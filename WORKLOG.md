@@ -1,3 +1,24 @@
+## 2026-07-05 23:40 @claude — PHASE P0 EXIT REVIEW (T-009)
+- Did: performed the Phase 0 exit review against PLAN.md §"Phase 0 — Foundation" exit criteria (line 387), now that every dependency (T-001, T-002, T-003, T-005, T-006, T-007, T-008, T-010) has a recorded @claude review PASS.
+- Exit criteria verdict:
+  1. `flutter test` green in CI — MET. .github/workflows/ci.yml runs pub get → build_runner stale-code guard → analyze → test on push/PR. @codex logs green analyze+test across T-005..T-008; database.g.dart is git-tracked so the guard is non-vacuous.
+  2. Encrypted DB creates and migrates — MET. T-003 Drift schema v1 + migration test (host fails-closed when SQLCipher absent; Android integration test asserts real cipher_version + all 7 tables), T-010 Android Keystore AES-GCM passphrase wrap (device-verified on motorola_edge_50_pro), wired into runtime via T-006 appDatabaseProvider → openEncryptedDatabase.
+  3. Fixture runner loads fixtures and asserts parser output (0 templates ⇒ all unparsed; the harness is what's proven) — MET. T-007 SmsFixtureRunner scans <bank>/<case>.txt+expected.json, empty root reports no cases, sample/unparsed fixture round-trips to err:unparsed.
+- Result: PASS. Phase 0 foundation is complete and its exit criteria are proven by tests. No hard blockers to Phase 1 grooming.
+- Carried non-blocking follow-ups (Proposed, groom before/into Phase 1): T-019 pin android minSdk=26 (PLAN §2) — REQUIRED before Phase 1 SMS work; T-016 native Kotlin unit tests for SmsFilter/DatabasePassphraseStore; T-017 real fixture runner content; T-018 broaden CI stale-generated-code guard.
+- Caveat: flutter/dart are not on my PATH, so criterion (1) and device criteria rest on @codex's logged runs + my source/CI reading, not fresh local execution — consistent with all prior @claude reviews this phase.
+- Files: TASKS.md, WORKLOG.md
+- Next: @codex to groom/take T-019 (minSdk) and begin Phase 1 template/capture work per PLAN.md §"Phase 1"; @claude reviews.
+
+## 2026-07-05 23:35 @claude — review T-005/T-006/T-007/T-008
+- Did: reviewed the four Phase 0 @codex tasks against their AC and source; all PASS. Moved T-005..T-008 from In Review to Done with review notes.
+- T-005: AppDatabase.seedDefaultCategories loads assets/seed/categories.json (asset registered in pubspec) via batch insertOrIgnore → idempotent, preserves user-edited name/icon; test seeds 18, renames food_dining, reseeds, asserts count stays 18 and rename survives (non-vacuous).
+- T-006: ProviderScope at root; appDatabaseProvider opens AppDatabase through AndroidKeystoreDatabasePassphraseProvider → openEncryptedDatabase with ref.onDispose; widget test overrides with NativeDatabase.memory() and asserts boot + same(database). Note: no production UI consumer yet (skeleton).
+- T-007: SmsFixtureRunner scans <bank>/<case>.txt+expected.json; empty root → no cases; sample/unparsed → err:unparsed; both paths tested. Note: orphan .txt without expected JSON throws StateError (strict-by-design).
+- T-008: CI guard is real — database.g.dart git-tracked, git diff --exit-code after build_runner; analyze+test run; docs/development.md documents Drift guard + device-only integration test.
+- Caveat: could not run flutter/dart locally (not on PATH); relied on source + CI-file reading + @codex's logged green analyze/test/build_runner and staged detect_changes LOW.
+- Files: TASKS.md, WORKLOG.md
+
 ## 2026-07-05 23:12 @codex — T-008
 - Did: added CI guardrail that runs build_runner and fails if `lib/data/db/database.g.dart` changes; documented normal CI checks and Android SQLCipher integration as device-only/manual until CI has a device runner; moved T-008 to In Review for @claude.
 - Files: .github/workflows/ci.yml, docs/development.md, TASKS.md, WORKLOG.md

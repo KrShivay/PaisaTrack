@@ -4,35 +4,27 @@ Last updated: 2026-07-05 by @claude
 ## In Progress
 
 ## Ready
-- [ ] T-009 (@claude) [P0] Phase 0 exit review
-      AC: verifies T-001 through T-008 and T-010 evidence against PLAN.md Phase 0 exit criteria; writes WORKLOG entry titled PHASE P0 EXIT REVIEW; lists any remaining blockers before Phase 1 grooming
-      Depends: T-001, T-002, T-003, T-005, T-006, T-007, T-008, T-010 review pass
 
 ## Blocked
 
 ## In Review
-- [ ] T-008 (@codex → review @claude) [P0] CI generated-code and integration-test guardrails
-AC: CI verifies generated Drift code is current after build_runner; normal unit tests run; Android SQLCipher integration test is documented as device-only/manual until CI device runner exists
-Evidence: `dart run build_runner build --delete-conflicting-outputs` succeeded; `git diff --exit-code -- lib/data/db/database.g.dart` passed; `flutter analyze` clean; `flutter test` passed; staged `detect_changes` LOW on intended T-008 files
-Depends: T-003 review pass
-
-- [ ] T-007 (@codex → review @claude) [P0] Fixture harness formalization
-      AC: fixture runner scans test/fixtures/sms/<bank>/<case>.txt + <case>.expected.json; with zero real fixtures it reports no cases cleanly; sample unparsed fixture test proves parser output comparison path
-      Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/fixtures/sms_fixture_runner_test.dart` passed; GitNexus impact LOW for `ParserCascade` and `ParserCascade.parse`; staged `detect_changes` LOW on intended T-007 files
-      Depends: T-001 review pass
-
-- [ ] T-006 (@codex → review @claude) [P0] Database provider skeleton
-      AC: Riverpod ProviderScope is installed at app root; appDatabaseProvider exposes an AppDatabase opened through AndroidKeystoreDatabasePassphraseProvider on Android with test override support; widget/provider test proves app boots with fake/in-memory DB
-      Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/widget_test.dart` passed; GitNexus impact LOW for `main`, `PaisaTrackApp`, `openEncryptedDatabase`; staged `detect_changes` LOW on intended T-006 files
-      Depends: T-003 review pass
-
-- [ ] T-005 (@codex → review @claude) [P0] Category seed loader + idempotency test
-AC: assets/seed/categories.json loads into Drift categories; rerunning seed does not duplicate rows or overwrite user-edited names/icons; test proves insert + rerun behavior
-Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/data/db/category_seed_loader_test.dart` passed; GitNexus impact LOW for `AppDatabase`; staged `detect_changes` LOW on intended T-005 files
-Depends: T-003 review pass
-
 
 ## Done
+- [x] T-009 (@claude) [P0] Phase 0 exit review (2026-07-05)
+      Result: PASS — Phase 0 exit criteria met; see WORKLOG "PHASE P0 EXIT REVIEW". T-001..T-008 and T-010 all review-passed. No hard blockers before Phase 1 grooming. Carried follow-ups (non-blocking): T-016 (Kotlin unit tests), T-017 (fixture runner real fixtures), T-018 (CI stale-gen guard hardening), T-019 (pin minSdk=26 before SMS work).
+
+- [x] T-008 (@codex, reviewed @claude) [P0] CI generated-code and integration-test guardrails (2026-07-05)
+      Review: PASS — CI runs pub get → `build_runner build --delete-conflicting-outputs` → `git diff --exit-code -- lib/data/db/database.g.dart` → analyze → test; database.g.dart is git-tracked so the stale-generated-code guard is real (not vacuous). docs/development.md documents the Drift guard and the Android SQLCipher integration test as device-only/manual until a CI device runner exists. Matches AC. Note (non-blocking): guard watches only database.g.dart — broaden to all generated files as tables grow (tracked by T-018).
+
+- [x] T-007 (@codex, reviewed @claude) [P0] Fixture harness formalization (2026-07-05)
+      Review: PASS — SmsFixtureRunner scans test/fixtures/sms/<bank>/<case>.txt with matching <case>.expected.json; missing root reports no cases (Phase 0 empty-set is clean); sample sample/unparsed fixture round-trips to err:unparsed through parseFixtureCase. Tests assert both the empty-root and comparison paths — non-vacuous. Note (non-blocking): an orphan .txt without expected JSON throws StateError (strict-by-design); real committed fixtures still deferred to T-017.
+
+- [x] T-006 (@codex, reviewed @claude) [P0] Database provider skeleton (2026-07-05)
+      Review: PASS — ProviderScope installed at app root (main.dart); appDatabaseProvider opens AppDatabase through AndroidKeystoreDatabasePassphraseProvider → openEncryptedDatabase (the T-010 runtime wiring folded in here), disposes via ref.onDispose. Widget test overrides appDatabaseProvider with AppDatabase(NativeDatabase.memory()) and asserts boot + same(database). Matches AC. Note (non-blocking): the provider has no production UI consumer yet, so the real Keystore→SQLCipher path only exercises on device/Phase 1 — acceptable for a skeleton.
+
+- [x] T-005 (@codex, reviewed @claude) [P0] Category seed loader + idempotency test (2026-07-05)
+      Review: PASS — AppDatabase.seedDefaultCategories loads assets/seed/categories.json (asset registered in pubspec) via a batch insertOrIgnore, so reruns neither duplicate rows nor overwrite user-edited names/icons. Test seeds 18, renames food_dining, reseeds, and asserts count stays 18 with the user rename+icon preserved — proves both insert and idempotent-rerun. Matches AC.
+
 - [x] T-010 (@codex, reviewed @claude) [P0] Android Keystore-backed passphrase provider (2026-07-05)
       Review: PASS — AndroidKeystoreDatabasePassphraseProvider + MainActivity DatabasePassphraseStore implement AES-GCM key-wrap via Android Keystore with StrongBox-when-available and a graceful fallback; passphrase generated once and reused; debug-gated reset via FLAG_DEBUGGABLE. Integration test asserts the real acceptance (same passphrase across restarts, fresh install differs) and the Dart test proves fail-closed on empty. On-device StrongBox/Keystore acceptance rests on the logged motorola_edge_50_pro run (I can't run a device here). Native-only unit coverage for the store is tracked by Proposed T-016; runtime wiring into openEncryptedDatabase folded into T-006.
 
