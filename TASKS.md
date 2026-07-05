@@ -5,10 +5,6 @@ Last updated: 2026-07-05 by @claude
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-022 (@codex) [P1] Platform channel: SMS → Dart ingestion
-      AC: a platform channel delivers sanitized RawSms from Kotlin to Dart; Dart ingestion persists raw_sms then runs ParserCascade, writing a transaction on Ok and leaving raw_sms flagged unparsed on Err; a contract test proves receiver→channel→parser→DB with a fake channel over an in-memory AppDatabase.
-      Depends: T-021 review pass, T-003 + T-005 + T-006 review pass
-
 - [ ] T-023 (@codex) [P1] Historical SMS inbox backfill
       AC: on first permission grant, backfill reads the last N months from the SMS inbox via the platform channel, dedups against existing raw_sms, and processes through the cascade in chunks without blocking the UI thread; a test proves re-running backfill inserts no duplicate rows (idempotent).
       Depends: T-022 review pass
@@ -32,17 +28,18 @@ Last updated: 2026-07-05 by @claude
 ## Blocked
 
 ## In Review
-- [ ] T-021 (@codex → review @claude) [P1] Kotlin SMS BroadcastReceiver + sender filter
-      AC: BroadcastReceiver handles SMS_RECEIVED_ACTION; SmsFilter allowlist accepts bank/UPI sender IDs and rejects OTP/promo/personal; raw SMS body is never written to logcat in release builds; JUnit tests cover allow and reject cases (subsumes the SmsFilter half of Proposed T-016).
-      Evidence: SmsFilter (pure Kotlin allowlist) + SmsReceiver (multipart reassembly, filter, no body logging, no-op sink until T-022) + manifest receiver registered for SMS_RECEIVED with BROADCAST_SMS permission. Ran `./gradlew :app:testDebugUnitTest` → BUILD SUCCESSFUL; SmsFilterTest 7 tests, 0 failures (allow bank/UPI, reject OTP/promo/personal/unknown/empty). Same build compiled all app Kotlin (incl. T-020 MainActivity). Actual receiver→Dart delivery is T-022; DatabasePassphraseStore native tests remain in T-016.
-      Depends: T-020 review pass
-
-- [ ] T-020 (@codex → review @claude) [P1] SMS permissions + onboarding flow
-      AC: onboarding screen requests RECEIVE_SMS/READ_SMS with a plain-language rationale; denial is handled gracefully (app still opens, explains degraded state); permission state exposed via a Riverpod provider with test override; widget tests cover granted and denied branches with the platform channel faked. No raw SMS content touched.
-      Evidence: SmsPermissionGate + PlatformSmsPermissionGate (channel com.paisatrack/sms_permissions); smsPermissionControllerProvider (AsyncNotifier); OnboardingScreen wired as app home; MainActivity handles status/request + onRequestPermissionsResult (granted/denied/permanentlyDenied); RECEIVE_SMS/READ_SMS added to manifest. `flutter analyze` clean; `flutter test` 27 pass / 1 host SQLCipher skip (provider transitions + 4 onboarding branch widget tests + updated widget_test). Native Kotlin path is device-only; JUnit coverage tracked by T-016.
-      Depends: T-006 review pass
 
 ## Done
+- [x] T-022 (@codex under @human override, reviewed @claude) [P1] Platform channel: SMS → Dart ingestion (2026-07-05)
+      Review: PASS — EventChannel `com.paisatrack/sms_events` bridges filter-approved SMS into Dart; `smsCaptureBootstrapProvider` boots only once permission==granted and the DB is ready, persists `raw_sms` (insertOnConflictUpdate), runs `ParserCascade`, writes a `txn_<smsId>` row on Ok and leaves `processed=false` on Err — all inside one DB transaction. The native bridge queues events until Dart `onListen` drains them, and clears the sink on `cleanUpFlutterEngine` so a torn-down engine can't be written to. Independently verified (see WORKLOG): `flutter analyze` clean, `flutter test test/capture/ test/widget_test.dart test/features/` 21/21, Gradle `:app:testDebugUnitTest` BUILD SUCCESSFUL. Review found + fixed a real robustness gap: `unawaited(ingest)` let a DB-write failure escape as an unhandled zone error — now routed through `_ingestSafely` — and added a duplicate-id idempotency test (3/3 capture tests). Non-blocking boundaries logged for follow-up: (a) SMS arriving while the app process is dead hit the no-op sink and are dropped here — recovered by T-023 backfill; (b) the parser runs inside the write transaction, fine for the current fast template matcher but revisit if the cascade goes async/heavy in T-024.
+
+- [x] T-021 (@codex under @human override, reviewed @claude) [P1] Kotlin SMS BroadcastReceiver + sender filter (2026-07-05)
+      Review: PASS — `SmsFilter` is framework-free pure Kotlin (JVM-unit-testable): rejects empty/personal-number senders, requires a known DLT header token, rejects OTP/promo bodies; `SmsReceiver` reassembles multipart via `getMessagesFromIntent`, filters, and forwards to `CapturedSmsSink` without ever logging bodies; manifest receiver is `exported=true` gated by `BROADCAST_SMS`. Independently verified: Gradle `:app:testDebugUnitTest` BUILD SUCCESSFUL, SmsFilterTest 7/7 (allow bank/UPI, reject OTP/promo/personal/unknown/empty). Non-blocking: token allowlist is a first pass to be hardened against real fixtures in T-024; multipart parts are joined in group order (adequate for the common single-part case).
+
+- [x] T-020 (@codex under @human override, reviewed @claude) [P1] SMS permissions + onboarding flow (2026-07-05)
+      Review: PASS — `SmsPermissionGate`/`PlatformSmsPermissionGate` over `com.paisatrack/sms_permissions`; `smsPermissionControllerProvider` (AsyncNotifier) with a fake-gate test override; `OnboardingScreen` wired as home with graceful denied / permanentlyDenied (→settings) / error (→retry) branches; MainActivity resolves granted/denied/permanentlyDenied and guards concurrent requests; existing Keystore passphrase logic byte-unchanged. Independently verified: `flutter analyze` clean, provider + 4 onboarding branch widget tests green within the 21-test run. Non-blocking: a cold `status()` call can only report granted/denied (permanentlyDenied is only knowable post-request) — the UI handles that transition correctly.
+
+
 - [x] T-019 (@codex under @human override, reviewed @claude) [P0] Pin Android minSdk to API 26 (2026-07-05)
       Done: android/app/build.gradle.kts now sets `minSdk = 26` (PLAN.md §2 Android 8.0) with a comment, replacing `flutter.minSdkVersion`. Caveat: `flutter build apk --debug` was NOT run here (flutter not on PATH in this environment) — build verification deferred to the next device/CI run; the Keystore/StrongBox code already runtime-guards on Build.VERSION_CODES.P so API 26 is safe.
 

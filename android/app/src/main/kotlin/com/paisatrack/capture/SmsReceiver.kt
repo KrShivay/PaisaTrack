@@ -4,14 +4,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
+import java.security.MessageDigest
 
 /**
  * Receives incoming SMS, reassembles multipart bodies, and keeps only messages
  * the [SmsFilter] accepts.
  *
- * Delivery of accepted messages into the Dart capture pipeline is added in
- * T-022; for now accepted messages are handed to [CapturedSmsSink.current],
- * which defaults to a no-op. This class never logs message bodies.
+ * Accepted messages are forwarded to [CapturedSmsSink.current], which the
+ * Flutter host replaces with an event-channel bridge during app startup.
+ * This class never logs message bodies.
  */
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,11 +33,17 @@ class SmsReceiver : BroadcastReceiver() {
                 part.displayMessageBody ?: part.messageBody ?: ""
             }
             if (SmsFilter.isAllowed(sender, body)) {
+                val receivedAtEpochMillis = System.currentTimeMillis()
                 CapturedSmsSink.current.accept(
                     CapturedSms(
+                        id = CapturedSmsId.forMessage(
+                            sender = sender,
+                            body = body,
+                            receivedAtEpochMillis = receivedAtEpochMillis,
+                        ),
                         sender = sender,
                         body = body,
-                        receivedAtEpochMillis = System.currentTimeMillis(),
+                        receivedAtEpochMillis = receivedAtEpochMillis,
                     ),
                 )
             }
@@ -46,6 +53,7 @@ class SmsReceiver : BroadcastReceiver() {
 
 /** A sanitized, filter-approved SMS ready for the Dart pipeline. */
 data class CapturedSms(
+    val id: String,
     val sender: String,
     val body: String,
     val receivedAtEpochMillis: Long,
@@ -59,5 +67,18 @@ fun interface CapturedSmsSink {
         /** No-op default until T-022 wires the platform channel sink. */
         @Volatile
         var current: CapturedSmsSink = CapturedSmsSink { }
+    }
+}
+
+private object CapturedSmsId {
+    fun forMessage(
+        sender: String,
+        body: String,
+        receivedAtEpochMillis: Long,
+    ): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val raw = "$sender\n$receivedAtEpochMillis\n$body".toByteArray(Charsets.UTF_8)
+        val hash = digest.digest(raw)
+        return hash.joinToString(separator = "") { byte -> "%02x".format(byte) }
     }
 }

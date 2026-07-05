@@ -5,16 +5,22 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.paisatrack.capture.CapturedSms
+import com.paisatrack.capture.CapturedSmsSink
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.security.KeyStore
 import java.security.SecureRandom
+import java.util.concurrent.ConcurrentLinkedQueue
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -22,6 +28,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 class MainActivity : FlutterActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
+    private val capturedSmsBridge = CapturedSmsEventChannelBridge()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -64,6 +71,20 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/sms_events",
+        ).setStreamHandler(capturedSmsBridge)
+        CapturedSmsSink.current = capturedSmsBridge
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        if (CapturedSmsSink.current === capturedSmsBridge) {
+            CapturedSmsSink.current = CapturedSmsSink { }
+        }
+        capturedSmsBridge.detach()
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     private fun requestSmsPermissions(result: MethodChannel.Result) {
@@ -130,6 +151,62 @@ class MainActivity : FlutterActivity() {
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.READ_SMS,
         )
+    }
+}
+
+private class CapturedSmsEventChannelBridge : EventChannel.StreamHandler, CapturedSmsSink {
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val pendingEvents = ConcurrentLinkedQueue<Map<String, Any>>()
+
+    @Volatile
+    private var eventSink: EventChannel.EventSink? = null
+
+    override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+        eventSink = events
+        drainPendingEvents()
+    }
+
+    override fun onCancel(arguments: Any?) {
+        eventSink = null
+    }
+
+    override fun accept(sms: CapturedSms) {
+        val payload = mapOf(
+            "id" to sms.id,
+            "sender" to sms.sender,
+            "body" to sms.body,
+            "receivedAtEpochMillis" to sms.receivedAtEpochMillis,
+        )
+        if (eventSink == null) {
+            pendingEvents.add(payload)
+            return
+        }
+
+        emit(payload)
+    }
+
+    fun detach() {
+        eventSink = null
+        pendingEvents.clear()
+    }
+
+    private fun drainPendingEvents() {
+        while (true) {
+            val payload = pendingEvents.poll() ?: return
+            emit(payload)
+        }
+    }
+
+    private fun emit(payload: Map<String, Any>) {
+        mainHandler.post {
+            val sink = eventSink
+            if (sink == null) {
+                pendingEvents.add(payload)
+                return@post
+            }
+
+            sink.success(payload)
+        }
     }
 }
 

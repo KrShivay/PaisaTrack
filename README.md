@@ -15,16 +15,20 @@ skip SQLCipher when the VM lacks it; Android migration device-tested on
 motorola_edge_50_pro), and the fixture runner asserts parser output. Android
 `minSdk` is pinned to API 26 (PLAN §2).
 
-**Phase 1 (Capture MVP): in progress.** Delivered and in review:
+**Phase 1 (Capture MVP): in progress.** Delivered and reviewed (PASS):
 
 - SMS runtime permissions + onboarding flow (graceful denial handling) — T-020.
 - Kotlin SMS `BroadcastReceiver` + `SmsFilter` allowlist (rejects OTP/promo/
-  personal senders), with JUnit tests — T-021.
+personal senders), with JUnit tests — T-021.
+- Live SMS platform channel → Dart ingestion bootstrap, raw SMS persistence,
+and transaction write-on-parse-success flow (idempotent by SMS id) — T-022.
 
-Verification: repo-local `flutter analyze` clean and `flutter test` green (27
-passing / 1 host SQLCipher skip); Android JUnit via
-`./gradlew :app:testDebugUnitTest` (SmsFilter 7/7). Remaining Phase 1 work is
-tracked in [TASKS.md](TASKS.md) (T-022 through T-027).
+Verification: repo-local `flutter analyze` is clean; targeted `flutter test`
+is green for the new capture contract (incl. idempotent reprocessing) and app
+shell; Android JUnit via `:app:testDebugUnitTest` is green with the live
+channel bridge compiled. Next: historical SMS inbox backfill (T-023) recovers
+messages that arrive while the app process is not running. Remaining Phase 1
+work is tracked in [TASKS.md](TASKS.md) (T-023 through T-027).
 
 ## Local Setup
 

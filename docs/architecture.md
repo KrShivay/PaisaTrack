@@ -16,5 +16,10 @@ Runtime SMS access is gated by `SmsPermissionGate` (platform channel
 and the onboarding screen. Denial is non-fatal: the app stays usable and explains
 the degraded (no automatic capture) state rather than blocking.
 
+Live SMS delivery uses a separate EventChannel (`com.paisatrack/sms_events`).
+Android forwards filter-approved `CapturedSms` payloads into that channel, and
+Riverpod boots the Dart listener through `smsCaptureBootstrapProvider` only
+after permission is granted and the encrypted database is ready.
+
 Raw SMS bodies are temporary capture inputs and must not appear in release logs,
 network payloads, or unencrypted exports.
