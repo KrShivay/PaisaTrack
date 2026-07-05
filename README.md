@@ -12,11 +12,14 @@ environment because Flutter/Dart are not installed.
 
 ## Local Setup
 
-Install Flutter stable, then run:
+This repo currently uses a repo-local Flutter SDK at `.tooling/flutter`.
+If your shell does not have Flutter on `PATH`, run commands through that SDK:
 
 ```sh
-flutter pub get
-flutter test
+.tooling/flutter/bin/flutter pub get
+.tooling/flutter/bin/flutter test
+.tooling/flutter/bin/flutter analyze
+.tooling/flutter/bin/flutter build apk --debug
 ```
 
 No raw SMS data should be committed. Use sanitized fixtures under
