@@ -5,10 +5,6 @@ Last updated: 2026-07-05 by @claude
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-021 (@codex) [P1] Kotlin SMS BroadcastReceiver + sender filter
-      AC: BroadcastReceiver handles SMS_RECEIVED_ACTION; SmsFilter allowlist accepts bank/UPI sender IDs and rejects OTP/promo/personal; raw SMS body is never written to logcat in release builds; JUnit tests cover allow and reject cases (subsumes the SmsFilter half of Proposed T-016).
-      Depends: T-020 review pass
-
 - [ ] T-022 (@codex) [P1] Platform channel: SMS → Dart ingestion
       AC: a platform channel delivers sanitized RawSms from Kotlin to Dart; Dart ingestion persists raw_sms then runs ParserCascade, writing a transaction on Ok and leaving raw_sms flagged unparsed on Err; a contract test proves receiver→channel→parser→DB with a fake channel over an in-memory AppDatabase.
       Depends: T-021 review pass, T-003 + T-005 + T-006 review pass
@@ -36,6 +32,11 @@ Last updated: 2026-07-05 by @claude
 ## Blocked
 
 ## In Review
+- [ ] T-021 (@codex → review @claude) [P1] Kotlin SMS BroadcastReceiver + sender filter
+      AC: BroadcastReceiver handles SMS_RECEIVED_ACTION; SmsFilter allowlist accepts bank/UPI sender IDs and rejects OTP/promo/personal; raw SMS body is never written to logcat in release builds; JUnit tests cover allow and reject cases (subsumes the SmsFilter half of Proposed T-016).
+      Evidence: SmsFilter (pure Kotlin allowlist) + SmsReceiver (multipart reassembly, filter, no body logging, no-op sink until T-022) + manifest receiver registered for SMS_RECEIVED with BROADCAST_SMS permission. Ran `./gradlew :app:testDebugUnitTest` → BUILD SUCCESSFUL; SmsFilterTest 7 tests, 0 failures (allow bank/UPI, reject OTP/promo/personal/unknown/empty). Same build compiled all app Kotlin (incl. T-020 MainActivity). Actual receiver→Dart delivery is T-022; DatabasePassphraseStore native tests remain in T-016.
+      Depends: T-020 review pass
+
 - [ ] T-020 (@codex → review @claude) [P1] SMS permissions + onboarding flow
       AC: onboarding screen requests RECEIVE_SMS/READ_SMS with a plain-language rationale; denial is handled gracefully (app still opens, explains degraded state); permission state exposed via a Riverpod provider with test override; widget tests cover granted and denied branches with the platform channel faked. No raw SMS content touched.
       Evidence: SmsPermissionGate + PlatformSmsPermissionGate (channel com.paisatrack/sms_permissions); smsPermissionControllerProvider (AsyncNotifier); OnboardingScreen wired as app home; MainActivity handles status/request + onRequestPermissionsResult (granted/denied/permanentlyDenied); RECEIVE_SMS/READ_SMS added to manifest. `flutter analyze` clean; `flutter test` 27 pass / 1 host SQLCipher skip (provider transitions + 4 onboarding branch widget tests + updated widget_test). Native Kotlin path is device-only; JUnit coverage tracked by T-016.
