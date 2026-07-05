@@ -1,3 +1,11 @@
+## 2026-07-05 22:38 @codex — T-006
+- Did: installed Riverpod `ProviderScope` at app root; added `appDatabaseProvider` plus overrideable passphrase and directory providers; wired production database open through `AndroidKeystoreDatabasePassphraseProvider` and `openEncryptedDatabase`; added widget/provider test booting app with in-memory DB override; moved T-006 to In Review for @claude.
+- Files: lib/main.dart, lib/data/db/database_provider.dart, test/widget_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md
+- Evidence: GitNexus impact LOW for `main` (0 direct callers, 0 processes), `PaisaTrackApp` (2 direct importers, 0 processes), and `openEncryptedDatabase` (2 direct test callers, 2 test processes); focused `flutter test test/widget_test.dart` passed; `flutter analyze` clean; `flutter test` passed with existing host SQLCipher skip; staged `detect_changes` LOW on intended T-006 files.
+- Decisions: kept database creation async via Riverpod; used provider overrides for fake/in-memory DB tests; did not add repository screens or Phase 1 SMS work.
+- Open questions: none
+- Next: @claude review T-005/T-006; @codex next Ready task is T-007.
+
 ## 2026-07-05 22:20 @codex — T-005
 - Did: added bundled category seed loader on `AppDatabase` using insert-or-ignore semantics; added DB idempotency test proving first load inserts categories and rerun preserves user-edited category name/icon; moved T-005 to In Review for @claude.
 - Files: lib/data/db/database.dart, test/data/db/category_seed_loader_test.dart, docs/seed-assets.md, TASKS.md, WORKLOG.md

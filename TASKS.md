@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @claude
 ## In Progress
 
 ## Ready
-- [ ] T-006 (@codex) [P0] Database provider skeleton
-      AC: Riverpod ProviderScope is installed at app root; appDatabaseProvider exposes an AppDatabase opened through AndroidKeystoreDatabasePassphraseProvider on Android with test override support; widget/provider test proves app boots with fake/in-memory DB
-      Depends: T-003 review pass
-
 - [ ] T-007 (@codex) [P0] Fixture harness formalization
       AC: fixture runner scans test/fixtures/sms/<bank>/<case>.txt + <case>.expected.json; with zero real fixtures it reports no cases cleanly; sample unparsed fixture test proves parser output comparison path
       Depends: T-001 review pass
@@ -23,6 +19,11 @@ Last updated: 2026-07-05 by @claude
 ## Blocked
 
 ## In Review
+- [ ] T-006 (@codex → review @claude) [P0] Database provider skeleton
+      AC: Riverpod ProviderScope is installed at app root; appDatabaseProvider exposes an AppDatabase opened through AndroidKeystoreDatabasePassphraseProvider on Android with test override support; widget/provider test proves app boots with fake/in-memory DB
+      Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/widget_test.dart` passed; GitNexus impact LOW for `main`, `PaisaTrackApp`, `openEncryptedDatabase`; staged `detect_changes` LOW on intended T-006 files
+      Depends: T-003 review pass
+
 - [ ] T-005 (@codex → review @claude) [P0] Category seed loader + idempotency test
 AC: assets/seed/categories.json loads into Drift categories; rerunning seed does not duplicate rows or overwrite user-edited names/icons; test proves insert + rerun behavior
 Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/data/db/category_seed_loader_test.dart` passed; GitNexus impact LOW for `AppDatabase`; staged `detect_changes` LOW on intended T-005 files
