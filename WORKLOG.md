@@ -1,3 +1,20 @@
+## 2026-07-05 21:55 @claude — Review T-001, T-002, T-010; T-009 status
+- Did: completed the remaining pending @claude reviews (T-001 scaffold, T-002 Flutter/Android normalization, T-010 Keystore passphrase provider) and assessed T-009 (Phase 0 exit review) readiness
+- Files: TASKS.md, WORKLOG.md
+- Evidence: verified T-001 artifacts (PLAN/COLLABORATION/TASKS/WORKLOG, non-empty docs stubs, fixture harness + README, CI workflow) all present; T-002 android/app/build.gradle.kts applicationId + namespace = com.paisatrack, platform files present, docs not overwritten; T-010 read lib/core/crypto/database_cipher.dart, android/.../MainActivity.kt, test/core/crypto/database_cipher_test.dart, integration_test/encrypted_database_migration_test.dart — integration test asserts stable-across-restarts + fresh-install-differs, Dart test asserts fail-closed on empty. Could not run `flutter`/`dart` (not on PATH); relied on source + @codex's logged device run (motorola_edge_50_pro) and GitNexus impact/detect_changes evidence.
+- Decisions: T-001 PASS, T-002 PASS, T-010 PASS — all moved to Done. Non-blocking gap found in T-002: minSdk is still the Flutter default, not PLAN.md §2's API 26 — filed as Proposed T-019. T-010's on-device StrongBox acceptance rests on the logged device run, not a fresh run here.
+- T-009 (Phase 0 exit review): CANNOT PASS YET. Its dependencies T-005 (seed loader), T-006 (Riverpod DB provider + Keystore wiring), T-007 (fixture runner), T-008 (CI guards) are not started, so PLAN.md Phase 0 exit criteria ("flutter test green in CI; encrypted DB creates and migrates; fixture runner loads fixtures and asserts parser output") are not all met. Remaining blockers before exit: T-005, T-006, T-007, T-008 (all @codex). T-001/T-002/T-003/T-010 exit inputs are now review-cleared.
+- Open questions: none
+- Next: @codex to take T-005..T-008 (and T-019); once those are Done + reviewed, @claude performs the T-009 Phase 0 exit review
+
+## 2026-07-05 21:40 @claude — Review T-011..T-015
+- Did: reviewed the six-commit batch (f8d6eb8..8d7f27b) against each task's AC and PLAN.md; moved T-011, T-012, T-013, T-014, T-015 to Done with Review: PASS
+- Files: TASKS.md, WORKLOG.md
+- Evidence: read lib/capture/template_engine/template_matcher.dart + field_normalizer.dart, test/capture/parser_cascade_test.dart, test/capture/template_engine/field_normalizer_test.dart, assets/seed/*.json + test/assets/seed_assets_test.dart, and the TASKS/README/WORKLOG diffs; independently verified seed referential integrity (every category_seed value resolves to a real categories.json id) and category taxonomy completeness (18/18, correct is_spending flags). Could not run `flutter test`/`analyze` — Flutter/Dart are not on PATH in this environment — so the review relies on reading source + tests plus @codex's logged green analyze/test and GitNexus impact(LOW)/detect_changes(clean) evidence, not a fresh run.
+- Decisions: all five PASS. T-011 correctly catches FormatException + ArgumentError covering all four throw sites and rejects via Err(unparsed) per §7.1; T-012 UTC parseDate + timezone-stable test; T-013 seed data complete with a test asserting completeness and referential integrity; T-014 reconciled the board without self-approving @claude reviews and folded the openEncryptedDatabase wiring into T-006; T-015 README accurate. Non-blocking follow-ups recorded on T-011/T-012 (broad ArgumentError catch; fallback timezone still caller-supplied; numeric-but-out-of-range dates roll over instead of rejecting).
+- Open questions: none blocking
+- Next: T-001, T-002, T-010 remain PENDING @claude review; then T-005/T-006/T-007/T-008 before the T-009 Phase 0 exit review
+
 ## 2026-07-05 21:28 @codex — T-015
 - Did: refreshed README Current Status to reflect working repo-local Flutter verification and the device-tested Android SQLCipher migration
 - Files: README.md, TASKS.md, WORKLOG.md

@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-05 by @codex
+Last updated: 2026-07-05 by @claude
 
 ## In Progress
 
@@ -27,43 +27,33 @@ Last updated: 2026-07-05 by @codex
 ## Blocked
 
 ## In Review
-- [ ] T-015 (@codex -> review @claude) [P0] Refresh README Current Status
-      AC: README.md no longer claims Flutter/Dart verification is blocked; it summarizes current Phase 0 verification reality and repo-local Flutter usage
-      Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, README/task/worklog-only scope
-
-- [ ] T-014 (@codex -> review @claude) [P0] Reconcile Phase 0 board evidence
-      AC: TASKS.md reflects true state for T-001, T-002, and T-010 from WORKLOG evidence without self-approving @claude reviews; WORKLOG records missing process entry and remaining review ownership
-      Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, task/worklog-only scope
-
-- [ ] T-013 (@codex -> review @claude) [P0] Complete category seed assets
-      AC: assets/seed/categories.json contains every PLAN.md §5 default category with correct spending flags; assets/seed/category_seed.json contains a small documented merchant-to-category starter map; JSON validity test proves both seed files are well-formed and complete enough for T-005 loader work
-      Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, seed/doc/test-only scope
-
-- [ ] T-012 (@codex -> review @claude) [P0] Template date timestamps use UTC
-      AC: FieldNormalizer.parseDate returns DateTime.utc for parsed SMS dates; tests assert UTC equality and timezone-stable epoch milliseconds
-      Evidence: GitNexus impact LOW for `FieldNormalizer.parseDate` (2 direct callers: `normalizeTemplateMatch`, field normalizer test; 2 affected processes; 4 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, no affected processes
-
-- [ ] T-011 (@codex -> review @claude) [P0] Parser rejects matched-but-malformed templates
-      AC: TemplateMatcher treats normalizer validation/parse failures as expected misses; ParserCascade returns Err(ParseFailure.unparsed) for matching templates with non-positive amount, garbage amount, non-numeric date, or invalid direction; regression test covers all listed cases
-      Evidence: GitNexus impact LOW for `TemplateMatcher.match` (1 direct caller: `ParserCascade.parse`; 1 affected process; 2 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, parser/test/doc-only scope
-
-- [ ] T-010 (@codex -> review @claude) [P0] Android Keystore-backed passphrase provider
-      AC: passphrase generated on first run and stored in Android Keystore (StrongBox where available); provider returns the same passphrase across app restarts; debug-only reset proves a fresh install gets a new one; Android SQLCipher migration test uses the stored passphrase
-      Evidence: `flutter test` passed; `flutter analyze --no-pub` clean; `flutter test integration_test/encrypted_database_migration_test.dart -d 192.168.1.10:5555` passed on motorola_edge_50_pro
-      Review: PENDING @claude. Follow-up: app-level `openEncryptedDatabase` provider wiring is folded into T-006 per @human scope.
-      Impact: LOW — openEncryptedDatabase had 2 direct test callers across 2 DB test flows; DatabasePassphrase had 2 importing test files; MainActivity had no indexed upstream dependents
-
-- [ ] T-001 (@codex -> review @claude) [P0] Repository foundation scaffold
-      AC: PLAN/COLLABORATION/TASKS/WORKLOG exist; docs stubs exist; parser fixture harness exists; CI workflow exists
-      Evidence: `flutter test` 5/5; `flutter analyze` clean; `flutter build apk --debug` built app-debug.apk
-      Review: PENDING @claude. Evidence is from WORKLOG 2026-07-05 18:25 and later repeated green local verification.
-
-- [ ] T-002 (@codex -> review @claude) [P0] Flutter project normalization via `flutter create`
-      AC: Android/Flutter platform files generated without overwriting repo docs; `flutter test` runs locally
-      Evidence: Android SDK 36 doctor green; `flutter test` 5/5; `flutter analyze` clean; `flutter build apk --debug` built app-debug.apk
-      Review: PENDING @claude. Evidence is from WORKLOG 2026-07-05 18:25 and later repeated green local verification.
 
 ## Done
+- [x] T-010 (@codex, reviewed @claude) [P0] Android Keystore-backed passphrase provider (2026-07-05)
+      Review: PASS — AndroidKeystoreDatabasePassphraseProvider + MainActivity DatabasePassphraseStore implement AES-GCM key-wrap via Android Keystore with StrongBox-when-available and a graceful fallback; passphrase generated once and reused; debug-gated reset via FLAG_DEBUGGABLE. Integration test asserts the real acceptance (same passphrase across restarts, fresh install differs) and the Dart test proves fail-closed on empty. On-device StrongBox/Keystore acceptance rests on the logged motorola_edge_50_pro run (I can't run a device here). Native-only unit coverage for the store is tracked by Proposed T-016; runtime wiring into openEncryptedDatabase folded into T-006.
+
+- [x] T-002 (@codex, reviewed @claude) [P0] Flutter project normalization via `flutter create` (2026-07-05)
+      Review: PASS — Android/Flutter platform files present and normalized to com.paisatrack (applicationId + namespace), repo docs not overwritten, .metadata/pubspec intact. Non-blocking follow-up filed as T-019: minSdk is still `flutter.minSdkVersion` (Flutter default), not pinned to API 26 as PLAN.md §2 requires — outside T-002's AC but must be set before Phase 1 SMS work.
+
+- [x] T-001 (@codex, reviewed @claude) [P0] Repository foundation scaffold (2026-07-05)
+      Review: PASS — PLAN/COLLABORATION/TASKS/WORKLOG present; docs stubs (architecture/schema/privacy/development) non-empty; parser fixture harness + fixture README present; CI workflow present. Matches AC.
+
+
+- [x] T-015 (@codex, reviewed @claude) [P0] Refresh README Current Status (2026-07-05)
+      Review: PASS — README "Current Status" no longer claims Flutter/Dart is uninstalled; it now states Phase 0 is in progress with repo-local Flutter, records that analyze/test/build apk pass, and notes the host SQLCipher migration skip plus device-tested Android migration. Accurate against WORKLOG.
+
+- [x] T-014 (@codex, reviewed @claude) [P0] Reconcile Phase 0 board evidence (2026-07-05)
+      Review: PASS — T-001/T-002/T-010 are marked `Review: PENDING @claude`, not self-approved; T-006 AC updated to fold in the Keystore→openEncryptedDatabase wiring; out-of-scope work correctly filed as Proposed T-016/T-017/T-018. Board now matches code reality.
+
+- [x] T-013 (@codex, reviewed @claude) [P0] Complete category seed assets (2026-07-05)
+      Review: PASS — categories.json holds all 18 PLAN.md §5 categories with unique ids and is_spending=false on Transfers/Cash Withdrawal/Income; category_seed.json has 21 entries and every value resolves to a real category id (no dangling refs, verified). seed_assets_test.dart asserts both taxonomy completeness and referential integrity — non-vacuous.
+
+- [x] T-012 (@codex, reviewed @claude) [P0] Template date timestamps use UTC (2026-07-05)
+      Review: PASS — FieldNormalizer.parseDate returns DateTime.utc; new test asserts isUtc and timezone-stable epoch ms. Note (non-blocking): the fallback path (sms.receivedAt) is still caller-supplied, and numeric-but-out-of-range dates roll over rather than reject — flagged for real-capture wiring / a future range guard.
+
+- [x] T-011 (@codex, reviewed @claude) [P0] Parser rejects matched-but-malformed templates (2026-07-05)
+      Review: PASS — TemplateMatcher.match wraps normalizeTemplateMatch in try/catch for FormatException and ArgumentError (covering parseAmount/parseOptionalAmount/parseDate and values.byName), continues past the bad template, and yields Err(ParseFailure.unparsed) per PLAN.md §7.1. Parametrized regression test covers non-positive amount, garbage amount, non-numeric date, and invalid direction. Note (non-blocking): `on ArgumentError` is broad but safe given the narrow try-body; revisit if normalizeTemplateMatch grows.
+
 - [x] T-003 (@codex, reviewed @claude) [P0] Drift schema v1 + migration test (2026-07-05)
       Review: PASS — transactions/raw_sms/merchants/merchant_aliases/categories/rules/feedback match PLAN.md §6.1 field-for-field; host + Android integration migration tests assert real behavior (table/index names, PRAGMA user_version, live cipher_version) and fail closed when SQLCipher is unavailable; docs/schema.md updated with migration log entry. Follow-up: no task covered PLAN.md §8's Keystore-backed passphrase generation (opener currently takes a plain passphrase constant) — filed as T-010.
 
@@ -82,3 +72,7 @@ Last updated: 2026-07-05 by @codex
 - [ ] T-018 (@codex) [P0] CI generated-code and build_runner guards
       AC: CI fails when Drift generated code is stale and documents local build_runner regeneration command
       Depends: T-008
+
+- [ ] T-019 (@codex) [P0] Pin Android minSdk to API 26
+      AC: android/app/build.gradle.kts sets minSdk = 26 (PLAN.md §2 Android 8.0) instead of the Flutter default; `flutter build apk --debug` still succeeds
+      Depends: T-002 review pass (done)
