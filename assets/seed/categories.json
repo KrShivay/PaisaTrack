@@ -1,0 +1,8 @@
+[
+  {"id": "food_dining", "name": "Food & Dining", "parent_id": null, "icon": "restaurant", "is_spending": true, "sort_order": 10, "is_user_created": false},
+  {"id": "groceries", "name": "Groceries", "parent_id": null, "icon": "shopping_basket", "is_spending": true, "sort_order": 20, "is_user_created": false},
+  {"id": "transport", "name": "Transport", "parent_id": null, "icon": "directions_car", "is_spending": true, "sort_order": 30, "is_user_created": false},
+  {"id": "transfers", "name": "Transfers", "parent_id": null, "icon": "swap_horiz", "is_spending": false, "sort_order": 130, "is_user_created": false},
+  {"id": "income", "name": "Income", "parent_id": null, "icon": "payments", "is_spending": false, "sort_order": 140, "is_user_created": false},
+  {"id": "other", "name": "Other", "parent_id": null, "icon": "category", "is_spending": true, "sort_order": 999, "is_user_created": false}
+]
