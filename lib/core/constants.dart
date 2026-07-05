@@ -25,4 +25,10 @@ class AppConstants {
 
   /// Number of days raw SMS bodies may remain before purge.
   static const rawSmsRetentionDays = 30;
+
+  /// Months of inbox history read on first permission grant (T-023 backfill).
+  static const smsBackfillMonths = 3;
+
+  /// Historical messages processed per yield so backfill never blocks the UI.
+  static const smsBackfillChunkSize = 25;
 }

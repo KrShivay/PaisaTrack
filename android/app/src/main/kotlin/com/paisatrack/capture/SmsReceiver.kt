@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
-import java.security.MessageDigest
 
 /**
  * Receives incoming SMS, reassembles multipart bodies, and keeps only messages
@@ -67,18 +66,5 @@ fun interface CapturedSmsSink {
         /** No-op default until T-022 wires the platform channel sink. */
         @Volatile
         var current: CapturedSmsSink = CapturedSmsSink { }
-    }
-}
-
-private object CapturedSmsId {
-    fun forMessage(
-        sender: String,
-        body: String,
-        receivedAtEpochMillis: Long,
-    ): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val raw = "$sender\n$receivedAtEpochMillis\n$body".toByteArray(Charsets.UTF_8)
-        val hash = digest.digest(raw)
-        return hash.joinToString(separator = "") { byte -> "%02x".format(byte) }
     }
 }

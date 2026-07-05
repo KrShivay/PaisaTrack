@@ -22,13 +22,17 @@ motorola_edge_50_pro), and the fixture runner asserts parser output. Android
 personal senders), with JUnit tests — T-021.
 - Live SMS platform channel → Dart ingestion bootstrap, raw SMS persistence,
 and transaction write-on-parse-success flow (idempotent by SMS id) — T-022.
+- Historical SMS inbox backfill on first permission grant: reads the last three
+months on-device, filters and ingests in non-blocking chunks, and runs once via
+a persisted marker so cold starts never re-scan or duplicate — T-023.
 
-Verification: repo-local `flutter analyze` is clean; targeted `flutter test`
-is green for the new capture contract (incl. idempotent reprocessing) and app
-shell; Android JUnit via `:app:testDebugUnitTest` is green with the live
-channel bridge compiled. Next: historical SMS inbox backfill (T-023) recovers
-messages that arrive while the app process is not running. Remaining Phase 1
-work is tracked in [TASKS.md](TASKS.md) (T-023 through T-027).
+Verification: repo-local `flutter analyze` is clean; `flutter test` is green
+(36 passed / 1 host SQLCipher skip), including the capture contract and the
+backfill idempotency test (re-running inserts no duplicate rows); Android JUnit
+via `:app:testDebugUnitTest` is green with the live channel bridge and inbox
+reader compiled. Next: real bank template registries + sanitized fixtures
+(T-024). Remaining Phase 1 work is tracked in [TASKS.md](TASKS.md) (T-024
+through T-027).
 
 ## Local Setup
 

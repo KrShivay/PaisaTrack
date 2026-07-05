@@ -45,35 +45,40 @@ class PlatformCapturedSmsSource implements CapturedSmsSource {
 
   @override
   Stream<RawSms> messages() {
-    return _channel.receiveBroadcastStream().map(_decodeRawSms);
+    return _channel.receiveBroadcastStream().map(decodeRawSmsPayload);
+  }
+}
+
+/// Converts a native SMS channel payload map into a [RawSms].
+///
+/// Shared by the live event channel and the historical inbox backfill (T-023)
+/// so both apply identical validation. Throws [StateError] on a malformed
+/// payload without echoing any message content.
+RawSms decodeRawSmsPayload(Object? event) {
+  if (event is! Map<Object?, Object?>) {
+    throw StateError('SMS event payload must be a map.');
   }
 
-  RawSms _decodeRawSms(Object? event) {
-    if (event is! Map<Object?, Object?>) {
-      throw StateError('SMS event payload must be a map.');
-    }
-
-    final id = event['id'];
-    final sender = event['sender'];
-    final body = event['body'];
-    final receivedAtEpochMillis = event['receivedAtEpochMillis'];
-    if (id is! String ||
-        sender is! String ||
-        body is! String ||
-        receivedAtEpochMillis is! int) {
-      throw StateError('SMS event payload is missing required fields.');
-    }
-
-    return RawSms(
-      id: id,
-      sender: sender,
-      body: body,
-      receivedAt: DateTime.fromMillisecondsSinceEpoch(
-        receivedAtEpochMillis,
-        isUtc: true,
-      ),
-    );
+  final id = event['id'];
+  final sender = event['sender'];
+  final body = event['body'];
+  final receivedAtEpochMillis = event['receivedAtEpochMillis'];
+  if (id is! String ||
+      sender is! String ||
+      body is! String ||
+      receivedAtEpochMillis is! int) {
+    throw StateError('SMS event payload is missing required fields.');
   }
+
+  return RawSms(
+    id: id,
+    sender: sender,
+    body: body,
+    receivedAt: DateTime.fromMillisecondsSinceEpoch(
+      receivedAtEpochMillis,
+      isUtc: true,
+    ),
+  );
 }
 
 /// Injectable source for production capture and fake-channel tests.

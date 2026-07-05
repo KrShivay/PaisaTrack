@@ -1,14 +1,10 @@
 # Task Board
-Last updated: 2026-07-05 by @claude
+Last updated: 2026-07-05 by @claude (T-023)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-023 (@codex) [P1] Historical SMS inbox backfill
-      AC: on first permission grant, backfill reads the last N months from the SMS inbox via the platform channel, dedups against existing raw_sms, and processes through the cascade in chunks without blocking the UI thread; a test proves re-running backfill inserts no duplicate rows (idempotent).
-      Depends: T-022 review pass
-
 - [ ] T-024 (@codex) [P1] Real bank template registries + ≥30 sanitized fixtures/bank
       AC: template registries authored for the developer's own banks; ≥30 sanitized real SMS per bank committed under test/fixtures/sms/<bank>/ with expected JSON; SmsFixtureRunner asserts ≥90% parse into the correct NormalizedTransactionRecord and that declined/failed SMS produce err (no transaction). Supersedes Proposed T-017.
       Depends: T-022 review pass, T-007 review pass
@@ -30,6 +26,9 @@ Last updated: 2026-07-05 by @claude
 ## In Review
 
 ## Done
+- [x] T-023 (@codex under @human override, reviewed @claude) [P1] Historical SMS inbox backfill (2026-07-05)
+      Review: PASS — new `com.paisatrack/sms_backfill` MethodChannel (`readInbox`/`isBackfillComplete`/`markBackfillComplete`); `SmsInboxReader` queries `Telephony.Sms.Inbox`, applies the existing `SmsFilter`, and stamps rows with the shared `CapturedSmsId` (extracted so live capture and backfill hash identically); the query runs off the main thread and never logs bodies. Dart `SmsBackfiller` reads the last 3 months and ingests via `SmsIngestor.ingest` in 25-message chunks, yielding between chunks so the UI thread never blocks; `smsBackfillProvider` runs it once on first grant, guarded by a persisted `BackfillMarker`. Independently verified (see WORKLOG): `flutter analyze` clean, `flutter test` 36 passed / 1 host SQLCipher skip incl. `sms_backfill_test` 6/6 (**re-running inserts no duplicate rows** — the AC test), Gradle `:app:testDebugUnitTest` BUILD SUCCESSFUL. Review found + fixed a real defect: the first cut relied only on the FutureProvider process cache, so every cold start would re-scan and duplicate live-captured messages (live uses `currentTimeMillis` ids, inbox uses `DATE`) — now a persisted marker fires backfill only at the genuine first grant, before any live captures exist; no schema migration. Non-blocking: (a) live-vs-backfill *semantic* duplicates are suppressed by T-025, not here; (b) backfill is one-time by design (AC), so post-first-grant misses while the receiver is inactive are not re-swept — a periodic catch-up would first need unified identity or T-025 dedup to stay duplicate-free.
+
 - [x] T-022 (@codex under @human override, reviewed @claude) [P1] Platform channel: SMS → Dart ingestion (2026-07-05)
       Review: PASS — EventChannel `com.paisatrack/sms_events` bridges filter-approved SMS into Dart; `smsCaptureBootstrapProvider` boots only once permission==granted and the DB is ready, persists `raw_sms` (insertOnConflictUpdate), runs `ParserCascade`, writes a `txn_<smsId>` row on Ok and leaves `processed=false` on Err — all inside one DB transaction. The native bridge queues events until Dart `onListen` drains them, and clears the sink on `cleanUpFlutterEngine` so a torn-down engine can't be written to. Independently verified (see WORKLOG): `flutter analyze` clean, `flutter test test/capture/ test/widget_test.dart test/features/` 21/21, Gradle `:app:testDebugUnitTest` BUILD SUCCESSFUL. Review found + fixed a real robustness gap: `unawaited(ingest)` let a DB-write failure escape as an unhandled zone error — now routed through `_ingestSafely` — and added a duplicate-id idempotency test (3/3 capture tests). Non-blocking boundaries logged for follow-up: (a) SMS arriving while the app process is dead hit the no-op sink and are dropped here — recovered by T-023 backfill; (b) the parser runs inside the write transaction, fine for the current fast template matcher but revisit if the cascade goes async/heavy in T-024.
 

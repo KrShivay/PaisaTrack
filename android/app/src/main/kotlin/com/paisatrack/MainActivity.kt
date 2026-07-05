@@ -14,13 +14,17 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.paisatrack.capture.CapturedSms
 import com.paisatrack.capture.CapturedSmsSink
+import com.paisatrack.capture.SmsInboxReader
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -29,6 +33,8 @@ import javax.crypto.spec.GCMParameterSpec
 class MainActivity : FlutterActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
     private val capturedSmsBridge = CapturedSmsEventChannelBridge()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -77,6 +83,23 @@ class MainActivity : FlutterActivity() {
             "com.paisatrack/sms_events",
         ).setStreamHandler(capturedSmsBridge)
         CapturedSmsSink.current = capturedSmsBridge
+
+        val inboxReader = SmsInboxReader(applicationContext)
+        val backfillState = BackfillStateStore(applicationContext)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/sms_backfill",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "readInbox" -> readInbox(inboxReader, call, result)
+                "isBackfillComplete" -> result.success(backfillState.isComplete())
+                "markBackfillComplete" -> {
+                    backfillState.markComplete()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -84,7 +107,40 @@ class MainActivity : FlutterActivity() {
             CapturedSmsSink.current = CapturedSmsSink { }
         }
         capturedSmsBridge.detach()
+        backfillExecutor.shutdown()
         super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    private fun readInbox(
+        inboxReader: SmsInboxReader,
+        call: MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        if (currentSmsPermissionStatus() != STATUS_GRANTED) {
+            result.error(
+                "permission_denied",
+                "READ_SMS permission is required to read the inbox.",
+                null,
+            )
+            return
+        }
+
+        val sinceEpochMillis = (call.argument<Number>("sinceEpochMillis"))?.toLong() ?: 0L
+        // Query the content provider off the main thread; the inbox can be large.
+        backfillExecutor.execute {
+            val response = try {
+                Result.success(inboxReader.readSince(sinceEpochMillis))
+            } catch (error: Exception) {
+                Result.failure(error)
+            }
+            mainHandler.post {
+                response.fold(
+                    onSuccess = { result.success(it) },
+                    // Never surface message bodies in the error payload.
+                    onFailure = { result.error("sms_backfill", it.message, null) },
+                )
+            }
+        }
     }
 
     private fun requestSmsPermissions(result: MethodChannel.Result) {
@@ -207,6 +263,27 @@ private class CapturedSmsEventChannelBridge : EventChannel.StreamHandler, Captur
 
             sink.success(payload)
         }
+    }
+}
+
+/**
+ * Persists whether the one-time historical inbox backfill (T-023) has run, so
+ * it fires only on the genuine first permission grant and never re-scans on
+ * later launches (which would duplicate live-captured messages).
+ */
+private class BackfillStateStore(context: Context) {
+    private val prefs = context.applicationContext
+        .getSharedPreferences(PrefsName, Context.MODE_PRIVATE)
+
+    fun isComplete(): Boolean = prefs.getBoolean(CompleteKey, false)
+
+    fun markComplete() {
+        prefs.edit().putBoolean(CompleteKey, true).apply()
+    }
+
+    private companion object {
+        const val PrefsName = "sms_backfill_state"
+        const val CompleteKey = "backfill_complete"
     }
 }
 

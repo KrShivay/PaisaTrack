@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
@@ -15,6 +16,9 @@ class PaisaTrackApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(smsCaptureBootstrapProvider);
+    // Activates the one-time historical inbox backfill (T-023) once the
+    // permission-granted, database-ready preconditions hold.
+    ref.watch(smsBackfillProvider);
 
     return MaterialApp(
       title: 'PaisaTrack',
