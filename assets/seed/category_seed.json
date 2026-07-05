@@ -1,1 +1,23 @@
-{}
+{
+  "amazon": "shopping",
+  "amzn": "shopping",
+  "bigbasket": "groceries",
+  "blinkit": "groceries",
+  "bookmyshow": "entertainment",
+  "bsnl": "bills_utilities",
+  "electricity": "bills_utilities",
+  "hdfc ergo": "health",
+  "hotstar": "subscriptions",
+  "irctc": "travel",
+  "jio": "bills_utilities",
+  "lic": "investments",
+  "netflix": "subscriptions",
+  "ola": "transport",
+  "petrol": "transport",
+  "pharmacy": "health",
+  "salary": "income",
+  "school": "education",
+  "swiggy": "food_dining",
+  "uber": "transport",
+  "zomato": "food_dining"
+}

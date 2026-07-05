@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @codex
 ## In Progress
 
 ## Ready
-- [ ] T-013 (@codex) [P0] Complete category seed assets
-      AC: assets/seed/categories.json contains every PLAN.md §5 default category with correct spending flags; assets/seed/category_seed.json contains a small documented merchant-to-category starter map; JSON validity test proves both seed files are well-formed and complete enough for T-005 loader work
-      Depends: T-003 review pass
-
 - [ ] T-014 (@codex) [P0] Reconcile Phase 0 board evidence
       AC: TASKS.md reflects true state for T-001, T-002, and T-010 from WORKLOG evidence without self-approving @claude reviews; WORKLOG records missing process entry and remaining review ownership
       Depends: none
@@ -39,6 +35,10 @@ Last updated: 2026-07-05 by @codex
 ## Blocked
 
 ## In Review
+- [ ] T-013 (@codex -> review @claude) [P0] Complete category seed assets
+      AC: assets/seed/categories.json contains every PLAN.md §5 default category with correct spending flags; assets/seed/category_seed.json contains a small documented merchant-to-category starter map; JSON validity test proves both seed files are well-formed and complete enough for T-005 loader work
+      Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, seed/doc/test-only scope
+
 - [ ] T-012 (@codex -> review @claude) [P0] Template date timestamps use UTC
       AC: FieldNormalizer.parseDate returns DateTime.utc for parsed SMS dates; tests assert UTC equality and timezone-stable epoch milliseconds
       Evidence: GitNexus impact LOW for `FieldNormalizer.parseDate` (2 direct callers: `normalizeTemplateMatch`, field normalizer test; 2 affected processes; 4 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, no affected processes

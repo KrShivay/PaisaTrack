@@ -1,3 +1,11 @@
+## 2026-07-05 21:15 @codex — T-013
+- Did: filled PLAN.md section 5 category seed assets, replaced empty merchant category seed map with a starter alias map, documented seed-growth expectations, and added JSON completeness tests
+- Files: assets/seed/categories.json, assets/seed/category_seed.json, docs/seed-assets.md, test/assets/seed_assets_test.dart, TASKS.md, WORKLOG.md
+- Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk with seed/doc/test-only scope
+- Decisions: kept `category_seed.json` as a direct merchant-to-category map for the future T-005 loader; documented the growth note in docs rather than adding metadata keys to the JSON map
+- Open questions: none
+- Next: T-014 board reconciliation
+
 ## 2026-07-05 21:08 @codex — T-012
 - Did: changed parsed template dates to `DateTime.utc`; updated parseDate tests to assert UTC equality and timezone-stable epoch milliseconds
 - Files: lib/capture/template_engine/field_normalizer.dart, test/capture/template_engine/field_normalizer_test.dart, TASKS.md, WORKLOG.md

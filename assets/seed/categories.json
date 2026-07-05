@@ -1,8 +1,164 @@
 [
-  {"id": "food_dining", "name": "Food & Dining", "parent_id": null, "icon": "restaurant", "is_spending": true, "sort_order": 10, "is_user_created": false},
-  {"id": "groceries", "name": "Groceries", "parent_id": null, "icon": "shopping_basket", "is_spending": true, "sort_order": 20, "is_user_created": false},
-  {"id": "transport", "name": "Transport", "parent_id": null, "icon": "directions_car", "is_spending": true, "sort_order": 30, "is_user_created": false},
-  {"id": "transfers", "name": "Transfers", "parent_id": null, "icon": "swap_horiz", "is_spending": false, "sort_order": 130, "is_user_created": false},
-  {"id": "income", "name": "Income", "parent_id": null, "icon": "payments", "is_spending": false, "sort_order": 140, "is_user_created": false},
-  {"id": "other", "name": "Other", "parent_id": null, "icon": "category", "is_spending": true, "sort_order": 999, "is_user_created": false}
+  {
+    "id": "food_dining",
+    "name": "Food & Dining",
+    "parent_id": null,
+    "icon": "restaurant",
+    "is_spending": true,
+    "sort_order": 10,
+    "is_user_created": false
+  },
+  {
+    "id": "groceries",
+    "name": "Groceries",
+    "parent_id": null,
+    "icon": "shopping_basket",
+    "is_spending": true,
+    "sort_order": 20,
+    "is_user_created": false
+  },
+  {
+    "id": "transport",
+    "name": "Transport",
+    "parent_id": null,
+    "icon": "directions_car",
+    "is_spending": true,
+    "sort_order": 30,
+    "is_user_created": false
+  },
+  {
+    "id": "shopping",
+    "name": "Shopping",
+    "parent_id": null,
+    "icon": "shopping_bag",
+    "is_spending": true,
+    "sort_order": 40,
+    "is_user_created": false
+  },
+  {
+    "id": "bills_utilities",
+    "name": "Bills & Utilities",
+    "parent_id": null,
+    "icon": "receipt_long",
+    "is_spending": true,
+    "sort_order": 50,
+    "is_user_created": false
+  },
+  {
+    "id": "subscriptions",
+    "name": "Subscriptions",
+    "parent_id": null,
+    "icon": "subscriptions",
+    "is_spending": true,
+    "sort_order": 60,
+    "is_user_created": false
+  },
+  {
+    "id": "rent_housing",
+    "name": "Rent & Housing",
+    "parent_id": null,
+    "icon": "home",
+    "is_spending": true,
+    "sort_order": 70,
+    "is_user_created": false
+  },
+  {
+    "id": "emi_loans",
+    "name": "EMI & Loans",
+    "parent_id": null,
+    "icon": "account_balance",
+    "is_spending": true,
+    "sort_order": 80,
+    "is_user_created": false
+  },
+  {
+    "id": "health",
+    "name": "Health",
+    "parent_id": null,
+    "icon": "local_hospital",
+    "is_spending": true,
+    "sort_order": 90,
+    "is_user_created": false
+  },
+  {
+    "id": "education",
+    "name": "Education",
+    "parent_id": null,
+    "icon": "school",
+    "is_spending": true,
+    "sort_order": 100,
+    "is_user_created": false
+  },
+  {
+    "id": "entertainment",
+    "name": "Entertainment",
+    "parent_id": null,
+    "icon": "theaters",
+    "is_spending": true,
+    "sort_order": 110,
+    "is_user_created": false
+  },
+  {
+    "id": "travel",
+    "name": "Travel",
+    "parent_id": null,
+    "icon": "flight",
+    "is_spending": true,
+    "sort_order": 120,
+    "is_user_created": false
+  },
+  {
+    "id": "transfers",
+    "name": "Transfers",
+    "parent_id": null,
+    "icon": "swap_horiz",
+    "is_spending": false,
+    "sort_order": 130,
+    "is_user_created": false
+  },
+  {
+    "id": "income",
+    "name": "Income",
+    "parent_id": null,
+    "icon": "payments",
+    "is_spending": false,
+    "sort_order": 140,
+    "is_user_created": false
+  },
+  {
+    "id": "fees_charges",
+    "name": "Fees & Charges",
+    "parent_id": null,
+    "icon": "request_quote",
+    "is_spending": true,
+    "sort_order": 150,
+    "is_user_created": false
+  },
+  {
+    "id": "cash_withdrawal",
+    "name": "Cash Withdrawal",
+    "parent_id": null,
+    "icon": "atm",
+    "is_spending": false,
+    "sort_order": 160,
+    "is_user_created": false
+  },
+  {
+    "id": "investments",
+    "name": "Investments",
+    "parent_id": null,
+    "icon": "trending_up",
+    "is_spending": true,
+    "sort_order": 170,
+    "is_user_created": false
+  },
+  {
+    "id": "other",
+    "name": "Other",
+    "parent_id": null,
+    "icon": "category",
+    "is_spending": true,
+    "sort_order": 999,
+    "is_user_created": false
+  }
 ]
