@@ -2,14 +2,33 @@
 Last updated: 2026-07-05 by @codex
 
 ## In Progress
+- [ ] T-011 (@codex) [P0] Parser rejects matched-but-malformed templates
+      AC: TemplateMatcher treats normalizer validation/parse failures as expected misses; ParserCascade returns Err(ParseFailure.unparsed) for matching templates with non-positive amount, garbage amount, non-numeric date, or invalid direction; regression test covers all listed cases
+      Depends: T-001 review pass
 
 ## Ready
+- [ ] T-012 (@codex) [P0] Template date timestamps use UTC
+      AC: FieldNormalizer.parseDate returns DateTime.utc for parsed SMS dates; tests assert UTC equality and timezone-stable epoch milliseconds
+      Depends: T-011
+
+- [ ] T-013 (@codex) [P0] Complete category seed assets
+      AC: assets/seed/categories.json contains every PLAN.md §5 default category with correct spending flags; assets/seed/category_seed.json contains a small documented merchant-to-category starter map; JSON validity test proves both seed files are well-formed and complete enough for T-005 loader work
+      Depends: T-003 review pass
+
+- [ ] T-014 (@codex) [P0] Reconcile Phase 0 board evidence
+      AC: TASKS.md reflects true state for T-001, T-002, and T-010 from WORKLOG evidence without self-approving @claude reviews; WORKLOG records missing process entry and remaining review ownership
+      Depends: none
+
+- [ ] T-015 (@codex) [P0] Refresh README Current Status
+      AC: README.md no longer claims Flutter/Dart verification is blocked; it summarizes current Phase 0 verification reality and repo-local Flutter usage
+      Depends: none
+
 - [ ] T-005 (@codex) [P0] Category seed loader + idempotency test
       AC: assets/seed/categories.json loads into Drift categories; rerunning seed does not duplicate rows or overwrite user-edited names/icons; test proves insert + rerun behavior
       Depends: T-003 review pass
 
 - [ ] T-006 (@codex) [P0] Database provider skeleton
-      AC: Riverpod ProviderScope is installed at app root; appDatabaseProvider exposes an AppDatabase with test override support; widget/provider test proves app boots with fake/in-memory DB
+      AC: Riverpod ProviderScope is installed at app root; appDatabaseProvider exposes an AppDatabase opened through AndroidKeystoreDatabasePassphraseProvider on Android with test override support; widget/provider test proves app boots with fake/in-memory DB
       Depends: T-003 review pass
 
 - [ ] T-007 (@codex) [P0] Fixture harness formalization
@@ -48,3 +67,14 @@ Last updated: 2026-07-05 by @codex
       Review: PASS — T-005 through T-009 are small, ordered, correctly dependency-linked to T-001/T-003, with testable AC covering DB seed, Riverpod skeleton, fixture harness, CI guardrails, and exit review. Process note: grooming was performed by @codex under an explicit @human override of the normal @claude-grooms-Ready rule (recorded in WORKLOG 19:10 entry) — no objection. Gap found and filed as T-010 (see above).
 
 ## Proposed
+- [ ] T-016 (@codex) [P0] Kotlin unit tests for Android SMS and Keystore storage
+      AC: native Kotlin/JUnit tests cover SmsFilter behavior and DatabasePassphraseStore persistence/error paths without relying on a physical device
+      Depends: T-010 review pass
+
+- [ ] T-017 (@codex) [P0] Fixture harness runner follow-up
+      AC: formal fixture runner from T-007 is implemented after review-approved parser scope; no real SMS fixtures are committed
+      Depends: T-007
+
+- [ ] T-018 (@codex) [P0] CI generated-code and build_runner guards
+      AC: CI fails when Drift generated code is stale and documents local build_runner regeneration command
+      Depends: T-008

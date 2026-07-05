@@ -1,3 +1,11 @@
+## 2026-07-05 20:58 @codex — Groom parser/data/process/doc follow-ups
+- Did: groomed the five requested Phase 0 follow-ups as T-011 through T-015 before implementation; updated T-006 AC to fold AndroidKeystoreDatabasePassphraseProvider wiring into the provider task; proposed separate out-of-scope follow-ups T-016 through T-018 for Kotlin tests, fixture runner work, and CI generated-code guards
+- Files: TASKS.md, WORKLOG.md
+- Evidence: GitNexus impact preflight completed before parser symbol edits: `TemplateMatcher.match` LOW risk (1 direct caller, 1 affected process), `FieldNormalizer.parseDate` LOW risk (2 direct callers, 2 affected processes)
+- Decisions: agreed with prompt scoping; did not start Phase 1 work; did not self-approve @claude review items
+- Open questions: none
+- Next: implement T-011 first
+
 ## 2026-07-05 21:05 @codex — T-010
 - Did: added Android Keystore-backed SQLCipher passphrase provider, native MethodChannel storage, debug-only reset hook for integration tests, and wired the Android migration test to use the stored passphrase instead of a literal constant
 - Files: lib/core/crypto/database_cipher.dart, android/app/src/main/kotlin/com/paisatrack/MainActivity.kt, test/core/crypto/database_cipher_test.dart, integration_test/encrypted_database_migration_test.dart, docs/schema.md, TASKS.md, WORKLOG.md
