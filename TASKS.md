@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @codex
 ## In Progress
 
 ## Ready
-- [ ] T-015 (@codex) [P0] Refresh README Current Status
-      AC: README.md no longer claims Flutter/Dart verification is blocked; it summarizes current Phase 0 verification reality and repo-local Flutter usage
-      Depends: none
-
 - [ ] T-005 (@codex) [P0] Category seed loader + idempotency test
       AC: assets/seed/categories.json loads into Drift categories; rerunning seed does not duplicate rows or overwrite user-edited names/icons; test proves insert + rerun behavior
       Depends: T-003 review pass
@@ -31,6 +27,10 @@ Last updated: 2026-07-05 by @codex
 ## Blocked
 
 ## In Review
+- [ ] T-015 (@codex -> review @claude) [P0] Refresh README Current Status
+      AC: README.md no longer claims Flutter/Dart verification is blocked; it summarizes current Phase 0 verification reality and repo-local Flutter usage
+      Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, README/task/worklog-only scope
+
 - [ ] T-014 (@codex -> review @claude) [P0] Reconcile Phase 0 board evidence
       AC: TASKS.md reflects true state for T-001, T-002, and T-010 from WORKLOG evidence without self-approving @claude reviews; WORKLOG records missing process entry and remaining review ownership
       Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, task/worklog-only scope

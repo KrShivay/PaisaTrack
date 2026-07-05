@@ -9,8 +9,12 @@ Feature work must include matching tests and documentation; see
 
 ## Current Status
 
-Phase 0 foundation scaffold is present, but runtime verification is blocked in this
-environment because Flutter/Dart are not installed.
+Phase 0 foundation work is in progress. The repo uses a repo-local Flutter SDK,
+and local verification is currently working: `flutter analyze`, `flutter test`,
+and `flutter build apk --debug` have all passed during Phase 0 work. Host tests
+skip the encrypted Drift migration when SQLCipher is unavailable in the VM; the
+Android SQLCipher migration has been device-tested separately on
+motorola_edge_50_pro.
 
 ## Local Setup
 

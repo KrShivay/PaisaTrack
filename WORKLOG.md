@@ -1,3 +1,11 @@
+## 2026-07-05 21:28 @codex — T-015
+- Did: refreshed README Current Status to reflect working repo-local Flutter verification and the device-tested Android SQLCipher migration
+- Files: README.md, TASKS.md, WORKLOG.md
+- Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk with README/task/worklog-only scope
+- Decisions: kept status Phase 0/in-progress; did not claim @claude review pass or Phase 0 exit
+- Open questions: none
+- Next: @claude review T-011 through T-015; T-005/T-006/T-007/T-008 remain separate Phase 0 work
+
 ## 2026-07-05 21:22 @codex — T-014
 - Did: reconciled TASKS.md state for T-001, T-002, and T-010 against WORKLOG evidence; kept all three in review for @claude; clarified T-010 provider/device-test scope and moved app-level database opener wiring into T-006
 - Files: TASKS.md, WORKLOG.md
