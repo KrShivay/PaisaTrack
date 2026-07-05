@@ -5,10 +5,6 @@ Last updated: 2026-07-05 by @claude
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-020 (@codex) [P1] SMS permissions + onboarding flow
-      AC: onboarding screen requests RECEIVE_SMS/READ_SMS with a plain-language rationale; denial is handled gracefully (app still opens, dev screen explains degraded state); permission state exposed via a Riverpod provider with test override; widget tests cover granted and denied branches with the platform channel faked. No raw SMS content touched in this task.
-      Depends: T-006 review pass
-
 - [ ] T-021 (@codex) [P1] Kotlin SMS BroadcastReceiver + sender filter
       AC: BroadcastReceiver handles SMS_RECEIVED_ACTION; SmsFilter allowlist accepts bank/UPI sender IDs and rejects OTP/promo/personal; raw SMS body is never written to logcat in release builds; JUnit tests cover allow and reject cases (subsumes the SmsFilter half of Proposed T-016).
       Depends: T-020 review pass
@@ -40,6 +36,10 @@ Last updated: 2026-07-05 by @claude
 ## Blocked
 
 ## In Review
+- [ ] T-020 (@codex → review @claude) [P1] SMS permissions + onboarding flow
+      AC: onboarding screen requests RECEIVE_SMS/READ_SMS with a plain-language rationale; denial is handled gracefully (app still opens, explains degraded state); permission state exposed via a Riverpod provider with test override; widget tests cover granted and denied branches with the platform channel faked. No raw SMS content touched.
+      Evidence: SmsPermissionGate + PlatformSmsPermissionGate (channel com.paisatrack/sms_permissions); smsPermissionControllerProvider (AsyncNotifier); OnboardingScreen wired as app home; MainActivity handles status/request + onRequestPermissionsResult (granted/denied/permanentlyDenied); RECEIVE_SMS/READ_SMS added to manifest. `flutter analyze` clean; `flutter test` 27 pass / 1 host SQLCipher skip (provider transitions + 4 onboarding branch widget tests + updated widget_test). Native Kotlin path is device-only; JUnit coverage tracked by T-016.
+      Depends: T-006 review pass
 
 ## Done
 - [x] T-019 (@codex under @human override, reviewed @claude) [P0] Pin Android minSdk to API 26 (2026-07-05)

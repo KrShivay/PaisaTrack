@@ -1,5 +1,6 @@
 package com.paisatrack
 
+import android.Manifest
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -7,6 +8,8 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -18,6 +21,8 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 class MainActivity : FlutterActivity() {
+    private var pendingPermissionResult: MethodChannel.Result? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -48,10 +53,83 @@ class MainActivity : FlutterActivity() {
                 result.error("database_passphrase", error.message, null)
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/sms_permissions",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "status" -> result.success(currentSmsPermissionStatus())
+                "request" -> requestSmsPermissions(result)
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestSmsPermissions(result: MethodChannel.Result) {
+        if (currentSmsPermissionStatus() == STATUS_GRANTED) {
+            result.success(STATUS_GRANTED)
+            return
+        }
+        if (pendingPermissionResult != null) {
+            result.error(
+                "in_progress",
+                "An SMS permission request is already in progress.",
+                null,
+            )
+            return
+        }
+
+        pendingPermissionResult = result
+        ActivityCompat.requestPermissions(this, SmsPermissions, SmsPermissionRequestCode)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != SmsPermissionRequestCode) {
+            return
+        }
+
+        val result = pendingPermissionResult ?: return
+        pendingPermissionResult = null
+
+        val granted = grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        val status = when {
+            granted -> STATUS_GRANTED
+            // No rationale after a denial means "Don't ask again" was selected.
+            SmsPermissions.any { ActivityCompat.shouldShowRequestPermissionRationale(this, it) } ->
+                STATUS_DENIED
+            else -> STATUS_PERMANENTLY_DENIED
+        }
+        result.success(status)
+    }
+
+    private fun currentSmsPermissionStatus(): String {
+        val allGranted = SmsPermissions.all { permission ->
+            ContextCompat.checkSelfPermission(this, permission) ==
+                PackageManager.PERMISSION_GRANTED
+        }
+        return if (allGranted) STATUS_GRANTED else STATUS_DENIED
     }
 
     private fun isDebuggable(): Boolean {
         return (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    }
+
+    private companion object {
+        const val SmsPermissionRequestCode = 4201
+        const val STATUS_GRANTED = "granted"
+        const val STATUS_DENIED = "denied"
+        const val STATUS_PERMANENTLY_DENIED = "permanentlyDenied"
+        val SmsPermissions = arrayOf(
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS,
+        )
     }
 }
 

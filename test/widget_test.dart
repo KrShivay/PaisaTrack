@@ -2,12 +2,26 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:paisatrack/app.dart';
+import 'package:paisatrack/capture/permissions/sms_permission.dart';
+import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 
+import 'support/fake_sms_permission_gate.dart';
+
 void main() {
   testWidgets('renders the app shell', (tester) async {
-    await tester.pumpWidget(const PaisaTrackApp());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
+        ],
+        child: const PaisaTrackApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text('PaisaTrack'), findsOneWidget);
   });
@@ -19,11 +33,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
           appDatabaseProvider.overrideWith((ref) async => database),
         ],
         child: const PaisaTrackApp(),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('PaisaTrack'), findsOneWidget);
 

@@ -11,5 +11,10 @@ PaisaTrack is organized as a local-first pipeline:
 5. Repositories persist records in encrypted SQLite.
 6. Experience screens read only normalized/enriched records.
 
+Runtime SMS access is gated by `SmsPermissionGate` (platform channel
+`com.paisatrack/sms_permissions`), surfaced through `smsPermissionControllerProvider`
+and the onboarding screen. Denial is non-fatal: the app stays usable and explains
+the degraded (no automatic capture) state rather than blocking.
+
 Raw SMS bodies are temporary capture inputs and must not appear in release logs,
 network payloads, or unencrypted exports.
