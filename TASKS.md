@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @codex
 ## In Progress
 
 ## Ready
-- [ ] T-014 (@codex) [P0] Reconcile Phase 0 board evidence
-      AC: TASKS.md reflects true state for T-001, T-002, and T-010 from WORKLOG evidence without self-approving @claude reviews; WORKLOG records missing process entry and remaining review ownership
-      Depends: none
-
 - [ ] T-015 (@codex) [P0] Refresh README Current Status
       AC: README.md no longer claims Flutter/Dart verification is blocked; it summarizes current Phase 0 verification reality and repo-local Flutter usage
       Depends: none
@@ -35,6 +31,10 @@ Last updated: 2026-07-05 by @codex
 ## Blocked
 
 ## In Review
+- [ ] T-014 (@codex -> review @claude) [P0] Reconcile Phase 0 board evidence
+      AC: TASKS.md reflects true state for T-001, T-002, and T-010 from WORKLOG evidence without self-approving @claude reviews; WORKLOG records missing process entry and remaining review ownership
+      Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, task/worklog-only scope
+
 - [ ] T-013 (@codex -> review @claude) [P0] Complete category seed assets
       AC: assets/seed/categories.json contains every PLAN.md §5 default category with correct spending flags; assets/seed/category_seed.json contains a small documented merchant-to-category starter map; JSON validity test proves both seed files are well-formed and complete enough for T-005 loader work
       Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, seed/doc/test-only scope
@@ -48,17 +48,20 @@ Last updated: 2026-07-05 by @codex
       Evidence: GitNexus impact LOW for `TemplateMatcher.match` (1 direct caller: `ParserCascade.parse`; 1 affected process; 2 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, parser/test/doc-only scope
 
 - [ ] T-010 (@codex -> review @claude) [P0] Android Keystore-backed passphrase provider
-      AC: passphrase generated on first run and stored in Android Keystore (StrongBox where available); openEncryptedDatabase is wired to the stored passphrase instead of a hardcoded test value; test proves the same passphrase is retrieved across app restarts and a fresh install gets a new one
+      AC: passphrase generated on first run and stored in Android Keystore (StrongBox where available); provider returns the same passphrase across app restarts; debug-only reset proves a fresh install gets a new one; Android SQLCipher migration test uses the stored passphrase
       Evidence: `flutter test` passed; `flutter analyze --no-pub` clean; `flutter test integration_test/encrypted_database_migration_test.dart -d 192.168.1.10:5555` passed on motorola_edge_50_pro
+      Review: PENDING @claude. Follow-up: app-level `openEncryptedDatabase` provider wiring is folded into T-006 per @human scope.
       Impact: LOW — openEncryptedDatabase had 2 direct test callers across 2 DB test flows; DatabasePassphrase had 2 importing test files; MainActivity had no indexed upstream dependents
 
 - [ ] T-001 (@codex -> review @claude) [P0] Repository foundation scaffold
       AC: PLAN/COLLABORATION/TASKS/WORKLOG exist; docs stubs exist; parser fixture harness exists; CI workflow exists
       Evidence: `flutter test` 5/5; `flutter analyze` clean; `flutter build apk --debug` built app-debug.apk
+      Review: PENDING @claude. Evidence is from WORKLOG 2026-07-05 18:25 and later repeated green local verification.
 
 - [ ] T-002 (@codex -> review @claude) [P0] Flutter project normalization via `flutter create`
       AC: Android/Flutter platform files generated without overwriting repo docs; `flutter test` runs locally
       Evidence: Android SDK 36 doctor green; `flutter test` 5/5; `flutter analyze` clean; `flutter build apk --debug` built app-debug.apk
+      Review: PENDING @claude. Evidence is from WORKLOG 2026-07-05 18:25 and later repeated green local verification.
 
 ## Done
 - [x] T-003 (@codex, reviewed @claude) [P0] Drift schema v1 + migration test (2026-07-05)

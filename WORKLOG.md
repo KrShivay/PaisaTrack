@@ -1,3 +1,11 @@
+## 2026-07-05 21:22 @codex — T-014
+- Did: reconciled TASKS.md state for T-001, T-002, and T-010 against WORKLOG evidence; kept all three in review for @claude; clarified T-010 provider/device-test scope and moved app-level database opener wiring into T-006
+- Files: TASKS.md, WORKLOG.md
+- Evidence: `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk with task/worklog-only scope
+- Decisions: did not self-approve @claude review items; did not implement T-006 wiring, Kotlin unit tests, fixture runner, or CI guard follow-ups
+- Open questions: none
+- Next: T-015 README status refresh
+
 ## 2026-07-05 21:15 @codex — T-013
 - Did: filled PLAN.md section 5 category seed assets, replaced empty merchant category seed map with a starter alias map, documented seed-growth expectations, and added JSON completeness tests
 - Files: assets/seed/categories.json, assets/seed/category_seed.json, docs/seed-assets.md, test/assets/seed_assets_test.dart, TASKS.md, WORKLOG.md
