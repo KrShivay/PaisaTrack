@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+/// Parsed collection of SMS templates scoped by sender patterns.
+///
+/// A registry usually maps to one template JSON asset for a bank, wallet, or
+/// payment provider.
 class TemplateRegistry {
   const TemplateRegistry({
     required this.senderPatterns,
@@ -9,6 +13,7 @@ class TemplateRegistry {
   final List<RegExp> senderPatterns;
   final List<SmsTemplate> templates;
 
+  /// Parses a registry JSON document from `assets/templates`.
   static TemplateRegistry fromJson(String source) {
     final json = jsonDecode(source) as Map<String, Object?>;
     final senderPatterns = (json['sender_patterns'] as List<Object?>? ?? [])
@@ -26,11 +31,16 @@ class TemplateRegistry {
     );
   }
 
+  /// Whether this registry should be considered for an SMS sender ID.
   bool matchesSender(String sender) {
     return senderPatterns.any((pattern) => pattern.hasMatch(sender));
   }
 }
 
+/// One regex-backed SMS transaction pattern.
+///
+/// Regexes should expose named capture groups such as `amount`, `merchant`,
+/// `account`, `balance`, `ref`, `vpa`, and `date` when those values are present.
 class SmsTemplate {
   const SmsTemplate({
     required this.id,
@@ -46,6 +56,7 @@ class SmsTemplate {
   final String channel;
   final String? dateFormat;
 
+  /// Parses one template entry from registry JSON.
   static SmsTemplate fromJson(Map<String, Object?> json) {
     return SmsTemplate(
       id: json['id']! as String,

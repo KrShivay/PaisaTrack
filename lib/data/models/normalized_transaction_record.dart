@@ -1,3 +1,8 @@
+/// Canonical transaction shape produced by parsers before database enrichment.
+///
+/// This is intentionally close to the frozen record contract in the plan. Raw
+/// SMS text must not be added here; sensitive source material stays in raw SMS
+/// storage with retention controls.
 class NormalizedTransactionRecord {
   const NormalizedTransactionRecord({
     required this.amount,
@@ -23,8 +28,11 @@ class NormalizedTransactionRecord {
   final String? refId;
   final DateTime ts;
   final ParseSource parseSource;
+
+  /// Parser confidence from 0.0 to 1.0.
   final double parseConfidence;
 
+  /// Serializes using stable wire names for fixtures and future interchange.
   Map<String, Object?> toJson() {
     return {
       'amount': amount,
@@ -42,15 +50,18 @@ class NormalizedTransactionRecord {
   }
 }
 
+/// Direction of money movement from the user's perspective.
 enum TransactionDirection {
   debit,
   credit,
 }
 
+/// Stable wire names for transaction direction values.
 extension TransactionDirectionWireName on TransactionDirection {
   String get wireName => name;
 }
 
+/// Payment channel inferred from SMS content.
 enum TransactionChannel {
   upi,
   card,
@@ -61,10 +72,12 @@ enum TransactionChannel {
   unknown,
 }
 
+/// Stable wire names for transaction channel values.
 extension TransactionChannelWireName on TransactionChannel {
   String get wireName => name;
 }
 
+/// Parser or workflow that produced the normalized record.
 enum ParseSource {
   template,
   localLlm,
@@ -72,6 +85,7 @@ enum ParseSource {
   manual,
 }
 
+/// Stable wire names for parse source values.
 extension ParseSourceWireName on ParseSource {
   String get wireName {
     return switch (this) {

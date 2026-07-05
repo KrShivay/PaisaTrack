@@ -1,9 +1,17 @@
 import '../../data/models/normalized_transaction_record.dart';
 import 'template_registry.dart';
 
+/// Converts named regex captures from SMS templates into domain records.
+///
+/// Templates own pattern recognition; this class owns parsing, normalization,
+/// and privacy-preserving formatting such as account hints.
 class FieldNormalizer {
   const FieldNormalizer();
 
+  /// Builds a normalized transaction from a template match.
+  ///
+  /// Missing optional capture groups become `null`. Missing dates fall back to
+  /// the SMS receive timestamp because many bank messages omit parseable dates.
   NormalizedTransactionRecord normalizeTemplateMatch({
     required RegExpMatch match,
     required SmsTemplate template,
@@ -31,6 +39,10 @@ class FieldNormalizer {
     );
   }
 
+  /// Parses a positive INR amount from SMS text.
+  ///
+  /// Throws [FormatException] when the value is missing, invalid, or non-
+  /// positive because a transaction record cannot be valid without an amount.
   double parseAmount(String? value) {
     final parsed = parseOptionalAmount(value);
     if (parsed == null || parsed <= 0) {
@@ -39,6 +51,7 @@ class FieldNormalizer {
     return parsed;
   }
 
+  /// Parses an optional INR amount, accepting symbols, `Rs`, `INR`, and commas.
   double? parseOptionalAmount(String? value) {
     if (value == null) {
       return null;
@@ -55,6 +68,10 @@ class FieldNormalizer {
     return double.parse(normalized);
   }
 
+  /// Parses supported SMS date formats, otherwise returns [fallback].
+  ///
+  /// Currently supports two-digit-year day-first formats used in seeded bank
+  /// templates, for example `dd-MM-yy` and `dd/MM/yy`.
   DateTime parseDate({
     required String? value,
     required String? format,

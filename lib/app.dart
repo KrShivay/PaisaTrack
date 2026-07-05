@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Root widget for the PaisaTrack Flutter application.
+///
+/// App-wide providers, navigation, and theme configuration should be attached
+/// here so tests can boot the same shell that production uses.
 class PaisaTrackApp extends StatelessWidget {
   const PaisaTrackApp({super.key});
 
