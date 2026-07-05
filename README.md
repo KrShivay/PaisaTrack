@@ -9,12 +9,22 @@ Feature work must include matching tests and documentation; see
 
 ## Current Status
 
-Phase 0 foundation work is in progress. The repo uses a repo-local Flutter SDK,
-and local verification is currently working: `flutter analyze`, `flutter test`,
-and `flutter build apk --debug` have all passed during Phase 0 work. Host tests
-skip the encrypted Drift migration when SQLCipher is unavailable in the VM; the
-Android SQLCipher migration has been device-tested separately on
-motorola_edge_50_pro.
+**Phase 0 (Foundation): complete.** All exit criteria are met and reviewed —
+`flutter test` green in CI, encrypted Drift DB creates + migrates (host tests
+skip SQLCipher when the VM lacks it; Android migration device-tested on
+motorola_edge_50_pro), and the fixture runner asserts parser output. Android
+`minSdk` is pinned to API 26 (PLAN §2).
+
+**Phase 1 (Capture MVP): in progress.** Delivered and in review:
+
+- SMS runtime permissions + onboarding flow (graceful denial handling) — T-020.
+- Kotlin SMS `BroadcastReceiver` + `SmsFilter` allowlist (rejects OTP/promo/
+  personal senders), with JUnit tests — T-021.
+
+Verification: repo-local `flutter analyze` clean and `flutter test` green (27
+passing / 1 host SQLCipher skip); Android JUnit via
+`./gradlew :app:testDebugUnitTest` (SmsFilter 7/7). Remaining Phase 1 work is
+tracked in [TASKS.md](TASKS.md) (T-022 through T-027).
 
 ## Local Setup
 
@@ -26,6 +36,12 @@ If your shell does not have Flutter on `PATH`, run commands through that SDK:
 .tooling/flutter/bin/flutter test
 .tooling/flutter/bin/flutter analyze
 .tooling/flutter/bin/flutter build apk --debug
+```
+
+Android native (Kotlin) unit tests run through Gradle:
+
+```sh
+cd android && ./gradlew :app:testDebugUnitTest
 ```
 
 No raw SMS data should be committed. Use sanitized fixtures under
