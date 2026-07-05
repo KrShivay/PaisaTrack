@@ -2,9 +2,6 @@
 Last updated: 2026-07-05 by @codex
 
 ## In Progress
-- [ ] T-011 (@codex) [P0] Parser rejects matched-but-malformed templates
-      AC: TemplateMatcher treats normalizer validation/parse failures as expected misses; ParserCascade returns Err(ParseFailure.unparsed) for matching templates with non-positive amount, garbage amount, non-numeric date, or invalid direction; regression test covers all listed cases
-      Depends: T-001 review pass
 
 ## Ready
 - [ ] T-012 (@codex) [P0] Template date timestamps use UTC
@@ -46,6 +43,10 @@ Last updated: 2026-07-05 by @codex
 ## Blocked
 
 ## In Review
+- [ ] T-011 (@codex -> review @claude) [P0] Parser rejects matched-but-malformed templates
+      AC: TemplateMatcher treats normalizer validation/parse failures as expected misses; ParserCascade returns Err(ParseFailure.unparsed) for matching templates with non-positive amount, garbage amount, non-numeric date, or invalid direction; regression test covers all listed cases
+      Evidence: GitNexus impact LOW for `TemplateMatcher.match` (1 direct caller: `ParserCascade.parse`; 1 affected process; 2 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, parser/test/doc-only scope
+
 - [ ] T-010 (@codex -> review @claude) [P0] Android Keystore-backed passphrase provider
       AC: passphrase generated on first run and stored in Android Keystore (StrongBox where available); openEncryptedDatabase is wired to the stored passphrase instead of a hardcoded test value; test proves the same passphrase is retrieved across app restarts and a fresh install gets a new one
       Evidence: `flutter test` passed; `flutter analyze --no-pub` clean; `flutter test integration_test/encrypted_database_migration_test.dart -d 192.168.1.10:5555` passed on motorola_edge_50_pro

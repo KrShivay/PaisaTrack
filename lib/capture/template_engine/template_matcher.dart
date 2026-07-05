@@ -33,11 +33,17 @@ class TemplateMatcher {
           continue;
         }
 
-        return _normalizer.normalizeTemplateMatch(
-          match: match,
-          template: template,
-          fallbackTimestamp: sms.receivedAt,
-        );
+        try {
+          return _normalizer.normalizeTemplateMatch(
+            match: match,
+            template: template,
+            fallbackTimestamp: sms.receivedAt,
+          );
+        } on FormatException {
+          continue;
+        } on ArgumentError {
+          continue;
+        }
       }
     }
 

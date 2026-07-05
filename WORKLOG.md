@@ -1,3 +1,11 @@
+## 2026-07-05 21:02 @codex — T-011
+- Did: made matched-but-malformed templates expected misses at the TemplateMatcher boundary; added ParserCascade regressions for non-positive amount, garbage amount, non-numeric date, and invalid direction returning `Err(ParseFailure.unparsed)`
+- Files: lib/capture/template_engine/template_matcher.dart, test/capture/parser_cascade_test.dart, TASKS.md, WORKLOG.md
+- Evidence: GitNexus impact LOW for `TemplateMatcher.match` (1 direct caller `ParserCascade.parse`, 1 affected process, 2 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk with parser/test/doc scope
+- Decisions: kept `FieldNormalizer` exceptions narrow and internal; `TemplateMatcher` catches only `FormatException`/`ArgumentError` and continues to later templates
+- Open questions: none
+- Next: T-012 UTC parsed dates
+
 ## 2026-07-05 20:58 @codex — Groom parser/data/process/doc follow-ups
 - Did: groomed the five requested Phase 0 follow-ups as T-011 through T-015 before implementation; updated T-006 AC to fold AndroidKeystoreDatabasePassphraseProvider wiring into the provider task; proposed separate out-of-scope follow-ups T-016 through T-018 for Kotlin tests, fixture runner work, and CI generated-code guards
 - Files: TASKS.md, WORKLOG.md
