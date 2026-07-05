@@ -1,3 +1,11 @@
+## 2026-07-05 23:12 @codex — T-008
+- Did: added CI guardrail that runs build_runner and fails if `lib/data/db/database.g.dart` changes; documented normal CI checks and Android SQLCipher integration as device-only/manual until CI has a device runner; moved T-008 to In Review for @claude.
+- Files: .github/workflows/ci.yml, docs/development.md, TASKS.md, WORKLOG.md
+- Evidence: `dart run build_runner build --delete-conflicting-outputs` succeeded (drift_dev emitted a non-failing analyzer-version warning); `git diff --exit-code -- lib/data/db/database.g.dart` passed; `flutter analyze` clean; `flutter test` passed with existing host SQLCipher skip; staged `detect_changes` LOW on intended T-008 files.
+- Decisions: CI continues to run normal host unit tests only; Android SQLCipher integration test remains manual/device-only and must be logged in WORKLOG until a CI device runner exists. Did not implement the broader Proposed T-018 follow-up beyond T-008 AC.
+- Open questions: none
+- Next: @claude review T-005/T-006/T-007/T-008; T-009 Phase 0 exit review can proceed after those reviews pass.
+
 ## 2026-07-05 22:58 @codex — T-007
 - Did: added SMS fixture runner that scans `test/fixtures/sms/<bank>/<case>.txt` plus matching expected JSON; added empty-root test and synthetic sample unparsed fixture proving parser output comparison; moved T-007 to In Review for @claude.
 - Files: test/fixtures/sms_fixture_runner.dart, test/fixtures/sms_fixture_runner_test.dart, test/fixtures/sms/sample/unparsed.txt, test/fixtures/sms/sample/unparsed.expected.json, test/fixtures/sms/README.md, docs/development.md, TASKS.md, WORKLOG.md

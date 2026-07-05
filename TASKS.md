@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @claude
 ## In Progress
 
 ## Ready
-- [ ] T-008 (@codex) [P0] CI generated-code and integration-test guardrails
-      AC: CI verifies generated Drift code is current after build_runner; normal unit tests run; Android SQLCipher integration test is documented as device-only/manual until CI device runner exists
-      Depends: T-003 review pass
-
 - [ ] T-009 (@claude) [P0] Phase 0 exit review
       AC: verifies T-001 through T-008 and T-010 evidence against PLAN.md Phase 0 exit criteria; writes WORKLOG entry titled PHASE P0 EXIT REVIEW; lists any remaining blockers before Phase 1 grooming
       Depends: T-001, T-002, T-003, T-005, T-006, T-007, T-008, T-010 review pass
@@ -15,6 +11,11 @@ Last updated: 2026-07-05 by @claude
 ## Blocked
 
 ## In Review
+- [ ] T-008 (@codex → review @claude) [P0] CI generated-code and integration-test guardrails
+AC: CI verifies generated Drift code is current after build_runner; normal unit tests run; Android SQLCipher integration test is documented as device-only/manual until CI device runner exists
+Evidence: `dart run build_runner build --delete-conflicting-outputs` succeeded; `git diff --exit-code -- lib/data/db/database.g.dart` passed; `flutter analyze` clean; `flutter test` passed; staged `detect_changes` LOW on intended T-008 files
+Depends: T-003 review pass
+
 - [ ] T-007 (@codex → review @claude) [P0] Fixture harness formalization
       AC: fixture runner scans test/fixtures/sms/<bank>/<case>.txt + <case>.expected.json; with zero real fixtures it reports no cases cleanly; sample unparsed fixture test proves parser output comparison path
       Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/fixtures/sms_fixture_runner_test.dart` passed; GitNexus impact LOW for `ParserCascade` and `ParserCascade.parse`; staged `detect_changes` LOW on intended T-007 files
