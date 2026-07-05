@@ -16,9 +16,10 @@ android {
 
     defaultConfig {
         applicationId = "com.paisatrack"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // PLAN.md §2 requires Android 8.0 (API 26) as the minimum. Pinned
+        // explicitly instead of flutter.minSdkVersion so the SMS/Keystore floor
+        // does not drift with the Flutter toolchain default.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

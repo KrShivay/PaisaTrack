@@ -4,12 +4,47 @@ Last updated: 2026-07-05 by @claude
 ## In Progress
 
 ## Ready
+<!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
+- [ ] T-020 (@codex) [P1] SMS permissions + onboarding flow
+      AC: onboarding screen requests RECEIVE_SMS/READ_SMS with a plain-language rationale; denial is handled gracefully (app still opens, dev screen explains degraded state); permission state exposed via a Riverpod provider with test override; widget tests cover granted and denied branches with the platform channel faked. No raw SMS content touched in this task.
+      Depends: T-006 review pass
+
+- [ ] T-021 (@codex) [P1] Kotlin SMS BroadcastReceiver + sender filter
+      AC: BroadcastReceiver handles SMS_RECEIVED_ACTION; SmsFilter allowlist accepts bank/UPI sender IDs and rejects OTP/promo/personal; raw SMS body is never written to logcat in release builds; JUnit tests cover allow and reject cases (subsumes the SmsFilter half of Proposed T-016).
+      Depends: T-020 review pass
+
+- [ ] T-022 (@codex) [P1] Platform channel: SMS → Dart ingestion
+      AC: a platform channel delivers sanitized RawSms from Kotlin to Dart; Dart ingestion persists raw_sms then runs ParserCascade, writing a transaction on Ok and leaving raw_sms flagged unparsed on Err; a contract test proves receiver→channel→parser→DB with a fake channel over an in-memory AppDatabase.
+      Depends: T-021 review pass, T-003 + T-005 + T-006 review pass
+
+- [ ] T-023 (@codex) [P1] Historical SMS inbox backfill
+      AC: on first permission grant, backfill reads the last N months from the SMS inbox via the platform channel, dedups against existing raw_sms, and processes through the cascade in chunks without blocking the UI thread; a test proves re-running backfill inserts no duplicate rows (idempotent).
+      Depends: T-022 review pass
+
+- [ ] T-024 (@codex) [P1] Real bank template registries + ≥30 sanitized fixtures/bank
+      AC: template registries authored for the developer's own banks; ≥30 sanitized real SMS per bank committed under test/fixtures/sms/<bank>/ with expected JSON; SmsFixtureRunner asserts ≥90% parse into the correct NormalizedTransactionRecord and that declined/failed SMS produce err (no transaction). Supersedes Proposed T-017.
+      Depends: T-022 review pass, T-007 review pass
+
+- [ ] T-025 (@codex) [P1] Paired bank+wallet duplicate suppression
+      AC: dedup logic suppresses a second transaction when a bank SMS and its paired wallet/UPI SMS describe the same debit (amount + counterparty within a time window); table-driven tests cover paired-duplicate, near-miss-not-duplicate, and unrelated cases.
+      Depends: T-022 review pass
+
+- [ ] T-026 (@codex) [P1] Transactions list + basic dashboard + unparsed dev screen
+      AC: transactions list renders parsed transactions from the DB via Riverpod; a basic dashboard shows month totals by direction; a dev screen lists unparsed raw_sms; widget tests run over a seeded in-memory AppDatabase.
+      Depends: T-022 review pass, T-006 review pass
+
+- [ ] T-027 (@claude) [P1] Phase 1 exit review
+      AC: verifies T-020..T-026 evidence against PLAN.md Phase 1 exit criteria (fresh-install ≥90% parse of last 3 months verified by hand vs bank statement; paired bank+wallet duplicates suppressed; unparsed messages visible in dev screen); writes a WORKLOG entry titled PHASE P1 EXIT REVIEW; lists any blockers before Phase 2 grooming.
+      Depends: T-020, T-021, T-022, T-023, T-024, T-025, T-026 review pass
 
 ## Blocked
 
 ## In Review
 
 ## Done
+- [x] T-019 (@codex under @human override, reviewed @claude) [P0] Pin Android minSdk to API 26 (2026-07-05)
+      Done: android/app/build.gradle.kts now sets `minSdk = 26` (PLAN.md §2 Android 8.0) with a comment, replacing `flutter.minSdkVersion`. Caveat: `flutter build apk --debug` was NOT run here (flutter not on PATH in this environment) — build verification deferred to the next device/CI run; the Keystore/StrongBox code already runtime-guards on Build.VERSION_CODES.P so API 26 is safe.
+
 - [x] T-009 (@claude) [P0] Phase 0 exit review (2026-07-05)
       Result: PASS — Phase 0 exit criteria met; see WORKLOG "PHASE P0 EXIT REVIEW". T-001..T-008 and T-010 all review-passed. No hard blockers before Phase 1 grooming. Carried follow-ups (non-blocking): T-016 (Kotlin unit tests), T-017 (fixture runner real fixtures), T-018 (CI stale-gen guard hardening), T-019 (pin minSdk=26 before SMS work).
 
@@ -61,14 +96,11 @@ Last updated: 2026-07-05 by @claude
       AC: native Kotlin/JUnit tests cover SmsFilter behavior and DatabasePassphraseStore persistence/error paths without relying on a physical device
       Depends: T-010 review pass
 
-- [ ] T-017 (@codex) [P0] Fixture harness runner follow-up
+- [ ] T-017 (@codex) [P0] Fixture harness runner follow-up — SUPERSEDED by T-024
       AC: formal fixture runner from T-007 is implemented after review-approved parser scope; no real SMS fixtures are committed
+      Note: real-fixture work folded into Phase 1 T-024; keep only if a non-fixture runner enhancement emerges.
       Depends: T-007
 
 - [ ] T-018 (@codex) [P0] CI generated-code and build_runner guards
       AC: CI fails when Drift generated code is stale and documents local build_runner regeneration command
       Depends: T-008
-
-- [ ] T-019 (@codex) [P0] Pin Android minSdk to API 26
-      AC: android/app/build.gradle.kts sets minSdk = 26 (PLAN.md §2 Android 8.0) instead of the Flutter default; `flutter build apk --debug` still succeeds
-      Depends: T-002 review pass (done)

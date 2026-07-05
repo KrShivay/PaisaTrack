@@ -1,3 +1,13 @@
+## 2026-07-05 23:55 @claude/@codex — T-019 + Phase 1 grooming (open Phase 1)
+- Did (T-019, @codex under explicit @human override): pinned `minSdk = 26` in android/app/build.gradle.kts (PLAN.md §2 Android 8.0), replacing `flutter.minSdkVersion`; moved T-019 Proposed→Done.
+- Did (Phase 1 grooming, @claude): broke PLAN.md §"Phase 1 — Capture MVP" into ordered tasks T-020..T-027 in Ready, each with testable AC and dependency links: T-020 SMS permissions + onboarding, T-021 Kotlin BroadcastReceiver + SmsFilter, T-022 platform channel SMS→Dart ingestion, T-023 inbox backfill, T-024 real registries + ≥30 sanitized fixtures/bank (≥90% parse), T-025 paired bank+wallet dedup, T-026 transactions list + dashboard + unparsed dev screen, T-027 @claude Phase 1 exit review. Marked Proposed T-017 SUPERSEDED by T-024.
+- Files: android/app/build.gradle.kts, TASKS.md, WORKLOG.md
+- Evidence: staged `detect_changes` LOW (docs + one Gradle constant; no indexed code symbols affected). `impact` not applicable to a Gradle config constant (not a graph symbol).
+- Caveat: `flutter build apk --debug` NOT run (flutter/dart not on PATH here) — T-019 build verification deferred to next device/CI run; Keystore/StrongBox path already runtime-guards on Build.VERSION_CODES.P, so API 26 is safe.
+- Decisions: grooming assigns implementation to @codex and review to @claude per COLLABORATION.md; privacy AC baked into T-021/T-022 (no raw SMS in release logs). Left T-016/T-018 in Proposed as still-valid follow-ups.
+- Open questions: T-024 needs the developer's own real (sanitized) bank SMS to author registries — that input is a human/device step.
+- Next: @codex to take T-020 (SMS permissions + onboarding), the first Ready Phase 1 task; @claude reviews.
+
 ## 2026-07-05 23:40 @claude — PHASE P0 EXIT REVIEW (T-009)
 - Did: performed the Phase 0 exit review against PLAN.md §"Phase 0 — Foundation" exit criteria (line 387), now that every dependency (T-001, T-002, T-003, T-005, T-006, T-007, T-008, T-010) has a recorded @claude review PASS.
 - Exit criteria verdict:
