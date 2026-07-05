@@ -4,6 +4,8 @@ Android-first, privacy-first expense tracking from transactional SMS.
 
 This repository follows the two-agent workflow in [COLLABORATION.md](COLLABORATION.md).
 The product and technical source of truth is [PLAN.md](PLAN.md).
+Feature work must include matching tests and documentation; see
+[docs/development.md](docs/development.md).
 
 ## Current Status
 

@@ -82,13 +82,16 @@ Branching: trunk-based. Branch `T-xxx-short-name` per task, PR to `main`, squash
 
 Phase gates: when all tasks of a phase are Done, @claude verifies the phase exit criteria (plan §9) against actual tests, writes a `WORKLOG` entry titled `PHASE Px EXIT REVIEW`, and only then grooms the next phase into Ready. @human confirms on a real device for P1, P2, P3 exits.
 
+Definition of Done: every feature must include matching tests, code documentation, and project documentation in the same change. Tests must prove the behavior or contract added by the feature. Code documentation must cover public APIs and non-obvious domain logic with Dart `///` comments. Project documentation must update the relevant project doc, ADR, schema/privacy note, README, or manual verification notes. If automated tests or docs are intentionally not added, the task and `WORKLOG.md` entry must state why. See `docs/development.md`.
+
 ## 4. Review checklist (@claude, every In Review task)
 1. AC met, proven by tests (run them / read CI evidence — don't trust the summary)
 2. Tests actually assert behavior (no vacuous tests); fixtures added for any new SMS variant
-3. Plan conformance: folder placement, enricher interface, constants not inlined, flags respected
-4. Privacy rules: no raw SMS in logs/payloads; anonymizer path if network involved
-5. Frozen contract untouched (or ADR present + approved)
-6. WORKLOG entry complete
+3. Code documentation and project documentation updated for the feature, or a clear reason recorded in the task and `WORKLOG.md`
+4. Plan conformance: folder placement, enricher interface, constants not inlined, flags respected
+5. Privacy rules: no raw SMS in logs/payloads; anonymizer path if network involved
+6. Frozen contract untouched (or ADR present + approved)
+7. WORKLOG entry complete
 Review outcome goes into the task item as `Review: PASS` or `Review: CHANGES — <numbered list>`.
 
 ## 5. Conflict avoidance
