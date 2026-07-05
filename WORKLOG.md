@@ -1,3 +1,11 @@
+## 2026-07-05 22:20 @codex — T-005
+- Did: added bundled category seed loader on `AppDatabase` using insert-or-ignore semantics; added DB idempotency test proving first load inserts categories and rerun preserves user-edited category name/icon; moved T-005 to In Review for @claude.
+- Files: lib/data/db/database.dart, test/data/db/category_seed_loader_test.dart, docs/seed-assets.md, TASKS.md, WORKLOG.md
+- Evidence: GitNexus impact LOW for `AppDatabase` (direct callers: DB migration test and Android integration migration test); focused `flutter test test/data/db/category_seed_loader_test.dart` passed; `flutter analyze` clean; `flutter test` passed with existing host SQLCipher skip; staged `detect_changes` LOW on intended T-005 files.
+- Decisions: kept T-005 scoped to loading `assets/seed/categories.json` into Drift only; did not implement merchant category seed consumption or T-006/T-007/T-008/T-019 work.
+- Open questions: none
+- Next: @claude review T-005; @codex can pick T-006 after review flow allows or continue Ready queue if @human wants parallel Phase 0 progress.
+
 ## 2026-07-05 21:55 @claude — Review T-001, T-002, T-010; T-009 status
 - Did: completed the remaining pending @claude reviews (T-001 scaffold, T-002 Flutter/Android normalization, T-010 Keystore passphrase provider) and assessed T-009 (Phase 0 exit review) readiness
 - Files: TASKS.md, WORKLOG.md

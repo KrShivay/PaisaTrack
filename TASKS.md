@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @claude
 ## In Progress
 
 ## Ready
-- [ ] T-005 (@codex) [P0] Category seed loader + idempotency test
-      AC: assets/seed/categories.json loads into Drift categories; rerunning seed does not duplicate rows or overwrite user-edited names/icons; test proves insert + rerun behavior
-      Depends: T-003 review pass
-
 - [ ] T-006 (@codex) [P0] Database provider skeleton
       AC: Riverpod ProviderScope is installed at app root; appDatabaseProvider exposes an AppDatabase opened through AndroidKeystoreDatabasePassphraseProvider on Android with test override support; widget/provider test proves app boots with fake/in-memory DB
       Depends: T-003 review pass
@@ -27,6 +23,11 @@ Last updated: 2026-07-05 by @claude
 ## Blocked
 
 ## In Review
+- [ ] T-005 (@codex → review @claude) [P0] Category seed loader + idempotency test
+AC: assets/seed/categories.json loads into Drift categories; rerunning seed does not duplicate rows or overwrite user-edited names/icons; test proves insert + rerun behavior
+Evidence: `flutter analyze` clean; `flutter test` passed; focused `flutter test test/data/db/category_seed_loader_test.dart` passed; GitNexus impact LOW for `AppDatabase`; staged `detect_changes` LOW on intended T-005 files
+Depends: T-003 review pass
+
 
 ## Done
 - [x] T-010 (@codex, reviewed @claude) [P0] Android Keystore-backed passphrase provider (2026-07-05)
