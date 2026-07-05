@@ -30,7 +30,9 @@ behavior, database changes, CI changes, and user-facing assets.
 - Device-only checks live under `integration_test/` and must include manual
   execution notes when CI cannot run them.
 - SMS parser fixtures must be sanitized and stored under
-  `test/fixtures/sms/<bank>/`.
+  `test/fixtures/sms/<bank>/`. Use `SmsFixtureRunner` from
+  `test/fixtures/sms_fixture_runner.dart` to scan fixture pairs and compare
+  parser output with expected JSON.
 
 ## Where To Put Documentation
 
