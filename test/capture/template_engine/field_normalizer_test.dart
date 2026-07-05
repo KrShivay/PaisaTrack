@@ -17,7 +17,21 @@ void main() {
         format: 'dd-MM-yy',
         fallback: DateTime.utc(2026),
       ),
-      DateTime(2026, 7, 5),
+      DateTime.utc(2026, 7, 5),
+    );
+  });
+
+  test('parsed date epoch milliseconds are timezone-stable', () {
+    final parsed = normalizer.parseDate(
+      value: '05/07/26',
+      format: 'dd/MM/yy',
+      fallback: DateTime.utc(2026),
+    );
+
+    expect(parsed.isUtc, isTrue);
+    expect(
+      parsed.millisecondsSinceEpoch,
+      DateTime.utc(2026, 7, 5).millisecondsSinceEpoch,
     );
   });
 }

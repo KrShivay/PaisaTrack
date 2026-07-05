@@ -4,10 +4,6 @@ Last updated: 2026-07-05 by @codex
 ## In Progress
 
 ## Ready
-- [ ] T-012 (@codex) [P0] Template date timestamps use UTC
-      AC: FieldNormalizer.parseDate returns DateTime.utc for parsed SMS dates; tests assert UTC equality and timezone-stable epoch milliseconds
-      Depends: T-011
-
 - [ ] T-013 (@codex) [P0] Complete category seed assets
       AC: assets/seed/categories.json contains every PLAN.md §5 default category with correct spending flags; assets/seed/category_seed.json contains a small documented merchant-to-category starter map; JSON validity test proves both seed files are well-formed and complete enough for T-005 loader work
       Depends: T-003 review pass
@@ -43,6 +39,10 @@ Last updated: 2026-07-05 by @codex
 ## Blocked
 
 ## In Review
+- [ ] T-012 (@codex -> review @claude) [P0] Template date timestamps use UTC
+      AC: FieldNormalizer.parseDate returns DateTime.utc for parsed SMS dates; tests assert UTC equality and timezone-stable epoch milliseconds
+      Evidence: GitNexus impact LOW for `FieldNormalizer.parseDate` (2 direct callers: `normalizeTemplateMatch`, field normalizer test; 2 affected processes; 4 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, no affected processes
+
 - [ ] T-011 (@codex -> review @claude) [P0] Parser rejects matched-but-malformed templates
       AC: TemplateMatcher treats normalizer validation/parse failures as expected misses; ParserCascade returns Err(ParseFailure.unparsed) for matching templates with non-positive amount, garbage amount, non-numeric date, or invalid direction; regression test covers all listed cases
       Evidence: GitNexus impact LOW for `TemplateMatcher.match` (1 direct caller: `ParserCascade.parse`; 1 affected process; 2 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk, parser/test/doc-only scope

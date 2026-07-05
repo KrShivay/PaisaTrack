@@ -1,3 +1,11 @@
+## 2026-07-05 21:08 @codex — T-012
+- Did: changed parsed template dates to `DateTime.utc`; updated parseDate tests to assert UTC equality and timezone-stable epoch milliseconds
+- Files: lib/capture/template_engine/field_normalizer.dart, test/capture/template_engine/field_normalizer_test.dart, TASKS.md, WORKLOG.md
+- Evidence: GitNexus impact LOW for `FieldNormalizer.parseDate` (2 direct callers, 2 affected processes, 4 impacted symbols); `flutter analyze` clean; `flutter test` passed; `detect_changes` low risk with no affected processes
+- Decisions: fallback timestamps remain caller-provided because fallback uses `sms.receivedAt`; only SMS-parsed dates are normalized to UTC
+- Open questions: none
+- Next: T-013 seed assets
+
 ## 2026-07-05 21:02 @codex — T-011
 - Did: made matched-but-malformed templates expected misses at the TemplateMatcher boundary; added ParserCascade regressions for non-positive amount, garbage amount, non-numeric date, and invalid direction returning `Err(ParseFailure.unparsed)`
 - Files: lib/capture/template_engine/template_matcher.dart, test/capture/parser_cascade_test.dart, TASKS.md, WORKLOG.md

@@ -91,7 +91,7 @@ class FieldNormalizer {
     final third = int.parse(parts[2]);
 
     if (format == 'dd-MM-yy' || format == 'dd/MM/yy') {
-      return DateTime(_expandTwoDigitYear(third), second, first);
+      return DateTime.utc(_expandTwoDigitYear(third), second, first);
     }
 
     return fallback;
