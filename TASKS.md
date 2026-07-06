@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-06 by @codex (T-027)
+Last updated: 2026-07-06 by @codex (T-016)
 
 ## In Progress
 
@@ -11,6 +11,9 @@ Last updated: 2026-07-06 by @codex (T-027)
 ## In Review
 
 ## Done
+- [x] T-016 (@codex, self-executed — no independent reviewer yet) [P0] Kotlin unit tests for Android SMS and Keystore storage (2026-07-06)
+      AC met: native JVM/JUnit coverage now includes both halves of the follow-up. `SmsFilterTest` already covered the pure Kotlin sender allowlist/rejection behavior (7 tests: bank/UPI allowed, OTP/promo/personal/unknown/empty rejected). Added `DatabasePassphraseStoreTest` (3 tests) for passphrase-store persistence/error orchestration without a physical device: encrypted passphrases are reused instead of regenerated, `clearForTests` clears storage plus cipher state before generating a fresh passphrase, and corrupted persisted ciphertext fails closed without overwriting storage. To make this host-testable, `DatabasePassphraseStore` moved out of `MainActivity.kt` into `DatabasePassphraseStore.kt` with injectable `PassphraseStorage`/`PassphraseCipher`; production still uses SharedPreferences plus AndroidKeyStore/AES-GCM and `MainActivity.configureFlutterEngine` still constructs the same store. Verified: GitNexus pre-edit impact on `DatabasePassphraseStore`, `DatabasePassphraseStore.getOrCreate`, and `MainActivity.configureFlutterEngine` was LOW; `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL (10 tests, 0 failures/errors/skips across `DatabasePassphraseStoreTest` and `SmsFilterTest`). Caveat: the host unit tests use fakes for storage/cipher orchestration; the real AndroidKeyStore provider remains covered by the existing T-010 device/integration evidence.
+
 - [x] T-027 (@codex, review completed) [P1] Phase 1 exit review (2026-07-06)
       Result: REVIEW COMPLETE, EXIT NOT YET PASS. Verified T-020..T-026 and T-028 evidence against PLAN.md Phase 1 exit criteria. Local evidence is strong for the code/testable parts: `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` green (57 passed, 2 skipped: scratch dashboard debug test plus known host SQLCipher migration skip); fixture coverage proves 100% positive parse rate across the committed real sanitized bank SMS fixtures; live/backfill parser cascade uses the real registries; duplicate suppression has unit and ingest-path coverage; transactions/dashboard/dev-unparsed surfaces are covered. GitNexus `detect_changes(scope: all)` reported LOW risk, 3 changed files, 0 changed indexed symbols, 0 affected processes.
       Blocker before Phase 2 grooming: PLAN.md Phase 1 exit requires a fresh install on phone parsing >=90% of the last 3 months bank SMS verified by hand against bank statement. The repo contains hand-computed expected JSON for real SMS fixtures and automated 100% fixture coverage, but I did not find explicit bank-statement reconciliation evidence. Run and log that manual/device reconciliation before declaring Phase 1 exit PASS.
@@ -92,10 +95,6 @@ Last updated: 2026-07-06 by @codex (T-027)
       Review: PASS — T-005 through T-009 are small, ordered, correctly dependency-linked to T-001/T-003, with testable AC covering DB seed, Riverpod skeleton, fixture harness, CI guardrails, and exit review. Process note: grooming was performed by @codex under an explicit @human override of the normal @claude-grooms-Ready rule (recorded in WORKLOG 19:10 entry) — no objection. Gap found and filed as T-010 (see above).
 
 ## Proposed
-- [ ] T-016 (@codex) [P0] Kotlin unit tests for Android SMS and Keystore storage
-      AC: native Kotlin/JUnit tests cover SmsFilter behavior and DatabasePassphraseStore persistence/error paths without relying on a physical device
-      Depends: T-010 review pass
-
 - [ ] T-017 (@codex) [P0] Fixture harness runner follow-up — SUPERSEDED by T-024
       AC: formal fixture runner from T-007 is implemented after review-approved parser scope; no real SMS fixtures are committed
       Note: real-fixture work folded into Phase 1 T-024; keep only if a non-fixture runner enhancement emerges.

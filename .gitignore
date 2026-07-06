@@ -5,6 +5,7 @@
 .packages
 .idea/
 build/
+BankStatement/
 
 android/.gradle/
 android/local.properties
