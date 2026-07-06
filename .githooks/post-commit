@@ -1,4 +1,9 @@
 #!/bin/sh
+# Post-commit Codex review. Headless review must use the non-interactive
+# runner (`codex exec review`), not the interactive `codex review` TUI
+# subcommand; the commit preset takes --commit/--title only and does NOT
+# accept a positional custom prompt (that combination is a CLI arg error).
+# Skip with CODEX_SKIP_COMMIT_REVIEW=1.
 
 set -u
 
@@ -18,13 +23,13 @@ commit_title="$(git log -1 --pretty=%s "$commit_sha" 2>/dev/null || true)"
 echo
 echo "Running Codex review for commit $commit_sha..."
 
-codex review --commit "$commit_sha" --title "$commit_title" \
-  "Review this commit for correctness bugs, regressions, security issues, and missing tests. Focus on actionable findings with file and line references."
+codex exec --sandbox read-only review --commit "$commit_sha" --title "$commit_title"
 status=$?
 
 if [ "$status" -ne 0 ]; then
   echo "Codex commit review failed with exit code $status."
-  echo "The commit was already created. Re-run manually with: codex review --commit $commit_sha"
+  echo "The commit was already created. Re-run manually with:"
+  echo "  codex exec --sandbox read-only review --commit $commit_sha"
 fi
 
 exit 0

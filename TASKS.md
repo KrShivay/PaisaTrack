@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-06 by @codex (T-030 verified)
+Last updated: 2026-07-07 by @claude (T-033 done)
 
 ## In Progress
 
@@ -7,17 +7,18 @@ Last updated: 2026-07-06 by @codex (T-030 verified)
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; depends on prior. -->
 
 <!-- Phase 2 — groomed early because they complete the design system. -->
-- [ ] T-031 (@codex) [P2] Shared `formatInr()` currency formatter (Indian digit grouping)
-      AC: one helper (suggest `lib/core/format.dart`) renders `₹1,00,000.00`-style grouping; dashboard + transaction list adopt it; widget tests updated in the same change (they currently assert `₹1000.00`-style strings); tabular figures preserved per docs/design-system.md §3.
-      Depends: T-030
-- [ ] T-032 (@codex) [P5] Compress brand illustration PNGs
-      AC: `assets/icons/*.png` (currently 1254×1254, ~1.4 MB each, ~14 MB total) resized to <=512px and recompressed (or converted WebP) to <=150 KB each with no visible quality loss at 120dp; APK size delta reported. See docs/design-system.md §6 "Asset debt".
 
 ## Blocked
 
 ## In Review
 
 ## Done
+- [x] T-033 (@claude) [P1] Fix post-commit Codex review hook CLI arguments (2026-07-07)
+      AC met: `.githooks/post-commit` invoked the interactive `codex review` TUI subcommand with a positional custom prompt alongside `--commit`, which the CLI rejects (the "argument issue" reported on every commit). Now uses the headless runner form the Codex maintainers document for automation: `codex exec --sandbox read-only review --commit "$sha" --title "$title"` — the commit preset takes `--commit`/`--title` only, no positional prompt; read-only sandbox since review never writes. Skip guard (`CODEX_SKIP_COMMIT_REVIEW=1`), absent-codex guard, and never-block-the-commit exit behavior unchanged. Verified: `sh -n` clean. Live run not possible in this environment (no codex CLI on PATH) — confirm output on the next local commit.
+- [x] T-032 (@codex) [P5] Compress brand illustration PNGs (2026-07-07)
+AC met: `assets/icons/*.png` resized from 1254x1254 to 384x384 PNGs, staying above the 120dp documented max display size while meeting the <=512px requirement. Exact asset sizes are now 126,271-152,466 bytes each (<=150 KiB each), 1,365,425 bytes total, down from 13,632,217 bytes total. Packaged icon entries dropped by 12,266,792 bytes; clean rebuilt `app-debug.apk` is 167,595,102 bytes, and `unzip -lv build/app/outputs/flutter-apk/app-debug.apk 'assets/flutter_assets/assets/icons/*'` confirms the packaged icon entries now total 1,365,425 stored bytes.
+- [x] T-031 (@codex) [P2] Shared `formatInr()` currency formatter (Indian digit grouping) (2026-07-07)
+AC met: added shared `formatInr()` in `lib/core/format.dart` with Indian digit grouping and two decimals (`₹1,00,000.00`, lakh/crore coverage, negative sign coverage). Dashboard totals and transaction list amounts now use it while preserving existing tabular-figure text styles and transaction-list direction signs. Widget tests updated for grouped strings; formatter unit tests added. Evidence: GitNexus pre-edit impact LOW for `_TotalCard` (3 direct dependents, 0 processes), LOW for `_TransactionTile` (2 direct dependents, 0 processes), LOW for `monthDirectionTotalsProvider` (0 dependents); `flutter analyze --no-pub` clean; targeted `flutter test --no-pub test/core/format_test.dart test/features/dashboard/dashboard_screen_test.dart test/features/transactions/transactions_screen_test.dart --concurrency=1` passed 7/7 outside sandbox after Flutter test socket binding was blocked in sandbox; GitNexus `detect_changes(scope: all)` LOW, 0 affected processes.
 - [x] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain (2026-07-06)
       AC met: T-029's design-system retrofit now passes the local toolchain. Found and fixed one real regression: the retrofitted onboarding screen overflowed at the default 800x600 widget-test viewport, leaving the grant button partly off-screen. `OnboardingScreen` now uses a scroll-safe body and compact presentation for short heights while preserving all test-visible strings and permission behavior. Evidence: GitNexus pre-edit impact LOW for `OnboardingScreen` (3 direct upstream dependents, 1 affected process: onboarding test flow) and `_PermissionBody` (2 direct upstream dependents, 0 affected processes); `flutter analyze` clean; targeted `flutter test test/features/onboarding/onboarding_screen_test.dart --concurrency=1` green; full `flutter test --concurrency=1` green (57 passed, 2 skipped: scratch dashboard debug test and host SQLCipher migration skip); Android `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL; GitNexus `detect_changes(scope: all)` reported MEDIUM risk limited to `lib/features/onboarding/onboarding_screen.dart` and the `Main → OnboardingScreen` process.
 - [x] T-029 (@claude, self-executed at human's direction — design authority per COLLABORATION roles; implementation verification delegated to T-030) [P1] Design system (dark-first) + theme implementation + screen retrofit (2026-07-06)
