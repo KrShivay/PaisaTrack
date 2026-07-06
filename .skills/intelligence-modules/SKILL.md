@@ -22,11 +22,10 @@ checklist:
   - Every intelligence PR reports before/after metrics (auto-label rate,
     correction rate, per-category precision proxy) on the frozen eval
     fixture set in the PR description or WORKLOG entry.
-  - No cloud calls anywhere in lib/intelligence/ except through
-    cloud_extractor.dart-style flagged paths gated by
-    AppConstants.enableCloudFallback, and only in lib/capture/, never here.
-  - No raw SMS text reaches any model prompt, local or cloud — only
-    normalized/anonymized fields (merchant_canonical, amount_band, channel).
+  - No cloud calls anywhere in the codebase — no cloud inference path exists
+    (ADR 0002). All model inference is on-device.
+  - No raw SMS text reaches any enricher/classifier input — only
+    normalized fields (merchant_canonical, amount_band, channel).
   - Rules (user-taught) always win over the classifier — verified by a
     table-driven test, not just code inspection.
 ---
@@ -145,15 +144,17 @@ is not reviewable; `code-review` should send it back with CHANGES.
 
 ## 6. Do-not list
 
-- No cloud calls from anywhere in `lib/intelligence/`. Cloud access is
-  exclusively `lib/capture/cloud_extractor.dart` (parsing fallback) and a
-  narrative-insight path (P4, flagged) — both gated behind
-  `AppConstants.enableCloudFallback` / `enableNarrativeInsights`, both
-  operating on anonymized/aggregate data only, never raw SMS.
-- No raw SMS text into any model prompt, on-device or cloud. Enrichers and
+- No cloud calls from anywhere in the codebase — no cloud inference path
+  exists (ADR 0002). LLM use is on-device only: `lib/capture/llm_extractor.dart`
+  (parsing fallback) and a narrative-insight path (P4, flagged), gated behind
+  `AppConstants.enableLocalLlm` / `enableNarrativeInsights`. The narrative
+  path operates on aggregate data only, never raw SMS.
+- No raw SMS text into any enricher or classifier input. Enrichers and
   the classifier operate on `NormalizedTransactionRecord` fields
   (`merchant_raw`/`merchant_canonical`, amount band, channel) — never
-  `RawSms.body`.
+  `RawSms.body`. (The on-device `llm_extractor` in `lib/capture/` is the
+  sole component that may see raw SMS, since inference never leaves the
+  device.)
 - No enricher silently overrides a user rule. Rules win, full stop —
   table-driven test required (see `testing-discipline`).
 

@@ -10,7 +10,7 @@
 **One-liner:** A personal finance app that turns transactional SMS into an intelligent, self-improving money dashboard — where all parsing and ML happens on-device, and no raw financial data ever leaves the phone.
 
 **Core principles (non-negotiable, enforce in every PR):**
-1. **Local-first:** Raw SMS text and transaction records never leave the device. Cloud LLM calls (optional, Phase 4+) receive only anonymized snippets or aggregate JSON.
+1. **Local-first, zero-cloud:** Raw SMS text and transaction records never leave the device. There is no cloud inference path at all — all parsing and ML runs on-device with free, open-weight models (ADR 0002). No paid or subscription services anywhere in the stack.
 2. **Confidence-driven autonomy:** Every ML decision carries a confidence score. High confidence → act silently. Medium → ask the user smartly. Low → defer to batch review. Never confidently wrong.
 3. **Every user answer is used forever:** One correction creates a rule + a training example + an alias entry. The app must never ask the same question twice.
 4. **Low interruption budget:** Max 2 "ask now" notifications per day. Everything else batches into a weekly review.
@@ -32,10 +32,9 @@
 | Native layer | **Kotlin** (Android module) | SMS BroadcastReceiver/ContentObserver MUST be native; exposed via platform channel |
 | Local DB | **SQLite via `drift`** (Dart) + **SQLCipher** | Type-safe queries, migrations, encryption at rest |
 | State management | **Riverpod** | Testable, compile-safe DI + state |
-| On-device ML (Phase 4) | **MediaPipe LLM Inference API** (Gemma-2B class) or `llama.cpp` via FFI | Structured extraction fallback for unknown SMS formats |
-| Embeddings (Phase 3) | Small sentence-embedding model via **TFLite / MediaPipe Text Embedder** | Merchant entity resolution |
+| On-device ML (Phase 4) | **MediaPipe LLM Inference API** (Gemma 2B-class, open weights) or `llama.cpp` via FFI (e.g. Qwen2.5-1.5B, Phi-3-mini, Llama 3.2 1B) | Structured extraction fallback for unknown SMS formats; free, no API key, optional in-app model download (not bundled in APK) |
+| Embeddings (Phase 3) | Small open sentence-embedding model via **TFLite / MediaPipe Text Embedder** | Merchant entity resolution |
 | Classic ML (Phase 3) | Pure Dart implementations (logistic regression, statistics) — no heavy deps | Tiny models, trivial math, full control |
-| Cloud LLM fallback (Phase 4, optional) | Anthropic API (claude-haiku class) behind a feature flag | Last-resort parsing + monthly narrative generation; anonymized input only |
 | Charts | `fl_chart` | Dashboard visualizations |
 | Notifications | `flutter_local_notifications` + Android notification actions | Tappable 3-guess ask flow |
 | Background work | **WorkManager** (native, bridged) | Nightly retraining, recurring-series scan, SMS backfill |
@@ -91,14 +90,12 @@ paisatrack/
 │   │   └── models/                  # freezed data classes (TransactionRecord, Merchant, ...)
 │   ├── capture/
 │   │   ├── sms_channel.dart         # receives SMS events from Kotlin
-│   │   ├── parser_cascade.dart      # orchestrates template → local LLM → cloud (flagged)
+│   │   ├── parser_cascade.dart      # orchestrates template → local LLM (flagged)
 │   │   ├── template_engine/
 │   │   │   ├── template_registry.dart     # loads templates from assets/templates/*.json
 │   │   │   ├── template_matcher.dart      # sender-ID + regex matching
 │   │   │   └── field_normalizer.dart      # amounts, dates, account hints → canonical forms
-│   │   ├── llm_extractor.dart       # on-device LLM structured extraction (Phase 4)
-│   │   ├── cloud_extractor.dart     # anonymize → cloud → parse JSON (Phase 4, flagged)
-│   │   └── anonymizer.dart          # masks amounts/accounts/names before any cloud call
+│   │   └── llm_extractor.dart       # on-device LLM structured extraction (Phase 4)
 │   ├── intelligence/
 │   │   ├── pipeline.dart            # runs enrichers in order, assembles confidence trail
 │   │   ├── enrichers/
@@ -148,7 +145,7 @@ paisatrack/
 - Every module in `lib/` gets a matching test file before it is considered done.
 - All enrichers implement `abstract class Enricher { Future<EnrichmentResult> enrich(TransactionRecord txn); }` where `EnrichmentResult` = `{field, value, confidence, source}`.
 - No enricher writes to the DB directly; only `pipeline.dart` commits, atomically, with the full confidence trail.
-- Feature flags in `constants.dart`: `enableLocalLlm`, `enableCloudFallback`, `enableNarrativeInsights` — all default **false** until their phase.
+- Feature flags in `constants.dart`: `enableLocalLlm`, `enableNarrativeInsights` — all default **false** until their phase.
 - Never log raw SMS bodies at info level. Debug-only, stripped in release builds.
 
 ---
@@ -162,8 +159,7 @@ paisatrack/
 - [P1] Sender-ID allowlist + junk filter (OTPs, promos, delivery notifications rejected)
 - [P1] Template-based parser for top Indian banks/wallets: HDFC, SBI, ICICI, Axis, Kotak, Paytm, PhonePe, GPay-linked bank alerts, Amazon Pay
 - [P2] Manual transaction entry (cash expenses) + quick-add widget
-- [P4] On-device LLM extraction fallback for unmatched formats
-- [P4] Anonymized cloud extraction fallback (feature-flagged, off by default)
+- [P4] On-device LLM extraction fallback for unmatched formats (open-weight model, optional download)
 - [P2] Duplicate suppression (same ref_id / same amount+time from two SMS, e.g., bank + wallet both notify)
 
 ### Storage & Data
@@ -184,7 +180,7 @@ paisatrack/
 - [P2] Decision policy v1: static thresholds (silent ≥0.9; ask 0.6–0.9 if amount ≥ ₹500 or merchant frequency ≥3; else batch)
 - [P3] Decision policy v2: adaptive per-category thresholds (rise on repeated corrections)
 - [P3] Burn-rate forecaster: cumulative day-of-month curve vs trailing-3-month curves
-- [P4] Insight narratives via LLM over aggregate JSON only (flagged)
+- [P4] Insight narratives via on-device LLM over aggregate JSON only (flagged)
 - [P3] Deterministic insights (no LLM): duplicate subscriptions, fee/penalty totals, price creep, category deltas, missed autopay
 
 ### Experience
@@ -236,7 +232,7 @@ category_id TEXT FK -> categories
 description TEXT                  -- user or auto description
 balance_after REAL NULL
 ref_id TEXT NULL                  -- UPI ref / txn id, used for dedup
-parse_source TEXT                 -- 'template' | 'local_llm' | 'cloud' | 'manual'
+parse_source TEXT                 -- 'template' | 'local_llm' | 'manual'
 sms_id TEXT NULL FK -> raw_sms    -- null after purge
 confidence_json TEXT              -- {"merchant":{"v":...,"c":0.94,"src":"alias"},"category":{...}}
 status TEXT                       -- 'auto' | 'confirmed' | 'needs_review' | 'asked'
@@ -322,9 +318,8 @@ Templates are data, not code — adding a bank never requires an app update logi
 input: RawSms
 1. SmsFilter (native pre-filter already dropped obvious junk; Dart re-checks)
 2. TemplateMatcher: find sender registry → try templates in order → on match, normalize fields → confidence 0.95+ (deterministic)
-3. [flag] LlmExtractor: prompt on-device model with SMS + JSON schema → validate output (amount parses, direction ∈ enum, ts sane) → model confidence × validation score
-4. [flag] CloudExtractor: anonymizer masks digits-runs>4, names after "to/from", VPAs → cloud → same validation
-5. No path succeeded → store raw_sms with processed=0, surface in "unparsed" dev list
+3. [flag] LlmExtractor: prompt on-device model with SMS + JSON schema (grammar-constrained decoding where the runtime supports it) → validate output (amount parses, direction ∈ enum, ts sane) → model confidence × validation score
+4. No path succeeded → store raw_sms with processed=0, surface in "unparsed" dev list
 output: NormalizedRecord | Unparsed
 ```
 Validation is code, not vibes: reject extraction where amount ≤ 0, ts in future, direction missing.
@@ -341,7 +336,7 @@ Pipeline commits transaction + confidence trail in one DB transaction, then hand
 1. **Rules** (user-taught) → confidence 1.0, done
 2. **Local classifier** (once trained, `model_meta` has weights): features = merchant embedding (or merchant-id one-hot for top-N) + log-amount-band + hour-bucket + dow + channel; output = softmax over categories; use if top-prob ≥ per-category threshold
 3. **Seed map** by merchant → 0.8
-4. **[flag] LLM zero-shot** on `{merchant_canonical, amount_band, channel}` (no raw SMS) → capped 0.75
+4. **[flag] On-device LLM zero-shot** on `{merchant_canonical, amount_band, channel}` (no raw SMS) → capped 0.75
 5. Nothing → `Other`, confidence 0.3, guaranteed to enter ask/batch flow
 
 ### 7.5 Decision policy
@@ -373,7 +368,7 @@ Constraints: device idle + charging; hard cap 3 minutes, resumable.
 ## 8. Privacy & Security Checklist
 - SQLCipher key generated on first run, stored in Android Keystore (StrongBox where available)
 - No analytics SDKs. Crash reporting local-only log ring buffer, user-exportable
-- Cloud calls (when flagged on): anonymizer unit-tested to strip account numbers, full names after to/from, VPAs, and to bucket amounts; payloads logged in debug for audit
+- No cloud inference path exists (ADR 0002). The app makes no network calls with user data; the only permitted network use is the optional one-time download of open-weight model files from a pinned source
 - `Delete everything` in settings wipes DB + key and proves it (recreates empty DB)
 - Export encrypted with user passphrase (Argon2id + AES-GCM)
 - Play Store: SMS permission requires a declaration — the core functionality IS SMS-based finance tracking, which is an accepted use case; write the declaration in Phase 5. Distribute as APK/sideload during development.
@@ -398,9 +393,9 @@ Manual entry; detail edit (writes feedback rows even before ML uses them); categ
 Embedder + merchant resolver v2; local classifier + nightly trainer; adaptive thresholds; recurring detector + recurring screen; anomaly baselines; forecaster; deterministic insights + insights screen; model metrics dev screen; WorkManager nightly jobs.
 **Exit criteria:** After 2 weeks of feedback, classifier auto-labels ≥80% of new transactions with ≤10% correction rate (metrics screen proves it); at least your real subscriptions/EMIs all appear in recurring with correct next dates; one genuine anomaly and one forecast insight have fired correctly.
 
-### Phase 4 — LLM Layer (Weeks 10–12, feature-flagged)
-On-device LLM extractor for unmatched SMS (measure: unparsed rate should drop toward ~0); anonymizer + optional cloud fallback; monthly narrative insight from aggregate JSON.
-**Exit criteria:** Unparsed rate < 2% on a fresh bank you never wrote templates for; anonymizer test suite passes adversarial cases; narrative renders from aggregates with zero raw text in the prompt (asserted in tests).
+### Phase 4 — LLM Layer (Weeks 10–12, feature-flagged, on-device only)
+On-device LLM extractor for unmatched SMS (measure: unparsed rate should drop toward ~0); optional in-app model download flow (model files are not bundled in the APK); monthly narrative insight from aggregate JSON via the same local model.
+**Exit criteria:** Unparsed rate < 2% on a fresh bank you never wrote templates for; extraction works fully offline once the model is downloaded (asserted with airplane-mode QA); narrative renders from aggregates with zero raw text in the prompt (asserted in tests).
 
 ### Phase 5 — Polish & Release (Weeks 13–14)
 App lock, home widget, empty states, performance pass (backfill of 10k SMS < 60s), accessibility (TalkBack labels, contrast), Play declaration or sideload distribution page, README with screenshots + architecture writeup (this is the portfolio artifact).
@@ -410,7 +405,7 @@ App lock, home widget, empty states, performance pass (backfill of 10k SMS < 60s
 
 ## 10. Testing Strategy
 - **Fixture-driven parser tests** are the backbone: every real-world SMS variant becomes a fixture the moment it's seen. Regression = re-run all fixtures. Target: 100+ fixtures by Phase 1 end.
-- **Unit:** normalizer edge cases (₹ vs Rs vs INR, lakh-comma formats `1,00,000`, dd-MM vs dd/MM dates, credited-vs-debited wording traps, "declined"/"failed" SMS must NOT create transactions), dedup logic, decision policy table-driven tests, recurring detector on synthetic series (monthly, weekly, price-creep, missed), Welford math, anonymizer adversarial cases.
+- **Unit:** normalizer edge cases (₹ vs Rs vs INR, lakh-comma formats `1,00,000`, dd-MM vs dd/MM dates, credited-vs-debited wording traps, "declined"/"failed" SMS must NOT create transactions), dedup logic, decision policy table-driven tests, recurring detector on synthetic series (monthly, weekly, price-creep, missed), Welford math.
 - **Property tests:** classifier trainer never crashes on degenerate feedback (1 class, duplicate rows); alias normalization idempotent.
 - **Integration:** SMS event → dashboard row; correction → rule → auto-label; nightly job full run on seeded DB.
 - **Kotlin:** filter allowlist/rejection JUnit tests; receiver → channel contract test.
@@ -437,4 +432,5 @@ App lock, home widget, empty states, performance pass (backfill of 10k SMS < 60s
 - Keep the normalized record schema (§6.2) frozen; propose an ADR in `docs/decisions/` for any change.
 - Prefer boring, dependency-light solutions; every new package needs one-line justification in the PR description.
 - All thresholds/budgets live in `constants.dart`, never inline.
-- Raw SMS text must never appear in: logs (release), cloud payloads, exports without encryption, or LLM prompts (only anonymized text in the flagged extractor path).
+- Raw SMS text must never appear in: logs (release), any network payload (no cloud path exists — ADR 0002), or exports without encryption. On-device LLM prompts may see raw SMS text since inference never leaves the device.
+- No paid or subscription-based service may be introduced anywhere in the stack (ADR 0002). Every dependency, model, and tool must be free and preferably open source.
