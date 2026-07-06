@@ -44,10 +44,10 @@ Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
 ## Blocked
 
 ## In Review
-- [ ] T-035 (@claude → approval @human) [P2] ADR 0003: dedup rework + counterparty schema spec
-      Evidence: docs/decisions/0003-dedup-and-counterparty.md drafted — `duplicate_of_txn_id` link replaces the `is_deleted` overload (user delete vs system suppression separated, reversible, dev-visible), `counterparty_vpa` column added per the frozen §6.2 contract, v1→v2 migration with conservative echo backfill (re-match → link, else stay hidden), no `counterparty_vpa` backfill (provenance unknowable). T-036 implements after @human approves.
 
 ## Done
+- [x] T-035 (@claude, approved @human) [P2] ADR 0003: dedup rework + counterparty schema spec (2026-07-07)
+      AC met: docs/decisions/0003-dedup-and-counterparty.md accepted — `duplicate_of_txn_id` link replaces the `is_deleted` overload (user delete vs system suppression separated, reversible, dev-visible), `counterparty_vpa` column per the frozen §6.2 contract, v1→v2 migration with conservative echo backfill, no `counterparty_vpa` backfill (write-time provenance unknowable). Unblocks T-036.
 - [x] T-034 (@human + @claude tooling) [P1] Phase 1 exit: bank-statement reconciliation (2026-07-07)
       AC met — **Phase 1 exit criterion PASSES: 94.4% coverage (388/411 statement rows) in the backfill window 2026-04-06..2026-07-06, criterion >=90%.** Human supplied 3 IndusInd statement XLSX exports (BankStatement/, gitignored) and the on-device parsed-transaction JSON export (400 records via the T-034 debug export button). `scripts/reconcile_statement.py` matched 389/400 device transactions to statement rows (381 by exact UPI/ACH ref, 7 amount+date, 1 unique-amount) with ZERO amount/direction contradictions — no misparses found. The 11 unmatched device transactions have no candidates anywhere in this account's statement (consistent with VPA-template messages belonging to a different linked IndusInd account). All 23 uncovered statement rows are Transfer Credits (NEFT salary, ACH dividends, quarterly interest, MF redemptions, IMPS P2A) — a template-coverage gap for credit shapes, filed as T-047. 4 suppressed duplicates exported and verified as true cross-source echoes. Row-level report: BankStatement/coverage_report.md (uncommitted, contains bank data). See WORKLOG "PHASE P1 EXIT: PASS".
 - [x] T-033 (@claude) [P1] Fix post-commit Codex review hook CLI arguments (2026-07-07)

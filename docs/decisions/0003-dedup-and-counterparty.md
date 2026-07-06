@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (2026-07-07) — awaiting @human approval; implementation is T-036.
+Accepted (2026-07-07, approved by @human) — implementation is T-036.
 
 ## Context
 
