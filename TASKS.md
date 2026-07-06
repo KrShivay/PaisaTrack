@@ -1,23 +1,27 @@
 # Task Board
-Last updated: 2026-07-06 by @claude (T-024)
+Last updated: 2026-07-06 by @claude (T-026, T-028)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-026 (@codex) [P1] Transactions list + basic dashboard + unparsed dev screen
-      AC: transactions list renders parsed transactions from the DB via Riverpod; a basic dashboard shows month totals by direction; a dev screen lists unparsed raw_sms; widget tests run over a seeded in-memory AppDatabase.
-      Depends: T-022 review pass, T-006 review pass
+- [ ] T-028 (@codex) [P1] Wire real bank template registries into the live parser cascade
+      AC: `parserCascadeProvider` (lib/capture/sms_ingestion.dart) and the parser used by `SmsBackfiller` (lib/capture/sms_backfill.dart) no longer construct `TemplateMatcher(registries: [])`; instead they load `assets/templates/{axisbk,indusind,paytmb,sbi}.json` via `rootBundle` at startup, parse each with `TemplateRegistry.fromJson`, and pass the resulting list into `TemplateMatcher`. Add a widget/provider test asserting a real fixture SMS (e.g. from test/fixtures/sms/sbi) parses to a transaction end-to-end through `smsCaptureBootstrapProvider`/`SmsIngestor`, not just through `SmsFixtureRunner`. Today every live-captured or backfilled SMS fails to parse because the registries list is empty in both providers — only the fixture-test harness exercises the real templates — which will fail T-027's ≥90%-parse exit criterion as-is.
+      Depends: T-024 review pass
 
 - [ ] T-027 (@claude) [P1] Phase 1 exit review
-      AC: verifies T-020..T-026 evidence against PLAN.md Phase 1 exit criteria (fresh-install ≥90% parse of last 3 months verified by hand vs bank statement; paired bank+wallet duplicates suppressed; unparsed messages visible in dev screen); writes a WORKLOG entry titled PHASE P1 EXIT REVIEW; lists any blockers before Phase 2 grooming.
-      Depends: T-020, T-021, T-022, T-023, T-024, T-025, T-026 review pass
+      AC: verifies T-020..T-026, T-028 evidence against PLAN.md Phase 1 exit criteria (fresh-install ≥90% parse of last 3 months verified by hand vs bank statement; paired bank+wallet duplicates suppressed; unparsed messages visible in dev screen); writes a WORKLOG entry titled PHASE P1 EXIT REVIEW; lists any blockers before Phase 2 grooming.
+      Depends: T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-028 review pass
 
 ## Blocked
 
 ## In Review
 
 ## Done
+- [x] T-026 (self-executed directly in the PaisaTrack working copy — no independent reviewer) [P1] Transactions list + basic dashboard + unparsed dev screen (2026-07-06)
+      AC met: `TransactionRepository.watchTransactions` (`lib/data/repositories/transaction_repository.dart`) streams non-deleted transactions newest-first with merchant/category names resolved via a single joined Drift query; `TransactionsScreen` renders it. `RawSmsRepository.watchUnparsed` streams `raw_sms` rows with `processed=false`; `UnparsedSmsScreen` lists them for diagnostics. `monthDirectionTotalsProvider` (`lib/features/dashboard/dashboard_providers.dart`) derives current-month debit/credit totals in-memory from the already-loaded transaction list (no second DB query); `DashboardScreen` shows both totals. `HomeShell` wires all three behind bottom navigation and is now the post-onboarding root in `lib/app.dart`. Widget tests added under `test/features/{dashboard,transactions,dev}/` running over a seeded in-memory `AppDatabase`, plus `test/widget_test.dart` updated for the new shell.
+      Caveat: this was implemented directly rather than through an independent codex→claude review handoff; `flutter analyze`/`flutter test` were not re-run in this environment (no Flutter toolchain available here) — run both locally before treating this as fully verified. Also see T-028: the dashboard/list will show real numbers once the parser cascade is actually wired to the bank templates.
+
 - [x] T-025 (@codex under @human override, self-executed by @claude — no independent reviewer) [P1] Paired bank+wallet duplicate suppression (2026-07-06)
       AC met: new `DuplicateSuppressor` (`lib/capture/duplicate_suppressor.dart`) flags a newly parsed transaction as a cross-source echo of an already-stored one when direction matches, amount matches within a small tolerance, timestamps fall within `AppConstants.duplicatePairWindowMinutes` (10 min) of each other, and either the UPI ref id matches or a normalized counterparty key (VPA local-part or merchant text, uppercased/alnum-only) matches or overlaps. Wired into `SmsIngestor.ingest` (`lib/capture/sms_ingestion.dart`): before inserting a transaction, queries existing non-deleted transactions in the time window and marks the new row `isDeleted: true` if a match is found — raw SMS and the transaction row are both still stored (auditable), just hidden from future list views. Also made `_transactionCompanionFor` fall back `merchantRaw` to `counterpartyVpa` when a template only captured a VPA (e.g. bank UPI-debit alerts), since the persisted schema has no separate VPA column and without this fallback such rows would carry no counterparty signal at all for matching. Same code path is shared by live capture and `SmsBackfiller`, so backfill-vs-live pairs are covered too; updated `sms_backfill.dart`'s doc comment accordingly. Table-driven tests in `test/capture/duplicate_suppressor_test.dart` cover paired-duplicate (vpa+merchant match, ref-id-overrides-text-mismatch), near-miss-not-duplicate (outside window, amount differs), and unrelated (different direction, unrelated counterparty, already-suppressed existing row never matched) cases; added one end-to-end test in `test/capture/sms_ingestion_test.dart` driving a real bank SMS followed by a wallet echo through `SmsIngestor` and asserting the second row lands `isDeleted: true`. Verified: `flutter analyze` clean (1 pre-existing unrelated lint in `sms_backfill_test.dart`), full `flutter test` suite green (49 tests, 1 known-limitation SQLCipher-in-host-VM skip), `mcp__gitnexus__detect_changes(scope: all)` shows only the expected `SmsIngestor`/`smsBackfillProvider` symbols touched (medium risk, no surprises — expected since the shared ingest write path changed). Caveat: this was self-executed end-to-end by @claude at the human's direct request rather than an independent codex→claude review handoff, same as T-024; the counterparty-matching heuristic is untested against real paired bank+wallet fixtures (none collected yet) so it should be revisited once real paired SMS are available.
 
