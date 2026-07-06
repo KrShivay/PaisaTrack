@@ -9,3 +9,9 @@ BankStatement/
 
 android/.gradle/
 android/local.properties
+
+# Personal data and local artifacts — never commit
+export.json
+.DS_Store
+__pycache__/
+*.pyc

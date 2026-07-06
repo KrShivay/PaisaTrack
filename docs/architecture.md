@@ -25,5 +25,29 @@ Android forwards filter-approved `CapturedSms` payloads into that channel, and
 Riverpod boots the Dart listener through `smsCaptureBootstrapProvider` only
 after permission is granted and the encrypted database is ready.
 
+## Capture pipeline (Phase 1, shipped)
+
+1. `SmsFilter` (Kotlin) allowlists bank/UPI DLT senders and rejects OTP,
+   promo, and personal messages before anything crosses to Dart.
+2. Historical backfill (`SmsBackfiller`, one-time on first grant, window set
+   by `AppConstants.smsBackfillMonths`) and live capture share the same
+   `SmsIngestor` write path.
+3. `ParserCascade` runs `TemplateMatcher` over the real bank registries in
+   `assets/templates/{axisbk,indusind,paytmb,sbi}.json` (loaded via
+   `parserCascadeProvider`). Parse success writes a transaction; failure
+   leaves the raw SMS `processed=false`, visible on the dev Unparsed screen.
+   No cloud parsing path exists (ADR 0002).
+4. `DuplicateSuppressor` marks cross-source echoes (paired bank+wallet SMS)
+   within a 10-minute window; suppressed rows stay stored for audit.
+5. Raw SMS rows are purged after the retention window; transactions persist.
+
+## Verification tooling
+
+`scripts/reconcile_statement.py` reconciles bank-statement XLSX exports
+against SMS-parsed transactions (fixtures or an on-device JSON export via the
+debug-only dev-screen button). Phase 1 exit was proven with it: 94.4%
+statement coverage, zero contradictions (WORKLOG "PHASE P1 EXIT: PASS").
+Statements and reports live in the gitignored `BankStatement/` folder.
+
 Raw SMS bodies are temporary capture inputs and must not appear in release logs,
 network payloads, or unencrypted exports.
