@@ -8,8 +8,6 @@ Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
      Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
      evidence is strong; Phase 2 build work may proceed in parallel while the
      human runs the reconciliation. -->
-- [ ] T-035 (@claude) [P2] ADR 0003: dedup rework + counterparty schema spec
-      AC: docs/decisions/0003-dedup-and-counterparty.md drafted covering (a) replacing the `is_deleted=true` overload for cross-source duplicates with an explicit `duplicate_of_txn_id` link (user soft-delete and system suppression must be distinguishable and reversible), (b) adding a `counterparty_vpa` column to `transactions` (removes the T-025 merchantRaw fallback hack), (c) migration + backfill strategy for existing rows, (d) exposing suppressed duplicates in a dev/detail view. Approved by @human before T-036 starts.
 - [ ] T-036 (@codex) [P2] Schema v2 migration: counterparty_vpa + duplicate_of + category in list items
       AC: Drift schema v2 per ADR 0003 with migration test (v1→v2 preserves data); `DuplicateSuppressor` writes `duplicate_of_txn_id` instead of `isDeleted`; list queries exclude suppressed rows; `TransactionListItem` gains `categoryId`/`categoryIcon` so `CategoryVisuals` no longer needs the name→id normalizer (switch tiles to `CategoryVisuals.icon`/`color`); docs/schema.md migration log updated.
       Depends: T-035
@@ -46,6 +44,8 @@ Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
 ## Blocked
 
 ## In Review
+- [ ] T-035 (@claude → approval @human) [P2] ADR 0003: dedup rework + counterparty schema spec
+      Evidence: docs/decisions/0003-dedup-and-counterparty.md drafted — `duplicate_of_txn_id` link replaces the `is_deleted` overload (user delete vs system suppression separated, reversible, dev-visible), `counterparty_vpa` column added per the frozen §6.2 contract, v1→v2 migration with conservative echo backfill (re-match → link, else stay hidden), no `counterparty_vpa` backfill (provenance unknowable). T-036 implements after @human approves.
 
 ## Done
 - [x] T-034 (@human + @claude tooling) [P1] Phase 1 exit: bank-statement reconciliation (2026-07-07)
