@@ -155,7 +155,7 @@ paisatrack/
 ### Capture
 - [P1] Runtime permission flow for RECEIVE_SMS / READ_SMS with clear explanation screen
 - [P1] Live SMS listener (native → Dart bridge)
-- [P1] Historical inbox backfill (last 12 months) with progress UI
+- [P1] Historical inbox backfill (default: last 3 months via `AppConstants.smsBackfillMonths`; extend toward 12 in Phase 5 after a performance pass) with progress UI
 - [P1] Sender-ID allowlist + junk filter (OTPs, promos, delivery notifications rejected)
 - [P1] Template-based parser for top Indian banks/wallets: HDFC, SBI, ICICI, Axis, Kotak, Paytm, PhonePe, GPay-linked bank alerts, Amazon Pay
 - [P2] Manual transaction entry (cash expenses) + quick-add widget
@@ -414,7 +414,7 @@ App lock, home widget, empty states, performance pass (backfill of 10k SMS < 60s
 ---
 
 ## 11. Milestone Demo Script (how you know it's "complete")
-1. Fresh install → onboarding → backfill 12 months → dashboard populated in under a minute.
+1. Fresh install → onboarding → backfill history (`AppConstants.smsBackfillMonths`) → dashboard populated in under a minute.
 2. Receive a real UPI payment SMS → transaction appears within seconds, correctly categorized silently.
 3. Pay a new unknown person → ask notification with 3 guesses → tap "Rent" → rule visible in settings → pay them again next month → silent, correct.
 4. Recurring screen shows all your actual subscriptions with next renewal dates; one shows a price-creep flag.

@@ -15,24 +15,26 @@ skip SQLCipher when the VM lacks it; Android migration device-tested on
 motorola_edge_50_pro), and the fixture runner asserts parser output. Android
 `minSdk` is pinned to API 26 (PLAN §2).
 
-**Phase 1 (Capture MVP): in progress.** Delivered and reviewed (PASS):
+**Phase 1 (Capture MVP): complete — exit PASS (2026-07-07).** Delivered:
+SMS permissions + onboarding (T-020), Kotlin receiver + sender filter (T-021),
+live platform-channel ingestion (T-022), one-time 3-month inbox backfill
+(T-023), real template registries for IndusInd/SBI/Paytm Payments Bank/Axis
+with 136 sanitized real fixtures (T-024), paired bank+wallet duplicate
+suppression (T-025), transactions list + dashboard + unparsed dev screen
+(T-026, T-028), and a dark-first design system implemented in
+`lib/core/theme/` (T-029, [docs/design-system.md](docs/design-system.md)).
 
-- SMS runtime permissions + onboarding flow (graceful denial handling) — T-020.
-- Kotlin SMS `BroadcastReceiver` + `SmsFilter` allowlist (rejects OTP/promo/
-personal senders), with JUnit tests — T-021.
-- Live SMS platform channel → Dart ingestion bootstrap, raw SMS persistence,
-and transaction write-on-parse-success flow (idempotent by SMS id) — T-022.
-- Historical SMS inbox backfill on first permission grant: reads the last three
-months on-device, filters and ingests in non-blocking chunks, and runs once via
-a persisted marker so cold starts never re-scan or duplicate — T-023.
+Exit evidence (T-034, WORKLOG "PHASE P1 EXIT: PASS"): on-device parsed
+transactions reconciled against real bank statements via
+`scripts/reconcile_statement.py` — **94.4% statement coverage (388/411 rows)**
+in the backfill window against the >=90% criterion, 381 exact-ref matches,
+zero amount/direction contradictions. Known gap: NEFT/IMPS/ACH-credit SMS
+shapes are not yet templated (T-047).
 
-Verification: repo-local `flutter analyze` is clean; `flutter test` is green
-(36 passed / 1 host SQLCipher skip), including the capture contract and the
-backfill idempotency test (re-running inserts no duplicate rows); Android JUnit
-via `:app:testDebugUnitTest` is green with the live channel bridge and inbox
-reader compiled. Next: real bank template registries + sanitized fixtures
-(T-024). Remaining Phase 1 work is tracked in [TASKS.md](TASKS.md) (T-024
-through T-027).
+**Phase 2 (Usable Tracker): queue groomed.** T-035 (dedup/counterparty schema
+ADR) through T-046 (exit review) are on [TASKS.md](TASKS.md). Intelligence is
+on-device only with free components — no cloud inference path exists
+(ADR 0002, [docs/decisions/0002-no-cloud-services.md](docs/decisions/0002-no-cloud-services.md)).
 
 ## Local Setup
 
