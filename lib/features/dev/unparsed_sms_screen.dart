@@ -39,9 +39,21 @@ class _UnparsedListView extends StatelessWidget {
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final sms = items[index];
+        final theme = Theme.of(context);
         return ListTile(
+          leading: Icon(
+            Icons.sms_failed_outlined,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
           title: Text(sms.sender),
-          subtitle: Text(sms.body, maxLines: 3, overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+            sms.body,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
         );
       },
     );

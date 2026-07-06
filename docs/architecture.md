@@ -11,6 +11,10 @@ PaisaTrack is organized as a local-first pipeline:
 5. Repositories persist records in encrypted SQLite.
 6. Experience screens read only normalized/enriched records.
 
+All UI follows the binding conventions in [design-system.md](design-system.md);
+themes and tokens live in `lib/core/theme/` (dark-first, light as an equal
+derived variant).
+
 Runtime SMS access is gated by `SmsPermissionGate` (platform channel
 `com.paisatrack/sms_permissions`), surfaced through `smsPermissionControllerProvider`
 and the onboarding screen. Denial is non-fatal: the app stays usable and explains

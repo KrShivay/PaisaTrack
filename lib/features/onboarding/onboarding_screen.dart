@@ -3,12 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../capture/permissions/sms_permission.dart';
 import '../../capture/permissions/sms_permission_provider.dart';
+import '../../core/theme/app_tokens.dart';
+import '../../core/theme/paisa_colors.dart';
 
 /// First-run screen that explains why PaisaTrack needs SMS access and requests
 /// the permission.
 ///
 /// Denial is non-fatal: the app stays usable and the screen explains the
 /// degraded state (no automatic capture) rather than blocking the user.
+/// Degraded notices use the warning style, not error — a denied permission is
+/// a valid choice, not a failure (docs/design-system.md §9).
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
 
@@ -19,7 +23,7 @@ class OnboardingScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('PaisaTrack')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
@@ -27,19 +31,33 @@ class OnboardingScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                // Brand illustration: hero use only (design-system.md §6).
+                Image.asset(
+                  AppIllustrations.smsRefresh,
+                  height: 96,
+                  excludeFromSemantics: true,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const SizedBox(height: 96),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
                   'Read bank SMS on this device',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
-                const Text(
+                const SizedBox(height: AppSpacing.md),
+                Text(
                   'PaisaTrack turns your bank and UPI messages into transactions. '
                   'Messages are parsed on your device and never leave it. '
                   'Grant SMS access to capture them automatically.',
                   textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 _PermissionBody(permission: permission),
               ],
             ),
@@ -78,7 +96,7 @@ class _PermissionBody extends ConsumerWidget {
                   'transactions automatically. You can grant it now or later '
                   'from settings.',
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             _GrantButton(onPressed: isBusy ? null : controller.request),
           ],
         ),
@@ -88,7 +106,7 @@ class _PermissionBody extends ConsumerWidget {
             const _DegradedNotice(
               message: 'Could not read the SMS permission state. Try again.',
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             _GrantButton(onPressed: isBusy ? null : controller.request),
           ],
         ),
@@ -116,17 +134,20 @@ class _GrantedNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final paisa = PaisaColors.of(context);
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.check_circle_outline),
-        SizedBox(width: 8),
-        Flexible(child: Text('SMS access granted. Capture is on.')),
+        Icon(Icons.check_circle_outline, color: paisa.credit),
+        const SizedBox(width: AppSpacing.sm),
+        const Flexible(child: Text('SMS access granted. Capture is on.')),
       ],
     );
   }
 }
 
+/// Warning-styled notice container (design-system.md §9): warning tint at low
+/// alpha, info icon, body text — never bare error-colored text.
 class _DegradedNotice extends StatelessWidget {
   const _DegradedNotice({required this.message});
 
@@ -134,10 +155,21 @@ class _DegradedNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      message,
-      textAlign: TextAlign.center,
-      style: TextStyle(color: Theme.of(context).colorScheme.error),
+    final paisa = PaisaColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: paisa.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 20, color: paisa.warning),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Text(message)),
+        ],
+      ),
     );
   }
 }

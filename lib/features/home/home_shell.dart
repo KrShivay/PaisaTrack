@@ -29,17 +29,21 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (index) => setState(() => _index = index),
+        // Outlined icons inactive, filled when selected (design-system.md §6).
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
             label: 'Transactions',
           ),
           NavigationDestination(
             icon: Icon(Icons.bug_report_outlined),
+            selectedIcon: Icon(Icons.bug_report),
             label: 'Dev',
           ),
         ],

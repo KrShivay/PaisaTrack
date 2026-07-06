@@ -5,6 +5,7 @@ import 'capture/permissions/sms_permission.dart';
 import 'capture/permissions/sms_permission_provider.dart';
 import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
+import 'core/theme/app_theme.dart';
 import 'features/home/home_shell.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
@@ -31,10 +32,11 @@ class PaisaTrackApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'PaisaTrack',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F766E)),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      // Dark-first per docs/design-system.md §10; the Phase 2 settings screen
+      // will expose a theme choice and switch this default to system.
+      themeMode: ThemeMode.dark,
       home: isGranted ? const HomeShell() : const OnboardingScreen(),
     );
   }

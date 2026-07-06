@@ -1,16 +1,28 @@
 # Task Board
-Last updated: 2026-07-06 by @codex (T-016)
+Last updated: 2026-07-06 by @claude (T-029, T-030 filed)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; depends on prior. -->
+- [ ] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain
+      AC: `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` green (all screen retrofits kept test-visible strings/amount formats unchanged, so failures indicate real breakage); `gitnexus detect-changes` run and reported; fix any analyze/test fallout from commit 5ab4e93 (authored without a Flutter toolchain — see WORKLOG 23:50). Watch specifically: onboarding `Image.asset` in widget tests (errorBuilder guard added), `withValues`/`CardThemeData`/`surfaceContainer*` availability on the repo SDK, unused-import lints in the new `lib/core/theme/` files.
+      Depends: T-029
+
+<!-- Phase 2 — groomed early because they complete the design system. -->
+- [ ] T-031 (@codex) [P2] Shared `formatInr()` currency formatter (Indian digit grouping)
+      AC: one helper (suggest `lib/core/format.dart`) renders `₹1,00,000.00`-style grouping; dashboard + transaction list adopt it; widget tests updated in the same change (they currently assert `₹1000.00`-style strings); tabular figures preserved per docs/design-system.md §3.
+      Depends: T-030
+- [ ] T-032 (@codex) [P5] Compress brand illustration PNGs
+      AC: `assets/icons/*.png` (currently 1254×1254, ~1.4 MB each, ~14 MB total) resized to <=512px and recompressed (or converted WebP) to <=150 KB each with no visible quality loss at 120dp; APK size delta reported. See docs/design-system.md §6 "Asset debt".
 
 ## Blocked
 
 ## In Review
 
 ## Done
+- [x] T-029 (@claude, self-executed at human's direction — design authority per COLLABORATION roles; implementation verification delegated to T-030) [P1] Design system (dark-first) + theme implementation + screen retrofit (2026-07-06)
+      AC met: `docs/design-system.md` written as the binding UI/UX convention set (principles, color/type/spacing/shape tokens, money & status semantics — debit/credit colors on amounts only, debit ≠ error, warning for degraded states — two-tier iconography with brand PNGs hero-only and Material icons + fixed category hues for functional UI, motion, accessibility, component recipes, UI-PR review checklist). Implemented in `lib/core/theme/`: `app_tokens.dart`, `app_theme.dart` (M3 dark+light from tokens, tonal surfaces, no shadows), `paisa_colors.dart` (ThemeExtension with brightness-aware fallback so bare-MaterialApp widget tests keep passing), `category_visuals.dart` (18 seed categories → icon + stable hue, plus name→id normalizer for list rows carrying only categoryName). Retrofitted `app.dart` (AppTheme light/dark, themeMode dark) and all five screens, styling only — every test-visible string and amount format unchanged. `docs/architecture.md` links the design system as binding. Evidence: commit 5ab4e93; WORKLOG 2026-07-06 23:50. Caveat: `flutter analyze`/`flutter test`/`detect-changes` could not run in the authoring environment (no Flutter toolchain; GitNexus native build unavailable on linux/arm64) — verification is T-030, which blocks treating this as fully reviewed.
 - [x] T-016 (@codex, self-executed — no independent reviewer yet) [P0] Kotlin unit tests for Android SMS and Keystore storage (2026-07-06)
       AC met: native JVM/JUnit coverage now includes both halves of the follow-up. `SmsFilterTest` already covered the pure Kotlin sender allowlist/rejection behavior (7 tests: bank/UPI allowed, OTP/promo/personal/unknown/empty rejected). Added `DatabasePassphraseStoreTest` (3 tests) for passphrase-store persistence/error orchestration without a physical device: encrypted passphrases are reused instead of regenerated, `clearForTests` clears storage plus cipher state before generating a fresh passphrase, and corrupted persisted ciphertext fails closed without overwriting storage. To make this host-testable, `DatabasePassphraseStore` moved out of `MainActivity.kt` into `DatabasePassphraseStore.kt` with injectable `PassphraseStorage`/`PassphraseCipher`; production still uses SharedPreferences plus AndroidKeyStore/AES-GCM and `MainActivity.configureFlutterEngine` still constructs the same store. Verified: GitNexus pre-edit impact on `DatabasePassphraseStore`, `DatabasePassphraseStore.getOrCreate`, and `MainActivity.configureFlutterEngine` was LOW; `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL (10 tests, 0 failures/errors/skips across `DatabasePassphraseStoreTest` and `SmsFilterTest`). Caveat: the host unit tests use fakes for storage/cipher orchestration; the real AndroidKeyStore provider remains covered by the existing T-010 device/integration evidence.
 
