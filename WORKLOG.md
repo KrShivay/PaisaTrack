@@ -1,3 +1,12 @@
+## 2026-07-07 @codex — T-031
+
+- Did: added shared `formatInr()` for INR strings with Indian digit grouping and two decimals, then adopted it in dashboard totals and transaction-list amount text. The existing tabular-figure styling remains on both money text sites; transaction-list credit/debit signs stay outside the formatter.
+- Files: `lib/core/format.dart`, `lib/features/dashboard/dashboard_screen.dart`, `lib/features/transactions/transactions_screen.dart`, `test/core/format_test.dart`, `test/features/dashboard/dashboard_screen_test.dart`, `test/features/transactions/transactions_screen_test.dart`, `TASKS.md`, `WORKLOG.md`.
+- Evidence: GitNexus pre-edit impact LOW for `_TotalCard` (3 direct dependents, 0 processes), LOW for `_TransactionTile` (2 direct dependents, 0 processes), and LOW for `monthDirectionTotalsProvider` (0 dependents). `flutter analyze --no-pub` clean with repo-local `HOME`. Targeted `flutter test --no-pub test/core/format_test.dart test/features/dashboard/dashboard_screen_test.dart test/features/transactions/transactions_screen_test.dart --concurrency=1` passed 7/7 outside sandbox after the sandbox blocked Flutter's local test-runner socket bind. GitNexus `detect_changes(scope: all)` reported LOW risk, 0 affected processes.
+- Decisions: kept `formatInr()` dependency-free and in `lib/core/format.dart`; did not introduce locale/intl setup for this narrow helper. Updated widget assertions to lakh/crore-shaped values so the regression signal covers Indian grouping, not only the currency symbol.
+- Open questions: none.
+- Next: none from T-031. Note: T-032 icon-compression changes are present separately in the worktree.
+
 ## 2026-07-06 @codex — T-030
 
 - Did: verified the T-029 dark-first design-system retrofit in the local toolchain and fixed the one regression it exposed. The onboarding screen overflowed at the default 800x600 widget-test viewport and left the "Grant SMS access" button partly off-screen; `OnboardingScreen` now uses a scroll-safe body with compact illustration/spacing/typography at short heights while preserving test-visible strings and permission behavior.

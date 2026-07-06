@@ -59,14 +59,14 @@ void main() {
       item(
         id: 'txn_newest',
         ts: now,
-        amount: 500,
+        amount: 1234567.89,
         direction: TransactionDirection.credit,
         displayName: 'Salary Inc',
       ),
       item(
         id: 'txn_older',
         ts: now.subtract(const Duration(days: 1)),
-        amount: 200,
+        amount: 200000,
         direction: TransactionDirection.debit,
         displayName: 'Amazon',
         categoryName: 'Shopping',
@@ -80,11 +80,11 @@ void main() {
 
     expect(find.text('Salary Inc'), findsOneWidget);
     expect(find.text('Uncategorized'), findsOneWidget);
-    expect(find.text('+₹500.00'), findsOneWidget);
+    expect(find.text('+₹12,34,567.89'), findsOneWidget);
 
     expect(find.text('Amazon'), findsOneWidget);
     expect(find.text('Shopping'), findsOneWidget);
-    expect(find.text('-₹200.00'), findsOneWidget);
+    expect(find.text('-₹2,00,000.00'), findsOneWidget);
 
     expect(
       tester.getTopLeft(find.widgetWithText(ListTile, 'Salary Inc')).dy,

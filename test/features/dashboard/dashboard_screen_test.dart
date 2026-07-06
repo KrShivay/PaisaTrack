@@ -48,7 +48,7 @@ void main() {
               item(
                 id: 'credit_1',
                 ts: now,
-                amount: 1000,
+                amount: 100000,
                 direction: TransactionDirection.credit,
               ),
               item(
@@ -68,7 +68,8 @@ void main() {
 
     expect(find.text('Spent'), findsOneWidget);
     expect(find.text('₹200.00'), findsOneWidget);
+
     expect(find.text('Received'), findsOneWidget);
-    expect(find.text('₹1000.00'), findsOneWidget);
+    expect(find.text('₹1,00,000.00'), findsOneWidget);
   });
 }

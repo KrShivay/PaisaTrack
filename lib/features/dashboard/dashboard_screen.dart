@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
@@ -87,7 +88,7 @@ class _TotalCard extends StatelessWidget {
               ),
             ),
             Text(
-              '₹${amount.toStringAsFixed(2)}',
+              formatInr(amount),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: color,

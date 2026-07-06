@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/theme/paisa_colors.dart';
@@ -26,7 +27,8 @@ class TransactionsScreen extends ConsumerWidget {
         AsyncData(:final value) when value.isEmpty =>
           const Center(child: Text('No transactions yet')),
         AsyncData(:final value) => _TransactionListView(items: value),
-        AsyncError() => const Center(child: Text('Could not load transactions')),
+        AsyncError() =>
+          const Center(child: Text('Could not load transactions')),
         _ => const Center(child: CircularProgressIndicator()),
       },
     );
@@ -88,7 +90,7 @@ class _TransactionTile extends StatelessWidget {
         ),
       ),
       trailing: Text(
-        '$sign₹${item.amount.toStringAsFixed(2)}',
+        '$sign${formatInr(item.amount)}',
         style: theme.textTheme.titleMedium?.copyWith(
           color: amountColor,
           fontWeight: FontWeight.w600,
