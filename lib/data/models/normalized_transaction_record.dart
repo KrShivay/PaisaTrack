@@ -78,10 +78,12 @@ extension TransactionChannelWireName on TransactionChannel {
 }
 
 /// Parser or workflow that produced the normalized record.
+///
+/// There is intentionally no cloud value: no cloud inference path exists
+/// (ADR 0002 — all parsing runs on-device).
 enum ParseSource {
   template,
   localLlm,
-  cloud,
   manual,
 }
 
@@ -91,7 +93,6 @@ extension ParseSourceWireName on ParseSource {
     return switch (this) {
       ParseSource.template => 'template',
       ParseSource.localLlm => 'local_llm',
-      ParseSource.cloud => 'cloud',
       ParseSource.manual => 'manual',
     };
   }

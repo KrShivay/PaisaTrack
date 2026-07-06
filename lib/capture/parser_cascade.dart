@@ -5,8 +5,9 @@ import 'template_engine/template_matcher.dart';
 
 /// Coordinates SMS parsing strategies from highest precision to fallback.
 ///
-/// Phase 0 only wires template matching. Later phases can add local LLM, cloud,
-/// or manual fallbacks while preserving this single parse contract.
+/// Phase 0 only wires template matching. Later phases can add an on-device
+/// LLM or manual fallbacks while preserving this single parse contract.
+/// No cloud parsing path may be added (ADR 0002).
 class ParserCascade {
   const ParserCascade({
     required TemplateMatcher templateMatcher,
