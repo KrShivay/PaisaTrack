@@ -87,6 +87,7 @@ def reconcile(stmt: list[dict], records: list[dict]) -> dict:
     used: set[int] = set()
     results = []
     for rec in records:
+        rec.setdefault("case", rec.get("id", "?"))
         amount = float(rec["amount"])
         direction = rec["direction"]
         ref = rec.get("ref_id") or ""
