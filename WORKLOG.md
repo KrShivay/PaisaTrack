@@ -26,6 +26,14 @@
 - Caveat: `flutter analyze` / `flutter test` NOT run here (no Flutter toolchain in this environment). Self-review covered imports, Dart 3.4 syntax, and Flutter 3.44 API availability (`withValues`, `CardThemeData`, `surfaceContainer*` verified present in `.tooling/flutter`), but run both locally plus `detect_changes()` before commit. Widget tests assert text finders only, so styling changes should be green, and onboarding's `Image.asset` has an errorBuilder guard.
 - Next: local verification; then Phase 2 UI tasks (settings theme toggle switching themeMode to system, formatInr + test updates, empty-state redesigns per design-system §5).
 
+## 2026-07-07 @claude — T-034 tooling: debug-only transactions JSON export
+
+- Did: added the missing piece for the T-034 device coverage run — a way to get parsed transactions out of the encrypted on-device DB. `lib/features/dev/transaction_export.dart`: `TransactionJsonExporter.serializeAll()` emits every transaction row (including suppressed duplicates, flagged `is_deleted`) in the reconciliation schema consumed by `scripts/reconcile_statement.py --transactions`; `exportTo()` writes pretty-printed JSON; `transactionJsonExportProvider` targets the app-private documents dir via path_provider (already a dependency). Dev screen gained an app-bar download button guarded by `kDebugMode` (compiled out of release) with success/failure snackbars.
+- Privacy: plain JSON lands only in `/data/data/com.paisatrack/app_flutter/` (app-private, never external storage); retrieval requires `adb run-as`, which only works on debuggable builds. This is developer tooling, distinct from the Phase 2 user-facing encrypted export (T-043).
+- Tests: `test/features/dev/transaction_export_test.dart` — serialization schema (incl. `is_deleted` passthrough) and file round-trip on an in-memory DB.
+- Caveat: `flutter analyze`/`flutter test` not run here (no toolchain in this environment); verify locally before relying on it — @codex can fold verification into the next task pickup.
+- Device procedure: debug build → grant SMS → let backfill finish → Dev tab → download icon → `adb shell run-as com.paisatrack cat app_flutter/transactions_export.json > export.json` → `python3 scripts/reconcile_statement.py --statements 'BankStatement/*.xlsx*' --transactions export.json --out BankStatement/coverage_report.md`.
+
 ## 2026-07-07 @claude — T-034 partial: fixture↔statement reconciliation tooling + first run
 
 - Did: built `scripts/reconcile_statement.py` to reconcile IndusInd statement XLSX exports (BankStatement/, gitignored — contains PAN/address; never commit) against SMS data. Matching ladder: ref containment → amount+direction+balance → amount+direction+date → amount+direction only-if-unique. Supports `--fixtures` (committed sanitized subset) today and `--transactions` (JSON export of the on-device parsed DB) for the real T-034 device run.
