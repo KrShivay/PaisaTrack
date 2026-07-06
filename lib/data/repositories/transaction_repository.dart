@@ -1,8 +1,34 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
+
+/// User input for a manually entered transaction (T-037).
+///
+/// Manual entries have no SMS provenance: `parse_source` is `'manual'`,
+/// confidence is 1.0, and status is `'confirmed'` (the user typed it, so
+/// there is nothing to review). Channel defaults to cash — the common case
+/// SMS capture can never see.
+class ManualTransactionDraft {
+  const ManualTransactionDraft({
+    required this.amount,
+    required this.direction,
+    required this.ts,
+    this.categoryId,
+    this.description,
+    this.channel = TransactionChannel.cash,
+  });
+
+  final double amount;
+  final TransactionDirection direction;
+  final DateTime ts;
+  final String? categoryId;
+  final String? description;
+  final TransactionChannel channel;
+}
 
 /// A row of the transactions list, joined with merchant/category display
 /// names in a single query (no per-row lookups).
@@ -61,6 +87,41 @@ class TransactionRepository {
         );
   }
 
+  /// Persists a manual entry and returns its id.
+  ///
+  /// Rows land `parse_source='manual'`, `status='confirmed'`, confidence 1.0
+  /// so they render in the list and dashboard identically to parsed rows.
+  /// [clock] is injectable for deterministic tests.
+  Future<String> insertManual(
+    ManualTransactionDraft draft, {
+    DateTime Function() clock = DateTime.now,
+  }) async {
+    final now = clock().toUtc();
+    final id = 'txn_manual_${now.microsecondsSinceEpoch}';
+    await _database.into(_database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: id,
+            ts: draft.ts.toUtc().millisecondsSinceEpoch,
+            amount: draft.amount,
+            direction: draft.direction.wireName,
+            channel: draft.channel.wireName,
+            categoryId: Value(draft.categoryId),
+            description: Value(draft.description),
+            parseSource: ParseSource.manual.wireName,
+            confidenceJson: jsonEncode({
+              'parse': {
+                'source': ParseSource.manual.wireName,
+                'confidence': 1.0,
+              },
+            }),
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    return id;
+  }
+
   TransactionListItem _toListItem(TypedResult row) {
     final txn = row.readTable(_database.transactions);
     final merchant = row.readTableOrNull(_database.merchants);
@@ -70,11 +131,13 @@ class TransactionRepository {
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
       amount: txn.amount,
       direction: _directionFromWireName(txn.direction),
-      // Presentation-time fallback (merchant -> VPA); the write path keeps
-      // the two signals independent (ADR 0003).
+      // Presentation-time fallback (merchant -> VPA -> description); the
+      // write path keeps the signals independent (ADR 0003). Description
+      // covers manual entries, which have no merchant/VPA provenance.
       displayName: merchant?.canonicalName ??
           txn.merchantRaw ??
           txn.counterpartyVpa ??
+          txn.description ??
           'Unknown',
       categoryName: category?.name,
       categoryId: category?.id,

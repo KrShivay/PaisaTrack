@@ -7,6 +7,7 @@ import '../../core/theme/category_visuals.dart';
 import '../../core/theme/paisa_colors.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
+import 'manual_entry_screen.dart';
 import 'transactions_providers.dart';
 
 /// Lists parsed transactions, newest first.
@@ -31,6 +32,15 @@ class TransactionsScreen extends ConsumerWidget {
           const Center(child: Text('Could not load transactions')),
         _ => const Center(child: CircularProgressIndicator()),
       },
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Add transaction',
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (context) => const ManualEntryScreen(),
+          ),
+        ),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }

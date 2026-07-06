@@ -1,0 +1,177 @@
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/data/models/normalized_transaction_record.dart';
+import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/features/transactions/manual_entry_screen.dart';
+import 'package:paisatrack/features/transactions/transactions_providers.dart';
+import 'package:paisatrack/features/transactions/transactions_screen.dart';
+
+void main() {
+  late AppDatabase database;
+
+  setUp(() async {
+    database = AppDatabase(NativeDatabase.memory());
+    await database.into(database.categories).insertOnConflictUpdate(
+          CategoriesCompanion.insert(
+            id: 'food_dining',
+            name: 'Food & Dining',
+            icon: 'restaurant',
+            isSpending: true,
+            sortOrder: 10,
+            isUserCreated: false,
+          ),
+        );
+  });
+
+  tearDown(() async {
+    await database.close();
+  });
+
+  Future<void> pumpEntryScreen(WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+        ],
+        child: const MaterialApp(home: ManualEntryScreen()),
+      ),
+    );
+    // Let the async database/category providers resolve.
+    await tester.pump();
+    await tester.pump();
+  }
+
+  group('repository', () {
+    test(
+        'insertManual persists manual/confirmed/cash row that renders in the '
+        'list identically to parsed rows', () async {
+      final repository = TransactionRepository(database);
+      final clockNow = DateTime.utc(2026, 7, 7, 12);
+
+      final id = await repository.insertManual(
+        ManualTransactionDraft(
+          amount: 320,
+          direction: TransactionDirection.debit,
+          ts: DateTime.utc(2026, 7, 6, 13, 30),
+          categoryId: 'food_dining',
+          description: 'Street food lunch',
+        ),
+        clock: () => clockNow,
+      );
+
+      expect(id, startsWith('txn_manual_'));
+
+      final row = await (database.select(database.transactions)
+            ..where((t) => t.id.equals(id)))
+          .getSingle();
+      expect(row.parseSource, 'manual');
+      expect(row.status, 'confirmed');
+      expect(row.channel, 'cash');
+      expect(row.amount, 320);
+      expect(row.direction, 'debit');
+      expect(row.categoryId, 'food_dining');
+      expect(row.description, 'Street food lunch');
+      expect(row.smsId, isNull);
+      expect(row.isDeleted, isFalse);
+      expect(row.duplicateOfTxnId, isNull);
+      expect(row.confidenceJson, contains('"confidence":1.0'));
+
+      // Renders through the same list pipeline as parsed rows: description
+      // becomes the display name, category display data is resolved.
+      final items = await repository.watchTransactions().first;
+      expect(items, hasLength(1));
+      expect(items.single.id, id);
+      expect(items.single.displayName, 'Street food lunch');
+      expect(items.single.categoryName, 'Food & Dining');
+      expect(items.single.categoryId, 'food_dining');
+      expect(items.single.categoryIcon, 'restaurant');
+      expect(items.single.direction, TransactionDirection.debit);
+    });
+  });
+
+  testWidgets('saving the form persists a manual transaction', (tester) async {
+    await pumpEntryScreen(tester);
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Amount'), '250');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Description'),
+      'Auto rickshaw',
+    );
+
+    await tester.tap(find.text('Uncategorized'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Food & Dining').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final rows = await database.select(database.transactions).get();
+    expect(rows, hasLength(1));
+    final row = rows.single;
+    expect(row.amount, 250);
+    expect(row.direction, 'debit');
+    expect(row.channel, 'cash');
+    expect(row.parseSource, 'manual');
+    expect(row.status, 'confirmed');
+    expect(row.categoryId, 'food_dining');
+    expect(row.description, 'Auto rickshaw');
+  });
+
+  testWidgets('credit direction is saved when Received is selected',
+      (tester) async {
+    await pumpEntryScreen(tester);
+
+    await tester.tap(find.text('Received'));
+    await tester.pump();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Amount'), '1200');
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final rows = await database.select(database.transactions).get();
+    expect(rows, hasLength(1));
+    expect(rows.single.direction, 'credit');
+    expect(rows.single.categoryId, isNull);
+    expect(rows.single.description, isNull);
+  });
+
+  testWidgets('invalid amount blocks save with a validation error',
+      (tester) async {
+    await pumpEntryScreen(tester);
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Amount'), '0');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter an amount greater than zero'), findsOneWidget);
+    expect(await database.select(database.transactions).get(), isEmpty);
+  });
+
+  testWidgets('transactions list FAB opens the manual entry form',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          transactionListProvider.overrideWith(
+            (ref) => Stream.value(const <TransactionListItem>[]),
+          ),
+        ],
+        child: const MaterialApp(home: TransactionsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManualEntryScreen), findsOneWidget);
+    expect(find.text('Add transaction'), findsOneWidget);
+  });
+}

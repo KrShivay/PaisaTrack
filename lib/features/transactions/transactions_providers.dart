@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 
 /// Live-updating list of non-deleted transactions, newest first.
@@ -16,5 +18,18 @@ final transactionListProvider = StreamProvider<List<TransactionListItem>>((ref) 
     loading: () => const Stream<List<TransactionListItem>>.empty(),
     error: (error, stackTrace) =>
         Stream<List<TransactionListItem>>.error(error, stackTrace),
+  );
+});
+
+/// Live-updating list of all categories in seed sort order, for the manual
+/// entry form's picker (T-037) and later category surfaces.
+final categoryListProvider = StreamProvider<List<Category>>((ref) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  return databaseAsync.when(
+    data: (database) =>
+        ref.watch(categoryRepositoryProvider(database)).watchAll(),
+    loading: () => const Stream<List<Category>>.empty(),
+    error: (error, stackTrace) =>
+        Stream<List<Category>>.error(error, stackTrace),
   );
 });
