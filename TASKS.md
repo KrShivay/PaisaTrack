@@ -1,14 +1,50 @@
 # Task Board
-Last updated: 2026-07-07 by @claude (T-033 done)
+Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
 
 ## In Progress
 
 ## Ready
-<!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; depends on prior. -->
-
-<!-- Phase 2 — groomed early because they complete the design system. -->
+<!-- Phase 2 — Usable Tracker (PLAN.md §"Phase 2"). Ordered; respect Depends.
+     Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
+     evidence is strong; Phase 2 build work may proceed in parallel while the
+     human runs the reconciliation. -->
+- [ ] T-035 (@claude) [P2] ADR 0003: dedup rework + counterparty schema spec
+      AC: docs/decisions/0003-dedup-and-counterparty.md drafted covering (a) replacing the `is_deleted=true` overload for cross-source duplicates with an explicit `duplicate_of_txn_id` link (user soft-delete and system suppression must be distinguishable and reversible), (b) adding a `counterparty_vpa` column to `transactions` (removes the T-025 merchantRaw fallback hack), (c) migration + backfill strategy for existing rows, (d) exposing suppressed duplicates in a dev/detail view. Approved by @human before T-036 starts.
+- [ ] T-036 (@codex) [P2] Schema v2 migration: counterparty_vpa + duplicate_of + category in list items
+      AC: Drift schema v2 per ADR 0003 with migration test (v1→v2 preserves data); `DuplicateSuppressor` writes `duplicate_of_txn_id` instead of `isDeleted`; list queries exclude suppressed rows; `TransactionListItem` gains `categoryId`/`categoryIcon` so `CategoryVisuals` no longer needs the name→id normalizer (switch tiles to `CategoryVisuals.icon`/`color`); docs/schema.md migration log updated.
+      Depends: T-035
+- [ ] T-037 (@codex) [P2] Manual transaction entry
+      AC: FAB on transactions list opens an entry form (amount, direction, category, description, date; channel defaults 'cash'); persists via repository with `parse_source='manual'`, `status='confirmed'`; renders in list/dashboard identically to parsed rows; widget + repository tests; design-system tokens only (no literals).
+- [ ] T-038 (@codex) [P2] Transaction detail + edit writes feedback rows
+      AC: tapping a list row opens detail (all §6.2 fields, confidence trail placeholder); category/description editable; each edit writes a `feedback` row (`field`, old/new, context 'detail_edit') in the same DB transaction as the update; tests prove edit→feedback atomicity.
+      Depends: T-036
+- [ ] T-039 (@codex) [P2] Seed-map categorization + rules engine
+      AC: `categorizer` enricher ladder per PLAN §7.4 steps 1+3 (rules → seed map → Other@0.3); rules repository honors match_types 'merchant'/'counterparty'; rules always win (table-driven test); ingest pipeline invokes the categorizer so new transactions land categorized; assets/seed/category_seed.json wired.
+      Depends: T-036
+- [ ] T-040 (@codex) [P2] Decision policy v1 (static thresholds)
+      AC: `decision_policy.dart` implements PLAN §7.5 with constants from `constants.dart` (silent >=0.9; ask 0.6-0.9 when amount>=500 or merchant txn_count>=3; else needs_review; unseen P2P counterparty always asks once); sets transaction `status`; table-driven tests cover every branch incl. daily ask-budget exhaustion.
+      Depends: T-039
+- [ ] T-041 (@codex) [P2] Category manager
+      AC: settings-reachable screen to add/rename/merge categories; merges retro-apply to existing transactions and update rules/seed mappings atomically; user-created categories flagged `is_user_created`; `CategoryVisuals` falls back gracefully for user categories; tests for merge retro-apply.
+      Depends: T-036
+- [ ] T-042 (@codex) [P2] Settings v1
+      AC: theme choice (dark default / light / system — switches `themeMode` per design-system §10), ask-budget, feature-flag toggles (read-only display for unphased flags), and "Delete everything" that wipes DB + Keystore-wrapped key and recreates empty (proven by test/manual evidence per PLAN §8).
+- [ ] T-043 (@codex) [P2] Encrypted export/import
+      AC: export = passphrase-encrypted JSON (Argon2id KDF + AES-GCM, free/open-source deps only per ADR 0002); import restores losslessly; round-trip test (export→wipe→import→byte-equivalent domain data); wrong-passphrase fails closed; no plaintext temp files.
+- [ ] T-044 (@codex) [P2] Ask-now notification flow
+      AC: local notification with top-3 category guesses as action buttons + free-text remote input; answer writes rule + feedback + updates txn status (one write, PLAN §1 principle 3); daily budget 2 enforced via `constants.dart`; works with app killed (manual QA note); JUnit/Dart tests for payload building and response handling.
+      Depends: T-040
+- [ ] T-045 (@codex) [P2] Weekly review screen
+      AC: queue of `needs_review` transactions with swipe-to-confirm / tap-to-correct; corrections write feedback rows (context 'batch_review'); confirmations set status 'confirmed'; empty state per design-system §5; widget tests.
+      Depends: T-040
+- [ ] T-046 (@claude) [P2] Phase 2 exit review
+      AC: verifies PLAN §9 Phase 2 exit criteria (daily-usable, <=2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip) against T-035..T-045 evidence; WORKLOG entry "PHASE P2 EXIT REVIEW"; blockers listed before Phase 3 grooming.
+      Depends: T-035..T-045
 
 ## Blocked
+- [ ] T-034 (@human) [P1] Phase 1 exit: manual bank-statement reconciliation
+      NEED: fresh install on the phone, backfill last 3 months, hand-verify >=90% of bank SMS parsed into correct transactions against the bank statement (PLAN §9 Phase 1 exit; T-027 blocker). Log results (parse rate, misparses as new fixtures) in WORKLOG, then Phase 1 exit flips to PASS. Alternatively: explicitly waive the criterion in WORKLOG.
+      Blocking: Phase 1 exit PASS declaration (not Phase 2 build work)
 
 ## In Review
 

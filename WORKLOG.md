@@ -26,6 +26,13 @@
 - Caveat: `flutter analyze` / `flutter test` NOT run here (no Flutter toolchain in this environment). Self-review covered imports, Dart 3.4 syntax, and Flutter 3.44 API availability (`withValues`, `CardThemeData`, `surfaceContainer*` verified present in `.tooling/flutter`), but run both locally plus `detect_changes()` before commit. Widget tests assert text finders only, so styling changes should be green, and onboarding's `Image.asset` has an errorBuilder guard.
 - Next: local verification; then Phase 2 UI tasks (settings theme toggle switching themeMode to system, formatInr + test updates, empty-state redesigns per design-system §5).
 
+## 2026-07-07 @claude — Phase 2 grooming (T-034..T-046 filed)
+
+- Did: groomed the Phase 2 (Usable Tracker) queue on TASKS.md with ordered, AC'd tasks: T-035 ADR 0003 spec (dedup `duplicate_of` link + `counterparty_vpa` column — fixes the T-025 `is_deleted` overload and merchantRaw fallback), T-036 schema v2 migration (also adds categoryId/icon to `TransactionListItem`, retiring the CategoryVisuals name→id normalizer), T-037 manual entry, T-038 detail+feedback, T-039 seed-map categorizer + rules, T-040 decision policy v1, T-041 category manager, T-042 settings v1 (incl. theme toggle per design-system §10 and "Delete everything"), T-043 encrypted export/import (free deps only per ADR 0002), T-044 ask-now notifications, T-045 weekly review, T-046 Phase 2 exit review.
+- Filed T-034 (@human, Blocked): the outstanding Phase 1 bank-statement reconciliation from T-027 — blocks Phase 1 exit PASS declaration only; Phase 2 build work proceeds in parallel per T-027's assessment.
+- Sequencing rationale: schema rework (T-035/T-036) goes first because detail/categorizer/category-manager all touch the same rows and should not build on the `is_deleted` dedup hack; policy (T-040) gates both interruption surfaces (T-044/T-045).
+- Next: @codex picks T-036 after @human approves the ADR (T-035 is mine and is next up); @human runs T-034 whenever convenient.
+
 ## 2026-07-06 @codex — T-016
 
 - Did: completed the native Kotlin/JUnit follow-up for SMS filter and Keystore passphrase storage. `SmsFilterTest` already covered the pure sender/body filter behavior. Added `DatabasePassphraseStoreTest` for persistence/error orchestration without a physical device: persisted encrypted passphrases are reused, debug reset clears storage plus cipher state and generates a fresh passphrase, and corrupted persisted ciphertext fails closed without overwriting storage.
