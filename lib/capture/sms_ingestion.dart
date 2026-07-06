@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants.dart';
@@ -16,11 +17,24 @@ import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
 import 'template_engine/template_matcher.dart';
+import 'template_engine/template_registry.dart';
 
 /// Parser cascade used by live SMS ingestion.
-final parserCascadeProvider = Provider<ParserCascade>((ref) {
-  return const ParserCascade(
-    templateMatcher: TemplateMatcher(registries: []),
+final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
+  final registries = await Future.wait(
+    const [
+      'assets/templates/axisbk.json',
+      'assets/templates/indusind.json',
+      'assets/templates/paytmb.json',
+      'assets/templates/sbi.json',
+    ].map((path) async {
+      final source = await rootBundle.loadString(path);
+      return TemplateRegistry.fromJson(source);
+    }),
+  );
+
+  return ParserCascade(
+    templateMatcher: TemplateMatcher(registries: registries),
   );
 });
 
@@ -34,7 +48,10 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
   }
 
   final source = ref.watch(capturedSmsSourceProvider);
-  final parser = ref.watch(parserCascadeProvider);
+  final parser = ref.watch(parserCascadeProvider).valueOrNull;
+  if (parser == null) {
+    return;
+  }
   final ingestor = SmsIngestor(database: database, parser: parser);
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),

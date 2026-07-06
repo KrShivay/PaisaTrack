@@ -59,8 +59,10 @@ void main() {
     final rawRows = await database.select(database.rawSms).get();
     expect(rawRows.map((row) => row.id), containsAll(['sms_a', 'sms_b']));
     final transactions = await database.select(database.transactions).get();
-    expect(transactions.map((row) => row.id),
-        containsAll(['txn_sms_a', 'txn_sms_b']));
+    expect(
+      transactions.map((row) => row.id),
+      containsAll(['txn_sms_a', 'txn_sms_b']),
+    );
   });
 
   test('re-running backfill inserts no duplicate rows (idempotent)', () async {
@@ -159,8 +161,11 @@ ProviderContainer _backfillContainer({
         FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
       ),
       appDatabaseProvider.overrideWith((ref) async => database),
-      smsInboxReaderProvider.overrideWithValue(reader ?? FakeInboxReader(inbox)),
-      parserCascadeProvider.overrideWithValue(FakeParserCascade.ok(_sampleRecord)),
+      smsInboxReaderProvider
+          .overrideWithValue(reader ?? FakeInboxReader(inbox)),
+      parserCascadeProvider.overrideWith(
+        (ref) async => FakeParserCascade.ok(_sampleRecord),
+      ),
       backfillMarkerProvider.overrideWithValue(marker),
     ],
   );

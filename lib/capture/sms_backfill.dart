@@ -125,8 +125,9 @@ class SmsBackfiller {
 
     var processed = 0;
     for (var start = 0; start < messages.length; start += _chunkSize) {
-      final end =
-          (start + _chunkSize < messages.length) ? start + _chunkSize : messages.length;
+      final end = (start + _chunkSize < messages.length)
+          ? start + _chunkSize
+          : messages.length;
       for (final sms in messages.sublist(start, end)) {
         try {
           await _ingestor.ingest(sms);
@@ -162,7 +163,7 @@ final smsBackfillProvider = FutureProvider<int>((ref) async {
     return 0;
   }
 
-  final parser = ref.read(parserCascadeProvider);
+  final parser = await ref.watch(parserCascadeProvider.future);
   final reader = ref.read(smsInboxReaderProvider);
   final ingestor = SmsIngestor(database: database, parser: parser);
   final backfiller = SmsBackfiller(ingestor: ingestor, reader: reader);

@@ -1,16 +1,12 @@
 # Task Board
-Last updated: 2026-07-06 by @claude (T-026, T-028)
+Last updated: 2026-07-06 by @codex (T-028)
 
 ## In Progress
 
 ## Ready
-<!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-028 (@codex) [P1] Wire real bank template registries into the live parser cascade
-      AC: `parserCascadeProvider` (lib/capture/sms_ingestion.dart) and the parser used by `SmsBackfiller` (lib/capture/sms_backfill.dart) no longer construct `TemplateMatcher(registries: [])`; instead they load `assets/templates/{axisbk,indusind,paytmb,sbi}.json` via `rootBundle` at startup, parse each with `TemplateRegistry.fromJson`, and pass the resulting list into `TemplateMatcher`. Add a widget/provider test asserting a real fixture SMS (e.g. from test/fixtures/sms/sbi) parses to a transaction end-to-end through `smsCaptureBootstrapProvider`/`SmsIngestor`, not just through `SmsFixtureRunner`. Today every live-captured or backfilled SMS fails to parse because the registries list is empty in both providers — only the fixture-test harness exercises the real templates — which will fail T-027's ≥90%-parse exit criterion as-is.
-      Depends: T-024 review pass
-
+<!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; depends on prior. -->
 - [ ] T-027 (@claude) [P1] Phase 1 exit review
-      AC: verifies T-020..T-026, T-028 evidence against PLAN.md Phase 1 exit criteria (fresh-install ≥90% parse of last 3 months verified by hand vs bank statement; paired bank+wallet duplicates suppressed; unparsed messages visible in dev screen); writes a WORKLOG entry titled PHASE P1 EXIT REVIEW; lists any blockers before Phase 2 grooming.
+      AC: verifies T-020..T-026, T-028 evidence against PLAN.md Phase 1 exit criteria (fresh-install >=90% parse of last 3 months verified by hand vs bank statement; paired bank+wallet duplicates suppressed; unparsed messages visible in dev screen); writes a WORKLOG entry titled PHASE P1 EXIT REVIEW; lists any blockers before Phase 2 grooming.
       Depends: T-020, T-021, T-022, T-023, T-024, T-025, T-026, T-028 review pass
 
 ## Blocked
@@ -18,6 +14,9 @@ Last updated: 2026-07-06 by @claude (T-026, T-028)
 ## In Review
 
 ## Done
+- [x] T-028 (@codex, self-executed — no independent reviewer yet) [P1] Wire real bank template registries into live parser cascade (2026-07-06)
+      AC met: `parserCascadeProvider` (`lib/capture/sms_ingestion.dart`) is now a `FutureProvider<ParserCascade>` that loads `assets/templates/{axisbk,indusind,paytmb,sbi}.json` via `rootBundle`, parses each with `TemplateRegistry.fromJson`, and passes the resulting registries into `TemplateMatcher`. `smsCaptureBootstrapProvider` waits until the async parser is ready before opening the SMS stream, and `smsBackfillProvider` awaits the same provider before constructing `SmsIngestor`, so live capture and inbox backfill share the real template cascade. Added a widget/provider regression in `test/capture/sms_ingestion_test.dart` that feeds a real SBI fixture through `smsCaptureBootstrapProvider` and asserts the persisted transaction fields match the fixture expectation. Updated parser-provider overrides in existing capture/backfill tests for the async provider contract. Verified: GitNexus pre-edit impact on `parserCascadeProvider` and `smsBackfillProvider` was LOW (0 direct callers/processes/modules in the index); `flutter test --no-pub test/capture/sms_ingestion_test.dart test/capture/sms_backfill_test.dart` passed; `flutter analyze --no-pub` passed; final `mcp__gitnexus__detect_changes(scope: all)` reported LOW risk with 0 affected processes. Caveat: a full `flutter test --no-pub` run was started but interrupted after going quiet in later widget tests, so it is not counted as evidence here.
+
 - [x] T-026 (self-executed directly in the PaisaTrack working copy — no independent reviewer) [P1] Transactions list + basic dashboard + unparsed dev screen (2026-07-06)
       AC met: `TransactionRepository.watchTransactions` (`lib/data/repositories/transaction_repository.dart`) streams non-deleted transactions newest-first with merchant/category names resolved via a single joined Drift query; `TransactionsScreen` renders it. `RawSmsRepository.watchUnparsed` streams `raw_sms` rows with `processed=false`; `UnparsedSmsScreen` lists them for diagnostics. `monthDirectionTotalsProvider` (`lib/features/dashboard/dashboard_providers.dart`) derives current-month debit/credit totals in-memory from the already-loaded transaction list (no second DB query); `DashboardScreen` shows both totals. `HomeShell` wires all three behind bottom navigation and is now the post-onboarding root in `lib/app.dart`. Widget tests added under `test/features/{dashboard,transactions,dev}/` running over a seeded in-memory `AppDatabase`, plus `test/widget_test.dart` updated for the new shell.
       Caveat: this was implemented directly rather than through an independent codex→claude review handoff; `flutter analyze`/`flutter test` were not re-run in this environment (no Flutter toolchain available here) — run both locally before treating this as fully verified. Also see T-028: the dashboard/list will show real numbers once the parser cascade is actually wired to the bank templates.

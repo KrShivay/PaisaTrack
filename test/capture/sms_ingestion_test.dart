@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:drift/native.dart';
@@ -31,6 +33,13 @@ void main() {
     await database.close();
   });
 
+  Future<void> waitForCaptureReady(ProviderContainer container) async {
+    await container.read(smsPermissionControllerProvider.future);
+    await container.read(appDatabaseProvider.future);
+    await container.read(parserCascadeProvider.future);
+    await pumpEventQueue();
+  }
+
   test('ingests channel SMS into raw_sms and transactions on parse success',
       () async {
     final controller = StreamController<Object?>();
@@ -45,8 +54,8 @@ void main() {
             channel: FakeCapturedSmsChannel(controller.stream),
           ),
         ),
-        parserCascadeProvider.overrideWithValue(
-          FakeParserCascade.ok(
+        parserCascadeProvider.overrideWith(
+          (ref) async => FakeParserCascade.ok(
             NormalizedTransactionRecord(
               amount: 449,
               direction: TransactionDirection.debit,
@@ -73,7 +82,7 @@ void main() {
       fireImmediately: true,
     );
     addTearDown(bootstrap.close);
-    await container.read(smsPermissionControllerProvider.future);
+    await waitForCaptureReady(container);
 
     controller.add({
       'id': 'sms_live_1',
@@ -113,7 +122,8 @@ void main() {
             channel: FakeCapturedSmsChannel(controller.stream),
           ),
         ),
-        parserCascadeProvider.overrideWithValue(FakeParserCascade.err()),
+        parserCascadeProvider
+            .overrideWith((ref) async => FakeParserCascade.err()),
       ],
     );
     addTearDown(container.dispose);
@@ -125,7 +135,7 @@ void main() {
       fireImmediately: true,
     );
     addTearDown(bootstrap.close);
-    await container.read(smsPermissionControllerProvider.future);
+    await waitForCaptureReady(container);
 
     controller.add({
       'id': 'sms_live_2',
@@ -159,8 +169,8 @@ void main() {
             channel: FakeCapturedSmsChannel(controller.stream),
           ),
         ),
-        parserCascadeProvider.overrideWithValue(
-          FakeParserCascade.ok(
+        parserCascadeProvider.overrideWith(
+          (ref) async => FakeParserCascade.ok(
             NormalizedTransactionRecord(
               amount: 449,
               direction: TransactionDirection.debit,
@@ -187,7 +197,7 @@ void main() {
       fireImmediately: true,
     );
     addTearDown(bootstrap.close);
-    await container.read(smsPermissionControllerProvider.future);
+    await waitForCaptureReady(container);
 
     final payload = {
       'id': 'sms_dupe',
@@ -224,8 +234,8 @@ void main() {
             channel: FakeCapturedSmsChannel(controller.stream),
           ),
         ),
-        parserCascadeProvider.overrideWithValue(
-          FakeParserCascade.byId({
+        parserCascadeProvider.overrideWith(
+          (ref) async => FakeParserCascade.byId({
             // Bank UPI-debit alert: only a VPA, no merchant text.
             'sms_bank': NormalizedTransactionRecord(
               amount: 449,
@@ -268,7 +278,7 @@ void main() {
       fireImmediately: true,
     );
     addTearDown(bootstrap.close);
-    await container.read(smsPermissionControllerProvider.future);
+    await waitForCaptureReady(container);
 
     controller.add({
       'id': 'sms_bank',
@@ -295,6 +305,65 @@ void main() {
     expect(transactions[0].isDeleted, isFalse);
     expect(transactions[1].id, 'txn_sms_wallet');
     expect(transactions[1].isDeleted, isTrue);
+  });
+
+  test(
+      'production parser registry ingests a real SBI fixture through '
+      'smsCaptureBootstrapProvider', () async {
+    final controller = StreamController<Object?>();
+    final expected = jsonDecode(
+      File('test/fixtures/sms/sbi/sbi_debit_dearupi_01.expected.json')
+          .readAsStringSync(),
+    ) as Map<String, Object?>;
+    final record = (expected['expected']! as Map<String, Object?>)['ok']!
+        as Map<String, Object?>;
+    final container = ProviderContainer(
+      overrides: [
+        smsPermissionGateProvider.overrideWithValue(
+          FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+        ),
+        appDatabaseProvider.overrideWith((ref) async => database),
+        capturedSmsSourceProvider.overrideWithValue(
+          PlatformCapturedSmsSource(
+            channel: FakeCapturedSmsChannel(controller.stream),
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(controller.close);
+
+    final bootstrap = container.listen<void>(
+      smsCaptureBootstrapProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(bootstrap.close);
+    await waitForCaptureReady(container);
+
+    controller.add({
+      'id': 'sms_sbi_fixture',
+      'sender': expected['sender'],
+      'body': File('test/fixtures/sms/sbi/sbi_debit_dearupi_01.txt')
+          .readAsStringSync(),
+      'receivedAtEpochMillis': expected['received_at'],
+    });
+    await pumpEventQueue();
+
+    final rawRows = await database.select(database.rawSms).get();
+    expect(rawRows, hasLength(1));
+    expect(rawRows.single.processed, isTrue);
+
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions, hasLength(1));
+    expect(transactions.single.id, 'txn_sms_sbi_fixture');
+    expect(transactions.single.amount, record['amount']);
+    expect(transactions.single.direction, record['direction']);
+    expect(transactions.single.channel, record['channel']);
+    expect(transactions.single.merchantRaw, record['merchant_raw']);
+    expect(transactions.single.accountHint, record['account_hint']);
+    expect(transactions.single.refId, record['ref_id']);
+    expect(transactions.single.ts, record['ts']);
   });
 }
 
