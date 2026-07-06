@@ -17,6 +17,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
+import 'package:paisatrack/enrichment/categorizer.dart';
 
 import '../support/fake_sms_permission_gate.dart';
 
@@ -37,6 +38,7 @@ void main() {
     await container.read(smsPermissionControllerProvider.future);
     await container.read(appDatabaseProvider.future);
     await container.read(parserCascadeProvider.future);
+    await container.read(categorizerProvider.future);
     await pumpEventQueue();
   }
 
@@ -106,6 +108,11 @@ void main() {
     expect(transactions.single.direction, 'debit');
     expect(transactions.single.channel, 'upi');
     expect(transactions.single.status, 'auto');
+    // T-039: the ingest pipeline runs the categorizer ladder — 'AMZN*MKTPLC'
+    // hits the bundled seed map ('amzn' -> shopping) at 0.8.
+    expect(transactions.single.categoryId, 'shopping');
+    expect(transactions.single.confidenceJson, contains('"category"'));
+    expect(transactions.single.confidenceJson, contains('"src":"seed"'));
   });
 
   test('leaves raw_sms unparsed when parser returns an expected miss',

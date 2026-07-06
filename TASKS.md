@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-07 by @claude (T-037, T-038 implemented → In Review pending toolchain verification)
+Last updated: 2026-07-07 by @claude (T-037, T-038, T-039 implemented → In Review pending toolchain verification; T-040 unblocked after verification)
 
 ## In Progress
 
@@ -8,9 +8,6 @@ Last updated: 2026-07-07 by @claude (T-037, T-038 implemented → In Review pend
      Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
      evidence is strong; Phase 2 build work may proceed in parallel while the
      human runs the reconciliation. -->
-- [ ] T-039 (@codex) [P2] Seed-map categorization + rules engine
-      AC: `categorizer` enricher ladder per PLAN §7.4 steps 1+3 (rules → seed map → Other@0.3); rules repository honors match_types 'merchant'/'counterparty'; rules always win (table-driven test); ingest pipeline invokes the categorizer so new transactions land categorized; assets/seed/category_seed.json wired.
-      Depends: T-036
 - [ ] T-040 (@codex) [P2] Decision policy v1 (static thresholds)
       AC: `decision_policy.dart` implements PLAN §7.5 with constants from `constants.dart` (silent >=0.9; ask 0.6-0.9 when amount>=500 or merchant txn_count>=3; else needs_review; unseen P2P counterparty always asks once); sets transaction `status`; table-driven tests cover every branch incl. daily ask-budget exhaustion.
       Depends: T-039
@@ -43,6 +40,10 @@ Last updated: 2026-07-07 by @claude (T-037, T-038 implemented → In Review pend
       AC met (pending toolchain run): list row tap pushes new `TransactionDetailScreen` showing all frozen §6.2 fields (amount/direction/channel/merchant incl. canonical-name resolution/counterparty_vpa/account_hint/balance_after/ref_id/ts/parse_source + status) with null fields as '—', plus a "Confidence trail" placeholder card (parse source + confidence from `confidence_json`, Phase 3 note). Category (dropdown, load-guarded against stale ids) and description are editable; Save calls new `TransactionRepository.updateWithFeedback` which, inside ONE drift `transaction()`, skips unchanged fields, applies the update (bumps `updated_at`), and inserts one `feedback` row per changed field (`field` in {category_id, description}, old/new values, context 'detail_edit', `model_confidence_at_time` from confidence_json); injectable clock + feedback-id factory. New `watchDetail(id)` join + `transactionDetailProvider` family.
       Tests (`test/features/transactions/transaction_detail_screen_test.dart`): feedback-row shape per changed field; no-op edit writes nothing; **atomicity proven** — injected feedback-id factory collides on the second staged field so its insert throws after the update and first insert ran, then asserts the txn row AND the first feedback row rolled back; widget tests for field rendering, edit→save→feedback, and list-row→detail navigation.
       Verification needed by @codex: same as T-037 (analyze, full test run, detect_changes) — no runnable Flutter/GitNexus in this sandbox.
+- [ ] T-039 (@claude, self-executed at human's "proceed" direction; verification @codex) [P2] Seed-map categorization + rules engine (2026-07-07)
+      AC met (pending toolchain run): new `lib/enrichment/` layer — `Categorizer` ladder per PLAN §7.4 steps 1+3: `RuleRepository.findMatch` (match_type 'counterparty' = exact normalized VPA, checked first; 'merchant' = normalized substring; unknown types never match; rules with null set_category_id skipped) → `SeedCategoryMap` (assets/seed/category_seed.json via `seedCategoryMapProvider`, case-insensitive longest-key-first substring over merchant text then VPA) @0.8 → 'other' @0.3 fallback. Rules always win (table-driven test). Both `smsCaptureBootstrapProvider` and `smsBackfillProvider` construct `SmsIngestor` with `categorizerProvider`, so live + backfill transactions land categorized; outcome recorded in `confidence_json.category` ({c, src, rule_id?}) and applied rules get `hit_count` incremented in the same DB transaction. `RuleRepository.insert` added for the T-040/T-044 correction flows. Also fixed a shape inconsistency T-037/T-038 introduced: manual entries + confidence extraction now use the same `{parser:{c,src}}` confidence_json shape ingestion writes. docs/architecture.md gains an Enrichment section.
+      Tests: `test/enrichment/categorizer_test.dart` — seed map (fromJson, longest-key preference, null/unmatched), table-driven ladder (rule-beats-seed, counterparty exact match, counterparty-beats-merchant, unknown match_type falls through, category-less rule skipped, VPA seed fallback, Other@0.3), rule repository (normalized substring match, hit-count increments only the applied rule); live-ingest test extended to assert new transactions land categorized with `src:"seed"` in confidence_json.
+      Verification needed by @codex: same as T-037/T-038.
 
 ## Done
 - [x] T-036 (@codex, review @claude: PASS) [P2] Schema v2 migration: counterparty_vpa + duplicate_of + category in list items (2026-07-07)

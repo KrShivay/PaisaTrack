@@ -78,7 +78,7 @@ void main() {
       expect(row.smsId, isNull);
       expect(row.isDeleted, isFalse);
       expect(row.duplicateOfTxnId, isNull);
-      expect(row.confidenceJson, contains('"confidence":1.0'));
+      expect(row.confidenceJson, contains('"c":1.0'));
 
       // Renders through the same list pipeline as parsed rows: description
       // becomes the display name, category display data is resolved.

@@ -53,7 +53,7 @@ void main() {
             refId: const Value('615223847712'),
             categoryId: const Value('food_dining'),
             parseSource: 'template',
-            confidenceJson: '{"parse":{"source":"template","confidence":0.97}}',
+            confidenceJson: '{"parser":{"c":0.97,"src":"template"}}',
             status: 'auto',
             createdAt: ts,
             updatedAt: ts,

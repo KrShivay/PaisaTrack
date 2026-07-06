@@ -212,13 +212,14 @@ class TransactionRepository {
     });
   }
 
-  /// Extracts the parse confidence from `confidence_json`, or null when the
-  /// payload has no parse entry (e.g. legacy rows).
+  /// Extracts the parse confidence from `confidence_json` (the `parser.c`
+  /// entry SmsIngestor and insertManual write), or null when the payload has
+  /// no parser entry (e.g. legacy rows).
   double? _parseConfidenceOf(Transaction txn) {
     try {
       final decoded = jsonDecode(txn.confidenceJson);
-      final parse = (decoded as Map<String, Object?>)['parse'];
-      final confidence = (parse as Map<String, Object?>?)?['confidence'];
+      final parser = (decoded as Map<String, Object?>)['parser'];
+      final confidence = (parser as Map<String, Object?>?)?['c'];
       return (confidence as num?)?.toDouble();
     } on FormatException {
       return null;
@@ -248,10 +249,11 @@ class TransactionRepository {
             categoryId: Value(draft.categoryId),
             description: Value(draft.description),
             parseSource: ParseSource.manual.wireName,
+            // Same shape SmsIngestor writes for parsed rows.
             confidenceJson: jsonEncode({
-              'parse': {
-                'source': ParseSource.manual.wireName,
-                'confidence': 1.0,
+              'parser': {
+                'c': 1.0,
+                'src': ParseSource.manual.wireName,
               },
             }),
             status: 'confirmed',

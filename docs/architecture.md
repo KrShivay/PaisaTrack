@@ -41,6 +41,19 @@ after permission is granted and the encrypted database is ready.
    within a 10-minute window; suppressed rows stay stored for audit.
 5. Raw SMS rows are purged after the retention window; transactions persist.
 
+## Enrichment (Phase 2, in progress)
+
+`Categorizer` (`lib/enrichment/`) runs the PLAN §7.4 ladder at ingest time,
+steps 1 + 3 for now: user-taught rules (`RuleRepository`, match_types
+`merchant` substring / `counterparty` exact-VPA, confidence 1.0, hit counts
+maintained) → bundled seed keyword map (`assets/seed/category_seed.json`,
+longest-key-first substring match, 0.8) → `other` at 0.3 (guaranteed to enter
+the ask/batch flow once the decision policy lands, T-040). Both live capture
+and backfill construct `SmsIngestor` with the categorizer
+(`categorizerProvider`), and the outcome is recorded in the transaction's
+`confidence_json` under `category` (`c`, `src`, optional `rule_id`). The
+classifier (step 2) and on-device LLM (step 4) slot in during later phases.
+
 ## Verification tooling
 
 `scripts/reconcile_statement.py` reconciles bank-statement XLSX exports

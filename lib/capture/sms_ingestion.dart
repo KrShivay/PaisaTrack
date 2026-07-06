@@ -11,6 +11,8 @@ import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
+import '../data/repositories/rule_repository.dart';
+import '../enrichment/categorizer.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
 import 'parser_cascade.dart';
@@ -49,10 +51,15 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
 
   final source = ref.watch(capturedSmsSourceProvider);
   final parser = ref.watch(parserCascadeProvider).valueOrNull;
-  if (parser == null) {
+  final categorizer = ref.watch(categorizerProvider).valueOrNull;
+  if (parser == null || categorizer == null) {
     return;
   }
-  final ingestor = SmsIngestor(database: database, parser: parser);
+  final ingestor = SmsIngestor(
+    database: database,
+    parser: parser,
+    categorizer: categorizer,
+  );
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),
     onError: (Object error, StackTrace stackTrace) {
@@ -78,15 +85,21 @@ class SmsIngestor {
   SmsIngestor({
     required AppDatabase database,
     required ParserCascade parser,
+    Categorizer? categorizer,
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
   })  : _database = database,
         _parser = parser,
+        _categorizer = categorizer,
         _duplicateSuppressor = duplicateSuppressor,
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
   final ParserCascade _parser;
+
+  /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
+  /// without one; production wiring always supplies it.
+  final Categorizer? _categorizer;
   final DuplicateSuppressor _duplicateSuppressor;
   final DateTime Function() _now;
 
@@ -109,13 +122,19 @@ class SmsIngestor {
       switch (parseResult) {
         case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
           final duplicateOfTxnId = await _findDuplicateOfExisting(value);
+          final categorization = await _categorizer?.categorize(value);
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
                   record: value,
                   duplicateOfTxnId: duplicateOfTxnId,
+                  categorization: categorization,
                 ),
               );
+          if (categorization?.ruleId != null) {
+            await RuleRepository(_database)
+                .incrementHitCount(categorization!.ruleId!);
+          }
           await _markRawSmsProcessed(sms.id, processed: true);
         case Err<NormalizedTransactionRecord, ParseFailure>():
           await _markRawSmsProcessed(sms.id, processed: false);
@@ -158,6 +177,7 @@ class SmsIngestor {
     required String smsId,
     required NormalizedTransactionRecord record,
     required String? duplicateOfTxnId,
+    CategorizationResult? categorization,
   }) {
     final timestamp = _now().toUtc();
     return TransactionsCompanion.insert(
@@ -171,6 +191,7 @@ class SmsIngestor {
       counterpartyVpa: Value(record.counterpartyVpa),
       balanceAfter: Value(record.balanceAfter),
       refId: Value(record.refId),
+      categoryId: Value(categorization?.categoryId),
       parseSource: record.parseSource.wireName,
       smsId: Value(smsId),
       confidenceJson: jsonEncode({
@@ -178,6 +199,13 @@ class SmsIngestor {
           'c': record.parseConfidence,
           'src': record.parseSource.wireName,
         },
+        if (categorization != null)
+          'category': {
+            'c': categorization.confidence,
+            'src': categorization.source,
+            if (categorization.ruleId != null)
+              'rule_id': categorization.ruleId,
+          },
       }),
       status: 'auto',
       duplicateOfTxnId: Value(duplicateOfTxnId),

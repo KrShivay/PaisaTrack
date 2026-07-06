@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/raw_sms.dart';
+import '../enrichment/categorizer.dart';
 import 'captured_sms_source.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
@@ -164,8 +165,13 @@ final smsBackfillProvider = FutureProvider<int>((ref) async {
   }
 
   final parser = await ref.watch(parserCascadeProvider.future);
+  final categorizer = await ref.watch(categorizerProvider.future);
   final reader = ref.read(smsInboxReaderProvider);
-  final ingestor = SmsIngestor(database: database, parser: parser);
+  final ingestor = SmsIngestor(
+    database: database,
+    parser: parser,
+    categorizer: categorizer,
+  );
   final backfiller = SmsBackfiller(ingestor: ingestor, reader: reader);
   final processed = await backfiller.run(now: DateTime.now());
   await marker.markComplete();
