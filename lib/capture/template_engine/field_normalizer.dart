@@ -70,8 +70,9 @@ class FieldNormalizer {
 
   /// Parses supported SMS date formats, otherwise returns [fallback].
   ///
-  /// Currently supports two-digit-year day-first formats used in seeded bank
-  /// templates, for example `dd-MM-yy` and `dd/MM/yy`.
+  /// Supports day-first numeric formats (`dd-MM-yy`, `dd/MM/yy`,
+  /// `dd-MM-yyyy`, `dd/MM/yyyy`) and the separator-less alpha-month format
+  /// used by some bank senders (`ddMMMyy`, e.g. `08Oct23`).
   DateTime parseDate({
     required String? value,
     required String? format,
@@ -79,6 +80,10 @@ class FieldNormalizer {
   }) {
     if (value == null || format == null) {
       return fallback;
+    }
+
+    if (format == 'ddMMMyy') {
+      return _parseAlphaMonthDate(value) ?? fallback;
     }
 
     final parts = value.split(RegExp(r'[-/]'));
@@ -93,8 +98,35 @@ class FieldNormalizer {
     if (format == 'dd-MM-yy' || format == 'dd/MM/yy') {
       return DateTime.utc(_expandTwoDigitYear(third), second, first);
     }
+    if (format == 'dd-MM-yyyy' || format == 'dd/MM/yyyy') {
+      return DateTime.utc(third, second, first);
+    }
 
     return fallback;
+  }
+
+  static const Map<String, int> _monthNames = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+  };
+
+  /// Parses a separator-less `ddMMMyy` date such as `08Oct23`.
+  DateTime? _parseAlphaMonthDate(String value) {
+    final match = RegExp(r'^(\d{2})([A-Za-z]{3})(\d{2})$').firstMatch(value);
+    if (match == null) {
+      return null;
+    }
+
+    final month = _monthNames[match.group(2)!.toLowerCase()];
+    if (month == null) {
+      return null;
+    }
+
+    return DateTime.utc(
+      _expandTwoDigitYear(int.parse(match.group(3)!)),
+      month,
+      int.parse(match.group(1)!),
+    );
   }
 
   String? _namedGroup(RegExpMatch match, String name) {

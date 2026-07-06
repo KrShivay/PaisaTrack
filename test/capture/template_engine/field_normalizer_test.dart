@@ -34,4 +34,37 @@ void main() {
       DateTime.utc(2026, 7, 5).millisecondsSinceEpoch,
     );
   });
+
+  test('parses dd-MM-yyyy four-digit-year dates', () {
+    expect(
+      normalizer.parseDate(
+        value: '02-01-2023',
+        format: 'dd-MM-yyyy',
+        fallback: DateTime.utc(2026),
+      ),
+      DateTime.utc(2023, 1, 2),
+    );
+  });
+
+  test('parses ddMMMyy separator-less alpha-month dates', () {
+    expect(
+      normalizer.parseDate(
+        value: '08Oct23',
+        format: 'ddMMMyy',
+        fallback: DateTime.utc(2026),
+      ),
+      DateTime.utc(2023, 10, 8),
+    );
+  });
+
+  test('falls back on malformed ddMMMyy value', () {
+    expect(
+      normalizer.parseDate(
+        value: '08Xyz23',
+        format: 'ddMMMyy',
+        fallback: DateTime.utc(2026, 5, 1),
+      ),
+      DateTime.utc(2026, 5, 1),
+    );
+  });
 }
