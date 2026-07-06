@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -207,6 +208,94 @@ void main() {
     expect(transactions, hasLength(1));
     expect(transactions.single.id, 'txn_sms_dupe');
   });
+
+  test(
+      'suppresses a wallet SMS echo of an already-ingested bank debit '
+      '(T-025)', () async {
+    final controller = StreamController<Object?>();
+    final container = ProviderContainer(
+      overrides: [
+        smsPermissionGateProvider.overrideWithValue(
+          FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+        ),
+        appDatabaseProvider.overrideWith((ref) async => database),
+        capturedSmsSourceProvider.overrideWithValue(
+          PlatformCapturedSmsSource(
+            channel: FakeCapturedSmsChannel(controller.stream),
+          ),
+        ),
+        parserCascadeProvider.overrideWithValue(
+          FakeParserCascade.byId({
+            // Bank UPI-debit alert: only a VPA, no merchant text.
+            'sms_bank': NormalizedTransactionRecord(
+              amount: 449,
+              direction: TransactionDirection.debit,
+              channel: TransactionChannel.upi,
+              merchantRaw: null,
+              counterpartyVpa: 'amazon@ybl',
+              accountHint: 'xx4521',
+              balanceAfter: 12384.5,
+              refId: null,
+              ts: DateTime.utc(2026, 7, 5, 10, 30),
+              parseSource: ParseSource.template,
+              parseConfidence: 0.97,
+            ),
+            // Wallet app's own notification for the same payment, 3 minutes
+            // later, with merchant text instead of a VPA.
+            'sms_wallet': NormalizedTransactionRecord(
+              amount: 449,
+              direction: TransactionDirection.debit,
+              channel: TransactionChannel.wallet,
+              merchantRaw: 'Amazon Pay India',
+              counterpartyVpa: null,
+              accountHint: null,
+              balanceAfter: null,
+              refId: null,
+              ts: DateTime.utc(2026, 7, 5, 10, 33),
+              parseSource: ParseSource.template,
+              parseConfidence: 0.9,
+            ),
+          }),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(controller.close);
+
+    final bootstrap = container.listen<void>(
+      smsCaptureBootstrapProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(bootstrap.close);
+    await container.read(smsPermissionControllerProvider.future);
+
+    controller.add({
+      'id': 'sms_bank',
+      'sender': 'VK-HDFCBK',
+      'body': 'A/c debited by Rs.449 towards amazon@ybl',
+      'receivedAtEpochMillis':
+          DateTime.utc(2026, 7, 5, 10, 30).millisecondsSinceEpoch,
+    });
+    await pumpEventQueue();
+    controller.add({
+      'id': 'sms_wallet',
+      'sender': 'AM-PAYTM',
+      'body': 'Paid Rs.449 to Amazon Pay India',
+      'receivedAtEpochMillis':
+          DateTime.utc(2026, 7, 5, 10, 33).millisecondsSinceEpoch,
+    });
+    await pumpEventQueue();
+
+    final transactions = await (database.select(database.transactions)
+          ..orderBy([(row) => OrderingTerm.asc(row.ts)]))
+        .get();
+    expect(transactions, hasLength(2));
+    expect(transactions[0].id, 'txn_sms_bank');
+    expect(transactions[0].isDeleted, isFalse);
+    expect(transactions[1].id, 'txn_sms_wallet');
+    expect(transactions[1].isDeleted, isTrue);
+  });
 }
 
 class FakeCapturedSmsChannel implements CapturedSmsChannel {
@@ -221,24 +310,40 @@ class FakeCapturedSmsChannel implements CapturedSmsChannel {
 class FakeParserCascade extends ParserCascade {
   FakeParserCascade.ok(this._record)
       : _error = null,
+        _recordsById = null,
         super(
           templateMatcher: const TemplateMatcher(registries: []),
         );
 
   FakeParserCascade.err()
       : _record = null,
+        _recordsById = null,
         _error = ParseFailure.unparsed,
+        super(
+          templateMatcher: const TemplateMatcher(registries: []),
+        );
+
+  /// Returns a different fixed record per SMS id, keyed by [RawSms.id].
+  FakeParserCascade.byId(this._recordsById)
+      : _record = null,
+        _error = null,
         super(
           templateMatcher: const TemplateMatcher(registries: []),
         );
 
   final NormalizedTransactionRecord? _record;
   final ParseFailure? _error;
+  final Map<String, NormalizedTransactionRecord>? _recordsById;
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
     RawSms sms,
   ) async {
+    final recordsById = _recordsById;
+    if (recordsById != null) {
+      return Ok(recordsById[sms.id]!);
+    }
+
     final record = _record;
     if (record != null) {
       return Ok(record);

@@ -11,6 +11,7 @@ import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import 'captured_sms_source.dart';
+import 'duplicate_suppressor.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
@@ -60,13 +61,16 @@ class SmsIngestor {
   SmsIngestor({
     required AppDatabase database,
     required ParserCascade parser,
+    DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
   })  : _database = database,
         _parser = parser,
+        _duplicateSuppressor = duplicateSuppressor,
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
   final ParserCascade _parser;
+  final DuplicateSuppressor _duplicateSuppressor;
   final DateTime Function() _now;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
@@ -87,10 +91,12 @@ class SmsIngestor {
       final parseResult = await _parser.parse(sms);
       switch (parseResult) {
         case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
+          final isDuplicate = await _isDuplicateOfExisting(value);
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
                   record: value,
+                  isDuplicate: isDuplicate,
                 ),
               );
           await _markRawSmsProcessed(sms.id, processed: true);
@@ -100,9 +106,36 @@ class SmsIngestor {
     });
   }
 
+  /// True when an already-stored transaction describes the same real-world
+  /// payment as [record] (e.g. a bank SMS and its wallet/UPI echo, T-025).
+  Future<bool> _isDuplicateOfExisting(
+    NormalizedTransactionRecord record,
+  ) async {
+    final window = _duplicateSuppressor.window;
+    final windowStart = record.ts.toUtc().subtract(window);
+    final windowEnd = record.ts.toUtc().add(window);
+    final candidates = await (_database.select(_database.transactions)
+          ..where(
+            (row) =>
+                row.direction.equals(record.direction.wireName) &
+                row.isDeleted.equals(false) &
+                row.ts.isBiggerOrEqualValue(
+                  windowStart.millisecondsSinceEpoch,
+                ) &
+                row.ts.isSmallerOrEqualValue(
+                  windowEnd.millisecondsSinceEpoch,
+                ),
+          ))
+        .get();
+    return candidates.any(
+      (existing) => _duplicateSuppressor.isDuplicate(record, existing),
+    );
+  }
+
   TransactionsCompanion _transactionCompanionFor({
     required String smsId,
     required NormalizedTransactionRecord record,
+    required bool isDuplicate,
   }) {
     final timestamp = _now().toUtc();
     return TransactionsCompanion.insert(
@@ -112,7 +145,9 @@ class SmsIngestor {
       direction: record.direction.wireName,
       channel: record.channel.wireName,
       accountHint: Value(record.accountHint),
-      merchantRaw: Value(record.merchantRaw),
+      // Falls back to the VPA when a template captures no merchant text
+      // (e.g. bank UPI-debit alerts) so a counterparty is still persisted.
+      merchantRaw: Value(record.merchantRaw ?? record.counterpartyVpa),
       balanceAfter: Value(record.balanceAfter),
       refId: Value(record.refId),
       parseSource: record.parseSource.wireName,
@@ -124,6 +159,7 @@ class SmsIngestor {
         },
       }),
       status: 'auto',
+      isDeleted: Value(isDuplicate),
       createdAt: timestamp,
       updatedAt: timestamp,
     );

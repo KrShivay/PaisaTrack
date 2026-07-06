@@ -31,4 +31,8 @@ class AppConstants {
 
   /// Historical messages processed per yield so backfill never blocks the UI.
   static const smsBackfillChunkSize = 25;
+
+  /// Max minutes apart two SMS may arrive and still be treated as one
+  /// paired bank+wallet/UPI notification for duplicate suppression (T-025).
+  static const duplicatePairWindowMinutes = 10;
 }

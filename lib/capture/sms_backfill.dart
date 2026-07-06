@@ -147,8 +147,9 @@ class SmsBackfiller {
 ///
 /// A persisted [BackfillMarker] guards the run so later cold starts never
 /// re-scan the inbox — re-scanning would duplicate messages already captured
-/// live under a different id. Cross-source semantic duplicates (a bank SMS and
-/// its wallet echo) are suppressed later by T-025.
+/// live under a different id. Cross-source semantic duplicates (a bank SMS
+/// and its wallet echo) are suppressed by `SmsIngestor`'s `DuplicateSuppressor`
+/// (T-025), which runs for every message ingested here too.
 final smsBackfillProvider = FutureProvider<int>((ref) async {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   final database = ref.watch(appDatabaseProvider).valueOrNull;
