@@ -1,0 +1,25 @@
+{
+  "sender_patterns": ["^[A-Z]{2}-PAYTMB(-[A-Z])?$"],
+  "templates": [
+    {
+      "id": "paytmb_p2p_paid_v1",
+      "regex": "You have paid Rs\\.(?<amount>[\\d,]+\\.?\\d*) via a/c 91XX(?<account>\\d{4}) to\\s+(?<merchant>.+?) on (?<date>\\d{2}-\\d{2}-\\d{4})\\. Ref:(?<ref>\\d+)\\.",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd-MM-yyyy"
+    },
+    {
+      "id": "paytmb_paid_merchant_v1",
+      "regex": "Paid Rs\\.(?<amount>[\\d,]+\\.?\\d*) via a/c 91XX(?<account>\\d{4})\\s*(?:to)?\\s*(?<merchant>.+?) on (?<date>\\d{2}-\\d{2}-\\d{4})\\. Ref No: (?<ref>\\d+) ",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd-MM-yyyy"
+    },
+    {
+      "id": "paytmb_credit_received_v1",
+      "regex": "Rs\\.(?<amount>[\\d,]+\\.?\\d*) received from (?<merchant>.+?) in (?:your )?(?:PPBL|Paytm Payments Bank) a/c 91XX(?<account>\\d{4})\\.\\s*UPI Ref:?\\s*(?<ref>\\d+)",
+      "direction": "credit",
+      "channel": "upi"
+    }
+  ]
+}

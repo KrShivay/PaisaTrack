@@ -1,0 +1,19 @@
+{
+  "sender": "JX-AXISBK-S",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 416.0,
+      "direction": "debit",
+      "channel": "card",
+      "merchant_raw": "WWW AMAZON",
+      "counterparty_vpa": null,
+      "account_hint": "xx5678",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1769817600000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

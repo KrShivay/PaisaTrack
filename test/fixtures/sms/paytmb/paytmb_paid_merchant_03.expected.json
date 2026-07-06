@@ -1,0 +1,19 @@
+{
+  "sender": "AD-PAYTMB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 32.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "Prashant provision store",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": "2629416686",
+      "ts": 1663718400000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

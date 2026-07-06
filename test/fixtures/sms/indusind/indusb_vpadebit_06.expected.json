@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 38.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": null,
+      "counterparty_vpa": "paytmqr5endco@ptys",
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "429976523023",
+      "ts": 1783319461708,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

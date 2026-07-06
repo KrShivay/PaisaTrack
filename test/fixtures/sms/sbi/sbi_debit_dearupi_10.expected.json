@@ -1,0 +1,19 @@
+{
+  "sender": "VK-SBIUPI",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 18000.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "KAVITA SHARMA",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "330813898916",
+      "ts": 1699056000000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

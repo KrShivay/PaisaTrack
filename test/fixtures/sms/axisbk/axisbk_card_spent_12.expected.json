@@ -1,0 +1,19 @@
+{
+  "sender": "JX-AXISBK-S",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 168.15,
+      "direction": "debit",
+      "channel": "card",
+      "merchant_raw": "RAZ*RAPIPAY",
+      "counterparty_vpa": null,
+      "account_hint": "xx5678",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1760054400000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

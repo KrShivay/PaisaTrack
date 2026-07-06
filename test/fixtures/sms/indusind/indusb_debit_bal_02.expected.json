@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 1363.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": null,
+      "counterparty_vpa": "upiswiggy@icici",
+      "account_hint": "xx4521",
+      "balance_after": 62027.97,
+      "ref_id": "174132400903",
+      "ts": 1783319461708,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

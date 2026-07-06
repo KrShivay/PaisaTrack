@@ -1,0 +1,19 @@
+{
+  "sender": "AD-PAYTMB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 60.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "Ramnath",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": "4057612290",
+      "ts": 1706313600000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

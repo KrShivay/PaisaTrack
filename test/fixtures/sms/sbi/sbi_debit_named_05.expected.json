@@ -1,0 +1,19 @@
+{
+  "sender": "VK-SBIUPI",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 62.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "Mr RAKESH RAO",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "319418961496",
+      "ts": 1689206400000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

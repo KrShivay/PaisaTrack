@@ -1,0 +1,19 @@
+{
+  "sender_patterns": ["^[A-Z]{2}-AXISBK(-[A-Z])?$", "^[A-Z]{2}-AxisBk$", "^[A-Z]{2}-AxisBK$"],
+  "templates": [
+    {
+      "id": "axisbk_card_spent_v1",
+      "regex": "Spent (?:USD|INR) (?<amount>[\\d,]+\\.?\\d*)\\nAxis Bank Card no\\. XX(?<account>\\d{4})\\n(?<date>\\d{2}-\\d{2}-\\d{2}) \\d{2}:\\d{2}:\\d{2} IST\\n(?<merchant>.+?)\\nAvl Limit:",
+      "direction": "debit",
+      "channel": "card",
+      "date_format": "dd-MM-yy"
+    },
+    {
+      "id": "axisbk_card_payment_received_v1",
+      "regex": "Payment of INR (?<amount>[\\d,]+\\.?\\d*) has been received towards your Axis Bank Credit Card XX(?<account>\\d{4}) on (?<date>\\d{2}-\\d{2}-\\d{2}) - Axis Bank",
+      "direction": "credit",
+      "channel": "card",
+      "date_format": "dd-MM-yy"
+    }
+  ]
+}

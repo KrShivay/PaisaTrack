@@ -1,0 +1,19 @@
+{
+  "sender": "VK-SBIUPI",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 73.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "SURESH IYER",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "367602251881",
+      "ts": 1699228800000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

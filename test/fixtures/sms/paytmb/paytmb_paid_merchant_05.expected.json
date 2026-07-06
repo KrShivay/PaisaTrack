@@ -1,0 +1,19 @@
+{
+  "sender": "AD-PAYTMB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 48.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "SHRI HARI 56 BHOG SWEETS",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": "2625365449",
+      "ts": 1663632000000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

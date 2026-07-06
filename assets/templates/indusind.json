@@ -1,0 +1,41 @@
+{
+  "sender_patterns": ["^[A-Z]{2}-INDUSB(-[A-Z])?$"],
+  "templates": [
+    {
+      "id": "indusind_upi_debit_v1",
+      "regex": "A/[cC] \\*XX(?<account>\\d{4}) debited by Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*) towards (?<vpa>.+?)\\.\\s*RRN:?\\s*(?<ref>\\d+)\\.(?:\\s*Avl Bal:(?<balance>[\\d,]+\\.?\\d*)\\.)?",
+      "direction": "debit",
+      "channel": "upi"
+    },
+    {
+      "id": "indusind_upi_credit_v1",
+      "regex": "A/c \\*XX(?<account>\\d{4}) credited by Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*)\\s*(?:from|for)?\\s*(?<vpa>.+?)\\.\\s*RRN:?\\s*(?<ref>\\d+)\\.",
+      "direction": "credit",
+      "channel": "upi"
+    },
+    {
+      "id": "indusind_upi_autopay_debit_v1",
+      "regex": "A/c \\*XX(?<account>\\d{4}) debited by Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*) towards (?<vpa>.+? UPI AutoPay), UMN (?<ref>[^@]+)@upi",
+      "direction": "debit",
+      "channel": "upi"
+    },
+    {
+      "id": "indusind_vpa_debit_v1",
+      "regex": "VPA \"(?<selfvpa>[^\"]+)\" linked to A/C No\\.\"X+(?<account>\\d{4})\" is Dr with INR\\.(?<amount>[\\d,]+\\.?\\d*) by VPA \"(?<vpa>[^\"]+)\",?\\s*Ref\\.?\\s*(?<ref>\\d+)",
+      "direction": "debit",
+      "channel": "upi"
+    },
+    {
+      "id": "indusind_vpa_credit_v1",
+      "regex": "VPA \"(?<selfvpa>[^\"]+)\" linked to A/C No\\.\"X+(?<account>\\d{4})\" is Cr with INR\\.(?<amount>[\\d,]+\\.?\\d*) by VPA \"(?<vpa>[^\"]+)\",?\\s*Ref\\.?\\s*(?<ref>\\d+)",
+      "direction": "credit",
+      "channel": "upi"
+    },
+    {
+      "id": "indusind_ach_debit_v1",
+      "regex": "IndusInd A/C \\*\\*(?<account>\\d{4}) Debited; INR\\s?(?<amount>[\\d,]+\\.?\\d*) Ref-(?<ref>[^.]+)\\.Bal INR\\s?(?<balance>[\\d,]+\\.?\\d*)",
+      "direction": "debit",
+      "channel": "netbanking"
+    }
+  ]
+}

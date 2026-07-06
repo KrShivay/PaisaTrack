@@ -1,0 +1,19 @@
+{
+  "sender": "VK-SBIUPI",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 75.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "SWEETS TREATS",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "355951183252",
+      "ts": 1689120000000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

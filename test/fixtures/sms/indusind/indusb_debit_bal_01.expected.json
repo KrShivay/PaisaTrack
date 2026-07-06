@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 352.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": null,
+      "counterparty_vpa": "blinkit.payu@hdfcbank",
+      "account_hint": "xx4521",
+      "balance_after": 61675.97,
+      "ref_id": "212423939472",
+      "ts": 1783319461708,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

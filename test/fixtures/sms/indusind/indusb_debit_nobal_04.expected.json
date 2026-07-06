@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 500.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": null,
+      "counterparty_vpa": "BHARATPE.8C0N0M6Q5A68747@fbpe",
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "121143995858",
+      "ts": 1783319461708,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

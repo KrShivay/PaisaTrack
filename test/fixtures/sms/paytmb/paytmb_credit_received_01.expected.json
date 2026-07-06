@@ -1,0 +1,19 @@
+{
+  "sender": "AD-PAYTMB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 500.0,
+      "direction": "credit",
+      "channel": "upi",
+      "merchant_raw": "AMIT KUMAR",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": "340838738268",
+      "ts": 1783319461708,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

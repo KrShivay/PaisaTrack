@@ -1,0 +1,19 @@
+{
+  "sender": "AD-PAYTMB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 200.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "Paytm Add Money",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": "2634374352",
+      "ts": 1663891200000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

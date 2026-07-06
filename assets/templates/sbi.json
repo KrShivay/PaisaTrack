@@ -1,0 +1,26 @@
+{
+  "sender_patterns": ["^[A-Z]{2}-SBIUPI(-[A-Z])?$"],
+  "templates": [
+    {
+      "id": "sbi_upi_debit_v1",
+      "regex": "Rs(?<amount>[\\d,]+\\.?\\d*) debited@SBI UPI frm A/cX(?<account>\\d+) on (?<date>\\d{2}[A-Za-z]{3}\\d{2}) RefNo (?<ref>\\d+)\\.",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "ddMMMyy"
+    },
+    {
+      "id": "sbi_upi_debit_named_v1",
+      "regex": "A/c X(?<account>\\d+)-debited by Rs(?<amount>[\\d,]+\\.?\\d*) on (?<date>\\d{2}[A-Za-z]{3}\\d{2}) transfer to (?<merchant>.+?) Ref No (?<ref>\\d+)\\.",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "ddMMMyy"
+    },
+    {
+      "id": "sbi_upi_debit_dearupi_v1",
+      "regex": "Dear UPI user A/C X(?<account>\\d+) debited by (?<amount>[\\d,]+\\.?\\d*) on date (?<date>\\d{2}[A-Za-z]{3}\\d{2}) trf to (?<merchant>.+?) Refno (?<ref>\\d+)\\.",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "ddMMMyy"
+    }
+  ]
+}

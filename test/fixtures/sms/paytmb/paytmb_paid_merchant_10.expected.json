@@ -1,0 +1,19 @@
+{
+  "sender": "AD-PAYTMB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 9.74,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "BSNL",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": "2542545245",
+      "ts": 1660867200000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

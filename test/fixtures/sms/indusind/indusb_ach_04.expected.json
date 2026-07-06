@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 5503.25,
+      "direction": "debit",
+      "channel": "netbanking",
+      "merchant_raw": null,
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": 96338.75,
+      "ref_id": "DR INW PAY/BANAYANTRET8MV7MAr261831020295/BANA",
+      "ts": 1783319461708,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

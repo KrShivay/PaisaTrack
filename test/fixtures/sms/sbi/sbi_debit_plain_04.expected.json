@@ -1,0 +1,19 @@
+{
+  "sender": "VK-SBIUPI",
+  "received_at": 1783319461708,
+  "expected": {
+    "ok": {
+      "amount": 479.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": null,
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "209769944865",
+      "ts": 1649289600000,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}
