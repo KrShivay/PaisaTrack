@@ -40,15 +40,16 @@ Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
 - [ ] T-046 (@claude) [P2] Phase 2 exit review
       AC: verifies PLAN §9 Phase 2 exit criteria (daily-usable, <=2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip) against T-035..T-045 evidence; WORKLOG entry "PHASE P2 EXIT REVIEW"; blockers listed before Phase 3 grooming.
       Depends: T-035..T-045
+- [ ] T-047 (@codex, fixtures from @human) [P1] IndusInd credit-shape templates (NEFT/IMPS/ACH-CR/interest)
+      AC: T-034 reconciliation found all 23 uncovered statement rows are Transfer Credits — NEFT (`N/...`/SAL), ACH CR INW PAY (dividends), IMPS/P2A, quarterly interest. @human checks the dev Unparsed screen for the corresponding SMS and pulls >=5 sanitized real fixtures per shape (fixture-first law; shapes with fewer occurrences become negative "known gap" fixtures — interest credits may generate no SMS at all, document if so); @codex adds templates to assets/templates/indusind.json + fixtures + docs/sms-templates.md; re-run `scripts/reconcile_statement.py --transactions` and report the new coverage number (expect >97%).
 
 ## Blocked
-- [ ] T-034 (@human) [P1] Phase 1 exit: manual bank-statement reconciliation
-      NEED: fresh install on the phone, backfill last 3 months, hand-verify >=90% of bank SMS parsed into correct transactions against the bank statement (PLAN §9 Phase 1 exit; T-027 blocker). Log results (parse rate, misparses as new fixtures) in WORKLOG, then Phase 1 exit flips to PASS. Alternatively: explicitly waive the criterion in WORKLOG.
-      Blocking: Phase 1 exit PASS declaration (not Phase 2 build work)
 
 ## In Review
 
 ## Done
+- [x] T-034 (@human + @claude tooling) [P1] Phase 1 exit: bank-statement reconciliation (2026-07-07)
+      AC met — **Phase 1 exit criterion PASSES: 94.4% coverage (388/411 statement rows) in the backfill window 2026-04-06..2026-07-06, criterion >=90%.** Human supplied 3 IndusInd statement XLSX exports (BankStatement/, gitignored) and the on-device parsed-transaction JSON export (400 records via the T-034 debug export button). `scripts/reconcile_statement.py` matched 389/400 device transactions to statement rows (381 by exact UPI/ACH ref, 7 amount+date, 1 unique-amount) with ZERO amount/direction contradictions — no misparses found. The 11 unmatched device transactions have no candidates anywhere in this account's statement (consistent with VPA-template messages belonging to a different linked IndusInd account). All 23 uncovered statement rows are Transfer Credits (NEFT salary, ACH dividends, quarterly interest, MF redemptions, IMPS P2A) — a template-coverage gap for credit shapes, filed as T-047. 4 suppressed duplicates exported and verified as true cross-source echoes. Row-level report: BankStatement/coverage_report.md (uncommitted, contains bank data). See WORKLOG "PHASE P1 EXIT: PASS".
 - [x] T-033 (@claude) [P1] Fix post-commit Codex review hook CLI arguments (2026-07-07)
       AC met: `.githooks/post-commit` invoked the interactive `codex review` TUI subcommand with a positional custom prompt alongside `--commit`, which the CLI rejects (the "argument issue" reported on every commit). Now uses the headless runner form the Codex maintainers document for automation: `codex exec --sandbox read-only review --commit "$sha" --title "$title"` — the commit preset takes `--commit`/`--title` only, no positional prompt; read-only sandbox since review never writes. Skip guard (`CODEX_SKIP_COMMIT_REVIEW=1`), absent-codex guard, and never-block-the-commit exit behavior unchanged. Verified: `sh -n` clean. Live run not possible in this environment (no codex CLI on PATH) — confirm output on the next local commit.
 - [x] T-032 (@codex) [P5] Compress brand illustration PNGs (2026-07-07)
