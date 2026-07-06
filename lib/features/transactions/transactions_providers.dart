@@ -21,6 +21,20 @@ final transactionListProvider = StreamProvider<List<TransactionListItem>>((ref) 
   );
 });
 
+/// Live-updating detail of one transaction (null when the id is unknown),
+/// for the detail screen (T-038).
+final transactionDetailProvider =
+    StreamProvider.family<TransactionDetail?, String>((ref, txnId) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  return databaseAsync.when(
+    data: (database) =>
+        ref.watch(transactionRepositoryProvider(database)).watchDetail(txnId),
+    loading: () => const Stream<TransactionDetail?>.empty(),
+    error: (error, stackTrace) =>
+        Stream<TransactionDetail?>.error(error, stackTrace),
+  );
+});
+
 /// Live-updating list of all categories in seed sort order, for the manual
 /// entry form's picker (T-037) and later category surfaces.
 final categoryListProvider = StreamProvider<List<Category>>((ref) {

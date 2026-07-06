@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-07 by @claude (T-037 implemented → In Review pending toolchain verification)
+Last updated: 2026-07-07 by @claude (T-037, T-038 implemented → In Review pending toolchain verification)
 
 ## In Progress
 
@@ -8,9 +8,6 @@ Last updated: 2026-07-07 by @claude (T-037 implemented → In Review pending too
      Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
      evidence is strong; Phase 2 build work may proceed in parallel while the
      human runs the reconciliation. -->
-- [ ] T-038 (@codex) [P2] Transaction detail + edit writes feedback rows
-      AC: tapping a list row opens detail (all §6.2 fields, confidence trail placeholder); category/description editable; each edit writes a `feedback` row (`field`, old/new, context 'detail_edit') in the same DB transaction as the update; tests prove edit→feedback atomicity.
-      Depends: T-036
 - [ ] T-039 (@codex) [P2] Seed-map categorization + rules engine
       AC: `categorizer` enricher ladder per PLAN §7.4 steps 1+3 (rules → seed map → Other@0.3); rules repository honors match_types 'merchant'/'counterparty'; rules always win (table-driven test); ingest pipeline invokes the categorizer so new transactions land categorized; assets/seed/category_seed.json wired.
       Depends: T-036
@@ -42,6 +39,10 @@ Last updated: 2026-07-07 by @claude (T-037 implemented → In Review pending too
 - [ ] T-037 (@claude, self-executed at human's "proceed" direction; verification @codex) [P2] Manual transaction entry (2026-07-07)
       AC met (pending toolchain run): FAB on `TransactionsScreen` pushes new `ManualEntryScreen` (amount with ₹ prefix + >0 validator, Spent/Received segmented direction, category dropdown fed by new `categoryListProvider`/`CategoryRepository`, optional description, date picker defaulting today; channel fixed 'cash'). Persists via new `TransactionRepository.insertManual` (`ManualTransactionDraft`): `parse_source='manual'`, `status='confirmed'`, confidence 1.0, id `txn_manual_<micros>`, injectable clock. Renders identically to parsed rows through the existing `watchTransactions` join — display-name fallback chain extended with `description` (null for all parsed rows, so no behavior change). Design-system tokens only (`AppSpacing`, theme colors; no literals). Tests: `test/features/transactions/manual_entry_screen_test.dart` — repository persistence+list-render test, save-form widget test, credit-direction test, validation-blocks-save test, FAB-navigation test.
       Verification needed by @codex (this sandbox has no runnable Flutter — repo-local binary is wrong arch — and GitNexus CLI cannot start, so impact/detect_changes preflights are documented as unavailable, same as prior @claude sessions): `flutter analyze --no-pub`, full `flutter test --no-pub --concurrency=1`, GitNexus `detect_changes(scope: all)`.
+- [ ] T-038 (@claude, self-executed at human's "proceed" direction; verification @codex) [P2] Transaction detail + edit writes feedback rows (2026-07-07)
+      AC met (pending toolchain run): list row tap pushes new `TransactionDetailScreen` showing all frozen §6.2 fields (amount/direction/channel/merchant incl. canonical-name resolution/counterparty_vpa/account_hint/balance_after/ref_id/ts/parse_source + status) with null fields as '—', plus a "Confidence trail" placeholder card (parse source + confidence from `confidence_json`, Phase 3 note). Category (dropdown, load-guarded against stale ids) and description are editable; Save calls new `TransactionRepository.updateWithFeedback` which, inside ONE drift `transaction()`, skips unchanged fields, applies the update (bumps `updated_at`), and inserts one `feedback` row per changed field (`field` in {category_id, description}, old/new values, context 'detail_edit', `model_confidence_at_time` from confidence_json); injectable clock + feedback-id factory. New `watchDetail(id)` join + `transactionDetailProvider` family.
+      Tests (`test/features/transactions/transaction_detail_screen_test.dart`): feedback-row shape per changed field; no-op edit writes nothing; **atomicity proven** — injected feedback-id factory collides on the second staged field so its insert throws after the update and first insert ran, then asserts the txn row AND the first feedback row rolled back; widget tests for field rendering, edit→save→feedback, and list-row→detail navigation.
+      Verification needed by @codex: same as T-037 (analyze, full test run, detect_changes) — no runnable Flutter/GitNexus in this sandbox.
 
 ## Done
 - [x] T-036 (@codex, review @claude: PASS) [P2] Schema v2 migration: counterparty_vpa + duplicate_of + category in list items (2026-07-07)

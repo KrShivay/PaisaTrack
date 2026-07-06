@@ -8,6 +8,7 @@ import '../../core/theme/paisa_colors.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'manual_entry_screen.dart';
+import 'transaction_detail_screen.dart';
 import 'transactions_providers.dart';
 
 /// Lists parsed transactions, newest first.
@@ -75,6 +76,11 @@ class _TransactionTile extends StatelessWidget {
     final categoryColor = CategoryVisuals.color(item.categoryId);
 
     return ListTile(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => TransactionDetailScreen(txnId: item.id),
+        ),
+      ),
       leading: Container(
         width: 40,
         height: 40,
