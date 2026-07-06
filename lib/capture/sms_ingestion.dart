@@ -108,12 +108,12 @@ class SmsIngestor {
       final parseResult = await _parser.parse(sms);
       switch (parseResult) {
         case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
-          final isDuplicate = await _isDuplicateOfExisting(value);
+          final duplicateOfTxnId = await _findDuplicateOfExisting(value);
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
                   record: value,
-                  isDuplicate: isDuplicate,
+                  duplicateOfTxnId: duplicateOfTxnId,
                 ),
               );
           await _markRawSmsProcessed(sms.id, processed: true);
@@ -123,9 +123,10 @@ class SmsIngestor {
     });
   }
 
-  /// True when an already-stored transaction describes the same real-world
-  /// payment as [record] (e.g. a bank SMS and its wallet/UPI echo, T-025).
-  Future<bool> _isDuplicateOfExisting(
+  /// Id of an already-stored transaction describing the same real-world
+  /// payment as [record] (e.g. a bank SMS and its wallet/UPI echo, T-025),
+  /// or null if none is found. Suppressed/deleted rows are never candidates.
+  Future<String?> _findDuplicateOfExisting(
     NormalizedTransactionRecord record,
   ) async {
     final window = _duplicateSuppressor.window;
@@ -136,6 +137,7 @@ class SmsIngestor {
             (row) =>
                 row.direction.equals(record.direction.wireName) &
                 row.isDeleted.equals(false) &
+                row.duplicateOfTxnId.isNull() &
                 row.ts.isBiggerOrEqualValue(
                   windowStart.millisecondsSinceEpoch,
                 ) &
@@ -144,15 +146,18 @@ class SmsIngestor {
                 ),
           ))
         .get();
-    return candidates.any(
-      (existing) => _duplicateSuppressor.isDuplicate(record, existing),
-    );
+    for (final existing in candidates) {
+      if (_duplicateSuppressor.isDuplicate(record, existing)) {
+        return existing.id;
+      }
+    }
+    return null;
   }
 
   TransactionsCompanion _transactionCompanionFor({
     required String smsId,
     required NormalizedTransactionRecord record,
-    required bool isDuplicate,
+    required String? duplicateOfTxnId,
   }) {
     final timestamp = _now().toUtc();
     return TransactionsCompanion.insert(
@@ -162,9 +167,8 @@ class SmsIngestor {
       direction: record.direction.wireName,
       channel: record.channel.wireName,
       accountHint: Value(record.accountHint),
-      // Falls back to the VPA when a template captures no merchant text
-      // (e.g. bank UPI-debit alerts) so a counterparty is still persisted.
-      merchantRaw: Value(record.merchantRaw ?? record.counterpartyVpa),
+      merchantRaw: Value(record.merchantRaw),
+      counterpartyVpa: Value(record.counterpartyVpa),
       balanceAfter: Value(record.balanceAfter),
       refId: Value(record.refId),
       parseSource: record.parseSource.wireName,
@@ -176,7 +180,7 @@ class SmsIngestor {
         },
       }),
       status: 'auto',
-      isDeleted: Value(isDuplicate),
+      duplicateOfTxnId: Value(duplicateOfTxnId),
       createdAt: timestamp,
       updatedAt: timestamp,
     );

@@ -25,7 +25,7 @@ class TransactionJsonExporter {
   final AppDatabase _database;
 
   /// Serializes every transaction row (including suppressed duplicates,
-  /// flagged via `is_deleted`) in the reconciliation schema.
+  /// flagged via `duplicate_of_txn_id`) in the reconciliation schema.
   Future<List<Map<String, Object?>>> serializeAll() async {
     final rows = await (_database.select(_database.transactions)
           ..orderBy([(t) => OrderingTerm.desc(t.ts)]))
@@ -40,11 +40,13 @@ class TransactionJsonExporter {
           'channel': row.channel,
           'account_hint': row.accountHint,
           'merchant_raw': row.merchantRaw,
+          'counterparty_vpa': row.counterpartyVpa,
           'balance_after': row.balanceAfter,
           'ref_id': row.refId,
           'parse_source': row.parseSource,
           'status': row.status,
           'is_deleted': row.isDeleted,
+          'duplicate_of_txn_id': row.duplicateOfTxnId,
         },
     ];
   }

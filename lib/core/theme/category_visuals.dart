@@ -21,57 +21,6 @@ abstract final class CategoryVisuals {
   static Color color(String? categoryId) =>
       _colors[categoryId] ?? fallbackColor;
 
-  /// Stable hue for a display name (e.g. `Food & Dining` -> `food_dining`).
-  ///
-  /// Interim path for list rows whose query carries only the category name;
-  /// once `TransactionListItem` includes `category_id`/`icon`, prefer
-  /// [color]/[icon] directly. User-created names fall back to neutral.
-  static Color colorForName(String? name) => color(_idForName(name));
-
-  /// Icon for a display name, same normalization as [colorForName].
-  static IconData iconForName(String? name) {
-    final id = _idForName(name);
-    if (id == null) return fallbackIcon;
-    final iconName = _seedIconByCategoryId[id];
-    return _icons[iconName] ?? fallbackIcon;
-  }
-
-  /// Normalizes a seed display name to its category id: lowercase, drop
-  /// punctuation, join word tokens with underscores.
-  static String? _idForName(String? name) {
-    if (name == null || name.isEmpty) return null;
-    final tokens = name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
-        .split(RegExp(r'\s+'))
-      ..removeWhere((t) => t.isEmpty);
-    if (tokens.isEmpty) return null;
-    final id = tokens.join('_');
-    return _colors.containsKey(id) ? id : null;
-  }
-
-  // Mirror of assets/seed/categories.json id -> icon identifier.
-  static const _seedIconByCategoryId = <String, String>{
-    'food_dining': 'restaurant',
-    'groceries': 'shopping_basket',
-    'transport': 'directions_car',
-    'shopping': 'shopping_bag',
-    'bills_utilities': 'receipt_long',
-    'subscriptions': 'subscriptions',
-    'rent_housing': 'home',
-    'emi_loans': 'account_balance',
-    'health': 'local_hospital',
-    'education': 'school',
-    'entertainment': 'theaters',
-    'travel': 'flight',
-    'transfers': 'swap_horiz',
-    'income': 'payments',
-    'fees_charges': 'request_quote',
-    'cash_withdrawal': 'atm',
-    'investments': 'trending_up',
-    'other': 'category',
-  };
-
   // Icon identifiers used by assets/seed/categories.json. Const map of
   // codepoints is not tree-shake friendly for unused entries, but this set is
   // small and fixed.

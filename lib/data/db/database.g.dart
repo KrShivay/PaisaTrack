@@ -1225,6 +1225,21 @@ class $TransactionsTable extends Transactions
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _counterpartyVpaMeta =
+      const VerificationMeta('counterpartyVpa');
+  @override
+  late final GeneratedColumn<String> counterpartyVpa = GeneratedColumn<String>(
+      'counterparty_vpa', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _duplicateOfTxnIdMeta =
+      const VerificationMeta('duplicateOfTxnId');
+  @override
+  late final GeneratedColumn<String> duplicateOfTxnId = GeneratedColumn<String>(
+      'duplicate_of_txn_id', aliasedName, true,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES transactions (id)'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -1256,6 +1271,8 @@ class $TransactionsTable extends Transactions
         confidenceJson,
         status,
         isDeleted,
+        counterpartyVpa,
+        duplicateOfTxnId,
         createdAt,
         updatedAt
       ];
@@ -1367,6 +1384,18 @@ class $TransactionsTable extends Transactions
       context.handle(_isDeletedMeta,
           isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
     }
+    if (data.containsKey('counterparty_vpa')) {
+      context.handle(
+          _counterpartyVpaMeta,
+          counterpartyVpa.isAcceptableOrUnknown(
+              data['counterparty_vpa']!, _counterpartyVpaMeta));
+    }
+    if (data.containsKey('duplicate_of_txn_id')) {
+      context.handle(
+          _duplicateOfTxnIdMeta,
+          duplicateOfTxnId.isAcceptableOrUnknown(
+              data['duplicate_of_txn_id']!, _duplicateOfTxnIdMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -1422,6 +1451,10 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       isDeleted: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      counterpartyVpa: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}counterparty_vpa']),
+      duplicateOfTxnId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}duplicate_of_txn_id']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -1453,6 +1486,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String confidenceJson;
   final String status;
   final bool isDeleted;
+  final String? counterpartyVpa;
+  final String? duplicateOfTxnId;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction(
@@ -1473,6 +1508,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.confidenceJson,
       required this.status,
       required this.isDeleted,
+      this.counterpartyVpa,
+      this.duplicateOfTxnId,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -1511,6 +1548,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['confidence_json'] = Variable<String>(confidenceJson);
     map['status'] = Variable<String>(status);
     map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || counterpartyVpa != null) {
+      map['counterparty_vpa'] = Variable<String>(counterpartyVpa);
+    }
+    if (!nullToAbsent || duplicateOfTxnId != null) {
+      map['duplicate_of_txn_id'] = Variable<String>(duplicateOfTxnId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -1549,6 +1592,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       confidenceJson: Value(confidenceJson),
       status: Value(status),
       isDeleted: Value(isDeleted),
+      counterpartyVpa: counterpartyVpa == null && nullToAbsent
+          ? const Value.absent()
+          : Value(counterpartyVpa),
+      duplicateOfTxnId: duplicateOfTxnId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(duplicateOfTxnId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -1575,6 +1624,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       confidenceJson: serializer.fromJson<String>(json['confidenceJson']),
       status: serializer.fromJson<String>(json['status']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      counterpartyVpa: serializer.fromJson<String?>(json['counterpartyVpa']),
+      duplicateOfTxnId: serializer.fromJson<String?>(json['duplicateOfTxnId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1600,6 +1651,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'confidenceJson': serializer.toJson<String>(confidenceJson),
       'status': serializer.toJson<String>(status),
       'isDeleted': serializer.toJson<bool>(isDeleted),
+      'counterpartyVpa': serializer.toJson<String?>(counterpartyVpa),
+      'duplicateOfTxnId': serializer.toJson<String?>(duplicateOfTxnId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1623,6 +1676,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           String? confidenceJson,
           String? status,
           bool? isDeleted,
+          Value<String?> counterpartyVpa = const Value.absent(),
+          Value<String?> duplicateOfTxnId = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Transaction(
@@ -1644,6 +1699,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         confidenceJson: confidenceJson ?? this.confidenceJson,
         status: status ?? this.status,
         isDeleted: isDeleted ?? this.isDeleted,
+        counterpartyVpa: counterpartyVpa.present
+            ? counterpartyVpa.value
+            : this.counterpartyVpa,
+        duplicateOfTxnId: duplicateOfTxnId.present
+            ? duplicateOfTxnId.value
+            : this.duplicateOfTxnId,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -1667,6 +1728,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('confidenceJson: $confidenceJson, ')
           ..write('status: $status, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('counterpartyVpa: $counterpartyVpa, ')
+          ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1674,26 +1737,29 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      ts,
-      amount,
-      direction,
-      channel,
-      accountHint,
-      merchantRaw,
-      merchantId,
-      categoryId,
-      description,
-      balanceAfter,
-      refId,
-      parseSource,
-      smsId,
-      confidenceJson,
-      status,
-      isDeleted,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        ts,
+        amount,
+        direction,
+        channel,
+        accountHint,
+        merchantRaw,
+        merchantId,
+        categoryId,
+        description,
+        balanceAfter,
+        refId,
+        parseSource,
+        smsId,
+        confidenceJson,
+        status,
+        isDeleted,
+        counterpartyVpa,
+        duplicateOfTxnId,
+        createdAt,
+        updatedAt
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1715,6 +1781,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.confidenceJson == this.confidenceJson &&
           other.status == this.status &&
           other.isDeleted == this.isDeleted &&
+          other.counterpartyVpa == this.counterpartyVpa &&
+          other.duplicateOfTxnId == this.duplicateOfTxnId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1737,6 +1805,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> confidenceJson;
   final Value<String> status;
   final Value<bool> isDeleted;
+  final Value<String?> counterpartyVpa;
+  final Value<String?> duplicateOfTxnId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1758,6 +1828,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.confidenceJson = const Value.absent(),
     this.status = const Value.absent(),
     this.isDeleted = const Value.absent(),
+    this.counterpartyVpa = const Value.absent(),
+    this.duplicateOfTxnId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1780,6 +1852,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String confidenceJson,
     required String status,
     this.isDeleted = const Value.absent(),
+    this.counterpartyVpa = const Value.absent(),
+    this.duplicateOfTxnId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -1811,6 +1885,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? confidenceJson,
     Expression<String>? status,
     Expression<bool>? isDeleted,
+    Expression<String>? counterpartyVpa,
+    Expression<String>? duplicateOfTxnId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1833,6 +1909,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (confidenceJson != null) 'confidence_json': confidenceJson,
       if (status != null) 'status': status,
       if (isDeleted != null) 'is_deleted': isDeleted,
+      if (counterpartyVpa != null) 'counterparty_vpa': counterpartyVpa,
+      if (duplicateOfTxnId != null) 'duplicate_of_txn_id': duplicateOfTxnId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1857,6 +1935,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String>? confidenceJson,
       Value<String>? status,
       Value<bool>? isDeleted,
+      Value<String?>? counterpartyVpa,
+      Value<String?>? duplicateOfTxnId,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -1878,6 +1958,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       confidenceJson: confidenceJson ?? this.confidenceJson,
       status: status ?? this.status,
       isDeleted: isDeleted ?? this.isDeleted,
+      counterpartyVpa: counterpartyVpa ?? this.counterpartyVpa,
+      duplicateOfTxnId: duplicateOfTxnId ?? this.duplicateOfTxnId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1938,6 +2020,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (isDeleted.present) {
       map['is_deleted'] = Variable<bool>(isDeleted.value);
     }
+    if (counterpartyVpa.present) {
+      map['counterparty_vpa'] = Variable<String>(counterpartyVpa.value);
+    }
+    if (duplicateOfTxnId.present) {
+      map['duplicate_of_txn_id'] = Variable<String>(duplicateOfTxnId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1970,6 +2058,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('confidenceJson: $confidenceJson, ')
           ..write('status: $status, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('counterpartyVpa: $counterpartyVpa, ')
+          ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -3135,6 +3225,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       'CREATE INDEX idx_transactions_ref_id ON transactions (ref_id)');
   late final Index idxTransactionsStatus = Index('idx_transactions_status',
       'CREATE INDEX idx_transactions_status ON transactions (status)');
+  late final Index idxTransactionsDuplicateOfTxnId = Index(
+      'idx_transactions_duplicate_of_txn_id',
+      'CREATE INDEX idx_transactions_duplicate_of_txn_id ON transactions (duplicate_of_txn_id)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3151,7 +3244,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         idxTransactionsMerchantId,
         idxTransactionsCategoryId,
         idxTransactionsRefId,
-        idxTransactionsStatus
+        idxTransactionsStatus,
+        idxTransactionsDuplicateOfTxnId
       ];
 }
 
@@ -3756,6 +3850,8 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   required String confidenceJson,
   required String status,
   Value<bool> isDeleted,
+  Value<String?> counterpartyVpa,
+  Value<String?> duplicateOfTxnId,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -3779,6 +3875,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String> confidenceJson,
   Value<String> status,
   Value<bool> isDeleted,
+  Value<String?> counterpartyVpa,
+  Value<String?> duplicateOfTxnId,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -3821,6 +3919,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> confidenceJson = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
+            Value<String?> counterpartyVpa = const Value.absent(),
+            Value<String?> duplicateOfTxnId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -3843,6 +3943,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             confidenceJson: confidenceJson,
             status: status,
             isDeleted: isDeleted,
+            counterpartyVpa: counterpartyVpa,
+            duplicateOfTxnId: duplicateOfTxnId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -3865,6 +3967,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             required String confidenceJson,
             required String status,
             Value<bool> isDeleted = const Value.absent(),
+            Value<String?> counterpartyVpa = const Value.absent(),
+            Value<String?> duplicateOfTxnId = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -3887,6 +3991,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             confidenceJson: confidenceJson,
             status: status,
             isDeleted: isDeleted,
+            counterpartyVpa: counterpartyVpa,
+            duplicateOfTxnId: duplicateOfTxnId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -3979,6 +4085,11 @@ class $$TransactionsTableFilterComposer
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
+  ColumnFilters<String> get counterpartyVpa => $state.composableBuilder(
+      column: $state.table.counterpartyVpa,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
   ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
       column: $state.table.createdAt,
       builder: (column, joinBuilders) =>
@@ -4022,6 +4133,18 @@ class $$TransactionsTableFilterComposer
         builder: (joinBuilder, parentComposers) => $$RawSmsTableFilterComposer(
             ComposerState(
                 $state.db, $state.db.rawSms, joinBuilder, parentComposers)));
+    return composer;
+  }
+
+  $$TransactionsTableFilterComposer get duplicateOfTxnId {
+    final $$TransactionsTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.duplicateOfTxnId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableFilterComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
     return composer;
   }
 
@@ -4125,6 +4248,11 @@ class $$TransactionsTableOrderingComposer
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
+  ColumnOrderings<String> get counterpartyVpa => $state.composableBuilder(
+      column: $state.table.counterpartyVpa,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
   ColumnOrderings<DateTime> get createdAt => $state.composableBuilder(
       column: $state.table.createdAt,
       builder: (column, joinBuilders) =>
@@ -4168,6 +4296,18 @@ class $$TransactionsTableOrderingComposer
         builder: (joinBuilder, parentComposers) =>
             $$RawSmsTableOrderingComposer(ComposerState(
                 $state.db, $state.db.rawSms, joinBuilder, parentComposers)));
+    return composer;
+  }
+
+  $$TransactionsTableOrderingComposer get duplicateOfTxnId {
+    final $$TransactionsTableOrderingComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.duplicateOfTxnId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableOrderingComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
     return composer;
   }
 }

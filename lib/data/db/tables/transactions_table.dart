@@ -13,6 +13,10 @@ import 'raw_sms_table.dart';
 @TableIndex(name: 'idx_transactions_category_id', columns: {#categoryId})
 @TableIndex(name: 'idx_transactions_ref_id', columns: {#refId})
 @TableIndex(name: 'idx_transactions_status', columns: {#status})
+@TableIndex(
+  name: 'idx_transactions_duplicate_of_txn_id',
+  columns: {#duplicateOfTxnId},
+)
 class Transactions extends Table {
   TextColumn get id => text()();
   IntColumn get ts => integer()();
@@ -30,7 +34,16 @@ class Transactions extends Table {
   TextColumn get smsId => text().nullable().references(RawSms, #id)();
   TextColumn get confidenceJson => text()();
   TextColumn get status => text()();
+  // v1 meaning was overloaded (user delete + system dedup suppression); v2
+  // (ADR 0003) narrows this back to user-initiated soft delete only.
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  // Independent counterparty signal for P2P rule matching (ADR 0003); no
+  // longer folded into merchantRaw at write time.
+  TextColumn get counterpartyVpa => text().nullable()();
+  // Non-null => this row is a cross-source echo of the referenced row
+  // (ADR 0003). Replaces the v1 `isDeleted` overload for dedup suppression.
+  TextColumn get duplicateOfTxnId =>
+      text().nullable().references(Transactions, #id)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

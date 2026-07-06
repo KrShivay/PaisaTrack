@@ -62,7 +62,7 @@ class _TransactionTile extends StatelessWidget {
     final isCredit = item.direction == TransactionDirection.credit;
     final sign = isCredit ? '+' : '-';
     final amountColor = isCredit ? paisa.credit : paisa.debit;
-    final categoryColor = CategoryVisuals.colorForName(item.categoryName);
+    final categoryColor = CategoryVisuals.color(item.categoryId);
 
     return ListTile(
       leading: Container(
@@ -73,7 +73,7 @@ class _TransactionTile extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          CategoryVisuals.iconForName(item.categoryName),
+          CategoryVisuals.icon(item.categoryIcon),
           size: 20,
           color: categoryColor,
         ),

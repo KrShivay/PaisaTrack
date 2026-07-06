@@ -17,6 +17,8 @@ void main() {
     required TransactionDirection direction,
     required String displayName,
     String? categoryName,
+    String? categoryId,
+    String? categoryIcon,
   }) {
     return TransactionListItem(
       id: id,
@@ -25,6 +27,8 @@ void main() {
       direction: direction,
       displayName: displayName,
       categoryName: categoryName,
+      categoryId: categoryId,
+      categoryIcon: categoryIcon,
     );
   }
 
@@ -92,8 +96,9 @@ void main() {
     );
   });
 
-  test('repository resolves names newest-first and excludes soft-deleted rows',
-      () async {
+  test(
+      'repository resolves names newest-first and excludes soft-deleted and '
+      'duplicate-suppressed rows', () async {
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
     final now = DateTime.utc(2026, 7, 6, 9);
@@ -126,6 +131,7 @@ void main() {
       String? merchantRaw,
       String? categoryId,
       bool isDeleted = false,
+      String? duplicateOfTxnId,
     }) {
       return database.into(database.transactions).insertOnConflictUpdate(
             TransactionsCompanion.insert(
@@ -141,6 +147,7 @@ void main() {
               confidenceJson: '{}',
               status: 'auto',
               isDeleted: Value(isDeleted),
+              duplicateOfTxnId: Value(duplicateOfTxnId),
               createdAt: ts,
               updatedAt: ts,
             ),
@@ -170,6 +177,14 @@ void main() {
       merchantRaw: 'Hidden Merchant',
       isDeleted: true,
     );
+    await insertTxn(
+      id: 'txn_dup_echo',
+      ts: now.add(const Duration(minutes: 2)),
+      amount: 300,
+      direction: 'debit',
+      merchantRaw: 'Echo Merchant',
+      duplicateOfTxnId: 'txn_older',
+    );
 
     final rows =
         await TransactionRepository(database).watchTransactions().first;
@@ -178,5 +193,7 @@ void main() {
     expect(rows.first.direction, TransactionDirection.credit);
     expect(rows.first.categoryName, isNull);
     expect(rows.last.categoryName, 'Shopping');
+    expect(rows.last.categoryId, 'cat_shopping');
+    expect(rows.last.categoryIcon, 'shopping_bag');
   });
 }

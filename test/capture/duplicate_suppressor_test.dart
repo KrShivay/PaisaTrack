@@ -46,6 +46,7 @@ Transaction _existing({
   String? merchantRaw,
   String? refId,
   bool isDeleted = false,
+  String? duplicateOfTxnId,
   required DateTime ts,
 }) {
   return Transaction(
@@ -66,6 +67,7 @@ Transaction _existing({
     confidenceJson: '{}',
     status: 'auto',
     isDeleted: isDeleted,
+    duplicateOfTxnId: duplicateOfTxnId,
     createdAt: ts,
     updatedAt: ts,
   );
@@ -158,6 +160,20 @@ void main() {
         merchantRaw: 'amazon@ybl',
         ts: baseTs,
         isDeleted: true,
+      ),
+      expectDuplicate: false,
+    ),
+    _Case(
+      description: 'unrelated: an existing row already linked as someone '
+          "else's echo (duplicate_of_txn_id set) is never a match target",
+      candidate: _record(
+        merchantRaw: 'Amazon Pay India',
+        ts: baseTs.add(const Duration(minutes: 1)),
+      ),
+      existing: _existing(
+        merchantRaw: 'amazon@ybl',
+        ts: baseTs,
+        duplicateOfTxnId: 'txn_primary',
       ),
       expectDuplicate: false,
     ),

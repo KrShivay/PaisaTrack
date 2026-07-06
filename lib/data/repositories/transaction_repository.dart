@@ -14,6 +14,8 @@ class TransactionListItem {
     required this.direction,
     required this.displayName,
     required this.categoryName,
+    required this.categoryId,
+    required this.categoryIcon,
   });
 
   final String id;
@@ -22,16 +24,21 @@ class TransactionListItem {
   final TransactionDirection direction;
   final String displayName;
   final String? categoryName;
+  final String? categoryId;
+  final String? categoryIcon;
 }
 
-/// Reads non-deleted transactions for list and dashboard screens.
+/// Reads non-deleted, non-suppressed transactions for list and dashboard
+/// screens.
 class TransactionRepository {
   const TransactionRepository(this._database);
 
   final AppDatabase _database;
 
-  /// Watches non-deleted transactions, newest first, with merchant and
-  /// category names resolved in the same query.
+  /// Watches user-visible transactions, newest first, with merchant and
+  /// category display data resolved in the same query. Excludes rows the
+  /// user deleted and rows suppressed as a cross-source duplicate echo
+  /// (ADR 0003: `is_deleted` and `duplicate_of_txn_id` are independent).
   Stream<List<TransactionListItem>> watchTransactions() {
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
@@ -43,7 +50,10 @@ class TransactionRepository {
         _database.categories.id.equalsExp(_database.transactions.categoryId),
       ),
     ])
-      ..where(_database.transactions.isDeleted.equals(false))
+      ..where(
+        _database.transactions.isDeleted.equals(false) &
+            _database.transactions.duplicateOfTxnId.isNull(),
+      )
       ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);
 
     return query.watch().map(
@@ -60,8 +70,15 @@ class TransactionRepository {
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
       amount: txn.amount,
       direction: _directionFromWireName(txn.direction),
-      displayName: merchant?.canonicalName ?? txn.merchantRaw ?? 'Unknown',
+      // Presentation-time fallback (merchant -> VPA); the write path keeps
+      // the two signals independent (ADR 0003).
+      displayName: merchant?.canonicalName ??
+          txn.merchantRaw ??
+          txn.counterpartyVpa ??
+          'Unknown',
       categoryName: category?.name,
+      categoryId: category?.id,
+      categoryIcon: category?.icon,
     );
   }
 }

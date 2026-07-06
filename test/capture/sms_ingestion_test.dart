@@ -303,8 +303,10 @@ void main() {
     expect(transactions, hasLength(2));
     expect(transactions[0].id, 'txn_sms_bank');
     expect(transactions[0].isDeleted, isFalse);
+    expect(transactions[0].duplicateOfTxnId, isNull);
     expect(transactions[1].id, 'txn_sms_wallet');
-    expect(transactions[1].isDeleted, isTrue);
+    expect(transactions[1].isDeleted, isFalse);
+    expect(transactions[1].duplicateOfTxnId, 'txn_sms_bank');
   });
 
   test(

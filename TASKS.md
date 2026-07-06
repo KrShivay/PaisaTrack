@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
+Last updated: 2026-07-07 by @claude (T-036 review PASS → Done; T-037/T-038/T-039/T-041 unblocked)
 
 ## In Progress
 
@@ -8,9 +8,6 @@ Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
      Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
      evidence is strong; Phase 2 build work may proceed in parallel while the
      human runs the reconciliation. -->
-- [ ] T-036 (@codex) [P2] Schema v2 migration: counterparty_vpa + duplicate_of + category in list items
-      AC: Drift schema v2 per ADR 0003 with migration test (v1→v2 preserves data); `DuplicateSuppressor` writes `duplicate_of_txn_id` instead of `isDeleted`; list queries exclude suppressed rows; `TransactionListItem` gains `categoryId`/`categoryIcon` so `CategoryVisuals` no longer needs the name→id normalizer (switch tiles to `CategoryVisuals.icon`/`color`); docs/schema.md migration log updated.
-      Depends: T-035
 - [ ] T-037 (@codex) [P2] Manual transaction entry
       AC: FAB on transactions list opens an entry form (amount, direction, category, description, date; channel defaults 'cash'); persists via repository with `parse_source='manual'`, `status='confirmed'`; renders in list/dashboard identically to parsed rows; widget + repository tests; design-system tokens only (no literals).
 - [ ] T-038 (@codex) [P2] Transaction detail + edit writes feedback rows
@@ -46,6 +43,11 @@ Last updated: 2026-07-07 by @claude (Phase 2 queue groomed: T-034..T-047)
 ## In Review
 
 ## Done
+- [x] T-036 (@codex, review @claude: PASS) [P2] Schema v2 migration: counterparty_vpa + duplicate_of + category in list items (2026-07-07)
+      Review: PASS — schema/migration/write-path/read-path/UI changes all match ADR 0003 exactly; v2 migration test is non-vacuous (real v1 sqlite3 file, asserts columns, index, unique-match backfill conversion, conservative orphan handling, no counterparty_vpa backfill, data preservation); `DuplicateMatchRule` extraction keeps live-ingest and migration semantics identical and fixed a real counterparty-key bug; suppressed/linked rows excluded as match targets with test coverage. Reviewer could not re-run `flutter test`/GitNexus in this sandbox (repo-local Flutter is wrong arch; gitnexus npx install times out) — relies on reading test source plus @codex's logged full-suite evidence. Non-blocking note: the migration backfill candidate query excludes `is_deleted=1` rows but not already-converted echoes (`duplicate_of_txn_id IS NOT NULL`), so a later suppressed row could theoretically match a just-converted echo; the ambiguity path (>1 match → stays suppressed) makes this conservative, not corrupting — tighten if a real device migration logs unresolved rows.
+      AC met: Drift schema v2 (`schemaVersion=2`) adds `transactions.counterparty_vpa` and `transactions.duplicate_of_txn_id` (indexed, self-referencing) per ADR 0003; `is_deleted` reverts to user-delete-only. `onUpgrade` migration backfills `duplicate_of_txn_id` for v1 suppressed rows by re-running the pairing rule, conservatively leaving unmatched rows `is_deleted=1`; new `test/data/db/app_database_v2_migration_test.dart` builds a real v1 sqlite3 file and asserts columns/index/backfill/data-preservation. `DuplicateSuppressor`/`SmsIngestor` write the link instead of `isDeleted`; `TransactionRepository.watchTransactions` excludes `is_deleted=1 OR duplicate_of_txn_id IS NOT NULL`. `TransactionListItem` gains `categoryId`/`categoryIcon`; `CategoryVisuals`'s name→id normalizer (`colorForName`/`iconForName`/`_idForName`) deleted, tiles use `CategoryVisuals.color`/`icon` directly. docs/schema.md migration log updated.
+      Evidence: `build_runner build` clean; `flutter analyze --no-pub` clean (1 pre-existing unrelated lint); `flutter test --no-pub --concurrency=1` 64 passed / 2 skipped (scratch debug test + host SQLCipher skip — the new v2 migration test does not need SQLCipher and runs unskipped). GitNexus `detect_changes(scope: all)` on a freshly re-analyzed index: HIGH risk / 51 changed symbols / 15 affected processes, reviewed and expected (single ADR touching write path, migration, read path, two UI call sites together) — see WORKLOG for the full breakdown.
+      Note: deferred the ADR's "Suppressed duplicates" dev screen (not in this task's AC) — flagged as a follow-up for whenever T-038 needs the same relationship.
 - [x] T-035 (@claude, approved @human) [P2] ADR 0003: dedup rework + counterparty schema spec (2026-07-07)
       AC met: docs/decisions/0003-dedup-and-counterparty.md accepted — `duplicate_of_txn_id` link replaces the `is_deleted` overload (user delete vs system suppression separated, reversible, dev-visible), `counterparty_vpa` column per the frozen §6.2 contract, v1→v2 migration with conservative echo backfill, no `counterparty_vpa` backfill (write-time provenance unknowable). Unblocks T-036.
 - [x] T-034 (@human + @claude tooling) [P1] Phase 1 exit: bank-statement reconciliation (2026-07-07)

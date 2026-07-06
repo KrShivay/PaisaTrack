@@ -20,6 +20,8 @@ void main() {
       direction: direction,
       displayName: id,
       categoryName: null,
+      categoryId: null,
+      categoryIcon: null,
     );
   }
 
