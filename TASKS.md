@@ -1,14 +1,10 @@
 # Task Board
-Last updated: 2026-07-05 by @claude (T-023)
+Last updated: 2026-07-06 by @claude (T-024)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; each depends on the prior. -->
-- [ ] T-024 (@codex) [P1] Real bank template registries + ≥30 sanitized fixtures/bank
-      AC: template registries authored for the developer's own banks; ≥30 sanitized real SMS per bank committed under test/fixtures/sms/<bank>/ with expected JSON; SmsFixtureRunner asserts ≥90% parse into the correct NormalizedTransactionRecord and that declined/failed SMS produce err (no transaction). Supersedes Proposed T-017.
-      Depends: T-022 review pass, T-007 review pass
-
 - [ ] T-025 (@codex) [P1] Paired bank+wallet duplicate suppression
       AC: dedup logic suppresses a second transaction when a bank SMS and its paired wallet/UPI SMS describe the same debit (amount + counterparty within a time window); table-driven tests cover paired-duplicate, near-miss-not-duplicate, and unrelated cases.
       Depends: T-022 review pass
@@ -26,6 +22,9 @@ Last updated: 2026-07-05 by @claude (T-023)
 ## In Review
 
 ## Done
+- [x] T-024 (@codex under @human override, self-executed by @claude — no independent reviewer) [P1] Real bank template registries + ≥30 sanitized fixtures/bank (2026-07-06)
+      AC met: template registries authored for the developer's own banks (IndusInd, SBI, Paytm Payments Bank, Axis Bank) in `assets/templates/{indusind,sbi,paytmb,axisbk}.json`; 30-44 sanitized real SMS per bank committed under `test/fixtures/sms/<bank>/` with hand-computed expected JSON (136 fixtures total across 4 banks); `sms_bank_fixture_coverage_test.dart` asserts ≥90% of positive fixtures per bank parse into the correct `NormalizedTransactionRecord` (all 4 banks hit 100%) and that every negative/declined/future-event fixture parses to `err`, never a transaction. All real SMS were pulled directly off the developer's own Android device via `adb`, never fabricated; personal counterparty names (incl. the device owner's own name) were masked to placeholders, account/card digits masked to fixed placeholders, business/merchant names left unmasked, per the `sms-template-authoring` skill's fixture-first law (≥5 real fixtures per template; shapes with <5 real occurrences — e.g. SBI credit-reversal, Paytm's one-off "Automatic Payment" message — committed as negative "known gap" fixtures instead of fabricated). Also extended `FieldNormalizer.parseDate` (`lib/capture/template_engine/field_normalizer.dart`) with `dd-MM-yyyy` and separator-less alpha-month `ddMMMyy` support, needed by real SBI/Axis date formats, with 3 new unit tests (6/6 passing). `docs/sms-templates.md` catalog updated with one section per bank. Verified: `flutter analyze` clean (1 pre-existing unrelated lint), full `flutter test` suite green (41+ tests, 1 known-limitation SQLCipher-in-host-VM skip), `mcp__gitnexus__detect_changes(scope: all)` shows only the expected `FieldNormalizer` symbols touched (medium risk, no surprises). Caveat: this was self-executed end-to-end by @claude at the human's direct request rather than an independent codex→claude review handoff — flagging for a future independent review pass if the team wants one before this is fully trusted for production parsing.
+
 - [x] T-023 (@codex under @human override, reviewed @claude) [P1] Historical SMS inbox backfill (2026-07-05)
       Review: PASS — new `com.paisatrack/sms_backfill` MethodChannel (`readInbox`/`isBackfillComplete`/`markBackfillComplete`); `SmsInboxReader` queries `Telephony.Sms.Inbox`, applies the existing `SmsFilter`, and stamps rows with the shared `CapturedSmsId` (extracted so live capture and backfill hash identically); the query runs off the main thread and never logs bodies. Dart `SmsBackfiller` reads the last 3 months and ingests via `SmsIngestor.ingest` in 25-message chunks, yielding between chunks so the UI thread never blocks; `smsBackfillProvider` runs it once on first grant, guarded by a persisted `BackfillMarker`. Independently verified (see WORKLOG): `flutter analyze` clean, `flutter test` 36 passed / 1 host SQLCipher skip incl. `sms_backfill_test` 6/6 (**re-running inserts no duplicate rows** — the AC test), Gradle `:app:testDebugUnitTest` BUILD SUCCESSFUL. Review found + fixed a real defect: the first cut relied only on the FutureProvider process cache, so every cold start would re-scan and duplicate live-captured messages (live uses `currentTimeMillis` ids, inbox uses `DATE`) — now a persisted marker fires backfill only at the genuine first grant, before any live captures exist; no schema migration. Non-blocking: (a) live-vs-backfill *semantic* duplicates are suppressed by T-025, not here; (b) backfill is one-time by design (AC), so post-first-grant misses while the receiver is inactive are not re-swept — a periodic catch-up would first need unified identity or T-025 dedup to stay duplicate-free.
 
