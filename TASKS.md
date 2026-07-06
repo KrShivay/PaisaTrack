@@ -1,13 +1,10 @@
 # Task Board
-Last updated: 2026-07-06 by @claude (T-029, T-030 filed)
+Last updated: 2026-07-06 by @codex (T-030 verified)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 1 — Capture MVP (PLAN.md §"Phase 1"). Ordered; depends on prior. -->
-- [ ] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain
-      AC: `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` green (all screen retrofits kept test-visible strings/amount formats unchanged, so failures indicate real breakage); `gitnexus detect-changes` run and reported; fix any analyze/test fallout from commit 5ab4e93 (authored without a Flutter toolchain — see WORKLOG 23:50). Watch specifically: onboarding `Image.asset` in widget tests (errorBuilder guard added), `withValues`/`CardThemeData`/`surfaceContainer*` availability on the repo SDK, unused-import lints in the new `lib/core/theme/` files.
-      Depends: T-029
 
 <!-- Phase 2 — groomed early because they complete the design system. -->
 - [ ] T-031 (@codex) [P2] Shared `formatInr()` currency formatter (Indian digit grouping)
@@ -21,6 +18,8 @@ Last updated: 2026-07-06 by @claude (T-029, T-030 filed)
 ## In Review
 
 ## Done
+- [x] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain (2026-07-06)
+      AC met: T-029's design-system retrofit now passes the local toolchain. Found and fixed one real regression: the retrofitted onboarding screen overflowed at the default 800x600 widget-test viewport, leaving the grant button partly off-screen. `OnboardingScreen` now uses a scroll-safe body and compact presentation for short heights while preserving all test-visible strings and permission behavior. Evidence: GitNexus pre-edit impact LOW for `OnboardingScreen` (3 direct upstream dependents, 1 affected process: onboarding test flow) and `_PermissionBody` (2 direct upstream dependents, 0 affected processes); `flutter analyze` clean; targeted `flutter test test/features/onboarding/onboarding_screen_test.dart --concurrency=1` green; full `flutter test --concurrency=1` green (57 passed, 2 skipped: scratch dashboard debug test and host SQLCipher migration skip); Android `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL; GitNexus `detect_changes(scope: all)` reported MEDIUM risk limited to `lib/features/onboarding/onboarding_screen.dart` and the `Main → OnboardingScreen` process.
 - [x] T-029 (@claude, self-executed at human's direction — design authority per COLLABORATION roles; implementation verification delegated to T-030) [P1] Design system (dark-first) + theme implementation + screen retrofit (2026-07-06)
       AC met: `docs/design-system.md` written as the binding UI/UX convention set (principles, color/type/spacing/shape tokens, money & status semantics — debit/credit colors on amounts only, debit ≠ error, warning for degraded states — two-tier iconography with brand PNGs hero-only and Material icons + fixed category hues for functional UI, motion, accessibility, component recipes, UI-PR review checklist). Implemented in `lib/core/theme/`: `app_tokens.dart`, `app_theme.dart` (M3 dark+light from tokens, tonal surfaces, no shadows), `paisa_colors.dart` (ThemeExtension with brightness-aware fallback so bare-MaterialApp widget tests keep passing), `category_visuals.dart` (18 seed categories → icon + stable hue, plus name→id normalizer for list rows carrying only categoryName). Retrofitted `app.dart` (AppTheme light/dark, themeMode dark) and all five screens, styling only — every test-visible string and amount format unchanged. `docs/architecture.md` links the design system as binding. Evidence: commit 5ab4e93; WORKLOG 2026-07-06 23:50. Caveat: `flutter analyze`/`flutter test`/`detect-changes` could not run in the authoring environment (no Flutter toolchain; GitNexus native build unavailable on linux/arm64) — verification is T-030, which blocks treating this as fully reviewed.
 - [x] T-016 (@codex, self-executed — no independent reviewer yet) [P0] Kotlin unit tests for Android SMS and Keystore storage (2026-07-06)

@@ -22,47 +22,61 @@ class OnboardingScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('PaisaTrack')),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Brand illustration: hero use only (design-system.md §6).
-                Image.asset(
-                  AppIllustrations.smsRefresh,
-                  height: 96,
-                  excludeFromSemantics: true,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const SizedBox(height: 96),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'Read bank SMS on this device',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'PaisaTrack turns your bank and UPI messages into transactions. '
-                  'Messages are parsed on your device and never leave it. '
-                  'Grant SMS access to capture them automatically.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxHeight < 560;
+          final illustrationHeight = compact ? 40.0 : 96.0;
+          final outerPadding = compact ? AppSpacing.lg : AppSpacing.xl;
+          final sectionGap = compact ? AppSpacing.sm : AppSpacing.xl;
+          final titleStyle = compact
+              ? Theme.of(context).textTheme.titleLarge
+              : Theme.of(context).textTheme.headlineSmall;
+          final bodyStyle = compact
+              ? Theme.of(context).textTheme.bodyMedium
+              : Theme.of(context).textTheme.bodyLarge;
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(outerPadding),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Brand illustration: hero use only (design-system.md §6).
+                    Image.asset(
+                      AppIllustrations.smsRefresh,
+                      height: illustrationHeight,
+                      excludeFromSemantics: true,
+                      errorBuilder: (context, error, stackTrace) =>
+                          SizedBox(height: illustrationHeight),
+                    ),
+                    SizedBox(height: sectionGap),
+                    Text(
+                      'Read bank SMS on this device',
+                      style: titleStyle?.copyWith(fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'PaisaTrack turns your bank and UPI messages into '
+                      'transactions. Messages are parsed on your device and '
+                      'never leave it. Grant SMS access to capture them '
+                      'automatically.',
+                      textAlign: TextAlign.center,
+                      style: bodyStyle?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
+                    ),
+                    SizedBox(height: sectionGap),
+                    _PermissionBody(permission: permission),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                _PermissionBody(permission: permission),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

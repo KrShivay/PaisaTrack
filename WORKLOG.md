@@ -1,3 +1,12 @@
+## 2026-07-06 @codex — T-030
+
+- Did: verified the T-029 dark-first design-system retrofit in the local toolchain and fixed the one regression it exposed. The onboarding screen overflowed at the default 800x600 widget-test viewport and left the "Grant SMS access" button partly off-screen; `OnboardingScreen` now uses a scroll-safe body with compact illustration/spacing/typography at short heights while preserving test-visible strings and permission behavior.
+- Files: `lib/features/onboarding/onboarding_screen.dart`, `TASKS.md`, `WORKLOG.md`.
+- Evidence: GitNexus pre-edit impact was LOW for `OnboardingScreen` (3 direct upstream dependents, 1 affected process: onboarding test flow) and LOW for `_PermissionBody` (2 direct upstream dependents, 0 affected processes). `flutter analyze` clean. Targeted `flutter test test/features/onboarding/onboarding_screen_test.dart --concurrency=1` passed. Full `flutter test --concurrency=1` passed: 57 passed, 2 skipped (scratch dashboard debug test and host SQLCipher migration skip). Android `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL: 90 actionable tasks, 12 executed, 78 up-to-date. GitNexus `detect_changes(scope: all)` reported MEDIUM risk limited to `lib/features/onboarding/onboarding_screen.dart` and the `Main → OnboardingScreen` process.
+- Decisions: treated the off-screen action as real design fallout from T-029 rather than weakening tests; kept the fix scoped to layout responsiveness, not copy or permission state behavior. Ran Gradle with `GRADLE_USER_HOME` under `.tooling/_home/.gradle` to avoid writing outside the workspace.
+- Open questions: none.
+- Next: T-031 shared `formatInr()` currency formatter.
+
 ## 2026-07-06 23:50 @claude — Design system (dark-first) + theme implementation + screen retrofit
 
 - Did: established the PaisaTrack design system per the human's direction (dark-first fintech anchored on the app icon: near-black green surfaces, emerald primary, gold accent; light as an equal derived variant) and retrofitted all existing screens.
