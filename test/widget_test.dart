@@ -27,12 +27,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PaisaTrack'), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
   });
 
   testWidgets('boots with an in-memory app database override', (tester) async {
     final database = AppDatabase(NativeDatabase.memory());
-    addTearDown(database.close);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -49,12 +48,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PaisaTrack'), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
 
     final container = ProviderScope.containerOf(
-      tester.element(find.text('PaisaTrack')),
+      tester.element(find.text('Dashboard')),
       listen: false,
     );
     expect(await container.read(appDatabaseProvider.future), same(database));
+
+    // flutter_test disposes the widget tree (and drift's watch() stream)
+    // before any tearDown/addTearDown callback runs, so close() must happen
+    // here, before the test body returns, or drift's markAsClosed() schedules
+    // a debounce Timer.run that outlives the test — see the comment in
+    // drift's StreamQueryStore.markAsClosed.
+    await database.close();
   });
 }
