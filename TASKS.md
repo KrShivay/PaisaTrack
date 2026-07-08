@@ -8,8 +8,9 @@ Last updated: 2026-07-08 by @claude (partial toolchain verification: GitNexus de
      Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
      evidence is strong; Phase 2 build work may proceed in parallel while the
      human runs the reconciliation. -->
-- [ ] T-040 (@codex) [P2] Decision policy v1 (static thresholds)
+- [ ] T-040 (@codex) [P2] Decision policy v1 (static thresholds) — PREP COMMITTED 2026-07-08
       AC: `decision_policy.dart` implements PLAN §7.5 with constants from `constants.dart` (silent >=0.9; ask 0.6-0.9 when amount>=500 or merchant txn_count>=3; else needs_review; unseen P2P counterparty always asks once); sets transaction `status`; table-driven tests cover every branch incl. daily ask-budget exhaustion.
+      Prep complete (toolchain tests skipped at @human direction): isolated `DecisionPolicy` implements static status decision outputs using `AppConstants`; table-driven tests cover high-confidence auto, min-confidence behavior, ask by amount, ask by merchant count, budget exhaustion, low-risk needs_review, unseen P2P ask, and unseen P2P with exhausted budget. Not Done yet because ingest/status wiring is intentionally held until T-039 clears review.
       Depends: T-039
 - [x] T-041 (@codex) [P2] Category manager (2026-07-08)
       AC: settings-reachable screen to add/rename/merge categories; merges retro-apply to existing transactions and update rules/seed mappings atomically; user-created categories flagged `is_user_created`; `CategoryVisuals` falls back gracefully for user categories; tests for merge retro-apply.

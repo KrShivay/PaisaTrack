@@ -55,6 +55,10 @@ and backfill construct `SmsIngestor` with the categorizer
 `confidence_json` under `category` (`c`, `src`, optional `rule_id`). The
 classifier (step 2) and on-device LLM (step 4) slot in during later phases.
 
+`DecisionPolicy` exists as T-040 prep and implements static PLAN §7.5
+thresholds from `AppConstants`; ingest wiring is intentionally deferred until
+T-039 verification clears.
+
 ## Verification tooling
 
 `scripts/reconcile_statement.py` reconciles bank-statement XLSX exports

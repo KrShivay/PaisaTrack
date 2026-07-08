@@ -1,3 +1,18 @@
+## 2026-07-08 @codex — T-040 prep Decision policy v1
+
+- Did: added isolated `DecisionPolicy` with status outputs only. No
+  `SmsIngestor`, capture, categorizer, notification, or transaction write-path
+  wiring was added.
+- Behavior: uses `AppConstants.silentConfidenceThreshold`,
+  `askConfidenceThreshold`, and `askNowDailyBudget`; `min(merchant.c,
+  category.c)` controls normal decisions; medium-confidence asks require amount
+  >= 500 or merchant txn count >= 3 and budget left; unseen P2P counterparties
+  ask once when budget remains.
+- Tests/docs: wrote table-driven policy tests for every branch and wire names;
+  updated architecture docs to note wiring is deferred until T-039 clears.
+  Per @human instruction, tests were not executed.
+- Evidence: pre-edit impact on `AppConstants` MEDIUM, no affected processes.
+
 ## 2026-07-08 @codex — T-041 Category manager
 
 - Did: added Settings -> Manage categories screen. Users can add, rename, and
