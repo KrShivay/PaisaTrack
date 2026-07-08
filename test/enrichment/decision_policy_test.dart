@@ -67,6 +67,15 @@ void main() {
         status: DecisionStatus.asked,
       ),
       (
+        name: 'seen p2p counterparty still reviews',
+        input: input(
+          merchantConfidence: 1,
+          categoryConfidence: 1,
+          counterpartyVpa: 'friend@upi',
+        ),
+        status: DecisionStatus.needsReview,
+      ),
+      (
         name: 'unseen p2p respects exhausted ask budget',
         input: input(
           counterpartyVpa: 'friend@upi',

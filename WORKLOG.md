@@ -1,3 +1,11 @@
+## 2026-07-08 @claude — Review T-040 wiring (PASS with two fixes)
+
+- Reviewed @codex's `DecisionPolicy` → `SmsIngestor` wiring against PLAN §7.5 and the T-040 AC. Semantics verified: min(parser, category) confidence drives the ladder; rule-backed (min 0.97) → auto; seed (0.8) → ask when amount/merchant-count eligible and budget remains, else needs_review; fallback (0.3) → needs_review; unseen-P2P asks before the confidence gate (AC's "always asks once"), degrading to needs_review when the budget is spent; manual entries and the detail-edit path untouched (status 'confirmed' flows preserved).
+- Fix 1 (AC deviation): `input.amount >= 500 || merchantTxnCount >= 3` hardcoded the thresholds the AC requires from `constants.dart` — added `AppConstants.askAmountThreshold` (500.0) + `askMerchantTxnCount` (3) and referenced them in the policy. Impact preflight LOW.
+- Fix 2 (real budget leak): the policy also ran for suppressed duplicate echoes, so a hidden echo (bank+wallet pair) could land `status='asked'` — consuming one of the 2 daily asks on a row that never surfaces — and `_countAskedToday` counted such rows. Echoes now always land `'auto'` (pre-T-040 behavior for hidden rows) and the budget count filters `is_deleted=0 AND duplicate_of_txn_id IS NULL`.
+- Both fixes are behavior-preserving for every existing test scenario (no test tickles an echo+ask interaction); suite re-run required before T-040 → Done.
+- Closure: suite re-run green over both fixes — analyze clean, 101 passed / 2 known host skips. T-040 → Done; T-044 + T-045 unblocked (the last build tasks before the T-046 Phase 2 exit review).
+
 ## 2026-07-08 @claude — TOOLCHAIN VERIFICATION PASS (T-037/38/39, T-041/42/43, T-047)
 
 - Result: **full suite green — `flutter analyze --no-pub` clean; `flutter test --no-pub --concurrency=1` 96 passed / 2 known host skips** (scratch dashboard debug test; host SQLCipher migration skip). First complete toolchain run over the whole Phase 2 chain. T-037/38/39 and T-047 → Done; T-041/42/43 verification lines added; T-040 wiring unblocked.
@@ -10,6 +18,36 @@
 - Known-noise note: the drift "AppDatabase created multiple times" warning during the settings reset test is intentional (the reset service reopens the DB) — not a defect.
 - T-047 closure evidence: fixture runner + per-bank coverage suites green over `indusind_neft_credit_v1`/`indusind_ach_credit_v1` — all 13 new positives parse field-exact, all 4 negatives stay unparsed. Statement-side 99.03% stands as simulation evidence; canonical on-device export re-run folds into T-046 exit evidence.
 - Next: T-040 wiring (@codex, now unblocked) → T-044 + T-045 → T-046 Phase 2 exit review (@claude).
+
+## 2026-07-08 @codex — T-040 wiring Decision policy into ingest
+
+- Did: wired `DecisionPolicy` into `SmsIngestor` so parsed SMS transactions now
+  land with `auto`, `asked`, or `needs_review` instead of always `auto`.
+  Runtime inputs come from parser confidence, T-039 category confidence, prior
+  same merchant/VPA rows, same-VPA seen history, and today's existing `asked`
+  count against `AppConstants.askNowDailyBudget`.
+- Tests: extended `sms_ingestion_test` for seed low-risk review, high-amount
+  ask, budget exhaustion, familiar merchant ask, rule-backed auto, and unseen
+  P2P ask-once. Existing `decision_policy_test` still covers isolated branch
+  behavior.
+- Evidence: pre-edit GitNexus impact LOW for `SmsIngestor`,
+  `_transactionCompanionFor`, `SmsIngestor.ingest`, `smsCaptureBootstrapProvider`,
+  `smsBackfillProvider`, and `DecisionPolicy`; affected processes are the
+  expected live/backfill ingest flows. `flutter analyze --no-pub` passed.
+  Targeted decision/ingestion tests passed. Backfill tests passed. Full
+  `flutter test --no-pub --concurrency=1` passed: 101 passed / 2 known host
+  skips.
+- Follow-up fix: local full-suite rerun exposed that the P2P ask-once test was
+  accidentally creating a duplicate echo (same VPA/amount/time window), which
+  correctly stays `auto` because it is suppressed and hidden. The regression
+  test now uses two payments outside the duplicate window, and the policy
+  explicitly keeps seen P2P counterparties in `needs_review`. Analyzer and full
+  suite are green after the fix.
+- Decisions: kept ask-budget source at `AppConstants.askNowDailyBudget` for
+  this task, matching T-040 AC. The Settings slider can be connected later
+  through a shared settings boundary without introducing a capture-to-feature
+  dependency.
+- Open questions: none.
 
 ## 2026-07-08 @codex — Docs status refresh
 

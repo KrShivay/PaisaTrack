@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:drift/drift.dart' show OrderingTerm;
+import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +17,9 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
+import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
+import 'package:paisatrack/enrichment/seed_category_map.dart';
 
 import '../support/fake_sms_permission_gate.dart';
 
@@ -110,12 +112,137 @@ void main() {
     expect(transactions.single.amount, 449);
     expect(transactions.single.direction, 'debit');
     expect(transactions.single.channel, 'upi');
-    expect(transactions.single.status, 'auto');
+    expect(transactions.single.status, 'needs_review');
     // T-039: the ingest pipeline runs the categorizer ladder — 'AMZN*MKTPLC'
     // hits the bundled seed map ('amzn' -> shopping) at 0.8.
     expect(transactions.single.categoryId, 'shopping');
     expect(transactions.single.confidenceJson, contains('"category"'));
     expect(transactions.single.confidenceJson, contains('"src":"seed"'));
+  });
+
+  test('decision policy marks high amount seed-categorized txn asked',
+      () async {
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(amount: 500),
+      now: () => DateTime.utc(2026, 7, 5, 12),
+    );
+
+    await ingestor.ingest(_message('sms_high_amount'));
+
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions.single.status, 'asked');
+  });
+
+  test('decision policy respects daily ask budget exhaustion', () async {
+    final now = DateTime.utc(2026, 7, 5, 12);
+    await _insertTransaction(
+      database,
+      id: 'txn_asked_1',
+      status: 'asked',
+      createdAt: DateTime.utc(2026, 7, 5, 8),
+    );
+    await _insertTransaction(
+      database,
+      id: 'txn_asked_2',
+      status: 'asked',
+      createdAt: DateTime.utc(2026, 7, 5, 9),
+    );
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(amount: 500),
+      now: () => now,
+    );
+
+    await ingestor.ingest(_message('sms_budget_full'));
+
+    final txn = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_budget_full')))
+        .getSingle();
+    expect(txn.status, 'needs_review');
+  });
+
+  test('decision policy asks for familiar merchant at medium confidence',
+      () async {
+    final now = DateTime.utc(2026, 7, 5, 12);
+    for (var i = 0; i < 3; i++) {
+      await _insertTransaction(
+        database,
+        id: 'txn_prior_$i',
+        merchantRaw: 'AMZN*MKTPLC',
+        status: 'auto',
+        createdAt: DateTime.utc(2026, 7, 4, i),
+      );
+    }
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(amount: 49),
+      now: () => now,
+    );
+
+    await ingestor.ingest(_message('sms_familiar_merchant'));
+
+    final txn = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_familiar_merchant')))
+        .getSingle();
+    expect(txn.status, 'asked');
+  });
+
+  test('decision policy keeps rule-backed high confidence txn auto', () async {
+    await database.into(database.rules).insert(
+          RulesCompanion.insert(
+            id: 'rule_amzn',
+            matchType: 'merchant',
+            matchValue: 'amzn',
+            setCategoryId: const Value('shopping'),
+            createdAt: DateTime.utc(2026, 7, 5),
+          ),
+        );
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(amount: 49),
+      now: () => DateTime.utc(2026, 7, 5, 12),
+    );
+
+    await ingestor.ingest(_message('sms_rule_auto'));
+
+    final txn = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_rule_auto')))
+        .getSingle();
+    expect(txn.status, 'auto');
+  });
+
+  test('decision policy asks once for unseen p2p counterparty', () async {
+    final ingestor = _ingestorFor(
+      database,
+      null,
+      recordsById: {
+        'sms_first_friend': _sampleRecord(
+          amount: 49,
+          merchantRaw: null,
+          counterpartyVpa: 'friend@upi',
+          ts: DateTime.utc(2026, 7, 5, 10, 30),
+        ),
+        'sms_second_friend': _sampleRecord(
+          amount: 49,
+          merchantRaw: null,
+          counterpartyVpa: 'friend@upi',
+          ts: DateTime.utc(2026, 7, 5, 10, 45),
+        ),
+      },
+      now: () => DateTime.utc(2026, 7, 5, 12),
+    );
+
+    await ingestor.ingest(_message('sms_first_friend'));
+    await ingestor.ingest(_message('sms_second_friend'));
+
+    final transactions = await (database.select(database.transactions)
+          ..orderBy([(row) => OrderingTerm.asc(row.createdAt)]))
+        .get();
+    expect(transactions.map((row) => row.status), [
+      'asked',
+      'needs_review',
+    ]);
   });
 
   test('leaves raw_sms unparsed when parser returns an expected miss',
@@ -377,6 +504,81 @@ void main() {
     expect(transactions.single.refId, record['ref_id']);
     expect(transactions.single.ts, record['ts']);
   });
+}
+
+SmsIngestor _ingestorFor(
+  AppDatabase database,
+  NormalizedTransactionRecord? record, {
+  Map<String, NormalizedTransactionRecord>? recordsById,
+  DateTime Function()? now,
+}) {
+  return SmsIngestor(
+    database: database,
+    parser: recordsById == null
+        ? FakeParserCascade.ok(record!)
+        : FakeParserCascade.byId(recordsById),
+    categorizer: Categorizer(
+      rules: RuleRepository(database),
+      seedMap: SeedCategoryMap.fromJson('{"amzn":"shopping"}'),
+    ),
+    now: now,
+  );
+}
+
+RawSms _message(String id) {
+  return RawSms(
+    id: id,
+    sender: 'VK-HDFCBK',
+    body: 'Spent Rs 449',
+    receivedAt: DateTime.utc(2026, 7, 5, 10, 31),
+  );
+}
+
+NormalizedTransactionRecord _sampleRecord({
+  double amount = 449,
+  String? merchantRaw = 'AMZN*MKTPLC',
+  String? counterpartyVpa,
+  DateTime? ts,
+}) {
+  return NormalizedTransactionRecord(
+    amount: amount,
+    direction: TransactionDirection.debit,
+    channel: TransactionChannel.upi,
+    merchantRaw: merchantRaw,
+    counterpartyVpa: counterpartyVpa,
+    accountHint: 'xx4521',
+    balanceAfter: 12384.5,
+    refId: null,
+    ts: ts ?? DateTime.utc(2026, 7, 5, 10, 30),
+    parseSource: ParseSource.template,
+    parseConfidence: 0.97,
+  );
+}
+
+Future<void> _insertTransaction(
+  AppDatabase database, {
+  required String id,
+  required String status,
+  required DateTime createdAt,
+  String? merchantRaw,
+  String? counterpartyVpa,
+}) {
+  return database.into(database.transactions).insert(
+        TransactionsCompanion.insert(
+          id: id,
+          ts: createdAt.millisecondsSinceEpoch,
+          amount: 49,
+          direction: TransactionDirection.debit.wireName,
+          channel: TransactionChannel.upi.wireName,
+          merchantRaw: Value(merchantRaw),
+          counterpartyVpa: Value(counterpartyVpa),
+          parseSource: ParseSource.template.wireName,
+          confidenceJson: '{}',
+          status: status,
+          createdAt: createdAt,
+          updatedAt: createdAt,
+        ),
+      );
 }
 
 class FakeCapturedSmsChannel implements CapturedSmsChannel {

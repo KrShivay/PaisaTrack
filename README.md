@@ -23,16 +23,15 @@ contradictions.
 
 **Phase 2 (Usable Tracker): in progress.** Schema v2, manual entry, transaction
 detail/edit feedback, seed/rule categorization, category manager, settings, data
-reset, and encrypted export/import have been implemented or prepared. Several
-items still need the canonical Flutter analyze/test verification pass; see
-[TASKS.md](TASKS.md) for exact state.
+reset, encrypted export/import, and Decision policy v1 ingest status wiring have
+been implemented or prepared. T-040 is in review after a passing full Flutter
+suite; see [TASKS.md](TASKS.md) for exact state.
 
-**Current focus.** Finish Phase 2 by verifying T-037/T-038/T-039, wiring
-Decision policy v1 (T-040), building the ask-now notification flow (T-044), the
-weekly review screen (T-045), and the Phase 2 exit review (T-046). T-047 added
-IndusInd NEFT/ACH-credit templates and reports **99.03% statement coverage
-(407/411 rows)** in the fixture/SMS-dump simulation; final Flutter fixture tests
-and a fresh device export remain before it is marked Done.
+**Current focus.** Finish Phase 2 by reviewing/landing T-040, building the
+ask-now notification flow (T-044), the weekly review screen (T-045), and the
+Phase 2 exit review (T-046). T-047 added IndusInd NEFT/ACH-credit templates and
+reports **99.03% statement coverage (407/411 rows)** in the fixture/SMS-dump
+simulation; final device export evidence is deferred to the Phase 2 exit pass.
 
 Intelligence is on-device only with free components. No cloud inference path
 exists; see [ADR 0002](docs/decisions/0002-no-cloud-services.md).

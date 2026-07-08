@@ -22,6 +22,14 @@ class AppConstants {
   /// Maximum number of active clarification prompts per day.
   static const askNowDailyBudget = 2;
 
+  /// Amount at or above which a mid-confidence transaction is worth asking
+  /// about (PLAN §7.5).
+  static const askAmountThreshold = 500.0;
+
+  /// Prior transactions with the same merchant at or above which asking is
+  /// worthwhile (the merchant is familiar enough to teach a rule, PLAN §7.5).
+  static const askMerchantTxnCount = 3;
+
   /// Number of days raw SMS bodies may remain before purge.
   static const rawSmsRetentionDays = 30;
 

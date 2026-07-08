@@ -13,6 +13,7 @@ import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import '../data/repositories/rule_repository.dart';
 import '../enrichment/categorizer.dart';
+import '../enrichment/decision_policy.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
 import 'parser_cascade.dart';
@@ -86,11 +87,13 @@ class SmsIngestor {
     required AppDatabase database,
     required ParserCascade parser,
     Categorizer? categorizer,
+    DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
+        _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _now = now ?? DateTime.now;
 
@@ -100,6 +103,7 @@ class SmsIngestor {
   /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
   /// without one; production wiring always supplies it.
   final Categorizer? _categorizer;
+  final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
   final DateTime Function() _now;
 
@@ -123,12 +127,21 @@ class SmsIngestor {
         case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
           final duplicateOfTxnId = await _findDuplicateOfExisting(value);
           final categorization = await _categorizer?.categorize(value);
+          // Suppressed echoes never surface to the user, so they must not
+          // enter the ask flow or consume ask budget — keep them 'auto'.
+          final status = duplicateOfTxnId != null
+              ? DecisionStatus.auto
+              : await _decideStatus(
+                  value,
+                  categorization: categorization,
+                );
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
                   record: value,
                   duplicateOfTxnId: duplicateOfTxnId,
                   categorization: categorization,
+                  status: status,
                 ),
               );
           if (categorization?.ruleId != null) {
@@ -173,10 +186,103 @@ class SmsIngestor {
     return null;
   }
 
+  Future<DecisionStatus> _decideStatus(
+    NormalizedTransactionRecord record, {
+    required CategorizationResult? categorization,
+  }) async {
+    final askedToday = await _countAskedToday();
+    final askBudgetLeft = AppConstants.askNowDailyBudget - askedToday;
+    return _decisionPolicy.decide(
+      DecisionPolicyInput(
+        merchantConfidence: record.parseConfidence,
+        categoryConfidence: categorization?.confidence ?? 0,
+        amount: record.amount,
+        merchantTxnCount: await _countPriorMerchantTransactions(record),
+        askBudgetLeft: askBudgetLeft > 0 ? askBudgetLeft : 0,
+        counterpartyVpa: record.counterpartyVpa,
+        counterpartySeen: await _hasSeenCounterparty(record.counterpartyVpa),
+      ),
+    );
+  }
+
+  Future<int> _countAskedToday() async {
+    final now = _now().toUtc();
+    final start = DateTime.utc(now.year, now.month, now.day);
+    final count = await (_database.select(_database.transactions)
+          ..where(
+            (row) =>
+                row.status.equals(DecisionStatus.asked.wireName) &
+                row.isDeleted.equals(false) &
+                row.duplicateOfTxnId.isNull() &
+                row.createdAt.isBiggerOrEqualValue(start),
+          ))
+        .get();
+    return count.length;
+  }
+
+  Future<int> _countPriorMerchantTransactions(
+    NormalizedTransactionRecord record,
+  ) async {
+    final merchantRaw = record.merchantRaw;
+    final counterpartyVpa = record.counterpartyVpa;
+    if ((merchantRaw == null || merchantRaw.isEmpty) &&
+        (counterpartyVpa == null || counterpartyVpa.isEmpty)) {
+      return 0;
+    }
+
+    final rows = await (_database.select(_database.transactions)
+          ..where(
+            (row) =>
+                row.isDeleted.equals(false) &
+                row.duplicateOfTxnId.isNull() &
+                _sameKnownCounterparty(
+                  row,
+                  merchantRaw: merchantRaw,
+                  counterpartyVpa: counterpartyVpa,
+                ),
+          ))
+        .get();
+    return rows.length;
+  }
+
+  Future<bool> _hasSeenCounterparty(String? counterpartyVpa) async {
+    if (counterpartyVpa == null || counterpartyVpa.isEmpty) {
+      return true;
+    }
+    final rows = await (_database.select(_database.transactions)
+          ..where(
+            (row) =>
+                row.isDeleted.equals(false) &
+                row.duplicateOfTxnId.isNull() &
+                row.counterpartyVpa.equals(counterpartyVpa),
+          )
+          ..limit(1))
+        .get();
+    return rows.isNotEmpty;
+  }
+
+  Expression<bool> _sameKnownCounterparty(
+    $TransactionsTable row, {
+    required String? merchantRaw,
+    required String? counterpartyVpa,
+  }) {
+    Expression<bool>? expression;
+    if (merchantRaw != null && merchantRaw.isNotEmpty) {
+      expression = row.merchantRaw.equals(merchantRaw);
+    }
+    if (counterpartyVpa != null && counterpartyVpa.isNotEmpty) {
+      final vpaExpression = row.counterpartyVpa.equals(counterpartyVpa);
+      expression =
+          expression == null ? vpaExpression : expression | vpaExpression;
+    }
+    return expression ?? const Constant(false);
+  }
+
   TransactionsCompanion _transactionCompanionFor({
     required String smsId,
     required NormalizedTransactionRecord record,
     required String? duplicateOfTxnId,
+    required DecisionStatus status,
     CategorizationResult? categorization,
   }) {
     final timestamp = _now().toUtc();
@@ -207,7 +313,7 @@ class SmsIngestor {
               'rule_id': categorization.ruleId,
           },
       }),
-      status: 'auto',
+      status: status.wireName,
       duplicateOfTxnId: Value(duplicateOfTxnId),
       createdAt: timestamp,
       updatedAt: timestamp,

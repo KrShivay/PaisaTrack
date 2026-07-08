@@ -39,12 +39,13 @@ class DecisionPolicy {
       input.categoryConfidence,
     );
 
-    if (input.counterpartyVpa != null &&
-        input.counterpartyVpa!.isNotEmpty &&
-        !input.counterpartySeen) {
-      return input.askBudgetLeft > 0
-          ? DecisionStatus.asked
-          : DecisionStatus.needsReview;
+    if (input.counterpartyVpa != null && input.counterpartyVpa!.isNotEmpty) {
+      if (!input.counterpartySeen) {
+        return input.askBudgetLeft > 0
+            ? DecisionStatus.asked
+            : DecisionStatus.needsReview;
+      }
+      return DecisionStatus.needsReview;
     }
 
     if (confidence >= AppConstants.silentConfidenceThreshold) {
@@ -52,7 +53,8 @@ class DecisionPolicy {
     }
 
     final askEligible = confidence >= AppConstants.askConfidenceThreshold &&
-        (input.amount >= 500 || input.merchantTxnCount >= 3);
+        (input.amount >= AppConstants.askAmountThreshold ||
+            input.merchantTxnCount >= AppConstants.askMerchantTxnCount);
     if (askEligible && input.askBudgetLeft > 0) {
       return DecisionStatus.asked;
     }

@@ -21,10 +21,10 @@ amount/direction contradictions.
 Phase 2 is partially built. Completed or prepared work includes:
 
 - T-035/T-036: duplicate/counterparty ADR and schema v2 implementation.
-- T-037: manual transaction entry, pending canonical toolchain verification.
-- T-038: transaction detail/edit writes feedback rows, pending verification.
-- T-039: seed-map categorization and rules engine, pending verification.
-- T-040: isolated Decision policy v1 prep, not yet wired to ingest.
+- T-037: manual transaction entry, verified and Done.
+- T-038: transaction detail/edit writes feedback rows, verified and Done.
+- T-039: seed-map categorization and rules engine, verified and Done.
+- T-040: Decision policy v1 wired into ingest/status writes, pending review.
 - T-041: category manager.
 - T-042: settings v1 and local data reset.
 - T-043: encrypted export/import.
@@ -36,14 +36,11 @@ Phase 2 is partially built. Completed or prepared work includes:
 
 Finish Phase 2 so the app is daily-usable:
 
-1. Run the canonical `flutter analyze --no-pub` and
-   `flutter test --no-pub --concurrency=1` verification pass for
-   T-037/T-038/T-039 and T-047.
-2. Wire Decision policy v1 into the ingest/status flow once T-039 clears.
-3. Build T-044 ask-now notifications with top category guesses and feedback/rule
+1. Review/land T-040 after the passing full Flutter suite.
+2. Build T-044 ask-now notifications with top category guesses and feedback/rule
    writes.
-4. Build T-045 weekly review for `needs_review` transactions.
-5. Run T-046 Phase 2 exit review against the PLAN.md criteria.
+3. Build T-045 weekly review for `needs_review` transactions.
+4. Run T-046 Phase 2 exit review against the PLAN.md criteria.
 
 ## 3. Architecture summary
 
@@ -81,8 +78,8 @@ enrichment, repositories, and UI.
   Flutter toolchain after recent changes.
 - GitNexus reported the index 3 commits behind HEAD during this review; use the
   task board and worklog as fresher status until the index is refreshed.
-- T-040 exists as isolated policy logic only; transaction status writes still
-  need to be wired deliberately.
+- T-040 status writes are wired into ingest, but review/board state still needs
+  to catch up.
 - Ask-now notifications and weekly review are the main missing user workflows
   before Phase 2 can exit.
 - T-047's 99.03% coverage is from fixture/SMS-dump simulation; the final device
