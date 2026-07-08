@@ -1,0 +1,19 @@
+{
+  "sender": "AD-INDUSB-S",
+  "received_at": 1779684473054,
+  "expected": {
+    "ok": {
+      "amount": 5.0,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": null,
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": 46658.91,
+      "ref_id": "ACH CR INW PAY/96596/Manappuram 4TH INT26",
+      "ts": 1779684473054,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

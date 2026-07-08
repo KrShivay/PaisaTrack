@@ -1,5 +1,7 @@
 {
-  "sender_patterns": ["^[A-Z]{2}-INDUSB(-[A-Z])?$"],
+  "sender_patterns": [
+    "^[A-Z]{2}-INDUSB(-[A-Z])?$"
+  ],
   "templates": [
     {
       "id": "indusind_upi_debit_v1",
@@ -35,6 +37,18 @@
       "id": "indusind_ach_debit_v1",
       "regex": "IndusInd A/C \\*\\*(?<account>\\d{4}) Debited; INR\\s?(?<amount>[\\d,]+\\.?\\d*) Ref-(?<ref>[^.]+)\\.Bal INR\\s?(?<balance>[\\d,]+\\.?\\d*)",
       "direction": "debit",
+      "channel": "netbanking"
+    },
+    {
+      "id": "indusind_neft_credit_v1",
+      "regex": "Your IndusInd Account X+(?<account>\\d{4}) has been credited for INR\\s?(?<amount>[\\d,]+\\.?\\d*) towards N/(?<ref>[A-Z0-9]+)/[A-Z0-9]+/(?<merchant>.+?)\\s*\\. Call",
+      "direction": "credit",
+      "channel": "netbanking"
+    },
+    {
+      "id": "indusind_ach_credit_v1",
+      "regex": "IndusInd A/C \\*\\*(?<account>\\d{4}) Credited; INR\\s?(?<amount>[\\d,]+\\.?\\d*) Ref-(?<ref>[^.]+)\\.Bal INR\\s?(?<balance>[\\d,]+\\.?\\d*)",
+      "direction": "credit",
       "channel": "netbanking"
     }
   ]

@@ -1,0 +1,19 @@
+{
+  "sender": "JK-INDUSB-S",
+  "received_at": 1776312755589,
+  "expected": {
+    "ok": {
+      "amount": 15000.0,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": "ICICI PRUDENTIAL M",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "HDFCH00936563567",
+      "ts": 1776312755589,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

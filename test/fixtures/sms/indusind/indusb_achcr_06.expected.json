@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB-S",
+  "received_at": 1779188110444,
+  "expected": {
+    "ok": {
+      "amount": 5.5,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": null,
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": 6339.01,
+      "ref_id": "ACH CR INW PAY/7674823/VARUN BEVERAGES LIMI",
+      "ts": 1779188110444,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

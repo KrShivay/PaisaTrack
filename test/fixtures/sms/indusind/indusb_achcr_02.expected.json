@@ -1,0 +1,19 @@
+{
+  "sender": "VM-INDUSB-S",
+  "received_at": 1782089199560,
+  "expected": {
+    "ok": {
+      "amount": 180.0,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": null,
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": 566.29,
+      "ref_id": "ACH CR INW PAY/PN2206261602511/PUNJAB NATIONAL BAN",
+      "ts": 1782089199560,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "sender": "JD-INDUSB-S",
+  "received_at": 1776449663714,
+  "expected": {
+    "ok": {
+      "amount": 39207.42,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": "GR0WW INVEST TECH P",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "AXNH261070595447",
+      "ts": 1776449663714,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}

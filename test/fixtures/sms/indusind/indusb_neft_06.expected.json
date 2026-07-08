@@ -1,0 +1,19 @@
+{
+  "sender": "JK-INDUSB-S",
+  "received_at": 1781003801212,
+  "expected": {
+    "ok": {
+      "amount": 1.0,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": "RAPIPAY FINTECH PVT",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": "IDFBH26160611330",
+      "ts": 1781003801212,
+      "parse_source": "template",
+      "parse_confidence": 0.97
+    }
+  }
+}
