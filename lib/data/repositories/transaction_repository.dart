@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
+import 'rule_repository.dart';
 
 /// User input for a manually entered transaction (T-037).
 ///
@@ -52,6 +53,32 @@ class TransactionListItem {
   final String? categoryName;
   final String? categoryId;
   final String? categoryIcon;
+}
+
+/// Review/ask queue row with enough context to render review surfaces and build
+/// notification payloads.
+class TransactionReviewItem {
+  const TransactionReviewItem({
+    required this.id,
+    required this.ts,
+    required this.amount,
+    required this.direction,
+    required this.displayName,
+    required this.categoryName,
+    required this.categoryId,
+    required this.categoryIcon,
+    required this.status,
+  });
+
+  final String id;
+  final DateTime ts;
+  final double amount;
+  final TransactionDirection direction;
+  final String displayName;
+  final String? categoryName;
+  final String? categoryId;
+  final String? categoryIcon;
+  final String status;
 }
 
 /// Full detail of a single transaction for the detail screen (T-038):
@@ -102,6 +129,16 @@ class TransactionRepository {
     return query.watch().map(
           (rows) => rows.map(_toListItem).toList(growable: false),
         );
+  }
+
+  /// Watches transactions that need the weekly review batch flow.
+  Stream<List<TransactionReviewItem>> watchReviewQueue() {
+    return _watchQueueWithStatus('needs_review');
+  }
+
+  /// Watches transactions currently awaiting an ask-now answer.
+  Stream<List<TransactionReviewItem>> watchAskQueue() {
+    return _watchQueueWithStatus('asked');
   }
 
   /// Watches one transaction with resolved merchant/category names, or null
@@ -212,6 +249,114 @@ class TransactionRepository {
     });
   }
 
+  /// Confirms a review row without changing its category.
+  Future<void> confirm({
+    required String txnId,
+    DateTime Function() clock = DateTime.now,
+  }) {
+    return _database.transaction(() async {
+      await (_database.update(_database.transactions)
+            ..where((t) => t.id.equals(txnId)))
+          .write(
+        TransactionsCompanion(
+          status: const Value('confirmed'),
+          updatedAt: Value(clock().toUtc()),
+        ),
+      );
+    });
+  }
+
+  /// Applies an ask-now or weekly-review correction in one database write
+  /// boundary: rule insertion, feedback row(s), and transaction update all
+  /// commit or roll back together.
+  Future<int> correctWithRule({
+    required String txnId,
+    required String categoryId,
+    String? description,
+    required String context,
+    DateTime Function() clock = DateTime.now,
+    String Function(String field)? feedbackIdFactory,
+  }) {
+    return _database.transaction(() async {
+      final row = await (_database.select(_database.transactions)
+            ..where((t) => t.id.equals(txnId)))
+          .getSingle();
+      final now = clock().toUtc();
+      final confidence = _parseConfidenceOf(row);
+      final ruleInput = _ruleInputFor(row);
+
+      if (ruleInput != null) {
+        await RuleRepository(_database).insert(
+          matchType: ruleInput.matchType,
+          matchValue: ruleInput.matchValue,
+          setCategoryId: categoryId,
+          setDescription: description,
+          createdFromTxnId: txnId,
+          clock: () => now,
+        );
+      }
+
+      String feedbackId(String field) =>
+          feedbackIdFactory?.call(field) ??
+          'fb_${txnId}_${field}_${now.microsecondsSinceEpoch}';
+      final feedbackRows = <FeedbackCompanion>[];
+
+      void stageFeedback({
+        required String field,
+        required String? oldValue,
+        required String? newValue,
+      }) {
+        if (oldValue == newValue) return;
+        feedbackRows.add(
+          FeedbackCompanion.insert(
+            id: feedbackId(field),
+            txnId: txnId,
+            field: field,
+            oldValue: Value(oldValue),
+            newValue: Value(newValue),
+            context: context,
+            modelConfidenceAtTime: Value(confidence),
+            createdAt: now,
+          ),
+        );
+      }
+
+      stageFeedback(
+        field: 'category_id',
+        oldValue: row.categoryId,
+        newValue: categoryId,
+      );
+      if (description != null) {
+        stageFeedback(
+          field: 'description',
+          oldValue: row.description,
+          newValue: description,
+        );
+      }
+      stageFeedback(
+        field: 'status',
+        oldValue: row.status,
+        newValue: 'confirmed',
+      );
+
+      await (_database.update(_database.transactions)
+            ..where((t) => t.id.equals(txnId)))
+          .write(
+        TransactionsCompanion(
+          categoryId: Value(categoryId),
+          description:
+              description == null ? const Value.absent() : Value(description),
+          status: const Value('confirmed'),
+          updatedAt: Value(now),
+        ),
+      );
+      for (final feedbackRow in feedbackRows) {
+        await _database.into(_database.feedback).insert(feedbackRow);
+      }
+      return feedbackRows.length;
+    });
+  }
+
   /// Extracts the parse confidence from `confidence_json` (the `parser.c`
   /// entry SmsIngestor and insertManual write), or null when the payload has
   /// no parser entry (e.g. legacy rows).
@@ -264,6 +409,29 @@ class TransactionRepository {
     return id;
   }
 
+  Stream<List<TransactionReviewItem>> _watchQueueWithStatus(String status) {
+    final query = _database.select(_database.transactions).join([
+      leftOuterJoin(
+        _database.merchants,
+        _database.merchants.id.equalsExp(_database.transactions.merchantId),
+      ),
+      leftOuterJoin(
+        _database.categories,
+        _database.categories.id.equalsExp(_database.transactions.categoryId),
+      ),
+    ])
+      ..where(
+        _database.transactions.status.equals(status) &
+            _database.transactions.isDeleted.equals(false) &
+            _database.transactions.duplicateOfTxnId.isNull(),
+      )
+      ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);
+
+    return query.watch().map(
+          (rows) => rows.map(_toReviewItem).toList(growable: false),
+        );
+  }
+
   TransactionListItem _toListItem(TypedResult row) {
     final txn = row.readTable(_database.transactions);
     final merchant = row.readTableOrNull(_database.merchants);
@@ -286,6 +454,49 @@ class TransactionRepository {
       categoryIcon: category?.icon,
     );
   }
+
+  TransactionReviewItem _toReviewItem(TypedResult row) {
+    final txn = row.readTable(_database.transactions);
+    final merchant = row.readTableOrNull(_database.merchants);
+    final category = row.readTableOrNull(_database.categories);
+    return TransactionReviewItem(
+      id: txn.id,
+      ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
+      amount: txn.amount,
+      direction: _directionFromWireName(txn.direction),
+      displayName: merchant?.canonicalName ??
+          txn.merchantRaw ??
+          txn.counterpartyVpa ??
+          txn.description ??
+          'Unknown',
+      categoryName: category?.name,
+      categoryId: category?.id,
+      categoryIcon: category?.icon,
+      status: txn.status,
+    );
+  }
+}
+
+class _RuleInput {
+  const _RuleInput({
+    required this.matchType,
+    required this.matchValue,
+  });
+
+  final String matchType;
+  final String matchValue;
+}
+
+_RuleInput? _ruleInputFor(Transaction txn) {
+  final vpa = txn.counterpartyVpa?.trim();
+  if (vpa != null && vpa.isNotEmpty) {
+    return _RuleInput(matchType: 'counterparty', matchValue: vpa);
+  }
+  final merchant = txn.merchantRaw?.trim();
+  if (merchant != null && merchant.isNotEmpty) {
+    return _RuleInput(matchType: 'merchant', matchValue: merchant);
+  }
+  return null;
 }
 
 TransactionDirection _directionFromWireName(String wireName) {

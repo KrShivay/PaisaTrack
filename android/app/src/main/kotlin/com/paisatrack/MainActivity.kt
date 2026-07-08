@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.app.ActivityCompat
@@ -22,6 +23,8 @@ import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
+    private var notificationPermissionRequestInFlight = false
+    private val pendingAskNowRequests = mutableListOf<PendingAskNowRequest>()
     private val capturedSmsBridge = CapturedSmsEventChannelBridge()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -94,6 +97,31 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/ask_now",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "show" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    showAskNowNotification(
+                        call.arguments as? Map<*, *> ?: emptyMap<Any, Any>(),
+                        result,
+                    )
+                }
+                "takePendingResponses" -> {
+                    result.success(AskNowNotifications.takePendingResponses(applicationContext))
+                }
+                "ackPendingResponses" -> {
+                    val txnIds = (call.arguments as? List<*>)?.mapNotNull { it as? String }
+                        ?: emptyList()
+                    AskNowNotifications.ackPendingResponses(applicationContext, txnIds)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -152,7 +180,7 @@ class MainActivity : FlutterActivity() {
         }
 
         pendingPermissionResult = result
-        ActivityCompat.requestPermissions(this, SmsPermissions, SmsPermissionRequestCode)
+        ActivityCompat.requestPermissions(this, smsPermissions(), SmsPermissionRequestCode)
     }
 
     override fun onRequestPermissionsResult(
@@ -161,6 +189,27 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NotificationPermissionRequestCode) {
+            notificationPermissionRequestInFlight = false
+            val requests = pendingAskNowRequests.toList()
+            pendingAskNowRequests.clear()
+            val granted = grantResults.isNotEmpty() &&
+                grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (!granted) {
+                requests.forEach { request -> request.result.success(false) }
+                return
+            }
+
+            val displayedTxnIds = mutableSetOf<Any?>()
+            requests.forEach { request ->
+                val txnId = request.payload["txnId"]
+                if (displayedTxnIds.add(txnId)) {
+                    AskNowNotifications.show(applicationContext, request.payload)
+                }
+                request.result.success(true)
+            }
+            return
+        }
         if (requestCode != SmsPermissionRequestCode) {
             return
         }
@@ -173,7 +222,7 @@ class MainActivity : FlutterActivity() {
         val status = when {
             granted -> STATUS_GRANTED
             // No rationale after a denial means "Don't ask again" was selected.
-            SmsPermissions.any { ActivityCompat.shouldShowRequestPermissionRationale(this, it) } ->
+            smsPermissions().any { ActivityCompat.shouldShowRequestPermissionRationale(this, it) } ->
                 STATUS_DENIED
             else -> STATUS_PERMANENTLY_DENIED
         }
@@ -181,11 +230,41 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun currentSmsPermissionStatus(): String {
-        val allGranted = SmsPermissions.all { permission ->
+        val allGranted = smsPermissions().all { permission ->
             ContextCompat.checkSelfPermission(this, permission) ==
                 PackageManager.PERMISSION_GRANTED
         }
         return if (allGranted) STATUS_GRANTED else STATUS_DENIED
+    }
+
+    private fun smsPermissions(): Array<String> {
+        return arrayOf(
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS,
+        )
+    }
+
+    private fun showAskNowNotification(payload: Map<*, *>, result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingAskNowRequests.add(PendingAskNowRequest(payload, result))
+            if (!notificationPermissionRequestInFlight) {
+                notificationPermissionRequestInFlight = true
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NotificationPermissionRequestCode,
+                )
+            }
+            return
+        }
+
+        AskNowNotifications.show(applicationContext, payload)
+        result.success(true)
     }
 
     private fun isDebuggable(): Boolean {
@@ -194,15 +273,17 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val SmsPermissionRequestCode = 4201
+        const val NotificationPermissionRequestCode = 4202
         const val STATUS_GRANTED = "granted"
         const val STATUS_DENIED = "denied"
         const val STATUS_PERMANENTLY_DENIED = "permanentlyDenied"
-        val SmsPermissions = arrayOf(
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS,
-        )
     }
 }
+
+private data class PendingAskNowRequest(
+    val payload: Map<*, *>,
+    val result: MethodChannel.Result,
+)
 
 private class CapturedSmsEventChannelBridge : EventChannel.StreamHandler, CapturedSmsSink {
     private val mainHandler = Handler(Looper.getMainLooper())

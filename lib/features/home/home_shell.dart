@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../dashboard/dashboard_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
+import '../review/weekly_review_screen.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transactions_screen.dart';
 
@@ -20,6 +21,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _screens = [
     DashboardScreen(),
     TransactionsScreen(),
+    WeeklyReviewScreen(),
     UnparsedSmsScreen(),
     SettingsScreen(),
   ];
@@ -42,6 +44,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Transactions',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.fact_check_outlined),
+            selectedIcon: Icon(Icons.fact_check),
+            label: 'Review',
           ),
           NavigationDestination(
             icon: Icon(Icons.bug_report_outlined),

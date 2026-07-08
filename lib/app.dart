@@ -7,6 +7,7 @@ import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/home_shell.dart';
+import 'features/notifications/ask_now_notifications.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/settings/app_settings.dart';
 
@@ -24,6 +25,7 @@ class PaisaTrackApp extends ConsumerWidget {
     // Activates the one-time historical inbox backfill (T-023) once the
     // permission-granted, database-ready preconditions hold.
     ref.watch(smsBackfillProvider);
+    ref.watch(askNowNotificationControllerProvider);
 
     final permission = ref.watch(smsPermissionControllerProvider);
     // Denied/unknown/error states stay on onboarding, which explains the

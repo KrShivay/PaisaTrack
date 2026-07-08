@@ -10,7 +10,8 @@ import '../../data/repositories/transaction_repository.dart';
 /// Stays in the loading state until the app database has finished opening;
 /// rebuilds automatically once it resolves since it watches
 /// `appDatabaseProvider` directly.
-final transactionListProvider = StreamProvider<List<TransactionListItem>>((ref) {
+final transactionListProvider =
+    StreamProvider<List<TransactionListItem>>((ref) {
   final databaseAsync = ref.watch(appDatabaseProvider);
   return databaseAsync.when(
     data: (database) =>
@@ -32,6 +33,30 @@ final transactionDetailProvider =
     loading: () => const Stream<TransactionDetail?>.empty(),
     error: (error, stackTrace) =>
         Stream<TransactionDetail?>.error(error, stackTrace),
+  );
+});
+
+/// Live queue of transactions waiting for weekly batch review.
+final reviewQueueProvider = StreamProvider<List<TransactionReviewItem>>((ref) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  return databaseAsync.when(
+    data: (database) =>
+        ref.watch(transactionRepositoryProvider(database)).watchReviewQueue(),
+    loading: () => const Stream<List<TransactionReviewItem>>.empty(),
+    error: (error, stackTrace) =>
+        Stream<List<TransactionReviewItem>>.error(error, stackTrace),
+  );
+});
+
+/// Live queue of transactions waiting for ask-now notification answers.
+final askQueueProvider = StreamProvider<List<TransactionReviewItem>>((ref) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  return databaseAsync.when(
+    data: (database) =>
+        ref.watch(transactionRepositoryProvider(database)).watchAskQueue(),
+    loading: () => const Stream<List<TransactionReviewItem>>.empty(),
+    error: (error, stackTrace) =>
+        Stream<List<TransactionReviewItem>>.error(error, stackTrace),
   );
 });
 

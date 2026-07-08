@@ -14,6 +14,7 @@ import '../data/models/raw_sms.dart';
 import '../data/repositories/rule_repository.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
+import '../features/settings/app_settings.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
 import 'parser_cascade.dart';
@@ -53,6 +54,7 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
   final source = ref.watch(capturedSmsSourceProvider);
   final parser = ref.watch(parserCascadeProvider).valueOrNull;
   final categorizer = ref.watch(categorizerProvider).valueOrNull;
+  final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
   if (parser == null || categorizer == null) {
     return;
   }
@@ -60,6 +62,7 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
     database: database,
     parser: parser,
     categorizer: categorizer,
+    askDailyBudget: settings?.askDailyBudget ?? AppConstants.askNowDailyBudget,
   );
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),
@@ -87,12 +90,14 @@ class SmsIngestor {
     required AppDatabase database,
     required ParserCascade parser,
     Categorizer? categorizer,
+    int askDailyBudget = AppConstants.askNowDailyBudget,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
+        _askDailyBudget = askDailyBudget,
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _now = now ?? DateTime.now;
@@ -103,6 +108,7 @@ class SmsIngestor {
   /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
   /// without one; production wiring always supplies it.
   final Categorizer? _categorizer;
+  final int _askDailyBudget;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
   final DateTime Function() _now;
@@ -191,7 +197,7 @@ class SmsIngestor {
     required CategorizationResult? categorization,
   }) async {
     final askedToday = await _countAskedToday();
-    final askBudgetLeft = AppConstants.askNowDailyBudget - askedToday;
+    final askBudgetLeft = _askDailyBudget - askedToday;
     return _decisionPolicy.decide(
       DecisionPolicyInput(
         merchantConfidence: record.parseConfidence,
@@ -208,7 +214,7 @@ class SmsIngestor {
   Future<int> _countAskedToday() async {
     final now = _now().toUtc();
     final start = DateTime.utc(now.year, now.month, now.day);
-    final count = await (_database.select(_database.transactions)
+    final askedRows = await (_database.select(_database.transactions)
           ..where(
             (row) =>
                 row.status.equals(DecisionStatus.asked.wireName) &
@@ -217,7 +223,31 @@ class SmsIngestor {
                 row.createdAt.isBiggerOrEqualValue(start),
           ))
         .get();
-    return count.length;
+    final askedTxnIds = askedRows.map((row) => row.id).toSet();
+    final answeredAskFeedback = await (_database.select(_database.feedback)
+          ..where(
+            (row) =>
+                row.context.equals('ask_now') &
+                row.createdAt.isBiggerOrEqualValue(start),
+          ))
+        .get();
+    final answeredTxnIds = answeredAskFeedback
+        .map((row) => row.txnId)
+        .toSet()
+        .difference(askedTxnIds);
+    if (answeredTxnIds.isEmpty) {
+      return askedTxnIds.length;
+    }
+    final answeredRows = await (_database.select(_database.transactions)
+          ..where(
+            (row) =>
+                row.id.isIn(answeredTxnIds) &
+                row.isDeleted.equals(false) &
+                row.duplicateOfTxnId.isNull() &
+                row.createdAt.isBiggerOrEqualValue(start),
+          ))
+        .get();
+    return askedTxnIds.length + answeredRows.length;
   }
 
   Future<int> _countPriorMerchantTransactions(
@@ -309,8 +339,7 @@ class SmsIngestor {
           'category': {
             'c': categorization.confidence,
             'src': categorization.source,
-            if (categorization.ruleId != null)
-              'rule_id': categorization.ruleId,
+            if (categorization.ruleId != null) 'rule_id': categorization.ruleId,
           },
       }),
       status: status.wireName,
