@@ -1,13 +1,12 @@
 # Task Board
-Last updated: 2026-07-08 by @claude (partial toolchain verification: GitNexus detect_changes RUN for T-037/38/39 — footprint matches ACs, risk CRITICAL = expected ingest surface; flutter analyze/test still needed from @codex. T-047 fixture pull checklist → BankStatement/t047_fixture_pull_checklist.md)
+Last updated: 2026-07-08 by @codex (docs refreshed to current Phase 2/T-047 status; toolchain verification still needed for T-037/38/39 and T-047)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 2 — Usable Tracker (PLAN.md §"Phase 2"). Ordered; respect Depends.
-     Phase 1 exit is NOT yet PASS (see T-034 in Blocked) but per T-027 the code
-     evidence is strong; Phase 2 build work may proceed in parallel while the
-     human runs the reconciliation. -->
+     Phase 1 exit is PASS (T-034 Done). Current bottleneck is the canonical
+     Flutter analyze/test verification for T-037/T-038/T-039 and T-047. -->
 - [ ] T-040 (@codex) [P2] Decision policy v1 (static thresholds) — PREP COMMITTED 2026-07-08
       AC: `decision_policy.dart` implements PLAN §7.5 with constants from `constants.dart` (silent >=0.9; ask 0.6-0.9 when amount>=500 or merchant txn_count>=3; else needs_review; unseen P2P counterparty always asks once); sets transaction `status`; table-driven tests cover every branch incl. daily ask-budget exhaustion.
       Prep complete (toolchain tests skipped at @human direction): isolated `DecisionPolicy` implements static status decision outputs using `AppConstants`; table-driven tests cover high-confidence auto, min-confidence behavior, ask by amount, ask by merchant count, budget exhaustion, low-risk needs_review, unseen P2P ask, and unseen P2P with exhausted budget. Not Done yet because ingest/status wiring is intentionally held until T-039 clears review.

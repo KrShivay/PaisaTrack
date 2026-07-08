@@ -1,3 +1,17 @@
+## 2026-07-08 @codex — Docs status refresh
+
+- Did: refreshed README, PROJECT_STATUS_REPORT, docs/architecture, and the
+  TASKS header/comment so the docs consistently describe current Phase 2 state
+  instead of the older Phase 0 / pre-T-047 snapshot.
+- Details: README now calls Phase 2 "in progress", lists the current focus
+  (verification, T-040 wiring, T-044, T-045, T-046), and records T-047's
+  99.03% fixture/SMS-dump coverage with its remaining verification caveat.
+  PROJECT_STATUS_REPORT was rewritten as a current 2026-07-08 status brief.
+  Architecture now notes DecisionPolicy is not wired yet and distinguishes the
+  Phase 1 94.4% device evidence from T-047's 99.03% simulation evidence.
+- Evidence: docs-only change; no Flutter tests run.
+- Open questions: none.
+
 ## 2026-07-08 @codex — T-040 prep Decision policy v1
 
 - Did: added isolated `DecisionPolicy` with status outputs only. No

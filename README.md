@@ -2,44 +2,44 @@
 
 Android-first, privacy-first expense tracking from transactional SMS.
 
-This repository follows the two-agent workflow in [COLLABORATION.md](COLLABORATION.md).
-The product and technical source of truth is [PLAN.md](PLAN.md).
-Feature work must include matching tests and documentation; see
-[docs/development.md](docs/development.md).
+The repository follows the two-agent workflow in [COLLABORATION.md](COLLABORATION.md).
+[PLAN.md](PLAN.md) is the product and technical source of truth. Feature work
+must include tests and documentation; see [docs/development.md](docs/development.md).
 
 ## Current Status
 
-**Phase 0 (Foundation): complete.** All exit criteria are met and reviewed —
-`flutter test` green in CI, encrypted Drift DB creates + migrates (host tests
-skip SQLCipher when the VM lacks it; Android migration device-tested on
-motorola_edge_50_pro), and the fixture runner asserts parser output. Android
-`minSdk` is pinned to API 26 (PLAN §2).
+**Phase 0 (Foundation): complete.** The Flutter/Android scaffold, encrypted
+Drift schema, Keystore-backed database passphrase, category seeds, fixture
+harness, and CI guardrails are in place. Android `minSdk` is pinned to API 26.
 
-**Phase 1 (Capture MVP): complete — exit PASS (2026-07-07).** Delivered:
-SMS permissions + onboarding (T-020), Kotlin receiver + sender filter (T-021),
-live platform-channel ingestion (T-022), one-time 3-month inbox backfill
-(T-023), real template registries for IndusInd/SBI/Paytm Payments Bank/Axis
-with 136 sanitized real fixtures (T-024), paired bank+wallet duplicate
-suppression (T-025), transactions list + dashboard + unparsed dev screen
-(T-026, T-028), and a dark-first design system implemented in
-`lib/core/theme/` (T-029, [docs/design-system.md](docs/design-system.md)).
+**Phase 1 (Capture MVP): complete — exit PASS (2026-07-07).** Delivered SMS
+permissions and onboarding, native SMS receiver/filtering, live platform-channel
+ingestion, one-time three-month inbox backfill, real template registries for
+IndusInd/SBI/Paytm Payments Bank/Axis, duplicate suppression, transaction list,
+dashboard, unparsed-SMS dev screen, and the dark-first design system. Phase 1
+exit evidence reconciled on-device parsed transactions against real bank
+statements with **94.4% coverage (388/411 rows)** and zero amount/direction
+contradictions.
 
-Exit evidence (T-034, WORKLOG "PHASE P1 EXIT: PASS"): on-device parsed
-transactions reconciled against real bank statements via
-`scripts/reconcile_statement.py` — **94.4% statement coverage (388/411 rows)**
-in the backfill window against the >=90% criterion, 381 exact-ref matches,
-zero amount/direction contradictions. Known gap: NEFT/IMPS/ACH-credit SMS
-shapes are not yet templated (T-047).
+**Phase 2 (Usable Tracker): in progress.** Schema v2, manual entry, transaction
+detail/edit feedback, seed/rule categorization, category manager, settings, data
+reset, and encrypted export/import have been implemented or prepared. Several
+items still need the canonical Flutter analyze/test verification pass; see
+[TASKS.md](TASKS.md) for exact state.
 
-**Phase 2 (Usable Tracker): queue groomed.** T-035 (dedup/counterparty schema
-ADR) through T-046 (exit review) are on [TASKS.md](TASKS.md). Intelligence is
-on-device only with free components — no cloud inference path exists
-(ADR 0002, [docs/decisions/0002-no-cloud-services.md](docs/decisions/0002-no-cloud-services.md)).
+**Current focus.** Finish Phase 2 by verifying T-037/T-038/T-039, wiring
+Decision policy v1 (T-040), building the ask-now notification flow (T-044), the
+weekly review screen (T-045), and the Phase 2 exit review (T-046). T-047 added
+IndusInd NEFT/ACH-credit templates and reports **99.03% statement coverage
+(407/411 rows)** in the fixture/SMS-dump simulation; final Flutter fixture tests
+and a fresh device export remain before it is marked Done.
+
+Intelligence is on-device only with free components. No cloud inference path
+exists; see [ADR 0002](docs/decisions/0002-no-cloud-services.md).
 
 ## Local Setup
 
-This repo currently uses a repo-local Flutter SDK at `.tooling/flutter`.
-If your shell does not have Flutter on `PATH`, run commands through that SDK:
+The repo uses the repo-local Flutter SDK at `.tooling/flutter`:
 
 ```sh
 .tooling/flutter/bin/flutter pub get

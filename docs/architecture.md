@@ -56,16 +56,19 @@ and backfill construct `SmsIngestor` with the categorizer
 classifier (step 2) and on-device LLM (step 4) slot in during later phases.
 
 `DecisionPolicy` exists as T-040 prep and implements static PLAN §7.5
-thresholds from `AppConstants`; ingest wiring is intentionally deferred until
-T-039 verification clears.
+thresholds from `AppConstants`; ingest/status wiring is intentionally deferred
+until T-039 verification clears.
 
 ## Verification tooling
 
-`scripts/reconcile_statement.py` reconciles bank-statement XLSX exports
-against SMS-parsed transactions (fixtures or an on-device JSON export via the
-debug-only dev-screen button). Phase 1 exit was proven with it: 94.4%
-statement coverage, zero contradictions (WORKLOG "PHASE P1 EXIT: PASS").
-Statements and reports live in the gitignored `BankStatement/` folder.
+`scripts/reconcile_statement.py` reconciles bank-statement XLSX exports against
+SMS-parsed transactions (fixtures or an on-device JSON export via the debug-only
+dev-screen button). Phase 1 exit was proven with it: 94.4% statement coverage,
+zero contradictions (WORKLOG "PHASE P1 EXIT: PASS"). T-047 later added
+IndusInd NEFT/ACH-credit templates and reports 99.03% coverage in the
+fixture/SMS-dump simulation; final Flutter fixture tests and a fresh device
+export remain before that task is Done. Statements and reports live in the
+gitignored `BankStatement/` folder.
 
 Raw SMS bodies are temporary capture inputs and must not appear in release logs,
 network payloads, or unencrypted exports. Settings `Delete everything` closes
