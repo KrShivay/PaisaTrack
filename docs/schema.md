@@ -44,3 +44,11 @@ Migration log:
   the row is left `is_deleted = 1` and logged. No backfill for
   `counterparty_vpa` (v1 rows conflated it into `merchant_raw` at write time;
   provenance is not reliably reconstructible) — only new ingests populate it.
+
+Encrypted backup archive:
+
+- T-043 exports `paisatrack_export.ptrack`, an encrypted JSON archive. Version 1
+  stores complete rows for categories, merchants, raw SMS, merchant aliases,
+  transactions, rules, and feedback. The outer file contains Argon2id
+  parameters plus AES-256-GCM nonce/MAC/ciphertext; plaintext table JSON stays
+  in memory only.

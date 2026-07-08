@@ -22,3 +22,6 @@ PaisaTrack is local-first:
 - Settings `Delete everything` closes the local database, deletes SQLCipher
   database files, clears Android Keystore-wrapped passphrase material, resets
   app-private settings, and recreates the database with bundled categories only.
+- User-facing backup export/import writes `paisatrack_export.ptrack`, a
+  passphrase-encrypted JSON archive using Argon2id and AES-GCM. Plaintext domain
+  JSON is kept in memory only and is never written as a temp file.

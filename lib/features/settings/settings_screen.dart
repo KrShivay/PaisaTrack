@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../backup/encrypted_backup_service.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
 
@@ -82,6 +85,18 @@ class SettingsScreen extends ConsumerWidget {
             _Section(
               title: 'Data',
               children: [
+                OutlinedButton.icon(
+                  onPressed: () => _exportBackup(context, ref),
+                  icon: const Icon(Icons.lock),
+                  label: const Text('Export encrypted backup'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () => _importBackup(context, ref),
+                  icon: const Icon(Icons.lock_open),
+                  label: const Text('Import encrypted backup'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 FilledButton.icon(
                   onPressed: () => _confirmDeleteEverything(context, ref),
                   icon: const Icon(Icons.delete_forever),
@@ -154,6 +169,93 @@ class SettingsScreen extends ConsumerWidget {
         SnackBar(content: Text('Delete failed: $error')),
       );
     }
+  }
+
+  Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
+    final passphrase = await _askPassphrase(
+      context,
+      title: 'Export encrypted backup',
+      action: 'Export',
+    );
+    if (passphrase == null || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final service = await ref.read(encryptedBackupServiceProvider.future);
+      final directory = await ref.read(backupDirectoryProvider.future);
+      final file = await service.exportToFile(
+        directory: directory,
+        passphrase: passphrase,
+      );
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Encrypted backup written to ${file.path}')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Export failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
+    final passphrase = await _askPassphrase(
+      context,
+      title: 'Import encrypted backup',
+      action: 'Import',
+    );
+    if (passphrase == null || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final service = await ref.read(encryptedBackupServiceProvider.future);
+      final directory = await ref.read(backupDirectoryProvider.future);
+      final file = File('${directory.path}/$encryptedBackupFileName');
+      await service.importFromFile(file: file, passphrase: passphrase);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Encrypted backup imported')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Import failed: $error')),
+      );
+    }
+  }
+
+  Future<String?> _askPassphrase(
+    BuildContext context, {
+    required String title,
+    required String action,
+  }) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          decoration: const InputDecoration(labelText: 'Passphrase'),
+          onSubmitted: (_) {
+            Navigator.of(context).pop(controller.text);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
   }
 }
 

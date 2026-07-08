@@ -1,3 +1,22 @@
+## 2026-07-08 @codex — T-043 Encrypted export/import
+
+- Did: added encrypted backup service and Settings actions for export/import.
+  Exports write app-private `paisatrack_export.ptrack`; import reads the same
+  file. Plaintext domain JSON is held in memory only.
+- Crypto: added free/open-source `cryptography` dependency. Archive encryption
+  uses Argon2id (19 MiB, parallelism 1, iterations 2, 32-byte key) and
+  AES-256-GCM with stored salt/nonce/MAC/ciphertext.
+- Data: archive version 1 serializes categories, merchants, raw SMS, merchant
+  aliases, transactions, rules, and feedback. Import validates the archive,
+  decrypts fail-closed on wrong passphrase/corruption, and replaces domain rows
+  transactionally.
+- Tests/docs: wrote backup tests for encrypted round-trip and wrong-passphrase
+  fail-closed behavior; updated privacy/schema/development docs. Per @human
+  instruction after T-042, tests were not executed.
+- Evidence: refreshed GitNexus after T-042. Pre-edit impact: `SettingsScreen`
+  LOW, `AppDataResetService` LOW, `AppDatabase` CRITICAL (expected whole-domain
+  backup/restore surface).
+
 ## 2026-07-08 @codex — T-042 Settings v1
 
 - Did: added Settings as a fourth HomeShell destination with theme choice
