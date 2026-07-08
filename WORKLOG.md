@@ -1,3 +1,18 @@
+## 2026-07-08 @codex — T-041 Category manager
+
+- Did: added Settings -> Manage categories screen. Users can add, rename, and
+  merge categories. User-created categories use `is_user_created=true`; unknown
+  icon/color values continue through `CategoryVisuals` fallback behavior.
+- Repository: `CategoryRepository.addUserCategory`, `renameCategory`, and
+  `mergeCategory`. Merge runs in one Drift transaction, updates transactions,
+  rules, and child category parent links from source to target, then deletes the
+  source category.
+- Tests/docs: wrote repository test for add/rename/merge retro-apply to
+  transactions and rules; updated development manual check. Per @human
+  instruction, tests were not executed.
+- Evidence: pre-edit impact after refreshed index: `CategoryRepository` LOW,
+  `CategoryVisuals` LOW, `SettingsScreen` LOW.
+
 ## 2026-07-08 @codex — T-043 Encrypted export/import
 
 - Did: added encrypted backup service and Settings actions for export/import.

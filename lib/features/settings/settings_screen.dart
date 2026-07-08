@@ -9,6 +9,7 @@ import '../../core/theme/paisa_colors.dart';
 import '../backup/encrypted_backup_service.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
+import 'category_manager_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -85,6 +86,18 @@ class SettingsScreen extends ConsumerWidget {
             _Section(
               title: 'Data',
               children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => const CategoryManagerScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.category),
+                  label: const Text('Manage categories'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 OutlinedButton.icon(
                   onPressed: () => _exportBackup(context, ref),
                   icon: const Icon(Icons.lock),

@@ -11,8 +11,9 @@ Last updated: 2026-07-08 by @claude (partial toolchain verification: GitNexus de
 - [ ] T-040 (@codex) [P2] Decision policy v1 (static thresholds)
       AC: `decision_policy.dart` implements PLAN §7.5 with constants from `constants.dart` (silent >=0.9; ask 0.6-0.9 when amount>=500 or merchant txn_count>=3; else needs_review; unseen P2P counterparty always asks once); sets transaction `status`; table-driven tests cover every branch incl. daily ask-budget exhaustion.
       Depends: T-039
-- [ ] T-041 (@codex) [P2] Category manager
+- [x] T-041 (@codex) [P2] Category manager (2026-07-08)
       AC: settings-reachable screen to add/rename/merge categories; merges retro-apply to existing transactions and update rules/seed mappings atomically; user-created categories flagged `is_user_created`; `CategoryVisuals` falls back gracefully for user categories; tests for merge retro-apply.
+      AC met (toolchain tests skipped at @human direction): Settings now links to Category manager; repository supports add (`is_user_created=true`), rename, and transactional merge; merge updates transactions, rules, child category parent links, then deletes source category; UI lists seed/user categories with `CategoryVisuals` fallback-safe icons/colors and add/rename/merge controls. Test written for add/rename/merge retro-apply to transactions and rules. Note: seed-map asset editing is intentionally not performed because seed mappings are bundled defaults and user-created categories/rules live in DB; future seed curation can add an asset task if needed.
       Depends: T-036
 - [x] T-042 (@codex) [P2] Settings v1 (2026-07-08)
       AC: theme choice (dark default / light / system — switches `themeMode` per design-system §10), ask-budget, feature-flag toggles (read-only display for unphased flags), and "Delete everything" that wipes DB + Keystore-wrapped key and recreates empty (proven by test/manual evidence per PLAN §8).

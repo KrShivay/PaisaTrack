@@ -16,6 +16,75 @@ class CategoryRepository {
       ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]);
     return query.watch();
   }
+
+  Future<String> addUserCategory({
+    required String name,
+    String icon = 'category',
+    DateTime Function() clock = DateTime.now,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) throw ArgumentError.value(name, 'name');
+    final maxSort = await (_database.selectOnly(_database.categories)
+          ..addColumns([_database.categories.sortOrder.max()]))
+        .map((row) => row.read(_database.categories.sortOrder.max()) ?? 0)
+        .getSingle();
+    final id =
+        'user_${_slug(trimmed)}_${clock().toUtc().microsecondsSinceEpoch}';
+    await _database.into(_database.categories).insert(
+          CategoriesCompanion.insert(
+            id: id,
+            name: trimmed,
+            icon: icon,
+            isSpending: true,
+            sortOrder: maxSort + 1,
+            isUserCreated: true,
+          ),
+        );
+    return id;
+  }
+
+  Future<void> renameCategory({
+    required String categoryId,
+    required String name,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) throw ArgumentError.value(name, 'name');
+    await (_database.update(_database.categories)
+          ..where((row) => row.id.equals(categoryId)))
+        .write(CategoriesCompanion(name: Value(trimmed)));
+  }
+
+  Future<void> mergeCategory({
+    required String sourceCategoryId,
+    required String targetCategoryId,
+  }) async {
+    if (sourceCategoryId == targetCategoryId) {
+      throw ArgumentError.value(sourceCategoryId, 'sourceCategoryId');
+    }
+
+    await _database.transaction(() async {
+      await (_database.update(_database.transactions)
+            ..where((row) => row.categoryId.equals(sourceCategoryId)))
+          .write(TransactionsCompanion(categoryId: Value(targetCategoryId)));
+      await (_database.update(_database.rules)
+            ..where((row) => row.setCategoryId.equals(sourceCategoryId)))
+          .write(RulesCompanion(setCategoryId: Value(targetCategoryId)));
+      await (_database.update(_database.categories)
+            ..where((row) => row.parentId.equals(sourceCategoryId)))
+          .write(CategoriesCompanion(parentId: Value(targetCategoryId)));
+      await (_database.delete(_database.categories)
+            ..where((row) => row.id.equals(sourceCategoryId)))
+          .go();
+    });
+  }
+
+  static String _slug(String value) {
+    final slug = value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return slug.isEmpty ? 'category' : slug;
+  }
 }
 
 /// Repository singleton, keyed by the resolved [AppDatabase] instance.

@@ -83,3 +83,10 @@ AES-GCM. Settings exports to app-private `paisatrack_export.ptrack`; import
 reads the same file. Manual check: export with a passphrase, Delete everything,
 import with the same passphrase, and confirm domain rows are restored. Re-run
 with a wrong passphrase and confirm existing rows are unchanged.
+
+## Category Manager Manual Check
+
+Settings -> Manage categories supports adding, renaming, and merging
+categories. Merge is destructive for the source category: verify transactions
+and rules that referenced the source now reference the target, and the source
+category no longer appears.
