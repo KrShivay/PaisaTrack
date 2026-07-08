@@ -13,7 +13,8 @@ PaisaTrack is organized as a local-first pipeline:
 
 All UI follows the binding conventions in [design-system.md](design-system.md);
 themes and tokens live in `lib/core/theme/` (dark-first, light as an equal
-derived variant).
+derived variant). Settings owns theme selection, ask budget, feature-flag
+readouts, and local data reset.
 
 Runtime SMS access is gated by `SmsPermissionGate` (platform channel
 `com.paisatrack/sms_permissions`), surfaced through `smsPermissionControllerProvider`
@@ -63,4 +64,8 @@ statement coverage, zero contradictions (WORKLOG "PHASE P1 EXIT: PASS").
 Statements and reports live in the gitignored `BankStatement/` folder.
 
 Raw SMS bodies are temporary capture inputs and must not appear in release logs,
-network payloads, or unencrypted exports.
+network payloads, or unencrypted exports. Settings `Delete everything` closes
+the Riverpod database, deletes SQLCipher database sidecars, clears the Android
+Keystore-wrapped passphrase via `com.paisatrack/database_passphrase`, resets
+app-private settings, and reopens a database seeded only with bundled
+categories.

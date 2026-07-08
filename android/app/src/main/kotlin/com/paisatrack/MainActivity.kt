@@ -37,6 +37,10 @@ class MainActivity : FlutterActivity() {
             try {
                 when (call.method) {
                     "getPassphrase" -> result.success(passphraseStore.getOrCreate())
+                    "clearPassphrase" -> {
+                        passphraseStore.clear()
+                        result.success(null)
+                    }
                     "debugResetForTests" -> {
                         if (!isDebuggable()) {
                             result.error(

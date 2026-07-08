@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../dashboard/dashboard_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
+import '../settings/settings_screen.dart';
 import '../transactions/transactions_screen.dart';
 
 /// Post-onboarding app shell: bottom navigation across the dashboard,
@@ -20,6 +21,7 @@ class _HomeShellState extends State<HomeShell> {
     DashboardScreen(),
     TransactionsScreen(),
     UnparsedSmsScreen(),
+    SettingsScreen(),
   ];
 
   @override
@@ -45,6 +47,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.bug_report_outlined),
             selectedIcon: Icon(Icons.bug_report),
             label: 'Dev',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

@@ -37,5 +37,15 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('clears stored passphrase through platform channel', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'clearPassphrase');
+        return null;
+      });
+
+      await provider.clearStoredPassphrase();
+    });
   });
 }

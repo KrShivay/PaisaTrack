@@ -19,3 +19,6 @@ PaisaTrack is local-first:
   Phase 1 verification live in the gitignored `BankStatement/` folder and are
   never committed; the same applies to on-device transaction exports
   (`export.json`, gitignored).
+- Settings `Delete everything` closes the local database, deletes SQLCipher
+  database files, clears Android Keystore-wrapped passphrase material, resets
+  app-private settings, and recreates the database with bundled categories only.

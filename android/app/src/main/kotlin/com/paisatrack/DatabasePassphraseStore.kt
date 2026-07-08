@@ -37,6 +37,10 @@ internal class DatabasePassphraseStore internal constructor(
     }
 
     fun clearForTests() {
+        clear()
+    }
+
+    fun clear() {
         storage.clear()
         cipher.clear()
     }

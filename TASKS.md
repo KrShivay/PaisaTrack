@@ -14,8 +14,9 @@ Last updated: 2026-07-08 by @claude (partial toolchain verification: GitNexus de
 - [ ] T-041 (@codex) [P2] Category manager
       AC: settings-reachable screen to add/rename/merge categories; merges retro-apply to existing transactions and update rules/seed mappings atomically; user-created categories flagged `is_user_created`; `CategoryVisuals` falls back gracefully for user categories; tests for merge retro-apply.
       Depends: T-036
-- [ ] T-042 (@codex) [P2] Settings v1
+- [x] T-042 (@codex) [P2] Settings v1 (2026-07-08)
       AC: theme choice (dark default / light / system — switches `themeMode` per design-system §10), ask-budget, feature-flag toggles (read-only display for unphased flags), and "Delete everything" that wipes DB + Keystore-wrapped key and recreates empty (proven by test/manual evidence per PLAN §8).
+      AC met (toolchain tests skipped at @human direction): Settings screen added as a fourth HomeShell destination; theme choice persists in app-private `settings.json` and drives `MaterialApp.themeMode`; ask-budget slider persists with default 2; feature flags render read-only from `AppConstants`; Delete everything confirms, closes/invalidate DB, deletes SQLCipher sidecars, clears Android Keystore passphrase via production `clearPassphrase`, resets settings, reopens DB, and reseeds bundled categories. Docs updated in architecture/privacy/development. Tests written: settings store round-trip, Settings widget controls, reset service DB/key/settings/category proof, passphrase channel clear. Execution caveat: targeted Flutter test run was interrupted/hung in the Settings widget test; @human then instructed to skip test execution and finish the rest.
 - [ ] T-043 (@codex) [P2] Encrypted export/import
       AC: export = passphrase-encrypted JSON (Argon2id KDF + AES-GCM, free/open-source deps only per ADR 0002); import restores losslessly; round-trip test (export→wipe→import→byte-equivalent domain data); wrong-passphrase fails closed; no plaintext temp files.
 - [ ] T-044 (@codex) [P2] Ask-now notification flow

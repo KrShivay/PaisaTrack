@@ -11,19 +11,22 @@ import 'package:sqlite3/open.dart';
 class DatabasePassphrase {
   const DatabasePassphrase(this.value);
 
-  /// Plain passphrase value; callers must avoid logging or persisting it.
+  /// Plain passphrase value; callers must never log or persist it.
   final String value;
 }
 
-/// Retrieves the secret used to unlock the encrypted database.
+/// Retrieves and clears the secret used to unlock the encrypted database.
 abstract interface class DatabasePassphraseProvider {
-  /// Returns the stable passphrase for this app install.
+  /// Returns a stable passphrase for this app install.
   Future<DatabasePassphrase> getPassphrase();
+
+  /// Clears the wrapped passphrase and backing keystore key.
+  Future<void> clearStoredPassphrase();
 }
 
 /// Android Keystore-backed database passphrase provider.
 ///
-/// The native implementation generates the passphrase once, wraps it with an
+/// The native implementation generates a passphrase once, wraps it with an
 /// Android Keystore AES key, and stores only encrypted bytes in app-private
 /// storage. StrongBox is requested when the device reports support.
 class AndroidKeystoreDatabasePassphraseProvider
@@ -50,7 +53,12 @@ class AndroidKeystoreDatabasePassphraseProvider
     return DatabasePassphrase(passphrase);
   }
 
-  /// Clears the stored passphrase in debug builds for integration tests.
+  @override
+  Future<void> clearStoredPassphrase() async {
+    await _channel.invokeMethod<void>('clearPassphrase');
+  }
+
+  /// Clears stored passphrase in debug builds for tests.
   @visibleForTesting
   Future<void> debugResetForTests() async {
     await _channel.invokeMethod<void>('debugResetForTests');
@@ -59,9 +67,7 @@ class AndroidKeystoreDatabasePassphraseProvider
 
 /// Opens the app database through SQLCipher and fails closed if unavailable.
 ///
-/// The passphrase is escaped before being embedded in the SQLite PRAGMA. This
-/// function verifies `cipher_version` before setting the key so tests catch
-/// environments that accidentally link plain SQLite.
+/// The passphrase is escaped before embedding in SQLite PRAGMA syntax.
 QueryExecutor openEncryptedDatabase({
   required File file,
   required DatabasePassphrase passphrase,
@@ -71,7 +77,7 @@ QueryExecutor openEncryptedDatabase({
     isolateSetup: _prepareSqlCipher,
     setup: (database) {
       if (database.select('PRAGMA cipher_version').isEmpty) {
-        throw StateError('SQLCipher is not available for this database');
+        throw StateError('SQLCipher not available for this database');
       }
 
       database

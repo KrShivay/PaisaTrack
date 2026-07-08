@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/crypto/database_cipher.dart';
 import 'database.dart';
 
-const _databaseFileName = 'paisatrack.db';
+const appDatabaseFileName = 'paisatrack.db';
 
 /// Provides the Android Keystore-backed passphrase source for SQLCipher.
 ///
@@ -33,12 +33,29 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
   final passphrase = await passphraseProvider.getPassphrase();
   final database = AppDatabase(
     openEncryptedDatabase(
-      file: File(p.join(directory.path, _databaseFileName)),
+      file: File(p.join(directory.path, appDatabaseFileName)),
       passphrase: passphrase,
     ),
   );
 
-  ref.onDispose(database.close);
+  ref.onDispose(() {
+    closeAppDatabase(database);
+  });
+
+  // T-039 regression fix: the categorizer stamps `category_id` on every parsed
+  // transaction and `PRAGMA foreign_keys = ON` enforces the reference, so the
+  // bundled defaults MUST exist before any ingest runs. Idempotent
+  // (insertOrIgnore) and preserves user-edited rows.
+  await database.seedDefaultCategories();
 
   return database;
 });
+
+Future<void> closeAppDatabase(AppDatabase database) async {
+  try {
+    await database.close();
+  } on StateError {
+    // Reset flows may close a provider-owned database before Riverpod disposes
+    // it. Treat an already-closed database as closed.
+  }
+}

@@ -8,6 +8,7 @@ import 'capture/sms_ingestion.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/home_shell.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/settings/app_settings.dart';
 
 /// Root widget for the PaisaTrack Flutter application.
 ///
@@ -29,14 +30,13 @@ class PaisaTrackApp extends ConsumerWidget {
     // degraded (manual-only) state; only a granted permission unlocks the
     // dashboard/transactions/dev shell.
     final isGranted = permission.valueOrNull == SmsPermissionStatus.granted;
+    final settings = ref.watch(appSettingsControllerProvider);
 
     return MaterialApp(
       title: 'PaisaTrack',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      // Dark-first per docs/design-system.md §10; the Phase 2 settings screen
-      // will expose a theme choice and switch this default to system.
-      themeMode: ThemeMode.dark,
+      themeMode: settings.valueOrNull?.themeChoice.themeMode ?? ThemeMode.dark,
       home: isGranted ? const HomeShell() : const OnboardingScreen(),
     );
   }

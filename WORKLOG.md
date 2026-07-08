@@ -1,3 +1,33 @@
+## 2026-07-08 @codex — T-042 Settings v1
+
+- Did: added Settings as a fourth HomeShell destination with theme choice
+  (dark/light/system), ask-budget control, read-only feature-flag display, and
+  Delete everything confirmation. `PaisaTrackApp` now reads persisted theme
+  mode from `appSettingsControllerProvider`; app settings live in app-private
+  `settings.json`.
+- Data reset: added `AppDataResetService`, exported `appDatabaseFileName`,
+  seeded bundled categories on DB open, and added production
+  `clearPassphrase` on `com.paisatrack/database_passphrase` so Settings can
+  delete SQLCipher sidecars and rotate the Android Keystore-wrapped DB key.
+- Docs/tests: updated `docs/architecture.md`, `docs/privacy.md`, and
+  `docs/development.md`. Tests were written for settings persistence, settings
+  UI controls, reset proof, and passphrase clear channel.
+- Evidence: refreshed GitNexus index successfully after sandbox approval.
+  Pre-edit impact: `PaisaTrackApp` LOW, `HomeShell` LOW,
+  `databasePassphraseProvider` LOW, `appDatabaseProvider` LOW,
+  `AndroidKeystoreDatabasePassphraseProvider` MEDIUM, `DatabasePassphraseStore`
+  LOW, `configureFlutterEngine` LOW, `AppConstants` MEDIUM. No HIGH/CRITICAL
+  surprise. Test execution caveat: targeted Flutter tests were started, then
+  interrupted/hung in the Settings widget test; @human instructed "skip the
+  test execution, finish rest", so no test result is claimed.
+- Post-commit review found and fixed before continuing: restored SQLCipher
+  `isolateSetup` so Android loads SQLCipher before the background connection
+  opens, and moved `appDatabaseProvider` invalidation until after database
+  files/key/settings are cleared so active listeners cannot reopen with the old
+  key mid-reset. Second review pass found and fixed two more reset edge cases:
+  reset no longer requires a successful database open before deleting files/key,
+  and provider database close is tolerant of reset-triggered early close.
+
 ## 2026-07-08 @claude — T-047 templates + coverage re-run (99.03%)
 
 - Did: added two credit templates to `assets/templates/indusind.json` — `indusind_neft_credit_v1` (`Your IndusInd Account X+{account} has been credited for INR {amount} towards N/{ref}/{ifsc}/{merchant} . Call`; merchant = remitter segment for seed categorization, ref = bare NEFT token for statement containment, no balance, ts falls back to receive time) and `indusind_ach_credit_v1` (exact mirror of `indusind_ach_debit_v1`: `Credited; INR {amount} Ref-{ref}.Bal INR {balance}`, full `ACH CR INW PAY/...` ref). Both use only field_normalizer's known groups (amount/account/merchant/vpa/balance/ref/date).
