@@ -1,3 +1,16 @@
+## 2026-07-08 @claude — TOOLCHAIN VERIFICATION PASS (T-037/38/39, T-041/42/43, T-047)
+
+- Result: **full suite green — `flutter analyze --no-pub` clean; `flutter test --no-pub --concurrency=1` 96 passed / 2 known host skips** (scratch dashboard debug test; host SQLCipher migration skip). First complete toolchain run over the whole Phase 2 chain. T-037/38/39 and T-047 → Done; T-041/42/43 verification lines added; T-040 wiring unblocked.
+- CRITICAL regression found & fixed (T-039): `seedDefaultCategories()` was defined but never called in production. With `PRAGMA foreign_keys = ON`, the categorizer stamps `category_id` on every parsed record; the FK against the empty categories table failed and the WHOLE ingest transaction — including the raw_sms insert — rolled back, silently swallowed by `_ingestSafely`. On device, SMS capture would have stopped entirely the moment T-039 shipped. Fix: `appDatabaseProvider` seeds after open (idempotent insertOrIgnore, user edits preserved); capture/enrichment test setups seed likewise. The detect_changes CRITICAL flag on this change set was accurate, not noise.
+- Test-infrastructure findings fixed along the way (commit 73abbab + follow-ups):
+  - Widget tests driving REAL drift streams raced the first emission under testWidgets' FakeAsync; fixed with bounded runAsync/pump alternation (real event-loop slices deliver completions; fake pumps run the microtasks they queue). A stuck stream also wedged `database.close()` in tearDown — the "suite hangs after failure" symptom.
+  - Real file IO started under FakeAsync deadlocks if awaited inside a single runAsync (its continuations queue as fake-zone microtasks that only flush after runAsync returns) — root cause of the settings widget-test hang; same alternation pattern fixes it.
+  - Lazy ListView: detail-screen fields below the 600x800 test viewport are never built; assertions now scroll each into view (`scrollUntilVisible`), with layout-order-aware assert ordering.
+  - One analyze info fixed (const literal, dev unparsed screen); stray `zz_probe_test.dart` scratch file removed.
+- Known-noise note: the drift "AppDatabase created multiple times" warning during the settings reset test is intentional (the reset service reopens the DB) — not a defect.
+- T-047 closure evidence: fixture runner + per-bank coverage suites green over `indusind_neft_credit_v1`/`indusind_ach_credit_v1` — all 13 new positives parse field-exact, all 4 negatives stay unparsed. Statement-side 99.03% stands as simulation evidence; canonical on-device export re-run folds into T-046 exit evidence.
+- Next: T-040 wiring (@codex, now unblocked) → T-044 + T-045 → T-046 Phase 2 exit review (@claude).
+
 ## 2026-07-08 @codex — Docs status refresh
 
 - Did: refreshed README, PROJECT_STATUS_REPORT, docs/architecture, and the
