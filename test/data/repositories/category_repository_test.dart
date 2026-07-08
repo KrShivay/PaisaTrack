@@ -5,6 +5,9 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/category_repository.dart';
 
 void main() {
+  // seedDefaultCategories() loads a bundled asset, which needs a binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase database;
   late CategoryRepository repository;
 

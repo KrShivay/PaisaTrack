@@ -82,7 +82,7 @@ Future<List<QueryRow>> _cipherVersionOrSkip(AppDatabase database) async {
   try {
     return await database.customSelect('PRAGMA cipher_version').get();
   } on Object catch (error) {
-    if (error.toString().contains('SQLCipher is not available')) {
+    if (error.toString().contains('SQLCipher not available')) {
       markTestSkipped(
         'SQLCipher is not available in this host VM test process.',
       );

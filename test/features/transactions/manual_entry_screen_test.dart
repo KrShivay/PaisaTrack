@@ -38,6 +38,24 @@ void main() {
     }
   });
 
+  // categoryListProvider is fed by a real drift `.watch()` stream, which only
+  // delivers under a real event-loop tick. Alternate real-async slices with
+  // fake pumps until it resolves. Bounded so a regression fails fast instead
+  // of hanging. Must be awaited before `unmount` below: closing the database
+  // while that first query is still in flight hangs drift's `close()`
+  // forever waiting for it to settle.
+  Future<void> drainCategories(WidgetTester tester, Finder scope) async {
+    final element = tester.element(scope);
+    for (var i = 0; i < 40; i++) {
+      final container = ProviderScope.containerOf(element, listen: false);
+      if (container.read(categoryListProvider).hasValue) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      await tester.pump(const Duration(milliseconds: 25));
+    }
+  }
+
   // The screens here hold real drift `.watch()` streams (categoryListProvider
   // / transactionListProvider). Cancelling one on ProviderScope dispose
   // schedules a timer inside drift's StreamQueryStore that survives past the
@@ -60,20 +78,9 @@ void main() {
         child: const MaterialApp(home: ManualEntryScreen()),
       ),
     );
-    // categoryListProvider is fed by a real drift `.watch()` stream, which
-    // only delivers under a real event-loop tick. Alternate real-async
-    // slices with fake pumps until it resolves, so the category dropdown's
-    // `items` snapshot includes the seeded categories by the time a test
-    // opens it. Bounded so a regression fails fast instead of hanging.
-    final element = tester.element(find.byType(ManualEntryScreen));
-    for (var i = 0; i < 40; i++) {
-      final container = ProviderScope.containerOf(element, listen: false);
-      if (container.read(categoryListProvider).hasValue) break;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 2)),
-      );
-      await tester.pump(const Duration(milliseconds: 25));
-    }
+    // The category dropdown's `items` snapshot must include the seeded
+    // categories by the time a test opens it.
+    await drainCategories(tester, find.byType(ManualEntryScreen));
     await tester.pump();
   }
 
@@ -208,6 +215,7 @@ void main() {
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
+    await drainCategories(tester, find.byType(ManualEntryScreen));
 
     expect(find.byType(ManualEntryScreen), findsOneWidget);
     expect(find.text('Add transaction'), findsOneWidget);
