@@ -200,6 +200,9 @@ final askNowNotificationControllerProvider = Provider<void>((ref) {
   final categories = ref.watch(categoryListProvider).valueOrNull ?? const [];
   if (database == null || categories.isEmpty) return;
 
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+
   final gateway = ref.watch(askNowNotificationGatewayProvider);
   final repository = ref.watch(transactionRepositoryProvider(database));
   const builder = AskNowPayloadBuilder();
@@ -214,7 +217,7 @@ final askNowNotificationControllerProvider = Provider<void>((ref) {
         repository: repository,
         categories: categories,
       );
-      if (handledTxnIds.isEmpty) return;
+      if (handledTxnIds.isEmpty || disposed) return;
       ref.read(shownAskNowTxnIdsProvider.notifier).update(
             (shownTxnIds) => shownTxnIds.difference(handledTxnIds),
           );
@@ -237,19 +240,31 @@ final askNowNotificationControllerProvider = Provider<void>((ref) {
     ref.read(shownAskNowTxnIdsProvider.notifier).state = prunedShownTxnIds;
   }
 
-  for (final item in askQueue) {
-    if (prunedShownTxnIds.contains(item.id)) continue;
-    unawaited(
-      gateway.show(builder.build(item: item, categories: categories)).then(
-        (shown) {
-          if (!shown) return;
-          ref.read(shownAskNowTxnIdsProvider.notifier).update(
-                (shownTxnIds) => {...shownTxnIds, item.id},
-              );
-        },
-      ),
-    );
+  final pendingShows =
+      askQueue.where((item) => !prunedShownTxnIds.contains(item.id)).toList();
+  if (pendingShows.isEmpty) return;
+
+  // Show notifications sequentially, record which succeeded, then commit the
+  // "shown" set in a single guarded write *after* all shows finish. Because
+  // this provider watches shownAskNowTxnIdsProvider, writing to it from a
+  // per-show callback would dispose this instance while other shows are still
+  // in flight, and those callbacks would then touch a disposed ref (uncaught
+  // StateError) and leave their items to be re-shown. One write at the end,
+  // gated on `disposed`, closes that window.
+  Future<void> showPendingNotifications() async {
+    final newlyShownTxnIds = <String>{};
+    for (final item in pendingShows) {
+      final shown =
+          await gateway.show(builder.build(item: item, categories: categories));
+      if (shown) newlyShownTxnIds.add(item.id);
+    }
+    if (disposed || newlyShownTxnIds.isEmpty) return;
+    ref.read(shownAskNowTxnIdsProvider.notifier).update(
+          (shownTxnIds) => {...shownTxnIds, ...newlyShownTxnIds},
+        );
   }
+
+  unawaited(showPendingNotifications());
 });
 
 _ResolvedAskNowAnswer? _resolveResponse(
