@@ -19,10 +19,10 @@ class UnparsedSmsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Unparsed SMS (dev)'),
-        actions: [
+        actions: const [
           // Debug-only plain-JSON transaction dump for the T-034
           // bank-statement reconciliation; compiled out of release builds.
-          if (kDebugMode) const _ExportTransactionsButton(),
+          if (kDebugMode) _ExportTransactionsButton(),
         ],
       ),
       body: switch (unparsed) {

@@ -26,6 +26,8 @@ NormalizedTransactionRecord _record({
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase database;
   late RuleRepository rules;
   late Categorizer categorizer;
@@ -38,8 +40,11 @@ void main() {
     'hdfc ergo': 'health',
   });
 
-  setUp(() {
+  setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
+    // Rules reference categories via set_category_id and foreign keys are
+    // enforced, so the bundled category rows must exist before inserts.
+    await database.seedDefaultCategories();
     rules = RuleRepository(database);
     categorizer = Categorizer(rules: rules, seedMap: seedMap);
   });

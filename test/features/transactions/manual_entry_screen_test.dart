@@ -12,8 +12,13 @@ import 'package:paisatrack/features/transactions/transactions_screen.dart';
 
 void main() {
   late AppDatabase database;
+  // Widget tests close the database themselves (see `unmount` below) so
+  // drift's stream-cancellation timer never gets scheduled; this flag stops
+  // the shared tearDown from closing it a second time.
+  var databaseClosed = false;
 
   setUp(() async {
+    databaseClosed = false;
     database = AppDatabase(NativeDatabase.memory());
     await database.into(database.categories).insertOnConflictUpdate(
           CategoriesCompanion.insert(
@@ -28,8 +33,23 @@ void main() {
   });
 
   tearDown(() async {
-    await database.close();
+    if (!databaseClosed) {
+      await database.close();
+    }
   });
+
+  // The screens here hold real drift `.watch()` streams (categoryListProvider
+  // / transactionListProvider). Cancelling one on ProviderScope dispose
+  // schedules a timer inside drift's StreamQueryStore that survives past the
+  // end of the test (see the comment on `StreamQueryStore.markAsClosed`),
+  // tripping flutter_test's `!timersPending` invariant. Closing the database
+  // *before* the widget tree tears down avoids scheduling that timer.
+  Future<void> unmount(WidgetTester tester) async {
+    databaseClosed = true;
+    await database.close();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  }
 
   Future<void> pumpEntryScreen(WidgetTester tester) async {
     await tester.pumpWidget(
@@ -40,8 +60,20 @@ void main() {
         child: const MaterialApp(home: ManualEntryScreen()),
       ),
     );
-    // Let the async database/category providers resolve.
-    await tester.pump();
+    // categoryListProvider is fed by a real drift `.watch()` stream, which
+    // only delivers under a real event-loop tick. Alternate real-async
+    // slices with fake pumps until it resolves, so the category dropdown's
+    // `items` snapshot includes the seeded categories by the time a test
+    // opens it. Bounded so a regression fails fast instead of hanging.
+    final element = tester.element(find.byType(ManualEntryScreen));
+    for (var i = 0; i < 40; i++) {
+      final container = ProviderScope.containerOf(element, listen: false);
+      if (container.read(categoryListProvider).hasValue) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      await tester.pump(const Duration(milliseconds: 25));
+    }
     await tester.pump();
   }
 
@@ -120,6 +152,8 @@ void main() {
     expect(row.status, 'confirmed');
     expect(row.categoryId, 'food_dining');
     expect(row.description, 'Auto rickshaw');
+
+    await unmount(tester);
   });
 
   testWidgets('credit direction is saved when Received is selected',
@@ -138,6 +172,8 @@ void main() {
     expect(rows.single.direction, 'credit');
     expect(rows.single.categoryId, isNull);
     expect(rows.single.description, isNull);
+
+    await unmount(tester);
   });
 
   testWidgets('invalid amount blocks save with a validation error',
@@ -150,6 +186,8 @@ void main() {
 
     expect(find.text('Enter an amount greater than zero'), findsOneWidget);
     expect(await database.select(database.transactions).get(), isEmpty);
+
+    await unmount(tester);
   });
 
   testWidgets('transactions list FAB opens the manual entry form',
@@ -173,5 +211,7 @@ void main() {
 
     expect(find.byType(ManualEntryScreen), findsOneWidget);
     expect(find.text('Add transaction'), findsOneWidget);
+
+    await unmount(tester);
   });
 }

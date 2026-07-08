@@ -14,8 +14,13 @@ import 'package:paisatrack/features/transactions/transactions_screen.dart';
 void main() {
   late AppDatabase database;
   late TransactionRepository repository;
+  // Widget tests close the database themselves (see `unmount` below) so
+  // drift's stream-cancellation timer never gets scheduled; this flag stops
+  // the shared tearDown from closing it a second time.
+  var databaseClosed = false;
 
   setUp(() async {
+    databaseClosed = false;
     database = AppDatabase(NativeDatabase.memory());
     repository = TransactionRepository(database);
     await database.into(database.categories).insertOnConflictUpdate(
@@ -62,7 +67,9 @@ void main() {
   });
 
   tearDown(() async {
-    await database.close();
+    if (!databaseClosed) {
+      await database.close();
+    }
   });
 
   group('repository.updateWithFeedback', () {
@@ -164,6 +171,22 @@ void main() {
   });
 
   group('detail screen', () {
+    // The screen's providers hold real drift `.watch()` streams. Cancelling
+    // one (e.g. on ProviderScope dispose) normally schedules a timer inside
+    // drift's StreamQueryStore so the query cache survives brief
+    // unsubscribe/resubscribe gaps - see the comment on
+    // `StreamQueryStore.markAsClosed`. In a widget test there's no later
+    // pump to flush that timer, which trips flutter_test's `!timersPending`
+    // invariant. Per drift's own guidance there, closing the database
+    // *before* the widget tree (and its stream subscriptions) tears down
+    // avoids scheduling the timer at all.
+    Future<void> unmount(WidgetTester tester) async {
+      databaseClosed = true;
+      await database.close();
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    }
+
     Future<void> pumpDetail(WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -175,9 +198,33 @@ void main() {
           ),
         ),
       );
+      // The screen is fed by a real drift stream created under testWidgets'
+      // FakeAsync zone. Alternate real-event-loop slices (runAsync delivers
+      // any real completions) with fake pumps (runs the microtasks they
+      // queue) until the detail row renders. Bounded so a regression fails
+      // fast instead of hanging the suite (as on the 2026-07-08 run).
+      for (var i = 0; i < 40 && !tester.any(find.text('-₹449.00')); i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        await tester.pump(const Duration(milliseconds: 25));
+      }
       await tester.pump();
-      await tester.pump();
-      await tester.pump();
+      if (!tester.any(find.text('-₹449.00'))) {
+        // Diagnostic for the next failure report: what did we render instead?
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(TransactionDetailScreen)),
+          listen: false,
+        );
+        debugPrint('detailProvider: '
+            '${container.read(transactionDetailProvider('txn_1'))}');
+        debugPrint('dbProvider: ${container.read(appDatabaseProvider)}');
+        debugPrint(
+          'spinner=${tester.any(find.byType(CircularProgressIndicator))} '
+          'notFound=${tester.any(find.text('Transaction not found'))} '
+          'loadError=${tester.any(find.text('Could not load transaction'))}',
+        );
+      }
     }
 
     testWidgets('renders the frozen-contract fields and confidence trail '
@@ -186,15 +233,30 @@ void main() {
 
       expect(find.text('-₹449.00'), findsOneWidget);
       expect(find.text('AMZN*MKTPLC'), findsOneWidget);
+      // The category dropdown sits near the top, above the field rows.
+      expect(find.text('Food & Dining'), findsOneWidget);
       expect(find.text('amazon@ybl'), findsOneWidget);
       expect(find.text('xx4521'), findsOneWidget);
       expect(find.text('₹12,384.50'), findsOneWidget);
       expect(find.text('615223847712'), findsOneWidget);
-      expect(find.text('auto'), findsOneWidget);
-      expect(find.text('Confidence trail'), findsOneWidget);
-      expect(find.text('template'), findsOneWidget);
-      expect(find.text('0.97'), findsOneWidget);
-      expect(find.text('Food & Dining'), findsOneWidget);
+
+      // The remaining fields sit below the 600x800 test viewport and the
+      // ListView builds lazily, so scroll each into view before asserting.
+      Future<void> revealAndExpect(String text) async {
+        await tester.scrollUntilVisible(
+          find.text(text),
+          80,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text(text), findsOneWidget);
+      }
+
+      await revealAndExpect('auto');
+      await revealAndExpect('Confidence trail');
+      await revealAndExpect('template');
+      await revealAndExpect('0.97');
+
+      await unmount(tester);
     });
 
     testWidgets('editing category and description saves and writes feedback',
@@ -227,6 +289,8 @@ void main() {
         feedbackRows.map((row) => row.context).toSet(),
         {'detail_edit'},
       );
+
+      await unmount(tester);
     });
 
     testWidgets('tapping a transactions list row opens the detail screen',
@@ -256,11 +320,42 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      // Not pumpAndSettle: the pushed screen shows an indeterminate
+      // CircularProgressIndicator while its real drift stream loads, which
+      // schedules a new frame forever and would make pumpAndSettle time out.
       await tester.tap(find.text('AMZN*MKTPLC'));
-      await tester.pumpAndSettle();
+      await tester.pump(); // starts the push
+      // Wait for the pushed screen to build (bounded so a stuck transition
+      // fails fast rather than hanging, as pumpAndSettle would with the
+      // pushed screen's indeterminate spinner still scheduling frames).
+      for (var i = 0;
+          i < 40 && find.byType(TransactionDetailScreen).evaluate().isEmpty;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      // Same real-drift-stream wait as pumpDetail for the pushed screen.
+      for (var i = 0;
+          i < 40 && tester.any(find.byType(CircularProgressIndicator));
+          i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        await tester.pump(const Duration(milliseconds: 25));
+      }
 
       expect(find.byType(TransactionDetailScreen), findsOneWidget);
-      expect(find.text('-₹449.00'), findsOneWidget);
+      // Scoped to the pushed screen: the list screen underneath (still
+      // showing the same amount in its ListTile) stays mounted, just
+      // visually behind, so an unscoped find.text would match twice.
+      expect(
+        find.descendant(
+          of: find.byType(TransactionDetailScreen),
+          matching: find.text('-₹449.00'),
+        ),
+        findsOneWidget,
+      );
+
+      await unmount(tester);
     });
   });
 }

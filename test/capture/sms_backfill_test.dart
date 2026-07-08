@@ -20,8 +20,11 @@ void main() {
 
   late AppDatabase database;
 
-  setUp(() {
+  setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
+    // The categorizer stamps category_id and foreign keys are enforced, so
+    // backfill tests need the bundled category rows just like production.
+    await database.seedDefaultCategories();
   });
 
   tearDown(() async {
