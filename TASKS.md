@@ -1,13 +1,13 @@
 # Task Board
-Last updated: 2026-07-08 by @claude (T-040 reviewed: PASS with two fixes — thresholds to constants.dart, echo ask-budget leak; suite re-run green 101/2. T-040 → Done. T-044 + T-045 UNBLOCKED; then T-046 Phase 2 exit review.)
+Last updated: 2026-07-09 by @claude (T-044 + T-045 → Done (1ba1e82); T-046 Phase 2 exit review DRAFTED — PASS by code evidence on all four PLAN §9 criteria, WORKLOG "PHASE P2 EXIT REVIEW" written. Remaining before T-046 → Done and Phase 3 grooming: unblock commit (stale .git/index.lock), canonical device `flutter test`, on-device evidence capture, GitNexus re-analyze. Phase 3 — Intelligence backlog groomed: T-048..T-064, dependency-ordered, gated on T-046 exit.)
 
 ## In Progress
 
 ## Ready
 <!-- Phase 2 — Usable Tracker (PLAN.md §"Phase 2"). Ordered; respect Depends.
      Phase 1 exit is PASS (T-034 Done). Toolchain verification PASSED
-     2026-07-08 (101/2 skips after T-040). T-040 Done → T-044/T-045 are the last build tasks,
-     then T-046 Phase 2 exit review. -->
+     2026-07-08 (101/2 skips after T-040). All Phase 2 build tasks (T-035..T-045) are Done;
+     only T-046 Phase 2 exit review remains. -->
 - [x] T-041 (@codex) [P2] Category manager (2026-07-08)
       AC: settings-reachable screen to add/rename/merge categories; merges retro-apply to existing transactions and update rules/seed mappings atomically; user-created categories flagged `is_user_created`; `CategoryVisuals` falls back gracefully for user categories; tests for merge retro-apply.
       AC met (toolchain tests skipped at @human direction): Settings now links to Category manager; repository supports add (`is_user_created=true`), rename, and transactional merge; merge updates transactions, rules, child category parent links, then deletes source category; UI lists seed/user categories with `CategoryVisuals` fallback-safe icons/colors and add/rename/merge controls. Test written for add/rename/merge retro-apply to transactions and rules. Note: seed-map asset editing is intentionally not performed because seed mappings are bundled defaults and user-created categories/rules live in DB; future seed curation can add an asset task if needed.
@@ -21,15 +21,79 @@ Last updated: 2026-07-08 by @claude (T-040 reviewed: PASS with two fixes — thr
       AC: export = passphrase-encrypted JSON (Argon2id KDF + AES-GCM, free/open-source deps only per ADR 0002); import restores losslessly; round-trip test (export→wipe→import→byte-equivalent domain data); wrong-passphrase fails closed; no plaintext temp files.
       AC met (toolchain tests skipped at @human direction): added `cryptography` (free/open-source) for Argon2id + AES-256-GCM; Settings exports/imports fixed app-private `paisatrack_export.ptrack`; backup module serializes domain rows to in-memory JSON, encrypts to file with Argon2id params + AES-GCM nonce/MAC/ciphertext, restores rows transactionally, and maps wrong passphrase/corrupt archive to fail-closed `EncryptedBackupException`. Tests written: encrypted round-trip without plaintext file content and wrong-passphrase leaves current data untouched. Docs updated in privacy/schema/development.
       VERIFIED 2026-07-08: crypto round-trip + fail-closed tests executed green in the full-suite toolchain pass (96/2 skips).
-- [ ] T-044 (@codex) [P2] Ask-now notification flow
+- [x] T-044 (@codex) [P2] Ask-now notification flow (2026-07-09)
       AC: local notification with top-3 category guesses as action buttons + free-text remote input; answer writes rule + feedback + updates txn status (one write, PLAN §1 principle 3); daily budget 2 enforced via `constants.dart`; works with app killed (manual QA note); JUnit/Dart tests for payload building and response handling.
+      AC met: `lib/features/notifications/ask_now_notifications.dart` adds `AskNowPayloadBuilder` (top-3 category guesses, leading with the current best guess), a `MethodChannel('com.paisatrack/ask_now')` gateway (`show` / `takePendingResponses`), and `AskNowResponseHandler` that drains queued answers into `TransactionRepository.correctWithRule(context: 'ask_now')`. `askNowNotificationControllerProvider` (watched in `app.dart`) shows the `askQueueProvider` (`status='asked'`) rows and drains pending responses on every build, i.e. on app start. Android side: `AskNowNotificationReceiver.kt` handles action-button taps + RemoteInput free-text and **persists responses to SharedPreferences**, so answers given while the app is killed survive and are returned by `takePendingResponses` on next launch (drained atomically — read then reset to `[]`). Free-text resolves by case-insensitive category-name match, else lands `Other` with the text kept as the transaction description. `correctWithRule` performs rule insert + feedback row(s) + txn update→`confirmed` in **one `_database.transaction`** (PLAN §1 principle 3). Daily budget now reads the Settings slider: `smsCaptureBootstrapProvider` passes `settings.askDailyBudget` (falling back to `AppConstants.askNowDailyBudget`) into `SmsIngestor._askDailyBudget`, closing the T-040 review note. `POST_NOTIFICATIONS` added for Android 13+. Income-side fix (regression from a bug @human caught): credit transactions only offer income-side categories — the builder drops any `isSpending` category except `Other` when `direction == credit`, so credits no longer suggest Food/Groceries; credit actions surface `Other`/`Transfers`/`Income`. Tests: Dart payload-builder + income-side-credit regression + response-handling tests (`test/features/notifications/ask_now_notifications_test.dart`); Android JVM codec test (`AskNowPendingResponseCodecTest.kt`).
+      VERIFIED 2026-07-09 (tests human-verified on device toolchain; sandbox Flutter is wrong-arch as in prior sessions): `flutter analyze --no-pub` clean, targeted Flutter tests green (notifications + weekly review), Android JVM `./gradlew :app:testDebugUnitTest` green, `dart format` clean. GitNexus `detect_changes`: MEDIUM, expected ingest/notification surface. @human confirmed the income-side regression test passes. Committed as `0003871`. Review-hook follow-up (unstaged at hand-off, to amend into `0003871`): `AskNowResponseHandler.handle` acks every *processed* response — resolves-null and `StateError` (stale txn) cases are caught and ack'd so they drain instead of re-firing each app start; return value still reports only applied corrections. Re-run `flutter analyze` over this one-file patch before amend. Canonical full-suite `flutter test` folded into T-046 exit evidence.
       Depends: T-040
-- [ ] T-045 (@codex) [P2] Weekly review screen
+- [x] T-045 (@codex) [P2] Weekly review screen (2026-07-09)
       AC: queue of `needs_review` transactions with swipe-to-confirm / tap-to-correct; corrections write feedback rows (context 'batch_review'); confirmations set status 'confirmed'; empty state per design-system §5; widget tests.
+      AC met: `lib/features/review/weekly_review_screen.dart` adds a **Review** tab to `HomeShell` fed by `reviewQueueProvider` → `TransactionRepository.watchReviewQueue()` (`status='needs_review'`, `is_deleted=0`, `duplicate_of_txn_id IS NULL`, newest first). Swipe (end-to-start) → `confirm()` sets `status='confirmed'` without touching the category; tap opens a correction sheet → `correctWithRule(context: 'batch_review')`, writing feedback rows and setting `status='confirmed'` in one DB transaction. Empty state ("All caught up") per design-system §5. Tests: `test/features/review/weekly_review_screen_test.dart` (widget tests over empty state, swipe-confirm, tap-correct).
+      VERIFIED 2026-07-09 (tests human-verified; see T-044 note): analyze clean, review widget tests green, `dart format` clean.
       Depends: T-040
-- [ ] T-046 (@claude) [P2] Phase 2 exit review
+- [~] T-046 (@claude) [P2] Phase 2 exit review — DRAFTED, PASS-by-code (2026-07-09)
       AC: verifies PLAN §9 Phase 2 exit criteria (daily-usable, <=2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip) against T-035..T-045 evidence; WORKLOG entry "PHASE P2 EXIT REVIEW"; blockers listed before Phase 3 grooming.
+      Review 2026-07-09 @claude: WORKLOG "PHASE P2 EXIT REVIEW" written. **PASS by code evidence on all four criteria.** (1) Daily-usable: full loop present (capture+backfill → categorizer → decision policy → manual/detail/category-manager → ask-now → weekly review → settings → encrypted backup); final = human daily-use confirmation. (2) ≤2 asks/day: enforced by `DecisionPolicy` band+gates and `SmsIngestor._countAskedToday` vs `askDailyBudget` (Settings slider, default 2; echoes excluded); tests in decision_policy_test + sms_ingestion_test. (3) Correction→rule→auto-label: `correctWithRule`→`_ruleInputFor` inserts a `counterparty` VPA rule → next transfer's `Categorizer.findMatch` returns 1.0/`rule` → `DecisionPolicy` auto (traced end-to-end). (4) export/wipe/import: T-043 Argon2id+AES-GCM round-trip test (`encrypted_backup_service_test.dart`) byte-equivalent + fail-closed.
+      Remaining to move → Done (all require the device toolchain / human, none are open defects): (a) `rm .git/index.lock` on the Mac, then commit the T-044/T-045 + T-046 docs; (b) canonical full-suite `flutter test` re-run over T-044/T-045 + T-047's deferred on-device export number; (c) on-device evidence capture for criteria 1/3/4; (d) refresh GitNexus index (`analyze`) since baseline 1f751b5 predates code commit 1ba1e82. Phase 3 grooming may begin once (a)/(b) land.
       Depends: T-035..T-045
+
+## Phase 3 — Intelligence (groomed backlog; gated on T-046 exit)
+<!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
+     start until T-046 → Done (commit unblocked + canonical device test green).
+     Dependency-ordered; schema v3 (T-048) unblocks the analytics chain, embedder
+     (T-050) unblocks resolver/classifier. Owners provisional (@codex build /
+     @claude review) per COLLABORATION.md; the exit review (T-064) is @claude. -->
+- [ ] T-048 (@codex) [P3] Schema v3 migration (analytics tables)
+      AC: adds `recurring_series`, `baselines`, `model_meta`, `insights` tables per PLAN §6.1 (drift table classes + registration); `merchants.embedding` BLOB already exists (v2) — confirm nullable + unused-until-T-050; bump `schemaVersion` 2→3 with an additive `onUpgrade` step (no data loss for existing rows) and a v2→v3 migration test; `docs/schema.md` updated. Indexes per §6.1 where specified (insights by period, recurring_series by merchant_id/next_expected_date).
+      Depends: T-036
+- [ ] T-049 (@codex) [P3] Confidence trail per transaction
+      AC: `confidence_json` records a per-enricher trail `{merchant:{v,c,src}, category:{c,src,rule_id?}, ...}` per PLAN §6.1/§7.2 (extends today's parser+category shape without breaking readers); written in the single ingest DB transaction; `TransactionDetail` exposes the trail for the metrics/dev surfaces (T-062); back-compat test over legacy rows with only `parser`. 
+      Depends: T-036
+- [ ] T-050 (@codex) [P3] On-device text embedder
+      AC: `Embedder` service (TFLite / MediaPipe Text Embedder, free/open weights per ADR 0002, on-device only) returns a fixed-dim vector for a normalized merchant string; model file bundled or lazily loaded (not networked at inference); deterministic output test over fixed inputs; graceful no-op/fallback when the model is unavailable so ingest never blocks.
+      Depends: T-048
+- [ ] T-051 (@codex) [P3] Merchant resolver v2 (embedding similarity)
+      AC: PLAN §7.3 — exact alias lookup (1.0) → brute-force cosine similarity vs stored merchant embeddings (<2k merchants): ≥0.92 auto-link + write `learned` alias; 0.75–0.92 link with `needs_review` mark; <0.75 create+embed new merchant. Slots ahead of the categorizer in the enrichment pipeline (§7.2); writes `merchant` block into the confidence trail (T-049); tests for each band + alias promotion.
+      Depends: T-050, T-049
+- [ ] T-052 (@codex) [P3] Local classifier + categorizer ladder step 2
+      AC: pure-Dart softmax/logistic classifier (no heavy deps per §2) over features = merchant embedding (or top-N merchant one-hot) + log-amount band + hour bucket + dow + channel; loads weights from `model_meta`; wired as ladder step 2 (PLAN §7.4) between rules(1.0) and seed(0.8), used only when top-prob ≥ per-category threshold; no-model → ladder falls through unchanged; inference + feature-extraction tests.
+      Depends: T-048, T-050
+- [ ] T-053 (@codex) [P3] Nightly classifier trainer
+      AC: trains the T-052 classifier on `feedback` rows (retrain trigger ≥30 new feedback rows per §7.9); persists weights + `last_trained_at` + version to `model_meta`; pure-Dart, bounded runtime; deterministic-seed training test asserting improved fit on a fixture feedback set; no raw SMS in features.
+      Depends: T-052
+- [ ] T-054 (@codex) [P3] Decision policy v2 (adaptive thresholds)
+      AC: per-category silent thresholds persisted in `model_meta`; PLAN §7.5 adaptation — corrections/auto-labels >15% over trailing 50 in a category → raise threshold +0.03 (cap 0.98); each clean 50 → lower 0.01; policy reads per-category threshold instead of the static constant; back-compat default when no history; branch tests for raise/lower/cap/floor.
+      Depends: T-052, T-040
+- [ ] T-055 (@codex) [P3] Recurring detector (nightly batch)
+      AC: PLAN §7.6 — group by merchant_id, sub-cluster by amount (±5%), inter-arrival gaps → periodicity when median gap ∈ known bands and CoV <0.25 with ≥3 occurrences; upsert `recurring_series` with `next_expected_date = last_ts + median_gap`; `rising` when last 3 amounts monotonically increase, `missed` when today > next_expected + 20% grace; fixture tests over synthetic subscription/EMI/income streams.
+      Depends: T-048
+- [ ] T-056 (@codex) [P3] Recurring screen
+      AC: lists subscriptions/EMIs/bills/income from `recurring_series` with upcoming renewals, price-creep (`rising`) and missed-payment (`missed`) badges; empty state per design-system §5; tap → underlying transactions; widget tests.
+      Depends: T-055
+- [ ] T-057 (@codex) [P3] Anomaly detector (nightly baselines)
+      AC: PLAN §7.7 — Welford running mean/σ per `cat:<id>:week` and `mer:<id>:month` in `baselines`; flag when current-period aggregate > mean+2.5σ and n≥8 periods; payload carries top-3 contributing transactions; incremental-update + flag-threshold tests.
+      Depends: T-048
+- [ ] T-058 (@codex) [P3] Burn-rate forecaster
+      AC: PLAN §7.8 — cumulative spend by day-of-month vs per-day median of trailing 3 months; project month-end = current + median remaining-days spend; emit insight when projection deviates >10% from the 3-month average; math verified programmatically over fixtures.
+      Depends: T-048
+- [ ] T-059 (@codex) [P3] Deterministic insights engine
+      AC: no-LLM detectors precomputed into `insights` (period keyed): duplicate subscriptions, fee/penalty totals, price creep, category month-over-month deltas, missed autopay; consumes T-055/T-057/T-058 outputs; idempotent per period; dismissable flag; detector unit tests.
+      Depends: T-055, T-057, T-058
+- [ ] T-060 (@codex) [P3] Insights screen
+      AC: monthly report + savings suggestions + anomaly explanations rendered from `insights`; dismiss control; empty state; widget tests; no raw SMS text surfaced.
+      Depends: T-059
+- [ ] T-061 (@codex) [P3] Nightly job orchestrator (WorkManager)
+      AC: PLAN §7.9 pipeline in order — purge expired raw_sms → recurring scan → baselines → retrain (if ≥30 new feedback) → recompute thresholds → precompute insights; WorkManager constraints device idle + charging, hard cap 3 min, resumable/checkpointed; single run wires the whole nightly batch; integration test over a seeded DB asserts each stage ran and is resumable.
+      Depends: T-053, T-055, T-057, T-058, T-059
+- [ ] T-062 (@codex) [P3] Model metrics dev screen (hidden)
+      AC: classifier accuracy on the last 100 feedback items, ask-rate, and per-category correction-rate from `feedback` + confidence trail (T-049); hidden/dev-only entry like the unparsed screen; this screen is the evidence surface for the Phase 3 exit criterion; widget test over seeded metrics.
+      Depends: T-052, T-054
+- [ ] T-063 (@codex) [P3] Learning loop: correction → rule + training example + alias (one write)
+      AC: PLAN §4 [P3] — extend `correctWithRule` so a single DB transaction stages the rule (existing), a training example for the classifier, and a learned merchant alias when the correction implies one; all commit/roll back together; no double-apply; transaction test over the combined write.
+      Depends: T-051, T-052
+- [ ] T-064 (@claude) [P3] Phase 3 exit review
+      AC: verifies PLAN §9 Phase 3 exit criteria against T-048..T-063 evidence — after 2 weeks of feedback the classifier auto-labels ≥80% of new transactions with ≤10% correction rate (proven on the T-062 metrics screen); real subscriptions/EMIs all appear in recurring with correct next dates; ≥1 genuine anomaly and ≥1 forecast insight have fired correctly; WORKLOG "PHASE P3 EXIT REVIEW"; blockers listed before Phase 4 grooming.
+      Depends: T-048..T-063
 
 ## Blocked
 

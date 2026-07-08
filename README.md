@@ -21,17 +21,20 @@ exit evidence reconciled on-device parsed transactions against real bank
 statements with **94.4% coverage (388/411 rows)** and zero amount/direction
 contradictions.
 
-**Phase 2 (Usable Tracker): in progress.** Schema v2, manual entry, transaction
-detail/edit feedback, seed/rule categorization, category manager, settings, data
-reset, encrypted export/import, and Decision policy v1 ingest status wiring have
-been implemented or prepared. T-040 is in review after a passing full Flutter
-suite; see [TASKS.md](TASKS.md) for exact state.
+**Phase 2 (Usable Tracker): build complete.** Schema v2, manual entry,
+transaction detail/edit feedback, seed/rule categorization, category manager,
+settings, data reset, encrypted export/import, Decision policy v1 ingest status
+wiring, ask-now notifications (T-044), and the weekly review screen (T-045) are
+all landed. Corrections from either surface flow through one write path
+(`correctWithRule`): rule + feedback + status update in a single DB transaction.
+The ask budget reads the Settings slider; credits only offer income-side
+categories. See [TASKS.md](TASKS.md) for exact state.
 
-**Current focus.** Finish Phase 2 by reviewing/landing T-040, building the
-ask-now notification flow (T-044), the weekly review screen (T-045), and the
-Phase 2 exit review (T-046). T-047 added IndusInd NEFT/ACH-credit templates and
-reports **99.03% statement coverage (407/411 rows)** in the fixture/SMS-dump
-simulation; final device export evidence is deferred to the Phase 2 exit pass.
+**Current focus.** The Phase 2 exit review (T-046) — verifying PLAN §9 exit
+criteria against T-035..T-045 evidence — is the last item before Phase 3
+grooming. T-047 added IndusInd NEFT/ACH-credit templates and reports **99.03%
+statement coverage (407/411 rows)** in the fixture/SMS-dump simulation; final
+device export evidence folds into the T-046 exit pass.
 
 Intelligence is on-device only with free components. No cloud inference path
 exists; see [ADR 0002](docs/decisions/0002-no-cloud-services.md).

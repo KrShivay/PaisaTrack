@@ -1,6 +1,6 @@
 # PaisaTrack — Project Status Report
 
-Reviewed 2026-07-08 by @codex, against PLAN.md, TASKS.md, README.md, docs/,
+Reviewed 2026-07-09 by @claude, against PLAN.md, TASKS.md, README.md, docs/,
 and WORKLOG.md.
 
 ## 1. Where the project stands
@@ -18,29 +18,32 @@ and shows captured transactions in the dashboard/list/dev views. The original
 Phase 1 reconciliation matched **388/411 statement rows (94.4%)** with zero
 amount/direction contradictions.
 
-Phase 2 is partially built. Completed or prepared work includes:
+Phase 2 build work is complete; only the exit review remains. Landed work:
 
 - T-035/T-036: duplicate/counterparty ADR and schema v2 implementation.
 - T-037: manual transaction entry, verified and Done.
 - T-038: transaction detail/edit writes feedback rows, verified and Done.
 - T-039: seed-map categorization and rules engine, verified and Done.
-- T-040: Decision policy v1 wired into ingest/status writes, pending review.
+- T-040: Decision policy v1 wired into ingest/status writes, reviewed and Done.
 - T-041: category manager.
 - T-042: settings v1 and local data reset.
 - T-043: encrypted export/import.
+- T-044: ask-now notifications — top-3 category action buttons + free-text
+  remote input, app-killed-safe response persistence, one-write
+  rule/feedback/status correction, ask budget from Settings, income-side-only
+  credit categories. Done (tests human-verified).
+- T-045: weekly review tab over `needs_review` with swipe-confirm /
+  tap-correct, one-write corrections, empty state. Done.
 - T-047: IndusInd NEFT/ACH-credit templates, fixture/SMS-dump coverage reported
-  at **407/411 statement rows (99.03%)**, pending Flutter fixture tests and a
-  fresh device export before Done.
+  at **407/411 statement rows (99.03%)**; final device export folds into T-046.
 
 ## 2. Current build goal
 
-Finish Phase 2 so the app is daily-usable:
+Phase 2 is built. The remaining step to close the phase:
 
-1. Review/land T-040 after the passing full Flutter suite.
-2. Build T-044 ask-now notifications with top category guesses and feedback/rule
-   writes.
-3. Build T-045 weekly review for `needs_review` transactions.
-4. Run T-046 Phase 2 exit review against the PLAN.md criteria.
+1. Run T-046 Phase 2 exit review against the PLAN §9 criteria (daily-usable,
+   ≤2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip)
+   using T-035..T-045 evidence, then move to Phase 3 grooming.
 
 ## 3. Architecture summary
 
@@ -50,7 +53,11 @@ The app is local-first:
 - Dart capture code parses messages through JSON template registries.
 - `SmsIngestor` writes raw SMS and normalized transaction rows in encrypted
   SQLite, suppressing linked duplicates instead of deleting them.
-- Enrichment currently applies user rules and a bundled seed category map.
+- Enrichment applies user rules and a bundled seed category map, then a static
+  decision policy sets each row's status (`auto` / `asked` / `needs_review`).
+- Ask-now notifications and the weekly review tab turn `asked` / `needs_review`
+  rows into confirmed transactions; both correct through one write path
+  (`correctWithRule`: rule + feedback + status in a single DB transaction).
 - Riverpod providers own database lifetime, settings, screens, and test
   overrides.
 - Settings owns theme choice, ask budget, reset, and encrypted backup/import.
@@ -74,20 +81,20 @@ enrichment, repositories, and UI.
 
 ## 5. Known risks and gaps
 
-- Several Phase 2 tasks have tests written but not executed in the canonical
-  Flutter toolchain after recent changes.
-- GitNexus reported the index 3 commits behind HEAD during this review; use the
+- T-044/T-045 tests are **human-verified**, not re-run in this sandbox (the
+  repo-local Flutter SDK is wrong-arch for the Linux sandbox). A canonical
+  full-suite `flutter test` re-run is folded into the T-046 exit evidence.
+- GitNexus reported the index stale (behind HEAD) during this review; use the
   task board and worklog as fresher status until the index is refreshed.
-- T-040 status writes are wired into ingest, but review/board state still needs
-  to catch up.
-- Ask-now notifications and weekly review are the main missing user workflows
-  before Phase 2 can exit.
+- Ask-now app-killed delivery relies on SharedPreferences persistence — the
+  end-to-end killed-state path is covered by unit tests and a manual QA note,
+  not an instrumented device test.
 - T-047's 99.03% coverage is from fixture/SMS-dump simulation; the final device
-  export confirmation is still outstanding.
+  export confirmation is still outstanding, to be captured in T-046.
 
 ## 6. Bottom line
 
 The project is no longer a foundation scaffold. It is a working local-first SMS
-finance tracker moving through Phase 2. The next push should be verification
-first, then decision-policy wiring, ask-now notifications, weekly review, and a
-Phase 2 exit review.
+finance tracker with its full Phase 2 build complete: capture, enrichment,
+decision policy, and both correction surfaces (ask-now + weekly review) are
+landed. The one remaining step before Phase 3 is the T-046 Phase 2 exit review.

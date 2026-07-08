@@ -391,6 +391,7 @@ Manual entry; detail edit (writes feedback rows even before ML uses them); categ
 
 ### Phase 3 — Intelligence (Weeks 6–9)
 Embedder + merchant resolver v2; local classifier + nightly trainer; adaptive thresholds; recurring detector + recurring screen; anomaly baselines; forecaster; deterministic insights + insights screen; model metrics dev screen; WorkManager nightly jobs.
+**Groomed board:** `TASKS.md` T-048..T-064 (dependency-ordered, gated on the T-046 Phase 2 exit). Critical path: schema v3 (T-048) → embedder (T-050) → merchant resolver v2 (T-051) + classifier (T-052) → nightly trainer (T-053) → decision policy v2 (T-054); recurring/anomaly/forecaster/insights (T-055..T-060) build off schema v3; the nightly orchestrator (T-061), metrics screen (T-062), and one-write learning loop (T-063) close the loop; T-064 is the exit review. Each task maps to the §7 design below.
 **Exit criteria:** After 2 weeks of feedback, classifier auto-labels ≥80% of new transactions with ≤10% correction rate (metrics screen proves it); at least your real subscriptions/EMIs all appear in recurring with correct next dates; one genuine anomaly and one forecast insight have fired correctly.
 
 ### Phase 4 — LLM Layer (Weeks 10–12, feature-flagged, on-device only)

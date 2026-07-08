@@ -42,7 +42,7 @@ after permission is granted and the encrypted database is ready.
    within a 10-minute window; suppressed rows stay stored for audit.
 5. Raw SMS rows are purged after the retention window; transactions persist.
 
-## Enrichment (Phase 2, in progress)
+## Enrichment (Phase 2, shipped)
 
 `Categorizer` (`lib/enrichment/`) runs the PLAN §7.4 ladder at ingest time,
 steps 1 + 3 for now: user-taught rules (`RuleRepository`, match types
@@ -60,6 +60,43 @@ confidence, category confidence, same merchant/VPA history, unseen P2P
 counterparty state, and the count of transactions already marked `asked` today.
 Rows land as `auto`, `asked`, or `needs_review`; manual entries stay
 `confirmed` because the user typed them.
+
+## Correction surfaces (Phase 2, shipped)
+
+Two surfaces turn `asked` / `needs_review` rows into confirmed, category-labelled
+transactions, and both funnel through one write path.
+
+`TransactionRepository.correctWithRule` is the single correction boundary: inside
+one `_database.transaction` it inserts a teaching rule (via `RuleRepository`),
+stages `feedback` rows for the changed `category_id` (and `description` when a
+free-text note is supplied), and updates the transaction to `status='confirmed'`
+— all commit or roll back together (PLAN §1 principle 3). A `context` string tags
+where the correction came from (`ask_now`, `batch_review`). `confirm()` is the
+lighter sibling: it sets `status='confirmed'` without changing the category, for
+"this guess was right" swipes.
+
+**Ask-now notifications (T-044)** interrupt at most `askDailyBudget` times/day
+(the Settings slider, falling back to `AppConstants.askNowDailyBudget`; threaded
+into `SmsIngestor` so the policy and the notifier agree on the budget).
+`AskNowPayloadBuilder` builds a notification with the top three category guesses
+as action buttons (best guess first) plus a free-text remote input.
+`askNowNotificationControllerProvider` (watched in `app.dart`) shows the
+`asked`-status queue and drains answers on every build — i.e. on app start. The
+Android `AskNowNotificationReceiver` persists button/free-text answers to
+SharedPreferences, so responses given while the app is killed survive; the Dart
+side reads them via the `com.paisatrack/ask_now` method channel, which returns
+then atomically clears the store (answers apply exactly once). Free-text resolves
+to a matching category by name, else lands `Other` with the text kept as the
+description. Credits only offer income-side categories: the builder drops any
+spending category except `Other` when the transaction is a credit, so income
+never suggests Food/Groceries — credit actions surface `Other`/`Transfers`/
+`Income`. Android 13+ requires the `POST_NOTIFICATIONS` runtime permission.
+
+**Weekly review (T-045)** is a `HomeShell` tab over the `needs_review` queue
+(`watchReviewQueue()`: not deleted, not a duplicate, newest first). Swipe
+confirms (`confirm()`); tap opens a correction sheet that calls
+`correctWithRule(context: 'batch_review')`. An "All caught up" empty state shows
+when the queue is clear.
 
 ## Verification tooling
 
