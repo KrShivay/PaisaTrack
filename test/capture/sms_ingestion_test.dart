@@ -20,6 +20,7 @@ import 'package:paisatrack/data/models/raw_sms.dart';
 import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
 import 'package:paisatrack/enrichment/seed_category_map.dart';
+import 'package:paisatrack/features/settings/app_settings.dart';
 
 import '../support/fake_sms_permission_gate.dart';
 
@@ -118,6 +119,62 @@ void main() {
     expect(transactions.single.categoryId, 'shopping');
     expect(transactions.single.confidenceJson, contains('"category"'));
     expect(transactions.single.confidenceJson, contains('"src":"seed"'));
+  });
+
+  test(
+      'settings emissions do not re-subscribe the capture stream '
+      '(regression: T-046 triage — ask-budget watch rebuilt the provider)',
+      () async {
+    // Single-subscription controller: any second listen() throws
+    // "Stream has already been listened to", which is exactly the failure
+    // mode this regression test guards against.
+    final controller = StreamController<Object?>();
+    final container = ProviderContainer(
+      overrides: [
+        smsPermissionGateProvider.overrideWithValue(
+          FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+        ),
+        appDatabaseProvider.overrideWith((ref) async => database),
+        capturedSmsSourceProvider.overrideWithValue(
+          PlatformCapturedSmsSource(
+            channel: FakeCapturedSmsChannel(controller.stream),
+          ),
+        ),
+        parserCascadeProvider.overrideWith(
+          (ref) async => FakeParserCascade.ok(_sampleRecord(amount: 100)),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(controller.close);
+
+    final bootstrap = container.listen<void>(
+      smsCaptureBootstrapProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(bootstrap.close);
+    await waitForCaptureReady(container);
+
+    controller.add(_channelPayload('sms_before_settings'));
+    await pumpEventQueue();
+
+    // Emit a settings change (also covers the controller's initial
+    // loading→data transition, which happens during waitForCaptureReady):
+    // the capture provider must NOT rebuild/re-listen.
+    await container
+        .read(appSettingsControllerProvider.notifier)
+        .setAskDailyBudget(1);
+    await pumpEventQueue();
+
+    controller.add(_channelPayload('sms_after_settings'));
+    await pumpEventQueue();
+
+    final rawRows = await database.select(database.rawSms).get();
+    expect(
+      rawRows.map((row) => row.id),
+      containsAll(['sms_before_settings', 'sms_after_settings']),
+    );
   });
 
   test('decision policy marks high amount seed-categorized txn asked',
@@ -532,6 +589,17 @@ RawSms _message(String id) {
     body: 'Spent Rs 449',
     receivedAt: DateTime.utc(2026, 7, 5, 10, 31),
   );
+}
+
+/// Raw payload in the shape the native SMS EventChannel emits.
+Map<String, Object?> _channelPayload(String id) {
+  return {
+    'id': id,
+    'sender': 'VK-HDFCBK',
+    'body': 'Spent Rs 100',
+    'receivedAtEpochMillis':
+        DateTime.utc(2026, 7, 5, 10, 31).millisecondsSinceEpoch,
+  };
 }
 
 NormalizedTransactionRecord _sampleRecord({

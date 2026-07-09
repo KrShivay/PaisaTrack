@@ -54,7 +54,6 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
   final source = ref.watch(capturedSmsSourceProvider);
   final parser = ref.watch(parserCascadeProvider).valueOrNull;
   final categorizer = ref.watch(categorizerProvider).valueOrNull;
-  final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
   if (parser == null || categorizer == null) {
     return;
   }
@@ -62,7 +61,17 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
     database: database,
     parser: parser,
     categorizer: categorizer,
-    askDailyBudget: settings?.askDailyBudget ?? AppConstants.askNowDailyBudget,
+    // Deliberately ref.read (lazy, at decision time) — NOT ref.watch.
+    // Watching the settings controller here rebuilt this provider on every
+    // settings emission (including its initial loading→data transition),
+    // cancelling and re-creating the SMS subscription: in-flight messages
+    // were droppable on device and single-subscription test streams threw
+    // "Stream has already been listened to". The resolver keeps the
+    // subscription stable and still picks up ask-budget slider changes
+    // immediately on the next ingest.
+    askDailyBudgetResolver: () =>
+        ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
+        AppConstants.askNowDailyBudget,
   );
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),
@@ -91,13 +100,14 @@ class SmsIngestor {
     required ParserCascade parser,
     Categorizer? categorizer,
     int askDailyBudget = AppConstants.askNowDailyBudget,
+    int Function()? askDailyBudgetResolver,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
-        _askDailyBudget = askDailyBudget,
+        _askDailyBudget = askDailyBudgetResolver ?? (() => askDailyBudget),
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _now = now ?? DateTime.now;
@@ -108,7 +118,11 @@ class SmsIngestor {
   /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
   /// without one; production wiring always supplies it.
   final Categorizer? _categorizer;
-  final int _askDailyBudget;
+
+  /// Resolves the daily ask budget at decision time, so a Settings change
+  /// applies to the next ingest without rebuilding the capture pipeline
+  /// (see smsCaptureBootstrapProvider).
+  final int Function() _askDailyBudget;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
   final DateTime Function() _now;
@@ -197,7 +211,7 @@ class SmsIngestor {
     required CategorizationResult? categorization,
   }) async {
     final askedToday = await _countAskedToday();
-    final askBudgetLeft = _askDailyBudget - askedToday;
+    final askBudgetLeft = _askDailyBudget() - askedToday;
     return _decisionPolicy.decide(
       DecisionPolicyInput(
         merchantConfidence: record.parseConfidence,
