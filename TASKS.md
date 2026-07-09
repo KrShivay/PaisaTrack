@@ -2,11 +2,6 @@
 Last updated: 2026-07-10 by @claude
 
 ## In Progress          <!-- max 1 task per agent at a time -->
-- [~] T-046 (@claude) [P2] Phase 2 exit review — PASS-by-code; closure in flight
-      AC: verifies PLAN §9 Phase 2 exit criteria (daily-usable, <=2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip) against T-035..T-045 evidence; WORKLOG entry "PHASE P2 EXIT REVIEW"; blockers listed before Phase 3 grooming.
-      Review 2026-07-09 @claude: PASS by code evidence on all four criteria (WORKLOG "PHASE P2 EXIT REVIEW").
-      Closure status 2026-07-10: (a) commits unblocked — T-044 failure-isolation hardening committed (df15053, review PASS); board/docs commit staged but blocked on a stale .git/HEAD.lock the sandbox cannot unlink (@human: `rm .git/HEAD.lock`, then commit). (b) On-device evidence CONFIRMED by @human 2026-07-10 (daily use, P2P auto-label demo, export/wipe/import). (c) Canonical `flutter test` 2026-07-10: 103/2/**5 FAILED** — TRIAGED 2026-07-10 @claude: single root cause, T-044 regression (smsCaptureBootstrapProvider watched appSettingsControllerProvider for the ask budget; its loading→data emission rebuilt the provider and re-subscribed the SMS stream — StateError on single-subscription test streams, message-drop window on device). FIXED: lazy askDailyBudgetResolver (ref.read at decision time) replaces the watch; regression test added ('settings emissions do not re-subscribe the capture stream'). Staged — @human: re-run `flutter test`, expect 109 passed / 2 skips / 0 failed, then commit. (d) GitNexus reindex done (a14eb3e, 2381 nodes).
-      Depends: T-035..T-045
 
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
 <!-- Phase 2.5 — Parser Coverage (field-reported: Kotak + Central Bank users get
@@ -94,6 +89,12 @@ Last updated: 2026-07-10 by @claude
 ## In Review
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-046 (@claude) [P2] Phase 2 exit review — PASS (2026-07-10)
+      AC: verifies PLAN §9 Phase 2 exit criteria (daily-usable, <=2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip) against T-035..T-045 evidence; WORKLOG entry "PHASE P2 EXIT REVIEW"; blockers listed before Phase 3 grooming.
+      Review 2026-07-09 @claude: PASS by code evidence on all four criteria (WORKLOG "PHASE P2 EXIT REVIEW").
+      Closure status 2026-07-10: (a) commits unblocked — T-044 failure-isolation hardening committed (df15053, review PASS); board/docs commit staged but blocked on a stale .git/HEAD.lock the sandbox cannot unlink (@human: `rm .git/HEAD.lock`, then commit). (b) On-device evidence CONFIRMED by @human 2026-07-10 (daily use, P2P auto-label demo, export/wipe/import). (c) Canonical `flutter test` 2026-07-10: 103/2/**5 FAILED** — TRIAGED 2026-07-10 @claude: single root cause, T-044 regression (smsCaptureBootstrapProvider watched appSettingsControllerProvider for the ask budget; its loading→data emission rebuilt the provider and re-subscribed the SMS stream — StateError on single-subscription test streams, message-drop window on device). FIXED: lazy askDailyBudgetResolver (ref.read at decision time) replaces the watch; regression test added ('settings emissions do not re-subscribe the capture stream'). Staged — @human: re-run `flutter test`, expect 109 passed / 2 skips / 0 failed, then commit. (d) GitNexus reindex done (a14eb3e, 2381 nodes).
+      Depends: T-035..T-045
+      CLOSED 2026-07-10: all conditions met — commits landed (df15053, a14eb3e, 8ff344a); on-device evidence confirmed by @human; canonical `flutter test` GREEN 109 passed / 2 known skips / 0 failed after the T-044 settings-watch regression fix; GitNexus reindexed (2381 nodes). PHASE 2 EXIT: PASS. Phase 2.5 (T-066..T-069) unblocked; Phase 3 grooming may proceed.
 - [x] T-045 (@codex) [P2] Weekly review screen (2026-07-09)
       AC: queue of `needs_review` transactions with swipe-to-confirm / tap-to-correct; corrections write feedback rows (context 'batch_review'); confirmations set status 'confirmed'; empty state per design-system §5; widget tests.
       AC met: `lib/features/review/weekly_review_screen.dart` adds a **Review** tab to `HomeShell` fed by `reviewQueueProvider` → `TransactionRepository.watchReviewQueue()` (`status='needs_review'`, `is_deleted=0`, `duplicate_of_txn_id IS NULL`, newest first). Swipe (end-to-start) → `confirm()` sets `status='confirmed'` without touching the category; tap opens a correction sheet → `correctWithRule(context: 'batch_review')`, writing feedback rows and setting `status='confirmed'` in one DB transaction. Empty state ("All caught up") per design-system §5. Tests: `test/features/review/weekly_review_screen_test.dart` (widget tests over empty state, swipe-confirm, tap-correct).

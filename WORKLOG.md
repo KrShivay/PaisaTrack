@@ -1,3 +1,10 @@
+## 2026-07-10 @claude — PHASE P2 EXIT: PASS (T-046 closed)
+
+- Canonical `flutter test` GREEN: 109 passed / 2 known host skips / 0 failed (@human, post-fix run); regression fix committed 8ff344a. All four PLAN §9 Phase 2 exit criteria verified (code evidence, WORKLOG 2026-07-09) + on-device sign-offs confirmed by @human 2026-07-10. GitNexus reindexed (a14eb3e, 2381 nodes / 4756 edges / 143 flows).
+- T-046 → Done. Phase 2 complete: T-035..T-046 all Done.
+- Cleared: @codex may pull T-066 (generic fallback parser — spec docs/parser-generic-fallback.md) and T-068 (dead SmsFilter deletion). T-067 remains gated on T-065 fixtures (@human). Phase 3 grooming already in Ready (T-048..T-064), starts after Phase 2.5 parser-coverage work per board ordering.
+- Next: review @codex's T-066/T-068 when In Review.
+
 ## 2026-07-10 @claude — T-046 test-failure triage: T-044 regression found + fixed
 
 - Triaged the 5 canonical-run failures (@human's flutter test output): all 5 in test/capture/sms_ingestion_test.dart, all "Bad state: Stream has already been listened to" at sms_ingestion.dart:67. Single root cause, introduced by T-044's ask-budget wiring: `smsCaptureBootstrapProvider` did `ref.watch(appSettingsControllerProvider)`, so the settings controller's loading→data emission (and every later settings save) rebuilt the provider, cancelling and re-listening the SMS stream. Tests use a single-subscription StreamController → StateError → zero rows ingested. Production: EventChannel broadcast stream doesn't throw, but every settings save (theme, slider) tore down and re-created the subscription — a real in-flight message-drop window. The prior 101/2 green run predated the tests exercising the settings transition timing; failure order is timing-dependent (AsyncNotifier build vs subscribe).
