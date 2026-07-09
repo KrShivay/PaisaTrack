@@ -1,3 +1,14 @@
+## 2026-07-10 @claude — ADR 0004: automated agent handoff (post-commit dispatch)
+
+- Problem (@human): each agent only acts when manually told to check the docs — handoffs stall. Both agents share one working copy and every protocol session ends in a commit, so commits are the natural handoff signal.
+- Built: `scripts/agent_handoff.sh` called from `.githooks/post-commit` after every commit. Reads TASKS.md: In Review open → dispatch @claude; else Ready has (@codex) task + no @codex In Progress → dispatch @codex headless (`codex exec --full-auto`) with the fixed prompt `scripts/prompts/codex_session.md`. Claude side: `claude -p` when the CLI exists, else drops `.handoff/claude.pending` polled by a Cowork scheduled task every 30 min (created: paisatrack-claude-handoff). Dispatched prompts force board re-verification and clean exit when nothing is actionable — judgment stays in the agents.
+- Rails: `.handoff/paused` kill switch; per-target dedup on TASKS.md hash; 10-min rate limit; PID lock; auto-runs skip per-commit codex review; hook never fails the commit; `.handoff/` gitignored. Serial dispatch: review outranks new work; one active agent.
+- Docs: ADR docs/decisions/0004-automated-agent-handoff.md; COLLABORATION.md §7. Board format (§2 headers + (@agent) tags) is now load-bearing for automation.
+- Verified: `sh -n` clean on script+hook; dry run against the live board correctly targeted @codex (T-066 Ready) and skipped gracefully with codex off PATH.
+- KNOWN GAP for @human: the Mac's hook environment reports "codex command was not found on PATH" — auto-dispatch of @codex will no-op until `codex` resolves in hook env (install CLI or add a PATH export at the top of .githooks/post-commit).
+- Files: scripts/agent_handoff.sh, scripts/prompts/{codex,claude}_session.md, .githooks/post-commit, docs/decisions/0004-automated-agent-handoff.md, COLLABORATION.md, .gitignore
+- Next: first commit arms the loop — expect @codex auto-dispatch to T-066 once PATH is fixed.
+
 ## 2026-07-10 @claude — PHASE P2 EXIT: PASS (T-046 closed)
 
 - Canonical `flutter test` GREEN: 109 passed / 2 known host skips / 0 failed (@human, post-fix run); regression fix committed 8ff344a. All four PLAN §9 Phase 2 exit criteria verified (code evidence, WORKLOG 2026-07-09) + on-device sign-offs confirmed by @human 2026-07-10. GitNexus reindexed (a14eb3e, 2381 nodes / 4756 edges / 143 flows).

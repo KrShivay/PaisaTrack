@@ -104,3 +104,23 @@ Review outcome goes into the task item as `Review: PASS` or `Review: CHANGES —
 2. Read TASKS.md fully; read last 3 WORKLOG entries; read any new ADRs since your last session
 3. State (in your reply to the human): current phase, your task, blockers you see
 4. Work. 5. Update TASKS.md + append WORKLOG. 6. Commit + push. A session that ends without a WORKLOG entry is an incomplete session.
+
+## 7. Automated handoff (ADR 0004)
+
+Commits are the handoff signal. `.githooks/post-commit` runs
+`scripts/agent_handoff.sh` after every commit: it reads TASKS.md and
+dispatches @claude when `## In Review` has open items, or @codex when In
+Review is empty, no @codex task is In Progress, and a `(@codex)` task sits in
+Ready. Dispatched sessions use the fixed prompts in `scripts/prompts/` and
+MUST re-verify the board themselves, exiting with no changes when nothing is
+actionable. One active agent at a time; review outranks new work.
+
+Operational notes:
+- Pause everything: `touch .handoff/paused` (remove to resume).
+- Logs: `.handoff/logs/`; state/locks live in `.handoff/` (gitignored).
+- @claude fallback: without the `claude` CLI, the hook drops
+  `.handoff/claude.pending` and a Cowork scheduled task polls it (~30 min).
+- Auto-runs skip per-commit Codex review (task-level review replaces it).
+- The §2 board format is load-bearing for this automation: do not rename
+  section headers or `(@agent)` tags without updating `agent_handoff.sh`.
+- @human remains merge/override authority; manual sessions work unchanged.

@@ -18,3 +18,4 @@ __pycache__/
 .serena/
 .claude/settings.local.json
 .tokensave/
+.handoff/

@@ -1,0 +1,51 @@
+# ADR 0004 — Automated agent handoff via post-commit dispatch
+
+Status: accepted (@human directed, 2026-07-10)
+
+## Context
+
+COLLABORATION.md coordinates @claude and @codex entirely through repo files
+(TASKS.md, WORKLOG.md), but had no push mechanism: each agent acted only when
+the human manually told it to check the docs. Handoffs (implement → review →
+next task) stalled on human prompting, causing friction and missed loops.
+Both agents share the same working copy, and every protocol-compliant session
+ends in a commit — so a commit is a complete, reliable "board changed" signal.
+
+## Decision
+
+A post-commit hook step (`scripts/agent_handoff.sh`) evaluates TASKS.md after
+every commit and dispatches the agent with actionable work:
+
+- **@claude** when `## In Review` has open items (review outranks new work).
+- **@codex** when In Review is empty, no @codex task is In Progress, and an
+  unchecked (@codex) task sits in `## Ready`.
+- Neither → no-op. Serial by design: one active agent at a time.
+
+Dispatch mechanics: @codex launches headless (`codex exec --full-auto`, logs
+in `.handoff/logs/`). @claude launches via the Claude Code CLI when installed;
+otherwise the hook drops `.handoff/claude.pending`, which a Cowork scheduled
+task polls every 30 minutes. Dispatched sessions run fixed prompts
+(`scripts/prompts/*_session.md`) that require the agent to re-verify the board
+and exit without changes when nothing is actionable — the shell script stays
+dumb; judgment stays in the agents.
+
+Safety rails: `.handoff/paused` kill switch; per-target dedup on the TASKS.md
+content hash; 10-minute per-target rate limit; PID lock against concurrent
+runs of the same agent; auto-runs set `CODEX_SKIP_COMMIT_REVIEW=1` (the
+handoff loop replaces per-commit review with task-level review); the hook
+never blocks or fails a commit. `.handoff/` is gitignored (machine-local
+state, never shared truth — TASKS.md remains the single source of truth).
+
+## Consequences
+
+- Handoffs fire within seconds of a commit (codex) or ≤30 min (claude via
+  poll) with zero human prompting; the human remains merge authority and can
+  pause the loop at any time (`touch .handoff/paused`).
+- Agents now run and commit unattended: token cost is bounded by the rate
+  limit + serial dispatch, and correctness by the unchanged review gate —
+  nothing reaches Done without an independent @claude review.
+- The board format in COLLABORATION.md §2 is now load-bearing for automation:
+  section headers and `(@agent)` assignee tags must not be renamed without
+  updating `agent_handoff.sh`.
+- Human-triggered sessions are unaffected; the hook simply makes the existing
+  protocol self-driving.

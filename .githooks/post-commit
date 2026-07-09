@@ -32,4 +32,10 @@ if [ "$status" -ne 0 ]; then
   echo "  codex exec --sandbox read-only review --commit $commit_sha"
 fi
 
+# Automated agent handoff (ADR 0004): evaluate the task board and dispatch
+# the agent that has actionable work. Never blocks or fails the commit.
+if [ -x "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" ]; then
+  sh "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" || true
+fi
+
 exit 0
