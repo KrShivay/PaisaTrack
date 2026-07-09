@@ -7,6 +7,14 @@
 
 set -u
 
+# Automated agent handoff (ADR 0004): evaluate the task board and dispatch the
+# agent that has actionable work. MUST run before any early exit below — the
+# review-skip paths exit 0, and dispatched agents' commits (which set
+# CODEX_SKIP_COMMIT_REVIEW=1) still need to cascade the next handoff.
+if [ -x "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" ]; then
+  sh "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" || true
+fi
+
 if [ "${CODEX_SKIP_COMMIT_REVIEW:-}" = "1" ]; then
   echo "Codex commit review skipped because CODEX_SKIP_COMMIT_REVIEW=1."
   exit 0
@@ -30,12 +38,6 @@ if [ "$status" -ne 0 ]; then
   echo "Codex commit review failed with exit code $status."
   echo "The commit was already created. Re-run manually with:"
   echo "  codex exec --sandbox read-only review --commit $commit_sha"
-fi
-
-# Automated agent handoff (ADR 0004): evaluate the task board and dispatch
-# the agent that has actionable work. Never blocks or fails the commit.
-if [ -x "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" ]; then
-  sh "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" || true
 fi
 
 exit 0
