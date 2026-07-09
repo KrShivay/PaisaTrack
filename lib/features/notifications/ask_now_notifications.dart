@@ -254,8 +254,14 @@ final askNowNotificationControllerProvider = Provider<void>((ref) {
   Future<void> showPendingNotifications() async {
     final newlyShownTxnIds = <String>{};
     for (final item in pendingShows) {
-      final shown =
-          await gateway.show(builder.build(item: item, categories: categories));
+      final bool shown;
+      try {
+        shown = await gateway.show(
+          builder.build(item: item, categories: categories),
+        );
+      } on Exception {
+        continue;
+      }
       if (shown) newlyShownTxnIds.add(item.id);
     }
     if (disposed || newlyShownTxnIds.isEmpty) return;

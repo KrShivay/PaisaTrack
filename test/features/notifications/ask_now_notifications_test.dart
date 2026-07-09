@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -201,6 +202,49 @@ void main() {
     );
     expect(container.read(shownAskNowTxnIdsProvider), {'txn_a', 'txn_b'});
   });
+
+  test('controller isolates show failures and commits successful queued asks',
+      () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await _seedCategories(database);
+
+    final items = [
+      _reviewItem('txn_a', 'Swiggy'),
+      _reviewItem('txn_b', 'Uber'),
+      _reviewItem('txn_c', 'Blinkit'),
+    ];
+    final categories = [
+      _categoryRow('other', 'Other', sortOrder: 1),
+      _categoryRow('food_dining', 'Food & Dining', sortOrder: 2),
+    ];
+    final gateway = _FailingGateway(failingTxnIds: {'txn_b'});
+
+    final container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWith((ref) async => database),
+        askQueueProvider.overrideWith((ref) => Stream.value(items)),
+        categoryListProvider.overrideWith((ref) => Stream.value(categories)),
+        askNowNotificationGatewayProvider.overrideWithValue(gateway),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final sub = container.listen(
+      askNowNotificationControllerProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(sub.close);
+
+    await container.read(appDatabaseProvider.future);
+    for (var i = 0; i < 12; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    expect(gateway.shownTxnIds, ['txn_a', 'txn_c']);
+    expect(container.read(shownAskNowTxnIdsProvider), {'txn_a', 'txn_c'});
+  });
 }
 
 TransactionReviewItem _reviewItem(String id, String displayName) {
@@ -292,4 +336,18 @@ class _RecordingGateway implements AskNowNotificationGateway {
 
   @override
   Future<void> ackPendingResponses(Set<String> txnIds) async {}
+}
+
+class _FailingGateway extends _RecordingGateway {
+  _FailingGateway({required this.failingTxnIds});
+
+  final Set<String> failingTxnIds;
+
+  @override
+  Future<bool> show(AskNowPayload payload) async {
+    if (failingTxnIds.contains(payload.txnId)) {
+      throw PlatformException(code: 'show_failed');
+    }
+    return super.show(payload);
+  }
 }
