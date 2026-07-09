@@ -1,43 +1,18 @@
 #!/bin/sh
-# Post-commit Codex review. Headless review must use the non-interactive
-# runner (`codex exec review`), not the interactive `codex review` TUI
-# subcommand; the commit preset takes --commit/--title only and does NOT
-# accept a positional custom prompt (that combination is a CLI arg error).
-# Skip with CODEX_SKIP_COMMIT_REVIEW=1.
+# Post-commit: automated agent handoff (ADR 0004). Evaluates the task board
+# and dispatches the agent with actionable work. Never blocks or fails the
+# commit.
+#
+# The former per-commit Codex review (T-033) was removed 2026-07-10: ADR 0004
+# gives every task an independent @claude review before Done, making the
+# per-commit pass redundant — and it ran in the foreground, blocking the
+# terminal and anything queued behind the commit. Re-run one manually with:
+#   codex exec --sandbox read-only review --commit <sha>
 
 set -u
 
-# Automated agent handoff (ADR 0004): evaluate the task board and dispatch the
-# agent that has actionable work. MUST run before any early exit below — the
-# review-skip paths exit 0, and dispatched agents' commits (which set
-# CODEX_SKIP_COMMIT_REVIEW=1) still need to cascade the next handoff.
 if [ -x "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" ]; then
   sh "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" || true
-fi
-
-if [ "${CODEX_SKIP_COMMIT_REVIEW:-}" = "1" ]; then
-  echo "Codex commit review skipped because CODEX_SKIP_COMMIT_REVIEW=1."
-  exit 0
-fi
-
-if ! command -v codex >/dev/null 2>&1; then
-  echo "Codex commit review skipped: codex command was not found on PATH."
-  exit 0
-fi
-
-commit_sha="$(git rev-parse --verify HEAD 2>/dev/null)" || exit 0
-commit_title="$(git log -1 --pretty=%s "$commit_sha" 2>/dev/null || true)"
-
-echo
-echo "Running Codex review for commit $commit_sha..."
-
-codex exec --sandbox read-only review --commit "$commit_sha" --title "$commit_title"
-status=$?
-
-if [ "$status" -ne 0 ]; then
-  echo "Codex commit review failed with exit code $status."
-  echo "The commit was already created. Re-run manually with:"
-  echo "  codex exec --sandbox read-only review --commit $commit_sha"
 fi
 
 exit 0

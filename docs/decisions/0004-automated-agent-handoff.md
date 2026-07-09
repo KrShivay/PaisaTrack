@@ -49,3 +49,9 @@ state, never shared truth — TASKS.md remains the single source of truth).
   updating `agent_handoff.sh`.
 - Human-triggered sessions are unaffected; the hook simply makes the existing
   protocol self-driving.
+- Amendment 2026-07-10: the per-commit Codex review (T-033) is removed from
+  the hook entirely (not just for auto-runs). Task-level @claude review is
+  the quality gate; the per-commit pass was redundant, slow, and ran in the
+  foreground — blocking the terminal and delaying commands queued behind the
+  commit (observed blocking `handoff.sh resume`). Manual re-run remains
+  available via `codex exec --sandbox read-only review --commit <sha>`.

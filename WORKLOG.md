@@ -1,3 +1,9 @@
+## 2026-07-10 @claude — remove per-commit Codex review from post-commit hook (@human approved)
+
+- The T-033 per-commit review ran in the hook foreground: slow, noisy, and it blocked the terminal so `handoff.sh resume` queued behind a hanging review. With ADR 0004 every task already gets an independent @claude review before Done — the per-commit pass is redundant. Hook now contains only the handoff dispatch (still non-blocking, backgrounded agents).
+- ADR 0004 amended; manual review still available: `codex exec --sandbox read-only review --commit <sha>`. CODEX_SKIP_COMMIT_REVIEW env no longer consulted (nothing left to skip); dispatched runs still set it harmlessly.
+- Files: .githooks/post-commit, docs/decisions/0004-automated-agent-handoff.md, WORKLOG.md
+
 ## 2026-07-10 @claude — handoff loop: control CLI + failure latch (@human request)
 
 - scripts/handoff.sh: on|off|status|kick. `off` = pause + kill running agents; `on` = clear pause/latch/dedup/locks + re-evaluate board; `status` = armed/latched, pids, exit codes, board counts, latest log.
