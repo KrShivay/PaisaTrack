@@ -116,7 +116,16 @@ MUST re-verify the board themselves, exiting with no changes when nothing is
 actionable. One active agent at a time; review outranks new work.
 
 Operational notes:
-- Pause everything: `touch .handoff/paused` (remove to resume).
+- Control CLI: `scripts/handoff.sh {on|off|status|kick|resume}`. `resume`
+  restarts a dead/blocked codex run on its In Progress task (CRASH RESUME). `off` pauses the
+  loop AND kills any running agent; `on` clears pause/latch/stale state and
+  re-evaluates the board; `status` shows armed/latched, live pids, board
+  counts, latest log; `kick` forces one evaluation.
+- FAILURE LATCH: a dispatched run that exits non-zero (expired session,
+  crash) writes `.handoff/paused` automatically — the loop will NOT continue
+  until the human runs `scripts/handoff.sh on`. Crash recovery of an orphaned
+  In Progress task is the CRASH RESUME rule in scripts/prompts/codex_session.md,
+  exercised on the next manual `on`/`kick`.
 - Logs: `.handoff/logs/`; state/locks live in `.handoff/` (gitignored).
 - @claude fallback: without the `claude` CLI, the hook drops
   `.handoff/claude.pending` and a Cowork scheduled task polls it (~30 min).

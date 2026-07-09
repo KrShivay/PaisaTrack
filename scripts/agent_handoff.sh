@@ -45,24 +45,30 @@ in_progress_codex="$(section 'In Progress' | grep -c '(@codex)' || true)"
 ready_codex="$(section 'Ready' | grep -c '^- \[ \] .*(@codex)' || true)"
 
 target=""
-if [ "$in_review_open" -gt 0 ]; then
+if [ -n "${PAISATRACK_FORCE_TARGET:-}" ]; then
+  # Human-triggered resume/force (scripts/handoff.sh resume). Bypasses board
+  # gating, dedup, and rate limit — never set this from automation.
+  target="$PAISATRACK_FORCE_TARGET"
+  forced=1
+elif [ "$in_review_open" -gt 0 ]; then
   target="claude"
 elif [ "$in_progress_codex" -eq 0 ] && [ "$ready_codex" -gt 0 ]; then
   target="codex"
 fi
 
 [ -z "$target" ] && { log "board has no actionable handoff"; exit 0; }
+forced="${forced:-0}"
 
 # Dedup: same board content already dispatched to this target -> skip.
 fingerprint="$(git hash-object TASKS.md 2>/dev/null || cksum TASKS.md)"
 state_file="$hd/last.$target"
-if [ -f "$state_file" ] && [ "$(cat "$state_file")" = "$fingerprint" ]; then
+if [ "$forced" -eq 0 ] && [ -f "$state_file" ] && [ "$(cat "$state_file")" = "$fingerprint" ]; then
   log "already dispatched $target for this board state"
   exit 0
 fi
 
 # Rate limit: 10 min per target.
-if [ -f "$state_file" ]; then
+if [ "$forced" -eq 0 ] && [ -f "$state_file" ]; then
   now="$(date +%s)"
   then_="$(stat -f %m "$state_file" 2>/dev/null || stat -c %Y "$state_file" 2>/dev/null || echo 0)"
   if [ $((now - then_)) -lt 600 ]; then
@@ -80,22 +86,51 @@ fi
 
 stamp="$(date +%Y%m%d-%H%M%S)"
 
+# Failure latch: if the previous run of this target exited non-zero (expired
+# session, crash), the loop pauses itself and stays off until the human runs
+# `scripts/handoff.sh on`. Dispatched runs are wrapped so their exit code is
+# recorded and a non-zero exit writes .handoff/paused.
+latched() { # latched <target>
+  if [ -s "$hd/$1.exit" ] && [ "$(cat "$hd/$1.exit")" != "0" ]; then
+    log "previous $1 run exited $(cat "$hd/$1.exit") — latching loop OFF (scripts/handoff.sh on to resume)"
+    echo "auto-latched: $1 run exited $(cat "$hd/$1.exit") at $(date) — run scripts/handoff.sh on to resume" >"$hd/paused"
+    return 0
+  fi
+  return 1
+}
+
 dispatch_codex() {
   command -v codex >/dev/null 2>&1 || { log "codex not on PATH; skipped"; return; }
+  latched codex && return
   log "dispatching codex (log: .handoff/logs/codex-$stamp.log)"
-  nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 \
-    codex exec --full-auto "$(cat scripts/prompts/codex_session.md)" \
-    >"$hd/logs/codex-$stamp.log" 2>&1 &
+  # network_access: the Flutter test runner binds 127.0.0.1, which the default
+  # codex workspace-write sandbox forbids (T-066 run was blocked by this).
+  nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 sh -c '
+    codex exec --full-auto \
+      -c sandbox_workspace_write.network_access=true \
+      "$(cat scripts/prompts/codex_session.md)"
+    ec=$?
+    echo "$ec" > .handoff/codex.exit
+    if [ "$ec" -ne 0 ]; then
+      echo "auto-latched: codex run exited $ec (session limit/crash?) at $(date) — run scripts/handoff.sh on to resume" > .handoff/paused
+    fi
+  ' >"$hd/logs/codex-$stamp.log" 2>&1 &
   echo $! >"$lock"
   echo "$fingerprint" >"$state_file"
 }
 
 dispatch_claude() {
+  latched claude && return
   if command -v claude >/dev/null 2>&1; then
     log "dispatching claude CLI (log: .handoff/logs/claude-$stamp.log)"
-    nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 \
-      claude -p "$(cat scripts/prompts/claude_session.md)" --permission-mode acceptEdits \
-      >"$hd/logs/claude-$stamp.log" 2>&1 &
+    nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 sh -c '
+      claude -p "$(cat scripts/prompts/claude_session.md)" --permission-mode acceptEdits
+      ec=$?
+      echo "$ec" > .handoff/claude.exit
+      if [ "$ec" -ne 0 ]; then
+        echo "auto-latched: claude run exited $ec (session limit/crash?) at $(date) — run scripts/handoff.sh on to resume" > .handoff/paused
+      fi
+    ' >"$hd/logs/claude-$stamp.log" 2>&1 &
     echo $! >"$lock"
   else
     log "claude CLI not found; flagging for the Cowork scheduled task"

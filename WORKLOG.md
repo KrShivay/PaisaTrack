@@ -1,3 +1,42 @@
+## 2026-07-10 @claude — handoff loop: control CLI + failure latch (@human request)
+
+- scripts/handoff.sh: on|off|status|kick. `off` = pause + kill running agents; `on` = clear pause/latch/dedup/locks + re-evaluate board; `status` = armed/latched, pids, exit codes, board counts, latest log.
+- Failure latch in agent_handoff.sh: dispatched runs are wrapped to record exit codes (.handoff/<agent>.exit); non-zero (expired session, crash) auto-writes .handoff/paused with the reason — the loop stops and does NOT auto-resume until `scripts/handoff.sh on`. Dispatch also refuses + latches when a prior failed exit code is present.
+- codex_session.md gains a CRASH RESUME rule: a freshly dispatched codex that finds its own (@codex) task already In Progress treats it as a died predecessor — reconcile the working tree against the AC, finish or restart cleanly.
+- Cowork scheduled poll honors the same paused flag (unchanged); the proposed auto-watchdog was declined by @human — recovery is manual by design (`handoff.sh status` → `on`).
+- COLLABORATION.md §7 operational notes updated. Verified: sh -n clean on both scripts; status ran green against the live board.
+- Addendum (same session): T-066 codex run blocked — its sandbox forbids Flutter's 127.0.0.1 bind for `flutter test`. Dispatcher now passes `-c sandbox_workspace_write.network_access=true` to codex exec; added `handoff.sh resume` (human-triggered PAISATRACK_FORCE_TARGET dispatch, bypasses board gating/dedup) so a dead or blocked codex run can be restarted onto its In Progress task via the CRASH RESUME prompt rule. Codex's uncommitted T-066 working tree left untouched for the resumed run to reconcile.
+- Files: scripts/handoff.sh, scripts/agent_handoff.sh, scripts/prompts/codex_session.md, COLLABORATION.md, WORKLOG.md
+
+## 2026-07-10 @codex — T-066 (In Progress: verification blocked)
+
+- Did: added `GenericTransactionParser` as the conservative second stage of
+  `ParserCascade`; template matches retain precedence. The fallback reuses
+  `FieldNormalizer.parseAmount`, requires direction + INR amount +
+  account/channel/VPA context, rejects OTP/promo/future/failed/statement
+  messages, and emits `ParseSource.generic` at 0.5–0.6 confidence. Updated
+  parser, precedence, generic-safety, negative, fixture-coverage tests, and
+  the capture architecture documentation.
+- Files: `lib/capture/generic_transaction_parser.dart`,
+  `lib/capture/parser_cascade.dart`,
+  `lib/data/models/normalized_transaction_record.dart`,
+  `test/capture/parser_cascade_test.dart`,
+  `test/fixtures/sms_bank_fixture_coverage_test.dart`,
+  `docs/architecture.md`, `TASKS.md`.
+- Evidence: GitNexus pre-edit impact: MEDIUM (6 direct callers/importers,
+  Capture module); post-edit `detect_changes(scope: all)`: HIGH, reviewed as
+  the expected parser-result flow footprint. `flutter analyze --no-pub` clean.
+  A direct parser run over fixtures proved 120/134 positives (89.6%; >=80%),
+  with zero amount/direction/account-hint contradictions and zero negative
+  false positives.
+- Blocker: `flutter test --no-pub --concurrency=1` cannot launch in this
+  sandbox because Flutter's test device cannot bind `127.0.0.1` (`OS Error:
+  Operation not permitted`), so the full suite has not executed. T-066 remains
+  In Progress; do not review/commit until a permitted environment runs the
+  suite green.
+- Next: run the full Flutter suite outside this socket-restricted sandbox, then
+  move T-066 to In Review and commit with `[T-066]`.
+
 ## 2026-07-10 @claude — ADR 0004: automated agent handoff (post-commit dispatch)
 
 - Problem (@human): each agent only acts when manually told to check the docs — handoffs stall. Both agents share one working copy and every protocol session ends in a commit, so commits are the natural handoff signal.
