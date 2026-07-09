@@ -37,7 +37,11 @@ after permission is granted and the encrypted database is ready.
    `assets/templates/{axisbk,indusind,paytmb,sbi}.json` (loaded via
    `parserCascadeProvider`). Parse success writes a transaction; failure leaves
    the raw SMS `processed=false`, visible on the dev Unparsed screen. No cloud
-   parsing path exists (ADR 0002).
+   parsing path exists (ADR 0002). Planned (T-066, spec:
+   `docs/parser-generic-fallback.md`): a generic keyword-based fallback stage
+   after the template matcher, at parser confidence <=0.6 (`src: 'generic'`),
+   so allowlisted-but-untemplated banks (field report: Kotak, Central Bank)
+   degrade to low-confidence parses instead of 0% coverage.
 4. `DuplicateSuppressor` marks cross-source echoes (paired bank+wallet SMS)
    within a 10-minute window; suppressed rows stay stored for audit.
 5. Raw SMS rows are purged after the retention window; transactions persist.

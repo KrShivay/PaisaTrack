@@ -15,3 +15,6 @@ export.json
 .DS_Store
 __pycache__/
 *.pyc
+.serena/
+.claude/settings.local.json
+.tokensave/

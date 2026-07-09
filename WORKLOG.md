@@ -1,3 +1,14 @@
+## 2026-07-10 @claude — T-046 closure progress + Phase 2.5 parser-coverage grooming + board hygiene
+
+- Did: reviewed + committed the T-044 failure-isolation hardening (df15053 — per-item try/catch around gateway.show() with _FailingGateway regression test; review PASS). Chore commit (.gitignore local tooling state, GitNexus count refresh in AGENTS/CLAUDE.md) is STAGED but blocked: stale .git/HEAD.lock cannot be unlinked from the sandbox — @human: `rm .git/HEAD.lock` then commit everything staged.
+- T-046: @human confirmed all on-device evidence 2026-07-10 (daily use, P2P correction→rule→auto-label, export/wipe/import). Canonical `flutter test`: 103 passed / 2 known skips / 5 FAILED — exit now blocked ONLY on triaging those failures; @human to paste failing test names/output (sandbox cannot run Flutter, wrong arch).
+- Field report (@human): Kotak + Central Bank users → zero parsed transactions; dev Unparsed screen shows all their transactional SMS. Root cause confirmed in code: SmsFilter allowlists KOTAKB/CENTBK (capture works) but ParserCascade is templates-or-Err (parser_cascade.dart) and no templates exist for those banks.
+- Groomed Phase 2.5 — Parser Coverage: T-065 fixtures (@human, Blocked), T-066 generic fallback parser (@codex; spec at docs/parser-generic-fallback.md), T-067 Kotak/Central template packs (@codex), T-068 delete dead com.paisatrack.sms.SmsFilter (@codex), T-069 rejection-stage triage on the unparsed dev screen (@codex). Phase 3 stays gated on T-046; Phase 2.5 outranks it in Ready.
+- Board hygiene: T-041..T-045 moved Ready→Done; Done trimmed to last 20, remainder archived verbatim to docs/tasks-archive.md; stale T-017 removed from Proposed; T-052 AC gains a fuzzy free-text note (ask-now typos currently land 'Other' silently).
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md, docs/parser-generic-fallback.md, docs/architecture.md, .gitignore, AGENTS.md, CLAUDE.md, lib/features/notifications/ask_now_notifications.dart + test (committed df15053)
+- Open questions: which 5 tests failed (blocking T-046); ETA on Kotak/Central fixtures (T-065).
+- Next: triage the 5 failures → close T-046 → @codex picks T-066/T-068.
+
 ## 2026-07-09 @claude — PHASE P2 EXIT REVIEW (T-046)
 
 Verdict: **PASS by code evidence on all four PLAN §9 Phase 2 exit criteria**, conditional on three on-device sign-offs and the commit unblock listed below. Reviewed T-035..T-045 against the criteria; no criterion is unmet in code.
