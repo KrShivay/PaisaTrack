@@ -105,7 +105,11 @@ dispatch_codex() {
   log "dispatching codex (log: .handoff/logs/codex-$stamp.log)"
   # network_access: the Flutter test runner binds 127.0.0.1, which the default
   # codex workspace-write sandbox forbids (T-066 run was blocked by this).
+  # The codex sandbox keeps .git read-only, so dispatched runs cannot commit.
+  # Protocol: codex writes its commit message to .handoff/commit-msg and this
+  # wrapper (unsandboxed) commits on its behalf after a clean exit.
   nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 sh -c '
+    rm -f .handoff/commit-msg
     codex exec --full-auto \
       -c sandbox_workspace_write.network_access=true \
       "$(cat scripts/prompts/codex_session.md)"
@@ -113,6 +117,16 @@ dispatch_codex() {
     echo "$ec" > .handoff/codex.exit
     if [ "$ec" -ne 0 ]; then
       echo "auto-latched: codex run exited $ec (session limit/crash?) at $(date) — run scripts/handoff.sh on to resume" > .handoff/paused
+    elif [ -s .handoff/commit-msg ] && [ -n "$(git status --porcelain)" ]; then
+      # Clear only STALE lock files (>60s) — never a live git operation.
+      [ -f .git/index.lock ] && [ -n "$(find .git/index.lock -mmin +1 2>/dev/null)" ] && rm -f .git/index.lock
+      git add -A
+      if git commit -F .handoff/commit-msg; then
+        echo "wrapper: committed on behalf of codex"
+        rm -f .handoff/commit-msg
+      else
+        echo "wrapper: commit FAILED — changes left staged; commit manually with: git commit -F .handoff/commit-msg"
+      fi
     fi
   ' >"$hd/logs/codex-$stamp.log" 2>&1 &
   echo $! >"$lock"

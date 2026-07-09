@@ -35,13 +35,12 @@ after permission is granted and the encrypted database is ready.
    `SmsIngestor` write path.
 3. `ParserCascade` runs `TemplateMatcher` over the real bank registries in
    `assets/templates/{axisbk,indusind,paytmb,sbi}.json` (loaded via
-   `parserCascadeProvider`). Parse success writes a transaction; failure leaves
-   the raw SMS `processed=false`, visible on the dev Unparsed screen. No cloud
-   parsing path exists (ADR 0002). Planned (T-066, spec:
-   `docs/parser-generic-fallback.md`): a generic keyword-based fallback stage
-   after the template matcher, at parser confidence <=0.6 (`src: 'generic'`),
-   so allowlisted-but-untemplated banks (field report: Kotak, Central Bank)
-   degrade to low-confidence parses instead of 0% coverage.
+   `parserCascadeProvider`), then a conservative on-device generic fallback.
+   The fallback requires direction + INR amount + account/channel/VPA context,
+   rejects OTP/future/failed messages, and emits `src: 'generic'` at <=0.6
+   confidence; therefore it can never silently auto-label. Parse success writes
+   a transaction; failure leaves the raw SMS `processed=false`, visible on the
+   dev Unparsed screen. No cloud parsing path exists (ADR 0002).
 4. `DuplicateSuppressor` marks cross-source echoes (paired bank+wallet SMS)
    within a 10-minute window; suppressed rows stay stored for audit.
 5. Raw SMS rows are purged after the retention window; transactions persist.

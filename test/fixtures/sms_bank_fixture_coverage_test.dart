@@ -28,7 +28,8 @@ void main() {
     templateMatcher: TemplateMatcher(registries: _loadRegistries()),
   );
 
-  test('declined/failed/future-event SMS never produce a transaction', () async {
+  test('declined/failed/future-event SMS never produce a transaction',
+      () async {
     final cases = await SmsFixtureRunner(
       root: Directory('test/fixtures/sms'),
     ).loadCases();
@@ -46,7 +47,8 @@ void main() {
     }
   });
 
-  test('>=90% of real per-bank transactional SMS parse into the correct '
+  test(
+      '>=90% of real per-bank transactional SMS parse into the correct '
       'NormalizedTransactionRecord', () async {
     final cases = await SmsFixtureRunner(
       root: Directory('test/fixtures/sms'),
@@ -82,5 +84,46 @@ void main() {
             'parsed correctly; mismatches: $mismatches',
       );
     }
+  });
+
+  test(
+      'generic fallback parses >=80% of positive fixtures without '
+      'contradicting amount, direction, or account hint', () async {
+    const genericOnly = ParserCascade(
+      templateMatcher: TemplateMatcher(registries: []),
+    );
+    final cases = await SmsFixtureRunner(
+      root: Directory('test/fixtures/sms'),
+    ).loadCases();
+    final positives =
+        cases.where((fixture) => fixture.expected.containsKey('ok'));
+    var parsed = 0;
+    final misses = <String>[];
+
+    for (final fixture in positives) {
+      final actual = await parseFixtureCase(genericOnly, fixture);
+      final record = actual['ok'] as Map<String, Object?>?;
+      if (record == null) {
+        misses.add(fixture.id);
+        continue;
+      }
+      parsed++;
+      final expected = fixture.expected['ok']! as Map<String, Object?>;
+      for (final key in ['amount', 'direction', 'account_hint']) {
+        final expectedValue = expected[key];
+        if (expectedValue != null && record[key] != null) {
+          expect(record[key], expectedValue, reason: '${fixture.id}: $key');
+        }
+      }
+      expect(record['parse_source'], 'generic');
+      expect(record['parse_confidence'], lessThanOrEqualTo(0.6));
+    }
+
+    expect(
+      parsed / positives.length,
+      greaterThanOrEqualTo(0.8),
+      reason:
+          'generic fallback parsed only $parsed/${positives.length}; misses: $misses',
+    );
   });
 }

@@ -121,6 +121,11 @@ Operational notes:
   loop AND kills any running agent; `on` clears pause/latch/stale state and
   re-evaluates the board; `status` shows armed/latched, live pids, board
   counts, latest log; `kick` forces one evaluation.
+- COMMIT DELEGATION: the codex sandbox keeps `.git` read-only, so dispatched
+  codex runs never commit directly — they write the message to
+  `.handoff/commit-msg` and the (unsandboxed) dispatch wrapper commits after a
+  clean exit. A failed wrapper commit leaves changes staged with the message
+  file intact (`git commit -F .handoff/commit-msg` to finish manually).
 - FAILURE LATCH: a dispatched run that exits non-zero (expired session,
   crash) writes `.handoff/paused` automatically — the loop will NOT continue
   until the human runs `scripts/handoff.sh on`. Crash recovery of an orphaned

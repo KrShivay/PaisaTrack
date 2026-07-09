@@ -9,9 +9,6 @@ Last updated: 2026-07-10 by @claude
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
-- [ ] T-066 (@codex) [P2] Generic fallback transaction parser in ParserCascade
-      AC: keyword+amount+context-signal conjunction parser slotted after TemplateMatcher per docs/parser-generic-fallback.md; reuses FieldNormalizer; emits parser confidence <=0.6 src 'generic' so DecisionPolicy never auto-labels a generic parse; negative tests prove OTP/promo/reminder/statement SMS still return unparsed; positive tests over existing bank fixtures with templates disabled; docs/architecture.md cascade section updated.
-      Depends: T-046 exit; T-065 fixtures strengthen tests but core impl may start on existing fixtures
 - [ ] T-068 (@codex) [P2] Delete dead com.paisatrack.sms.SmsFilter
       AC: android/app/src/main/kotlin/com/paisatrack/sms/SmsFilter.kt removed (zero references; capture/SmsFilter.kt is the real filter); `./gradlew :app:testDebugUnitTest` stays green.
       Depends: T-046 exit
@@ -87,8 +84,12 @@ Last updated: 2026-07-10 by @claude
       Blocking: T-067; strengthens T-066
 
 ## In Review
-
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-066 (@codex, review @claude: PASS) [P2] Generic fallback transaction parser in ParserCascade (2026-07-10)
+      AC: keyword+amount+context-signal conjunction parser slotted after TemplateMatcher per docs/parser-generic-fallback.md; reuses FieldNormalizer; emits parser confidence <=0.6 src 'generic' so DecisionPolicy never auto-labels a generic parse; negative tests prove OTP/promo/reminder/statement SMS still return unparsed; positive tests over existing bank fixtures with templates disabled; docs/architecture.md cascade section updated.
+      Depends: T-046 exit; T-065 fixtures strengthen tests but core impl may start on existing fixtures
+      Evidence: `flutter analyze --no-pub` clean; `flutter test --no-pub --concurrency=1` 113 passed, 1 skipped.
+      Review 2026-07-10 @claude: PASS — spec (docs/parser-generic-fallback.md) conformance verified line-by-line: cascade order template→generic→Err with a precedence test; guard conjunction direction+amount+{account|channel|VPA} with hard rejects (OTP/future/declined/statement/cashback); confidence 0.6/0.5 <=0.6, src 'generic', and the safety property is TESTED (DecisionPolicy never returns auto at generic confidences); negative fixture law holds (all expected-err fixtures still err through the full cascade); positive sweep 120/134 (89.6%, >=80% AC) with zero amount/direction/account contradictions; ParseSource.generic wired incl. wireName; docs/architecture.md updated. Non-blocking notes for T-067/T-065: (1) hard-reject terms 'received from account'/'interest credit' encode the current <5-occurrence gap fixtures — revisit against real Kotak/Central fixtures so genuine IMPS credits aren't permanently rejected; (2) bare \bdr\b/\bcr\b direction tokens are broad — keep an eye on false directions in new-bank fixtures. Suite 113/1 verified by @codex on the device toolchain (sandbox cannot run Flutter).
 - [x] T-046 (@claude) [P2] Phase 2 exit review — PASS (2026-07-10)
       AC: verifies PLAN §9 Phase 2 exit criteria (daily-usable, <=2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip) against T-035..T-045 evidence; WORKLOG entry "PHASE P2 EXIT REVIEW"; blockers listed before Phase 3 grooming.
       Review 2026-07-09 @claude: PASS by code evidence on all four criteria (WORKLOG "PHASE P2 EXIT REVIEW").

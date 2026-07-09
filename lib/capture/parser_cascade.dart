@@ -1,6 +1,7 @@
 import '../core/result.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
+import 'generic_transaction_parser.dart';
 import 'template_engine/template_matcher.dart';
 
 /// Coordinates SMS parsing strategies from highest precision to fallback.
@@ -11,9 +12,13 @@ import 'template_engine/template_matcher.dart';
 class ParserCascade {
   const ParserCascade({
     required TemplateMatcher templateMatcher,
-  }) : _templateMatcher = templateMatcher;
+    GenericTransactionParser genericTransactionParser =
+        const GenericTransactionParser(),
+  })  : _templateMatcher = templateMatcher,
+        _genericTransactionParser = genericTransactionParser;
 
   final TemplateMatcher _templateMatcher;
+  final GenericTransactionParser _genericTransactionParser;
 
   /// Attempts to convert one raw SMS into a normalized transaction record.
   ///
@@ -25,6 +30,11 @@ class ParserCascade {
     final templateResult = _templateMatcher.match(sms);
     if (templateResult != null) {
       return Ok(templateResult);
+    }
+
+    final genericResult = _genericTransactionParser.parse(sms);
+    if (genericResult != null) {
+      return Ok(genericResult);
     }
 
     return const Err(ParseFailure.unparsed);

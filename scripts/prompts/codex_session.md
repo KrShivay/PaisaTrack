@@ -19,7 +19,10 @@ to you. Follow COLLABORATION.md exactly.
    detect_changes before commit).
 4. Run `flutter analyze --no-pub` and the relevant tests; the full suite must
    be green before you finish.
-5. Move the task to "## In Review (review @claude)", append your WORKLOG entry,
-   commit with the [T-xxx] prefix. Your commit will automatically flag @claude
-   for review — do not start another task.
+5. Move the task to "## In Review (review @claude)" and append your WORKLOG
+   entry. COMMITTING: your sandbox cannot write .git — do NOT run git commit.
+   Instead write the complete commit message to `.handoff/commit-msg` (first
+   line: `[T-xxx] <subject>`; body optional). The dispatch wrapper commits all
+   working-tree changes on your behalf after you exit cleanly, and that commit
+   automatically flags @claude for review — do not start another task.
 WIP limit: exactly one task. Small, reviewable changes only.

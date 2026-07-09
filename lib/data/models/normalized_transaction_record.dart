@@ -83,6 +83,7 @@ extension TransactionChannelWireName on TransactionChannel {
 /// (ADR 0002 — all parsing runs on-device).
 enum ParseSource {
   template,
+  generic,
   localLlm,
   manual,
 }
@@ -92,6 +93,7 @@ extension ParseSourceWireName on ParseSource {
   String get wireName {
     return switch (this) {
       ParseSource.template => 'template',
+      ParseSource.generic => 'generic',
       ParseSource.localLlm => 'local_llm',
       ParseSource.manual => 'manual',
     };
