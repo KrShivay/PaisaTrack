@@ -19,9 +19,6 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
      chain, embedder (T-050) unblocks resolver/classifier. Owners provisional
      (@codex build / @claude review) per COLLABORATION.md; the exit review
      (T-064) is @claude. -->
-- [ ] T-050 (@codex) [P3] On-device text embedder
-      AC: `Embedder` service (TFLite / MediaPipe Text Embedder, free/open weights per ADR 0002, on-device only) returns a fixed-dim vector for a normalized merchant string; model file bundled or lazily loaded (not networked at inference); deterministic output test over fixed inputs; graceful no-op/fallback when the model is unavailable so ingest never blocks.
-      Depends: T-048
 - [ ] T-051 (@codex) [P3] Merchant resolver v2 (embedding similarity)
       AC: PLAN §7.3 — exact alias lookup (1.0) → brute-force cosine similarity vs stored merchant embeddings (<2k merchants): ≥0.92 auto-link + write `learned` alias; 0.75–0.92 link with `needs_review` mark; <0.75 create+embed new merchant. Slots ahead of the categorizer in the enrichment pipeline (§7.2); writes `merchant` block into the confidence trail (T-049); tests for each band + alias promotion.
       Depends: T-050, T-049
@@ -73,6 +70,10 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       Depends: T-075, T-064 (Phase 3 exit)
 
 ## Blocked
+- [ ] T-050 (@codex) [P3] On-device text embedder
+      AC: `Embedder` service (TFLite / MediaPipe Text Embedder, free/open weights per ADR 0002, on-device only) returns a fixed-dim vector for a normalized merchant string; model file bundled or lazily loaded (not networked at inference); deterministic output test over fixed inputs; graceful no-op/fallback when the model is unavailable so ingest never blocks.
+      Depends: T-048
+      Blocking: @human/@claude must pin an open embedding artifact and inference contract: exact model file/source + SHA-256, license/redistribution record, tokenizer/input tensor contract, output tensor/dimension, and TFLite/MediaPipe runtime version. Without that, deterministic fixed-vector tests would validate a fabricated embedder rather than the required model.
 - [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
       AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
       Model: gpt-5.6-terra high

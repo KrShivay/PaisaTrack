@@ -1,3 +1,9 @@
+## 2026-07-11 @codex — T-050 BLOCKED (embedding artifact not pinned)
+
+- Checked: T-050 AC, PLAN §2/§7.3, ADR 0002, assets, and dependencies. No embedding model, source/checksum, tokenizer/tensor contract, vector dimension, runtime version, or license record is specified.
+- Blocker: those exact inputs are required to prove deterministic output from a real TFLite/MediaPipe model. A hand-written hash/vector placeholder would not satisfy AC and would contaminate T-051 similarity behavior.
+- Board: moved T-050 to Blocked; T-051/T-052 and their dependents remain unavailable. Continuing with dependency-satisfied T-055.
+
 ## 2026-07-11 @codex — T-049
 
 - Did: extended each new ingest's `confidence_json` with provisional merchant evidence (`v`, `c`, `src`) alongside the existing parser/category blocks, all inside the existing atomic ingest transaction. Added a typed `TransactionConfidenceTrail` reader, exposed it on `TransactionDetail`, and replaced the detail-screen placeholder with parser/merchant/category evidence rows.
