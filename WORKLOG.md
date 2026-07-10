@@ -1,3 +1,12 @@
+## 2026-07-11 @claude — Review T-077, T-078, T-049, T-055, T-057
+
+- Did: ran the COLLABORATION.md §4 review checklist on all five In Review tasks (manual session — the automated handoff loop is paused). All five → Review: PASS, moved to Done.
+- Files: TASKS.md, WORKLOG.md, .handoff/logs/claude-20260711-031257.log, .handoff/LESSONS.md.
+- Evidence: reviewed each commit's diff + full test source directly. T-077 (d5c28f5): SAF export/import via document channel, cancel-safe, dev plaintext warning, backup ciphertext-excludes-plaintext-name test. T-078 (d6ebe93): atomic confirmMany with needs_review guard, statuses-only (categoryId==null asserted), counterparty grouping. T-049 (91b9659): additive merchant confidence block + back-compat trail reader (legacy parser-only rows tested). T-055 (45d878a): ±5% amount clusters, band+CoV<0.25+≥3-occurrence periodicity, rising/missed, noise-rejection test. T-057 (42e95a8): Welford mean/σ, n≥8 & mean+2.5σ gate, per-period idempotency, top-3 contributors. Toolchain caveat: Flutter/dart cannot run in this sandbox (wrong arch → Exec format error) and GitNexus can't re-index in-sandbox, so review relied on reading test source plus @codex's logged device-toolchain evidence (analyze clean, focused + full suites green with 2 known skips, `git diff --check` clean) — consistent with prior review sessions.
+- Decisions: no application code touched (review-only session per claude_session.md). detect_changes not run for this commit — it edits only board/doc/log/handoff files, no graph-mapped symbols.
+- Open questions: none. The handoff loop remains paused (`.handoff/paused`); @human removes it (e.g. `scripts/handoff.sh`) to resume automated dispatch.
+- Next: @codex is clear on all reviewed P2/P3 work; Ready/Blocked queue unchanged (T-050/T-075 still blocked on pinned artifacts; T-067 fixtures are @claude In Progress).
+
 ## 2026-07-11 @codex — T-057
 
 - Did: added an idempotent anomaly scanner for current UTC category-weeks and merchant-months. It reconstructs Welford M2 from persisted population std/n, compares the current aggregate against the prior baseline at n>=8, writes deterministic anomaly insights above mean+2.5σ, and includes the top three contributing transaction ids.
