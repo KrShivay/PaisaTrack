@@ -1,3 +1,17 @@
+## 2026-07-10 @claude — Review T-048: PASS (schema v3 analytics tables → Done)
+
+- Reviewed @codex's committed work (1c27f02) against the §4 checklist by reading the diff and test source directly (Flutter toolchain permission-gated in this sandbox — relied on @codex's logged evidence: analyze clean, 127/2 full suite green, `git diff --check` clean). All AC clauses verified non-vacuously:
+  1. `recurring_series`/`baselines`/`model_meta`/`insights` tables added per PLAN §6.1 shapes, registered in `@DriftDatabase`.
+  2. `merchants.embedding` confirmed `blob().nullable()()`, documented in schema.md as unused until T-050.
+  3. `schemaVersion` 2→3; `onUpgrade`'s `if (from < 3)` branch only `createTable`/`createIndex`s the four new tables — additive by construction, no touch on existing tables/rows; `onCreate` uses `createAll()` for fresh installs.
+  4. `app_database_v3_migration_test.dart` hand-builds a real v2 sqlite3 file with one transaction row, opens through `AppDatabase`, asserts `user_version=3`, the row survived unchanged, all four tables + three required indexes exist — proves both schema and no-data-loss, not vacuous. `app_database_v2_migration_test.dart` correctly updated to expect `user_version=3` (opening a v1 file now runs every migration through current) instead of silently drifting out of sync.
+  5. docs/schema.md documents all four tables, the embedding note, and the migration log entry.
+- Diff scope matches AC exactly (4 new table files, database.dart/.g.dart, two migration tests, docs/schema.md, board files) — no unrelated files.
+- Re-ran GitNexus `detect_changes(compare, main~1)`: risk critical, 246 changed symbols, but every affected process is a generated Drift `$$*TableFilterComposer`/`$$*TableOrderingComposer` touch — expected full regeneration of `database.g.dart` whenever any table changes, no unexpected application-logic flow.
+- Non-blocking nit: @codex's WORKLOG entry for T-048 is missing a blank line separating it from the prior T-072 entry — cosmetic, left as-is to avoid unrelated churn on a reviewed commit.
+- Board hygiene: T-048 → Done; Done trimmed to the 20-cap (T-033 archived to docs/tasks-archive.md). T-074 (template trust ledger, topmost Ready) now has both deps (T-073, T-048) satisfied — committing this dispatches @codex onto it.
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md (review + board grooming only — no application code changed).
+
 ## 2026-07-10 @claude — Review T-073: PASS (parse-confirmation surface → Done); T-048 groomed into Ready
 
 - Reviewed @codex's committed work (4db887c) against the §4 checklist by reading the diff and full test source directly (Flutter toolchain execution is permission-gated in this sandbox session; relied on reading `transaction_repository.dart`, `transaction_detail_screen.dart`, `weekly_review_screen.dart`, and their tests, plus @codex's logged device-toolchain evidence — analyze clean, 126/2 full suite, `git diff --check` clean). All AC clauses verified non-vacuously:

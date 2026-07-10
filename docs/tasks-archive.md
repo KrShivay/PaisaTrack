@@ -2,6 +2,8 @@
 
 Older `## Done` entries moved verbatim from TASKS.md per COLLABORATION.md ("keep last 20, archive rest"). Newest first. Archived 2026-07-10 by @claude.
 
+- [x] T-033 (@claude) [P1] Fix post-commit Codex review hook CLI arguments (2026-07-07)
+      AC met: `.githooks/post-commit` invoked the interactive `codex review` TUI subcommand with a positional custom prompt alongside `--commit`, which the CLI rejects (the "argument issue" reported on every commit). Now uses the headless runner form the Codex maintainers document for automation: `codex exec --sandbox read-only review --commit "$sha" --title "$title"` — the commit preset takes `--commit`/`--title` only, no positional prompt; read-only sandbox since review never writes. Skip guard (`CODEX_SKIP_COMMIT_REVIEW=1`), absent-codex guard, and never-block-the-commit exit behavior unchanged. Verified: `sh -n` clean. Live run not possible in this environment (no codex CLI on PATH) — confirm output on the next local commit.
 - [x] T-032 (@codex) [P5] Compress brand illustration PNGs (2026-07-07)
       AC met: `assets/icons/*.png` resized from 1254x1254 to 384x384 PNGs, staying above the 120dp documented max display size while meeting the <=512px requirement. Exact asset sizes are now 126,271-152,466 bytes each (<=150 KiB each), 1,365,425 bytes total, down from 13,632,217 bytes total. Packaged icon entries dropped by 12,266,792 bytes; clean rebuilt `app-debug.apk` is 167,595,102 bytes, and `unzip -lv build/app/outputs/flutter-apk/app-debug.apk 'assets/flutter_assets/assets/icons/*'` confirms the packaged icon entries now total 1,365,425 stored bytes.
 - [x] T-031 (@codex) [P2] Shared `formatInr()` currency formatter (Indian digit grouping) (2026-07-07)
