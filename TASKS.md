@@ -2,16 +2,12 @@
 Last updated: 2026-07-10 by @claude
 
 ## In Progress          <!-- max 1 task per agent at a time -->
-
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
 <!-- Phase 2.5 — Parser Coverage (field-reported: Kotak + Central Bank users get
      ZERO parsed transactions — SmsFilter allowlists KOTAKB/CENTBK so capture works,
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
-- [ ] T-068 (@codex) [P2] Delete dead com.paisatrack.sms.SmsFilter
-      AC: android/app/src/main/kotlin/com/paisatrack/sms/SmsFilter.kt removed (zero references; capture/SmsFilter.kt is the real filter); `./gradlew :app:testDebugUnitTest` stays green.
-      Depends: T-046 exit
 - [ ] T-067 (@codex) [P2] Kotak + Central Bank template packs
       AC: assets/templates/kotak.json + centbk.json with sanitized real fixtures per test/fixtures/sms conventions (fixture-first law, >=5 per shape, <5 occurrences → negative known-gap fixtures); per-bank coverage test includes both banks; docs/sms-templates.md updated.
       Depends: T-065
@@ -85,6 +81,10 @@ Last updated: 2026-07-10 by @claude
 
 ## In Review
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-068 (@codex, review @claude: PASS) [P2] Delete dead com.paisatrack.sms.SmsFilter (2026-07-10)
+      AC: android/app/src/main/kotlin/com/paisatrack/sms/SmsFilter.kt removed (zero references; capture/SmsFilter.kt is the real filter); `./gradlew :app:testDebugUnitTest` stays green.
+      Depends: T-046 exit
+      Review 2026-07-10 @claude: PASS — file deleted; independently re-verified zero references to the com.paisatrack.sms package (remaining 'com.paisatrack/sms_*' matches are MethodChannel names, a different namespace). Evidence: @codex sandbox run — GitNexus impact LOW (0 callers/processes), analyze clean, full Dart suite 117 passed / 2 known skips, `git diff --check` clean; `./gradlew :app:testDebugUnitTest` sandbox-blocked, run by @human 2026-07-10: BUILD SUCCESSFUL (90 tasks). First exercise of the sandbox-blocked-verification protocol (codex prompt step 4).
 - [x] T-066 (@codex, review @claude: PASS) [P2] Generic fallback transaction parser in ParserCascade (2026-07-10)
       AC: keyword+amount+context-signal conjunction parser slotted after TemplateMatcher per docs/parser-generic-fallback.md; reuses FieldNormalizer; emits parser confidence <=0.6 src 'generic' so DecisionPolicy never auto-labels a generic parse; negative tests prove OTP/promo/reminder/statement SMS still return unparsed; positive tests over existing bank fixtures with templates disabled; docs/architecture.md cascade section updated.
       Depends: T-046 exit; T-065 fixtures strengthen tests but core impl may start on existing fixtures

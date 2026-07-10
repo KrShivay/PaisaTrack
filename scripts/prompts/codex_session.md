@@ -18,7 +18,13 @@ to you. Follow COLLABORATION.md exactly.
    Respect the GitNexus rules in CLAUDE.md/AGENTS.md (impact before edit,
    detect_changes before commit).
 4. Run `flutter analyze --no-pub` and the relevant tests; the full suite must
-   be green before you finish.
+   be green before you finish. SANDBOX-BLOCKED VERIFICATION: if a required
+   check cannot run in your sandbox (e.g., `./gradlew` is terminated during
+   Android configuration), do NOT stall the cascade. Record the exact command
+   as "pending @human" in the task's Evidence line and your WORKLOG entry,
+   then proceed to step 5 — the @claude review withholds PASS until the
+   human-run result is logged. Everything that CAN run in-sandbox must be
+   green; never defer a runnable check.
 5. Move the task to "## In Review (review @claude)" and append your WORKLOG
    entry. COMMITTING: your sandbox cannot write .git — do NOT run git commit.
    Instead write the complete commit message to `.handoff/commit-msg` (first

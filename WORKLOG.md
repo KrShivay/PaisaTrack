@@ -1,3 +1,35 @@
+## 2026-07-10 @claude — Review T-068: PASS (dead SmsFilter removed → Done)
+
+- Deletion verified independently: com.paisatrack.sms package has zero remaining references (MethodChannel 'com.paisatrack/sms_*' strings are unrelated). @codex evidence: impact LOW, analyze clean, Dart suite 117/2 green, diff check clean. Gradle JVM suite was sandbox-blocked (terminated during Android configuration) and run by @human: BUILD SUCCESSFUL.
+- Process hardening from this task: codex_session.md step 4 now has a SANDBOX-BLOCKED VERIFICATION clause — unrunnable checks are recorded as "pending @human" and the task still moves to In Review with a commit, instead of stalling the cascade without a commit; @claude withholds PASS until the human-run result lands.
+- T-068 → Done. Next actionable: T-069 (unparsed dev screen rejection stage; depends T-066 — satisfied). T-067 still gated on T-065 fixtures (@human).
+- Files: TASKS.md, WORKLOG.md, scripts/prompts/codex_session.md, android/.../sms/SmsFilter.kt (deleted by @codex).
+
+## 2026-07-10 @codex — T-068 (In Progress: native verification blocked)
+
+- Did: removed the unused `com.paisatrack.sms.SmsFilter`; the production
+  filter remains `com.paisatrack.capture.SmsFilter`. Repository-wide source
+  search confirms zero references to the deleted package/class.
+- Files: `android/app/src/main/kotlin/com/paisatrack/sms/SmsFilter.kt`,
+  `TASKS.md`, `WORKLOG.md`.
+- Evidence: GitNexus pre-edit impact LOW (0 direct callers, 0 affected
+  processes/modules); `flutter analyze --no-pub` clean. Full Dart suite run
+  in runner-sized groups: capture 48 passed; assets/core/data/enrichment/
+  fixtures/widget 33 passed with 1 known SQLCipher host skip; feature groups
+  17 passed with 1 known scratch-test skip and 19 passed. `detect_changes`
+  LOW with no affected processes; `git diff --check` clean.
+- Blocker: `./gradlew :app:testDebugUnitTest` cannot reach test execution in
+  this sandbox. It resolves/configures Android and Flutter subprojects, but
+  the runner terminates the Gradle process during lengthy Android
+  configuration; earlier attempts also exposed sandbox-only default cache
+  permissions. Do not move T-068 to In Review or commit until the native JVM
+  task reports BUILD SUCCESSFUL.
+- Decisions: no code or project documentation is needed beyond this worklog:
+  the change only removes an unreferenced duplicate private implementation.
+- Next: rerun `cd android && ./gradlew :app:testDebugUnitTest` in the normal
+  local environment, then move T-068 to In Review and write `[T-068] Delete
+  dead SMS filter` to `.handoff/commit-msg`.
+
 ## 2026-07-10 @claude — fix: dispatched codex runs cannot commit (.git read-only in its sandbox)
 
 - Codex workspace-write sandbox blocks .git writes by design ("cannot create .git/index.lock"), so dispatched runs finished work but could never commit — breaking the cascade (no commit → no hook → no review dispatch).
