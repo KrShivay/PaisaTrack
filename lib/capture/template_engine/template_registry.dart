@@ -48,6 +48,7 @@ class SmsTemplate {
     required this.direction,
     required this.channel,
     required this.dateFormat,
+    this.provenance = TemplateProvenance.device,
   });
 
   final String id;
@@ -55,6 +56,9 @@ class SmsTemplate {
   final String direction;
   final String channel;
   final String? dateFormat;
+
+  /// Evidence tier for this template's fixture source (ADR 0005).
+  final TemplateProvenance provenance;
 
   /// Parses one template entry from registry JSON.
   static SmsTemplate fromJson(Map<String, Object?> json) {
@@ -64,6 +68,28 @@ class SmsTemplate {
       direction: json['direction']! as String,
       channel: json['channel']! as String,
       dateFormat: json['date_format'] as String?,
+      provenance: TemplateProvenance.fromJson(json['provenance'] as String?),
     );
+  }
+}
+
+/// Evidence source for a template's fixture-backed parser contract.
+enum TemplateProvenance {
+  /// A sanitized, statement-reconcilable device fixture (gold tier).
+  device,
+
+  /// A publicly posted fixture that must remain in the review band (silver).
+  public;
+
+  /// Stable JSON value used by templates and fixture metadata.
+  String get wireName => name;
+
+  /// Missing provenance predates ADR 0005 and is intentionally device-grade.
+  static TemplateProvenance fromJson(String? value) {
+    return switch (value) {
+      null || 'device' => TemplateProvenance.device,
+      'public' => TemplateProvenance.public,
+      _ => throw FormatException('Unsupported template provenance: $value'),
+    };
   }
 }

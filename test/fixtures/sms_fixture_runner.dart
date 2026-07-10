@@ -71,6 +71,7 @@ class SmsFixtureRunner {
         metadata['received_at']! as int,
         isUtc: true,
       ),
+      provenance: FixtureProvenance.fromJson(metadata['provenance'] as String?),
       expected: (metadata['expected']! as Map<String, Object?>).cast(),
     );
   }
@@ -83,6 +84,7 @@ class SmsFixtureCase {
     required this.sender,
     required this.body,
     required this.receivedAt,
+    required this.provenance,
     required this.expected,
   });
 
@@ -90,6 +92,7 @@ class SmsFixtureCase {
   final String sender;
   final String body;
   final DateTime receivedAt;
+  final FixtureProvenance provenance;
   final Map<String, Object?> expected;
 
   RawSms toRawSms() {
@@ -99,6 +102,20 @@ class SmsFixtureCase {
       body: body,
       receivedAt: receivedAt,
     );
+  }
+}
+
+/// Fixture evidence tier; missing legacy metadata remains device-grade.
+enum FixtureProvenance {
+  device,
+  public;
+
+  static FixtureProvenance fromJson(String? value) {
+    return switch (value) {
+      null || 'device' => FixtureProvenance.device,
+      'public' => FixtureProvenance.public,
+      _ => throw FormatException('Unsupported fixture provenance: $value'),
+    };
   }
 }
 

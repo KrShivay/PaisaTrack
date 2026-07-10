@@ -3,6 +3,15 @@
 Templates live in `assets/templates/*.json`. Do not invent formats; add only
 sanitized, real fixture-backed variants (`test/fixtures/sms/<bank>/`).
 
+## Provenance and confidence (ADR 0005)
+
+Both a template entry and its fixture expected JSON may include
+`"provenance": "public"`. Public (silver-tier) templates are capped at 0.85
+confidence, below the 0.9 silent-auto threshold, until T-074 promotes them
+from confirmation evidence. Omit the field for device (gold-tier) fixtures;
+that is the backward-compatible default and retains the 0.97 template
+confidence. Never label an invented or unsourced fixture as either tier.
+
 ## IndusInd Bank (`assets/templates/indusind.json`)
 
 Sender pattern: `^[A-Z]{2}-INDUSB(-[A-Z])?$`

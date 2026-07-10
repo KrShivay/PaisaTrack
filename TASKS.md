@@ -6,10 +6,6 @@ Last updated: 2026-07-10 by @claude
 <!-- Phase 2.5b — Parser trust loop (ADR 0005: provenance tiers + confirmation-
      driven promotion; @human approved 2026-07-10). Order matters: T-072 caps
      public templates BEFORE T-067 ships any. -->
-- [ ] T-072 (@codex) [P2] Provenance-capped template confidence
-      AC: template JSON entries and fixture expected-JSON support optional `"provenance": "public"` (absent = device, back-compat); TemplateRegistry/TemplateMatcher cap parse confidence at 0.85 for public-provenance templates (never >=0.9, so DecisionPolicy can never auto-label them — safety test mirrors T-066's); template matches now record `template_id` (+ provenance) in `confidence_json.parser` so T-074 can attribute parse verdicts per template (extends the existing {c,src} shape, back-compat readers tested); docs/sms-templates.md documents the tiers per ADR 0005.
-      Model: gpt-5.6-terra medium
-      Depends: T-066
 - [ ] T-073 (@codex) [P2] Parse-confirmation surface + verdict feedback
       AC: transaction detail (and review sheet) show a compact "Parsed correctly?" confirm/fix affordance for low-trust parses (parse_source generic OR public-provenance template); confirm writes a feedback row (field `parse_verdict`, value `ok`, context `parse_confirm`) in one transaction; "fix" lets the user correct amount/direction/merchant and writes per-field feedback rows + the txn update atomically (extends updateWithFeedback); high-trust parses show nothing (no nag); widget + repository tests.
       Model: gpt-5.6-terra high
@@ -23,6 +19,10 @@ Last updated: 2026-07-10 by @claude
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
+- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
+      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
+      Model: gpt-5.6-terra high
+      Depends: T-074 (queue order only — no code dependency; Phase-3-parallel safe: new module, no file overlap)
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074; note T-048 is pulled forward as a T-074 dependency)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -81,6 +81,13 @@ Last updated: 2026-07-10 by @claude
 - [ ] T-064 (@claude) [P3] Phase 3 exit review
       AC: verifies PLAN §9 Phase 3 exit criteria against T-048..T-063 evidence — after 2 weeks of feedback the classifier auto-labels ≥80% of new transactions with ≤10% correction rate (proven on the T-062 metrics screen); real subscriptions/EMIs all appear in recurring with correct next dates; ≥1 genuine anomaly and ≥1 forecast insight have fired correctly; WORKLOG "PHASE P3 EXIT REVIEW"; blockers listed before Phase 4 grooming.
 
+## Phase 4 — Assistant & LLM layer (groomed; gated on Phase 3 exit T-064 + T-075; ADR 0006)
+- [ ] T-076 (@codex, spec @claude first) [P4] In-app assistant: ask your money anything
+      AC: chat surface behind the LLM feature flag; NL question → LLM emits constrained intent JSON (metric, category/merchant filter, time range, aggregation) validated against a whitelist — model NEVER emits SQL; deterministic QueryEngine executes intents over repositories (transactions, recurring_series, baselines, insights); reply interpolates ONLY QueryEngine numbers (renderer test proves no model-originated figures); out-of-whitelist intents refuse gracefully with suggestions; no advice framing — forecasts relay PLAN §7.8 outputs only; session-scoped history; prompts never leave the device (ADR 0002/0006). MVP intents: period totals, category breakdown, merchant lookup, month-over-month comparison, upcoming recurring, active insights.
+      Spec: @claude writes docs/assistant-nlq.md (intent schema, whitelist, prompt design, grounding contract) before implementation — same pattern as the T-066 parser spec.
+      Model: gpt-5.6-terra high
+      Depends: T-075, T-064 (Phase 3 exit)
+
 ## Blocked
 - [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
       AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
@@ -89,6 +96,11 @@ Last updated: 2026-07-10 by @claude
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-072 (@codex → review @claude) [P2] Provenance-capped template confidence
+      AC: template JSON entries and fixture expected-JSON support optional `"provenance": "public"` (absent = device, back-compat); TemplateRegistry/TemplateMatcher cap parse confidence at 0.85 for public-provenance templates (never >=0.9, so DecisionPolicy can never auto-label them — safety test mirrors T-066's); template matches now record `template_id` (+ provenance) in `confidence_json.parser` so T-074 can attribute parse verdicts per template (extends the existing {c,src} shape, back-compat readers tested); docs/sms-templates.md documents the tiers per ADR 0005.
+      Model: gpt-5.6-terra medium
+      Depends: T-066
+      Evidence: GitNexus pre-edit impact: TemplateRegistry MEDIUM (6 direct dependents, 1 test flow), TemplateMatcher LOW; additive NormalizedTransactionRecord metadata was CRITICAL (32 direct dependents, 5 flows) and constrained to optional fields. `flutter analyze --no-pub` clean; focused tests 30/30; full `flutter test --no-pub --concurrency=1` green; `git diff --check` clean; GitNexus detect_changes MEDIUM (13 changed symbols, 2 expected parse/model flows).
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-069 (@codex, review @claude: PASS) [P2] Unparsed dev screen shows rejection stage (2026-07-10)
       AC: each unparsed row surfaces which stage rejected it (template miss vs generic-parser guard) so new-bank gaps are triageable from the device without adb; widget test.
@@ -176,11 +188,6 @@ AC met: added shared `formatInr()` in `lib/core/format.dart` with Indian digit g
 - [x] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain (2026-07-06)
       AC met: T-029's design-system retrofit now passes the local toolchain. Found and fixed one real regression: the retrofitted onboarding screen overflowed at the default 800x600 widget-test viewport, leaving the grant button partly off-screen. `OnboardingScreen` now uses a scroll-safe body and compact presentation for short heights while preserving all test-visible strings and permission behavior. Evidence: GitNexus pre-edit impact LOW for `OnboardingScreen` (3 direct upstream dependents, 1 affected process: onboarding test flow) and `_PermissionBody` (2 direct upstream dependents, 0 affected processes); `flutter analyze` clean; targeted `flutter test test/features/onboarding/onboarding_screen_test.dart --concurrency=1` green; full `flutter test --concurrency=1` green (57 passed, 2 skipped: scratch dashboard debug test and host SQLCipher migration skip); Android `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL; GitNexus `detect_changes(scope: all)` reported MEDIUM risk limited to `lib/features/onboarding/onboarding_screen.dart` and the `Main → OnboardingScreen` process.
 ## Proposed
-- [ ] T-075 (@codex, spec @claude) [P4] On-device LLM runtime foundation
-      AC: single shared runtime (MediaPipe LLM Inference / llama.cpp FFI per PLAN §2) behind a feature flag; optional in-app model download (not bundled; user-initiated, resumable, integrity-checked); inference strictly on-device (ADR 0002 — model download is a static asset fetch, no data leaves); graceful absent-model no-op. Serves PLAN Phase 4 extraction fallback + insight narratives AND T-076.
-- [ ] T-076 (@claude spec → @codex) [P4] In-app assistant: ask your money anything
-      AC: chat surface over LOCAL data only — NL question → on-device LLM translates to structured queries over transactions/recurring/insights (never raw SMS bodies in prompts beyond what PLAN §8 allows on-device) → grounded answer with the numbers cited from SQL results; scope guardrails (no financial advice framing, answers only from the user's own data); requires T-075; PLAN Phase 4 section amended when groomed (@human approval at grooming).
-
 - [ ] T-070 (@codex) [P2] Unparsed screen: per-stage generic rejection reason
       AC: GenericTransactionParser exposes a `RejectionReason` (hard-reject term / no direction / no amount / no context signal) and the unparsed dev screen recomputes and shows it per row at display time (no schema change); widget + unit tests. Makes new-bank triage actionable beyond the static T-069 label.
       Depends: T-066; groom after T-065/T-067 fixture experience

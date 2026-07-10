@@ -16,6 +16,8 @@ class NormalizedTransactionRecord {
     required this.ts,
     required this.parseSource,
     required this.parseConfidence,
+    this.templateId,
+    this.templateProvenance,
   });
 
   final double amount;
@@ -31,6 +33,32 @@ class NormalizedTransactionRecord {
 
   /// Parser confidence from 0.0 to 1.0.
   final double parseConfidence;
+
+  /// Template identity retained for ingest provenance; omitted from the frozen
+  /// parser wire contract and absent for non-template parse paths.
+  final String? templateId;
+
+  /// Fixture evidence tier associated with [templateId], when present.
+  final String? templateProvenance;
+
+  /// Returns this record with a different parser confidence.
+  NormalizedTransactionRecord withParseConfidence(double confidence) {
+    return NormalizedTransactionRecord(
+      amount: amount,
+      direction: direction,
+      channel: channel,
+      merchantRaw: merchantRaw,
+      counterpartyVpa: counterpartyVpa,
+      accountHint: accountHint,
+      balanceAfter: balanceAfter,
+      refId: refId,
+      ts: ts,
+      parseSource: parseSource,
+      parseConfidence: confidence,
+      templateId: templateId,
+      templateProvenance: templateProvenance,
+    );
+  }
 
   /// Serializes using stable wire names for fixtures and future interchange.
   Map<String, Object?> toJson() {

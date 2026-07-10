@@ -1,3 +1,10 @@
+## 2026-07-10 @claude — Groomed Phase 4 assistant (ADR 0006) at @human direction
+
+- ADR 0006 accepted: in-app assistant admitted into PLAN Phase 4 with a fixed safety envelope — grounded-numbers-only (constrained intent whitelist → deterministic QueryEngine; the model never emits SQL or figures), local-only inference, no advice framing, gated on Phase 3 exit. PLAN §Phase 4 text + exit criteria amended accordingly.
+- Board: T-075 (shared on-device LLM runtime: download/integrity/flag/no-op, serves extractor+narratives+assistant) groomed into Ready after the trust loop, Phase-3-parallel safe; T-076 (assistant) groomed into a new Phase 4 section, Depends T-075 + T-064, with an @claude spec (docs/assistant-nlq.md) required before implementation. Both removed from Proposed.
+- Note: @human ran `scripts/handoff.sh off` before this session per the new §7 rule — codex died mid-T-072 with partial uncommitted work in capture files; `scripts/handoff.sh resume` after committing this grooming will crash-resume it.
+- Files: docs/decisions/0006-in-app-assistant.md, PLAN.md, TASKS.md, WORKLOG.md
+
 ## 2026-07-10 @claude — Intelligence scoping audit + Phase 4 in-app AI proposal (@human request)
 
 - Audited Phase 3 backlog (T-048..T-064) against PLAN §7: all detector thresholds, ladder positions, nightly order, retrain trigger, and exit criteria match the plan (0.92/0.75 resolver bands, +0.03/cap 0.98 adaptive thresholds, CoV<0.25 recurring, 2.5σ/n>=8 anomaly, 10% forecast deviation, >=30-feedback retrain, >=80%/<=10% exit). Docs consistent (architecture.md ladder steps 2/4 deferral note).
@@ -815,3 +822,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Decisions: kept Phase 0 scaffold dependency-light; parser cascade returns unparsed until templates are added
 - Open questions: install/provide Flutter SDK so T-001/T-002 can be verified with `flutter test`
 - Next: after Flutter is available, run `flutter create .` carefully and normalize generated project files
+## 2026-07-10 @codex — T-072
+
+- Did: added `device`/`public` provenance parsing for templates and fixtures (legacy absence defaults to device); capped public-template records at 0.85; retained template id/provenance in parser confidence metadata for T-074 while preserving the frozen fixture wire shape.
+- Files: lib/capture/template_engine/{template_registry,template_matcher,field_normalizer}.dart, lib/data/models/normalized_transaction_record.dart, lib/capture/sms_ingestion.dart, test/capture/{parser_cascade,sms_ingestion}_test.dart, test/capture/template_engine/template_registry_test.dart, test/fixtures/sms_fixture_runner{,_test}.dart, docs/sms-templates.md, test/fixtures/sms/README.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus impact TemplateRegistry MEDIUM (6 direct dependents, 1 test flow), TemplateMatcher LOW; the optional NormalizedTransactionRecord metadata addition had CRITICAL blast radius (32 direct dependents, 5 flows), constrained to backward-compatible optional fields. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused test command passed 30/30; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` green; `git diff --check` clean; GitNexus detect_changes MEDIUM (13 changed symbols, 2 expected flows). Initial Flutter run without HOME was sandbox-blocked by telemetry state; rerun with repo-local HOME completed.
+- Decisions: provenance is carried separately from `NormalizedTransactionRecord.toJson()` so existing fixture expected JSON and the frozen parser contract remain stable; parser metadata is additive and only populated for template parses.
+- Open questions: none.
+- Next: @claude review T-072; T-073 remains blocked on review flow.

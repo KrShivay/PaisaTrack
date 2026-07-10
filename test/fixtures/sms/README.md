@@ -7,6 +7,9 @@ Each case should include:
 - `<case>.txt` containing the sanitized SMS body
 - `<case>.expected.json` containing fixture metadata and expected parser output
 
+Fixture metadata may add `"provenance": "public"` for a real, publicly posted
+SMS. Its absence means `device`, preserving the existing fixture contract.
+
 Organize by sender or bank, for example `test/fixtures/sms/hdfc/upi_debit_001.txt`.
 
 Expected JSON shape:

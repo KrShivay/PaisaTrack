@@ -191,6 +191,42 @@ void main() {
     expect(transactions.single.status, 'asked');
   });
 
+  test('persists template id and provenance in parser confidence metadata',
+      () async {
+    final ingestor = _ingestorFor(
+      database,
+      NormalizedTransactionRecord(
+        amount: 100,
+        direction: TransactionDirection.debit,
+        channel: TransactionChannel.upi,
+        merchantRaw: 'PUBLIC SHOP',
+        counterpartyVpa: null,
+        accountHint: 'xx1234',
+        balanceAfter: null,
+        refId: null,
+        ts: DateTime.utc(2026, 7, 10),
+        parseSource: ParseSource.template,
+        parseConfidence: 0.85,
+        templateId: 'public_debit_v1',
+        templateProvenance: 'public',
+      ),
+    );
+
+    await ingestor.ingest(_message('sms_public_template'));
+
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_public_template')))
+        .getSingle();
+    final confidence =
+        jsonDecode(transaction.confidenceJson) as Map<String, Object?>;
+    expect(confidence['parser'], {
+      'c': 0.85,
+      'src': 'template',
+      'template_id': 'public_debit_v1',
+      'provenance': 'public',
+    });
+  });
+
   test('decision policy respects daily ask budget exhaustion', () async {
     final now = DateTime.utc(2026, 7, 5, 12);
     await _insertTransaction(

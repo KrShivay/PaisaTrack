@@ -36,6 +36,8 @@ class FieldNormalizer {
       ),
       parseSource: ParseSource.template,
       parseConfidence: 0.97,
+      templateId: template.id,
+      templateProvenance: template.provenance.wireName,
     );
   }
 

@@ -101,6 +101,55 @@ void main() {
     }
   });
 
+  test('public template confidence is capped below silent auto-labeling',
+      () async {
+    final cascade = ParserCascade(
+      templateMatcher: TemplateMatcher(
+        registries: [
+          TemplateRegistry(
+            senderPatterns: [RegExp(r'^XX-PUBLIC$')],
+            templates: [
+              SmsTemplate(
+                id: 'public_debit_v1',
+                regex: RegExp(r'Rs\. (?<amount>\d+) debited'),
+                direction: 'debit',
+                channel: 'upi',
+                dateFormat: null,
+                provenance: TemplateProvenance.public,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final result = await cascade.parse(
+      RawSms(
+        id: 'public-1',
+        sender: 'XX-PUBLIC',
+        body: 'Rs. 250 debited from A/c XX1234 via UPI',
+        receivedAt: DateTime.utc(2026, 7, 10),
+      ),
+    );
+    final record = (result as Ok).value;
+
+    expect(record.parseConfidence, 0.85);
+    expect(record.templateId, 'public_debit_v1');
+    expect(record.templateProvenance, 'public');
+    expect(
+      const DecisionPolicy().decide(
+        DecisionPolicyInput(
+          merchantConfidence: record.parseConfidence,
+          categoryConfidence: 1,
+          amount: 1000,
+          merchantTxnCount: 10,
+          askBudgetLeft: 2,
+        ),
+      ),
+      isNot(DecisionStatus.auto),
+    );
+  });
+
   for (final body in [
     'Your OTP is 123456. Do not share it.',
     'Get Rs. 500 cashback with this limited offer.',

@@ -348,6 +348,9 @@ class SmsIngestor {
         'parser': {
           'c': record.parseConfidence,
           'src': record.parseSource.wireName,
+          if (record.templateId != null) 'template_id': record.templateId,
+          if (record.templateProvenance != null)
+            'provenance': record.templateProvenance,
         },
         if (categorization != null)
           'category': {

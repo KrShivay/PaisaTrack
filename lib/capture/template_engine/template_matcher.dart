@@ -34,11 +34,16 @@ class TemplateMatcher {
         }
 
         try {
-          return _normalizer.normalizeTemplateMatch(
+          final record = _normalizer.normalizeTemplateMatch(
             match: match,
             template: template,
             fallbackTimestamp: sms.receivedAt,
           );
+          // Public fixtures are useful coverage, but without device/statement
+          // evidence they must never enter the silent auto-label band (ADR 0005).
+          return template.provenance == TemplateProvenance.public
+              ? record.withParseConfidence(0.85)
+              : record;
         } on FormatException {
           continue;
         } on ArgumentError {
