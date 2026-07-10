@@ -56,7 +56,12 @@ maintained) → bundled seed keyword map (`assets/seed/category_seed.json`,
 longest-key-first substring match, 0.8) → `other` at 0.3. Both live capture
 and backfill construct `SmsIngestor` with the categorizer
 (`categorizerProvider`), and the outcome is recorded in the transaction's
-`confidence_json` under `category` (`c`, `src`, optional `rule_id`). The
+`confidence_json` under `category` (`c`, `src`, optional `rule_id`). The same
+atomic transaction records provisional merchant evidence (`v`, `c`, `src`)
+from the parser until the Phase 3 merchant resolver replaces that block.
+`TransactionConfidenceTrail` reads parser/merchant/category blocks without
+breaking legacy parser-only rows and exposes them through transaction detail.
+The
 classifier (step 2) and on-device LLM (step 4) slot in during later phases.
 
 `DecisionPolicy` implements static PLAN §7.5 thresholds from `AppConstants`.

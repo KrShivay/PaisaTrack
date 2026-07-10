@@ -1,3 +1,12 @@
+## 2026-07-11 @codex — T-049
+
+- Did: extended each new ingest's `confidence_json` with provisional merchant evidence (`v`, `c`, `src`) alongside the existing parser/category blocks, all inside the existing atomic ingest transaction. Added a typed `TransactionConfidenceTrail` reader, exposed it on `TransactionDetail`, and replaced the detail-screen placeholder with parser/merchant/category evidence rows.
+- Files: lib/data/models/transaction_confidence_trail.dart, lib/capture/sms_ingestion.dart, lib/data/repositories/transaction_repository.dart, lib/features/transactions/transaction_detail_screen.dart, test/capture/sms_ingestion_test.dart, test/features/transactions/transaction_detail_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit MEDIUM for `SmsIngestor`/`TransactionDetail`, LOW for `_transactionCompanionFor`, `watchDetail`, and detail rendering. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused ingest/detail/backfill tests 28/28; full suite 141 passed / 2 existing skips; `git diff --check` clean; final `detect_changes(all)` LOW with no affected processes.
+- Decisions: until T-051 resolves canonical merchants, the merchant trail records the parser's merchant/VPA signal and parse confidence/source; T-051 can replace the block with alias/embedding evidence. Malformed or legacy parser-only JSON degrades to absent optional entries, not a read failure. Frozen §6.2 record unchanged.
+- Open questions: none.
+- Next: @claude review T-049.
+
 ## 2026-07-11 @codex — T-075 BLOCKED (missing pinned model artifact)
 
 - Checked: `AppConstants`, dependencies, PLAN §2/Phase 4, ADR 0002/0006, and the T-075 AC. The repo specifies only a Gemma-2B-class family, not an artifact that can be downloaded and verified.

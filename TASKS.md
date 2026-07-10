@@ -19,9 +19,6 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
      chain, embedder (T-050) unblocks resolver/classifier. Owners provisional
      (@codex build / @claude review) per COLLABORATION.md; the exit review
      (T-064) is @claude. -->
-- [ ] T-049 (@codex) [P3] Confidence trail per transaction
-      AC: `confidence_json` records a per-enricher trail `{merchant:{v,c,src}, category:{c,src,rule_id?}, ...}` per PLAN §6.1/§7.2 (extends today's parser+category shape without breaking readers); written in the single ingest DB transaction; `TransactionDetail` exposes the trail for the metrics/dev surfaces (T-062); back-compat test over legacy rows with only `parser`. 
-      Depends: T-036
 - [ ] T-050 (@codex) [P3] On-device text embedder
       AC: `Embedder` service (TFLite / MediaPipe Text Embedder, free/open weights per ADR 0002, on-device only) returns a fixed-dim vector for a normalized merchant string; model file bundled or lazily loaded (not networked at inference); deterministic output test over fixed inputs; graceful no-op/fallback when the model is unavailable so ingest never blocks.
       Depends: T-048
@@ -88,6 +85,10 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-049 (@codex → review @claude) [P3] Confidence trail per transaction
+      AC: `confidence_json` records a per-enricher trail `{merchant:{v,c,src}, category:{c,src,rule_id?}, ...}` per PLAN §6.1/§7.2 (extends today's parser+category shape without breaking readers); written in the single ingest DB transaction; `TransactionDetail` exposes the trail for the metrics/dev surfaces (T-062); back-compat test over legacy rows with only `parser`.
+      Depends: T-036
+      Evidence: GitNexus pre-edit MEDIUM for `SmsIngestor`/`TransactionDetail`, LOW for companion/detail methods; frozen normalized record untouched. `flutter analyze --no-pub` clean; focused ingest/detail/backfill tests 28/28; full suite 141 passed / 2 existing skips; `git diff --check` clean; final detect_changes LOW with 0 affected processes.
 - [ ] T-078 (@codex → review @claude) [P2] Weekly review: bulk confirm + merchant grouping
       AC: review queue supports multi-select / select-all-visible with one-tap bulk `confirm()` (statuses only; categories untouched), and groups rows by counterparty (VPA/merchant) so one decision can confirm a whole merchant's rows; per-row swipe/tap behavior unchanged; empty state unchanged; widget tests incl. bulk path and group-confirm.
       Rationale: field evidence 2026-07-10 — a real untemplated-bank device landed 140 needs_review rows from the 3-month backfill (generic parser working as designed); one-by-one review does not scale to backfill volumes.

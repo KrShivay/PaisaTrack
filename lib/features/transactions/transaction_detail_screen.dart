@@ -265,13 +265,31 @@ class _TransactionDetailScreenState
                   label: 'Parse confidence',
                   value: detail.parseConfidence?.toStringAsFixed(2),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Enrichment and decision steps will appear here once the '
-                  'categorization pipeline records them (Phase 3).',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                _FieldRow(
+                  label: 'Merchant value',
+                  value: detail.confidenceTrail.merchant?.value?.toString(),
+                ),
+                _FieldRow(
+                  label: 'Merchant source',
+                  value: detail.confidenceTrail.merchant?.source,
+                ),
+                _FieldRow(
+                  label: 'Merchant confidence',
+                  value: detail.confidenceTrail.merchant?.confidence
+                      ?.toStringAsFixed(2),
+                ),
+                _FieldRow(
+                  label: 'Category source',
+                  value: detail.confidenceTrail.category?.source,
+                ),
+                _FieldRow(
+                  label: 'Category confidence',
+                  value: detail.confidenceTrail.category?.confidence
+                      ?.toStringAsFixed(2),
+                ),
+                _FieldRow(
+                  label: 'Category rule',
+                  value: detail.confidenceTrail.category?.ruleId,
                 ),
               ],
             ),

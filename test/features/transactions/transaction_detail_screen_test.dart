@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,6 +120,16 @@ void main() {
         (await repository.watchDetail('txn_1').first)!.isLowTrustParse,
         isTrue,
       );
+    });
+
+    test('legacy parser-only confidence rows remain readable', () async {
+      final detail = await repository.watchDetail('txn_1').first;
+
+      expect(detail, isNotNull);
+      expect(detail!.confidenceTrail.parser?.confidence, 0.97);
+      expect(detail.confidenceTrail.parser?.source, 'template');
+      expect(detail.confidenceTrail.merchant, isNull);
+      expect(detail.confidenceTrail.category, isNull);
     });
 
     test('parse corrections atomically update fields and record verdicts',
@@ -320,9 +330,8 @@ void main() {
       }
     }
 
-    testWidgets(
-        'renders the frozen-contract fields and confidence trail '
-        'placeholder', (tester) async {
+    testWidgets('renders the frozen-contract fields and confidence trail',
+        (tester) async {
       await pumpDetail(tester);
 
       expect(find.text('-₹449.00'), findsOneWidget);

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
+import '../models/transaction_confidence_trail.dart';
 import 'rule_repository.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
 
@@ -99,6 +100,7 @@ class TransactionDetail {
     required this.merchantName,
     required this.categoryName,
     required this.parseConfidence,
+    required this.confidenceTrail,
     required this.isLowTrustParse,
   });
 
@@ -106,6 +108,7 @@ class TransactionDetail {
   final String? merchantName;
   final String? categoryName;
   final double? parseConfidence;
+  final TransactionConfidenceTrail confidenceTrail;
   final bool isLowTrustParse;
 }
 
@@ -171,11 +174,14 @@ class TransactionRepository {
       if (rows.isEmpty) return null;
       final row = rows.first;
       final txn = row.readTable(_database.transactions);
+      final confidenceTrail =
+          TransactionConfidenceTrail.fromJson(txn.confidenceJson);
       return TransactionDetail(
         txn: txn,
         merchantName: row.readTableOrNull(_database.merchants)?.canonicalName,
         categoryName: row.readTableOrNull(_database.categories)?.name,
-        parseConfidence: _parseConfidenceOf(txn),
+        parseConfidence: confidenceTrail.parser?.confidence,
+        confidenceTrail: confidenceTrail,
         isLowTrustParse: _isLowTrustParse(txn),
       );
     });

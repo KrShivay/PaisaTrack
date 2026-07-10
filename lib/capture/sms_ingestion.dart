@@ -357,6 +357,11 @@ class SmsIngestor {
           if (record.templateProvenance != null)
             'provenance': record.templateProvenance,
         },
+        'merchant': {
+          'v': record.merchantRaw ?? record.counterpartyVpa,
+          'c': record.parseConfidence,
+          'src': record.parseSource.wireName,
+        },
         if (categorization != null)
           'category': {
             'c': categorization.confidence,
