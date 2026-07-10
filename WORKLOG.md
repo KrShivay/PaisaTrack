@@ -1,3 +1,10 @@
+## 2026-07-10 @claude — Intelligence scoping audit + Phase 4 in-app AI proposal (@human request)
+
+- Audited Phase 3 backlog (T-048..T-064) against PLAN §7: all detector thresholds, ladder positions, nightly order, retrain trigger, and exit criteria match the plan (0.92/0.75 resolver bands, +0.03/cap 0.98 adaptive thresholds, CoV<0.25 recurring, 2.5σ/n>=8 anomaly, 10% forecast deviation, >=30-feedback retrain, >=80%/<=10% exit). Docs consistent (architecture.md ladder steps 2/4 deferral note).
+- Three scoping gaps found and fixed: (1) T-074's trust ledger would have invented a second store while T-048 creates model_meta — T-048 pulled forward as an explicit T-074 dependency; (2) parse verdicts could not be attributed per-template (confidence_json.parser lacks template_id) — added to T-072's AC with back-compat reader test; (3) Phase 3 gate comment still referenced T-069/T-067 — now gated on T-072..T-074.
+- In-app AI (@human wish): PLAN Phase 4 already reserves the on-device LLM layer (extraction fallback + narratives, flagged, optional model download). Filed T-075 (shared on-device LLM runtime foundation) and T-076 (assistant: NL Q&A over local transactions/insights, grounded answers, ADR 0002-compliant) in Proposed — conversational assistant is NEW scope beyond PLAN Phase 4, so PLAN amendment + @human approval happen at grooming time.
+- Files: TASKS.md, WORKLOG.md
+
 ## 2026-07-10 @claude — ADR 0005 + Phase 2.5b grooming (parser trust loop, @human proposed)
 
 - @human's synthesis adopted as ADR 0005: fixture provenance tiers (device=gold 0.97 / public=silver capped 0.85, never auto) with promotion by user confirmation — the app asks "parsed correctly?" on low-trust parses, verdicts land as feedback rows, a per-template trust ledger promotes public templates to 0.97 after 20 clean confirms and demotes on any amount/direction correction. Reuses the one-write correction machinery; verdicts double as Phase 3 training data.

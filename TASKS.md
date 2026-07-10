@@ -7,7 +7,7 @@ Last updated: 2026-07-10 by @claude
      driven promotion; @human approved 2026-07-10). Order matters: T-072 caps
      public templates BEFORE T-067 ships any. -->
 - [ ] T-072 (@codex) [P2] Provenance-capped template confidence
-      AC: template JSON entries and fixture expected-JSON support optional `"provenance": "public"` (absent = device, back-compat); TemplateRegistry/TemplateMatcher cap parse confidence at 0.85 for public-provenance templates (never >=0.9, so DecisionPolicy can never auto-label them — safety test mirrors T-066's); docs/sms-templates.md documents the tiers per ADR 0005.
+      AC: template JSON entries and fixture expected-JSON support optional `"provenance": "public"` (absent = device, back-compat); TemplateRegistry/TemplateMatcher cap parse confidence at 0.85 for public-provenance templates (never >=0.9, so DecisionPolicy can never auto-label them — safety test mirrors T-066's); template matches now record `template_id` (+ provenance) in `confidence_json.parser` so T-074 can attribute parse verdicts per template (extends the existing {c,src} shape, back-compat readers tested); docs/sms-templates.md documents the tiers per ADR 0005.
       Model: gpt-5.6-terra medium
       Depends: T-066
 - [ ] T-073 (@codex) [P2] Parse-confirmation surface + verdict feedback
@@ -15,15 +15,15 @@ Last updated: 2026-07-10 by @claude
       Model: gpt-5.6-terra high
       Depends: T-072
 - [ ] T-074 (@codex) [P2] Template trust ledger + promotion/demotion
-      AC: per-template counters (confirmed parses, amount/direction corrections) derived from `parse_verdict` feedback rows; a public template with >=20 confirms and 0 amount/direction corrections is promoted to 0.97 (persisted, e.g. model_meta-style table or settings-adjacent store — schema note required); any amount/direction correction demotes to 0.85 and flags the template id in the dev screen; unit tests over promote/demote/flag branches; ADR 0005 rules are the spec.
+      AC: per-template counters (confirmed parses, amount/direction corrections) derived from `parse_verdict` feedback rows; a public template with >=20 confirms and 0 amount/direction corrections is promoted to 0.97; any amount/direction correction demotes to 0.85 and flags the template id in the dev screen; PERSISTENCE: reuse `model_meta` from schema v3 — T-048 is pulled forward as a dependency rather than inventing a second store; unit tests over promote/demote/flag branches; ADR 0005 rules are the spec.
       Model: gpt-5.6-terra high
-      Depends: T-073
+      Depends: T-073, T-048 (schema v3 — pulled forward)
 <!-- Phase 2.5 — Parser Coverage (field-reported: Kotak + Central Bank users get
      ZERO parsed transactions — SmsFilter allowlists KOTAKB/CENTBK so capture works,
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
-## Phase 3 — Intelligence (groomed backlog; gated on Phase 2.5 parser coverage: T-069 build + T-067 when fixtures land)
+## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074; note T-048 is pulled forward as a T-074 dependency)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
      Dependency-ordered; schema v3 (T-048) unblocks the analytics chain, embedder
@@ -176,6 +176,11 @@ AC met: added shared `formatInr()` in `lib/core/format.dart` with Indian digit g
 - [x] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain (2026-07-06)
       AC met: T-029's design-system retrofit now passes the local toolchain. Found and fixed one real regression: the retrofitted onboarding screen overflowed at the default 800x600 widget-test viewport, leaving the grant button partly off-screen. `OnboardingScreen` now uses a scroll-safe body and compact presentation for short heights while preserving all test-visible strings and permission behavior. Evidence: GitNexus pre-edit impact LOW for `OnboardingScreen` (3 direct upstream dependents, 1 affected process: onboarding test flow) and `_PermissionBody` (2 direct upstream dependents, 0 affected processes); `flutter analyze` clean; targeted `flutter test test/features/onboarding/onboarding_screen_test.dart --concurrency=1` green; full `flutter test --concurrency=1` green (57 passed, 2 skipped: scratch dashboard debug test and host SQLCipher migration skip); Android `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL; GitNexus `detect_changes(scope: all)` reported MEDIUM risk limited to `lib/features/onboarding/onboarding_screen.dart` and the `Main → OnboardingScreen` process.
 ## Proposed
+- [ ] T-075 (@codex, spec @claude) [P4] On-device LLM runtime foundation
+      AC: single shared runtime (MediaPipe LLM Inference / llama.cpp FFI per PLAN §2) behind a feature flag; optional in-app model download (not bundled; user-initiated, resumable, integrity-checked); inference strictly on-device (ADR 0002 — model download is a static asset fetch, no data leaves); graceful absent-model no-op. Serves PLAN Phase 4 extraction fallback + insight narratives AND T-076.
+- [ ] T-076 (@claude spec → @codex) [P4] In-app assistant: ask your money anything
+      AC: chat surface over LOCAL data only — NL question → on-device LLM translates to structured queries over transactions/recurring/insights (never raw SMS bodies in prompts beyond what PLAN §8 allows on-device) → grounded answer with the numbers cited from SQL results; scope guardrails (no financial advice framing, answers only from the user's own data); requires T-075; PLAN Phase 4 section amended when groomed (@human approval at grooming).
+
 - [ ] T-070 (@codex) [P2] Unparsed screen: per-stage generic rejection reason
       AC: GenericTransactionParser exposes a `RejectionReason` (hard-reject term / no direction / no amount / no context signal) and the unparsed dev screen recomputes and shows it per row at display time (no schema change); widget + unit tests. Makes new-bank triage actionable beyond the static T-069 label.
       Depends: T-066; groom after T-065/T-067 fixture experience
