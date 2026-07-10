@@ -142,4 +142,6 @@ Operational notes:
 - Auto-runs skip per-commit Codex review (task-level review replaces it).
 - The §2 board format is load-bearing for this automation: do not rename
   section headers or `(@agent)` tags without updating `agent_handoff.sh`.
-- @human remains merge/override authority; manual sessions work unchanged.
+- @human remains merge/override authority. Before any manual or interactive
+  session that edits board/docs files, run `scripts/handoff.sh off` (and `on`
+  after) — an armed loop can dispatch codex into the same files concurrently.

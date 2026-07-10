@@ -75,12 +75,13 @@ Last updated: 2026-07-10 by @claude
       AC: assets/templates/kotak.json + centbk.json with sanitized real fixtures per test/fixtures/sms conventions (fixture-first law, >=5 per shape, <5 occurrences → negative known-gap fixtures); per-bank coverage test includes both banks; docs/sms-templates.md updated.
       Depends: T-065
 ## In Review
-- [ ] T-069 (@codex → review @claude) [P2] Unparsed dev screen shows rejection stage
+## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-069 (@codex, review @claude: PASS) [P2] Unparsed dev screen shows rejection stage (2026-07-10)
       AC: each unparsed row surfaces which stage rejected it (template miss vs generic-parser guard) so new-bank gaps are triageable from the device without adb; widget test.
       Model: gpt-5.6-terra medium
       Depends: T-066
       Evidence: `flutter analyze --no-pub` clean; targeted widget test 3/3; full `flutter test --no-pub --concurrency=1` green (117 passed, 2 known skips); GitNexus detect_changes LOW, 0 affected processes.
-## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+      Review 2026-07-10 @claude: PASS — rows now state the rejection path ('Template: no match · Generic parser: guard rejected'); static label is correct by cascade construction (an unparsed row failed both stages by definition, per @codex's logged decision). Widget test asserts the label; evidence: analyze clean, targeted 3/3, full suite 117/2 green, impact/detect_changes LOW (@codex sandbox run, log codex-20260710-204356). Note: reviewed from the working tree in a race with the dispatch wrapper, which committed codex's work as 14d4681 (first fully-autonomous implement→commit cycle; that commit also swept in @claude's staged docs-audit files — mixed but reconciled). Carry-forward filed as T-070.
 - [x] T-068 (@codex, review @claude: PASS) [P2] Delete dead com.paisatrack.sms.SmsFilter (2026-07-10)
       AC: android/app/src/main/kotlin/com/paisatrack/sms/SmsFilter.kt removed (zero references; capture/SmsFilter.kt is the real filter); `./gradlew :app:testDebugUnitTest` stays green.
       Depends: T-046 exit
@@ -161,6 +162,9 @@ AC met: added shared `formatInr()` in `lib/core/format.dart` with Indian digit g
 - [x] T-030 (@codex) [P1] Verify design-system commit (T-029) in a full toolchain (2026-07-06)
       AC met: T-029's design-system retrofit now passes the local toolchain. Found and fixed one real regression: the retrofitted onboarding screen overflowed at the default 800x600 widget-test viewport, leaving the grant button partly off-screen. `OnboardingScreen` now uses a scroll-safe body and compact presentation for short heights while preserving all test-visible strings and permission behavior. Evidence: GitNexus pre-edit impact LOW for `OnboardingScreen` (3 direct upstream dependents, 1 affected process: onboarding test flow) and `_PermissionBody` (2 direct upstream dependents, 0 affected processes); `flutter analyze` clean; targeted `flutter test test/features/onboarding/onboarding_screen_test.dart --concurrency=1` green; full `flutter test --concurrency=1` green (57 passed, 2 skipped: scratch dashboard debug test and host SQLCipher migration skip); Android `./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL; GitNexus `detect_changes(scope: all)` reported MEDIUM risk limited to `lib/features/onboarding/onboarding_screen.dart` and the `Main → OnboardingScreen` process.
 ## Proposed
+- [ ] T-070 (@codex) [P2] Unparsed screen: per-stage generic rejection reason
+      AC: GenericTransactionParser exposes a `RejectionReason` (hard-reject term / no direction / no amount / no context signal) and the unparsed dev screen recomputes and shows it per row at display time (no schema change); widget + unit tests. Makes new-bank triage actionable beyond the static T-069 label.
+      Depends: T-066; groom after T-065/T-067 fixture experience
 - [ ] T-018 (@codex) [P0] CI generated-code and build_runner guards
       AC: CI fails when Drift generated code is stale and documents local build_runner regeneration command
       Depends: T-008

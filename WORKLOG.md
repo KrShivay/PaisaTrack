@@ -1,3 +1,11 @@
+## 2026-07-10 @claude — Review T-069: PASS (rejection-stage label → Done); Phase 2.5 build complete
+
+- Reviewed from the working tree while the dispatch wrapper was still finishing: codex's run completed verification (analyze clean, 3/3 widget, full suite 117/2) AND the wrapper committed it as 14d4681 mid-review — the loop's first fully-autonomous implement→verify→commit cycle. The commit also swept in @claude's staged docs-audit files (git add -A in the wrapper; mixed commit, contents reconciled and correct). Static rejection-path label is correct by cascade construction; test non-vacuous. Review: PASS; T-069 → Done. Follow-up T-070 (per-stage generic rejection reason) filed in Proposed.
+- Session-collision lesson: my docs audit ran concurrently with codex's armed-loop T-069 run — I briefly "corrected" architecture.md wording that was codex's legitimate in-progress doc. No damage (reconciled), but rule added to COLLABORATION §7: run `scripts/handoff.sh off` before manual/interactive sessions that touch board or docs; `on` after.
+- Phase 2.5 state: T-066/T-068/T-069 Done; T-067 blocked on T-065 fixtures (@human). With Ready empty above the Phase 3 header, the armed loop correctly goes idle — next work is fixtures (T-067) or a @human decision to open Phase 3.
+- Also in this commit: docs/board consistency audit (Done archived to 20-cap, README status brought to Phase 2 exit PASS + Phase 2.5, Phase 3 gate comment updated, ADR 0004 operational amendments, T-069 architecture wording now accurate as shipped).
+- Files: TASKS.md, WORKLOG.md, README.md, docs/architecture.md, docs/decisions/0004-automated-agent-handoff.md, docs/tasks-archive.md, lib/features/dev/unparsed_sms_screen.dart + test (by @codex), COLLABORATION.md
+
 ## 2026-07-10 @codex — T-069
 
 - Did: updated the dev Unparsed SMS rows to state the complete rejection path: `Template: no match` followed by `Generic parser: guard rejected`.
