@@ -1,3 +1,12 @@
+## 2026-07-11 @codex — T-078
+
+- Did: grouped weekly-review rows by resolved merchant, VPA, or normalized merchant text; added row selection, select-all-visible, atomic bulk confirmation, and one-tap group confirmation. Bulk writes update only `status`/`updated_at`; row tap correction, swipe confirmation, and the empty state remain intact.
+- Files: lib/data/repositories/transaction_repository.dart, lib/features/review/weekly_review_screen.dart, test/features/review/weekly_review_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit HIGH for additive `TransactionReviewItem` metadata (16 direct imports/constructors; optional default preserves compatibility), LOW for `confirm`, `_toReviewItem`, and the screen. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused review tests 5/5; full Flutter suite 140 passed / 2 existing skips; `git diff --check` clean. Final `detect_changes(all)` HIGH from the expected shared review-model/screen fan-out; ask-now and correction/rule paths passed regression coverage.
+- Decisions: used one set-based Drift update guarded by `status='needs_review'`, preventing stale bulk selections from overwriting newer workflow states. Group keys prefer merchant id, then normalized VPA, then normalized merchant text.
+- Open questions: none.
+- Next: @claude review T-078.
+
 ## 2026-07-11 @codex — T-077
 
 - Did: routed encrypted backup export/import through Android's system create/open-document pickers, and routed the debug transaction JSON export through the same user-visible destination flow with an explicit plaintext warning. Picker dismissal reports cancellation and performs no write/restore; no storage permission or third-party dependency was added.

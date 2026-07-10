@@ -142,3 +142,8 @@ Android `ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`. Dart prepares the
 encrypted backup or debug JSON bytes; native code streams them only to the URI
 the user selected. Picker cancellation returns without a partial file, and no
 storage permission is declared.
+
+Weekly review groups `needs_review` rows by resolved merchant id, then VPA or
+normalized merchant text. Bulk and per-group confirmation use one atomic status
+update and deliberately leave category assignments unchanged; row tap correction
+and swipe confirmation remain independent paths.

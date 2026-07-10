@@ -12,11 +12,6 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
-- [ ] T-078 (@codex) [P2] Weekly review: bulk confirm + merchant grouping
-      AC: review queue supports multi-select / select-all-visible with one-tap bulk `confirm()` (statuses only; categories untouched), and groups rows by counterparty (VPA/merchant) so one decision can confirm a whole merchant's rows; per-row swipe/tap behavior unchanged; empty state unchanged; widget tests incl. bulk path and group-confirm.
-      Rationale: field evidence 2026-07-10 — a real untemplated-bank device landed 140 needs_review rows from the 3-month backfill (generic parser working as designed); one-by-one review does not scale to backfill volumes.
-      Model: gpt-5.6-terra medium
-      Depends: T-046 exit
 - [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
       AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
       Model: gpt-5.6-terra high
@@ -92,6 +87,12 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-078 (@codex → review @claude) [P2] Weekly review: bulk confirm + merchant grouping
+      AC: review queue supports multi-select / select-all-visible with one-tap bulk `confirm()` (statuses only; categories untouched), and groups rows by counterparty (VPA/merchant) so one decision can confirm a whole merchant's rows; per-row swipe/tap behavior unchanged; empty state unchanged; widget tests incl. bulk path and group-confirm.
+      Rationale: field evidence 2026-07-10 — a real untemplated-bank device landed 140 needs_review rows from the 3-month backfill (generic parser working as designed); one-by-one review does not scale to backfill volumes.
+      Model: gpt-5.6-terra medium
+      Depends: T-046 exit
+      Evidence: GitNexus pre-edit HIGH for additive `TransactionReviewItem` metadata (16 direct imports/constructors; kept optional/back-compatible), LOW for repository/screen methods. `flutter analyze --no-pub` clean; focused weekly-review tests 5/5; full suite 140 passed / 2 existing skips; `git diff --check` clean. Final detect_changes HIGH, expected from the shared review model/screen fan-out; ask-now and correction/rule regression tests remain green.
 - [ ] T-077 (@codex → review @claude) [P2] Save exports via system file picker (user-visible destination)
       AC: both export surfaces — Settings encrypted backup (`paisatrack_export.ptrack`) and the debug transaction JSON export — write through Android's ACTION_CREATE_DOCUMENT (platform channel or maintained plugin per ADR 0002 free/open rule): user picks the destination (e.g. Downloads), file streams to the returned URI, snackbar confirms; no storage permissions requested; works on minSdk 26+; import flow gains the matching ACTION_OPEN_DOCUMENT picker so restores don't depend on the app-private path; debug JSON export keeps its dev-only gating and adds a plaintext warning dialog before the picker (PLAN §8 — normalized data only, still user-sensitive); cancel-safe (picker dismissed → no partial file, snackbar notes cancellation); tests for the Dart-side channel contract + cancel path.
       Reported: @human 2026-07-10 — exported file invisible on device (app-private dir).

@@ -70,6 +70,7 @@ class TransactionReviewItem {
     required this.categoryIcon,
     required this.status,
     this.merchantRaw,
+    this.counterpartyKey,
     this.isLowTrustParse = false,
   });
 
@@ -83,6 +84,9 @@ class TransactionReviewItem {
   final String? categoryIcon;
   final String status;
   final String? merchantRaw;
+
+  /// Stable merchant/VPA/raw-merchant identity used to group review rows.
+  final String? counterpartyKey;
   final bool isLowTrustParse;
 }
 
@@ -379,6 +383,30 @@ class TransactionRepository {
     });
   }
 
+  /// Confirms multiple review rows atomically without changing categories.
+  ///
+  /// Only rows still in `needs_review` are affected, so a stale selection
+  /// cannot overwrite a newer ask/correction state. Returns the updated count.
+  Future<int> confirmMany({
+    required Iterable<String> txnIds,
+    DateTime Function() clock = DateTime.now,
+  }) {
+    final ids = txnIds.toSet();
+    if (ids.isEmpty) return Future.value(0);
+    return _database.transaction(() {
+      return (_database.update(_database.transactions)
+            ..where(
+              (t) => t.id.isIn(ids) & t.status.equals('needs_review'),
+            ))
+          .write(
+        TransactionsCompanion(
+          status: const Value('confirmed'),
+          updatedAt: Value(clock().toUtc()),
+        ),
+      );
+    });
+  }
+
   /// Applies an ask-now or weekly-review correction in one database write
   /// boundary: rule insertion, feedback row(s), and transaction update all
   /// commit or roll back together.
@@ -602,6 +630,13 @@ class TransactionRepository {
       categoryIcon: category?.icon,
       status: txn.status,
       merchantRaw: txn.merchantRaw,
+      counterpartyKey: merchant != null
+          ? 'merchant:${merchant.id}'
+          : txn.counterpartyVpa != null
+              ? 'vpa:${txn.counterpartyVpa!.trim().toLowerCase()}'
+              : txn.merchantRaw != null
+                  ? 'raw:${txn.merchantRaw!.trim().toLowerCase()}'
+                  : 'txn:${txn.id}',
       isLowTrustParse: _isLowTrustParse(txn),
     );
   }
