@@ -1,3 +1,17 @@
+## 2026-07-10 @claude — Review T-074: PASS (template trust ledger → Done)
+
+- Reviewed @codex's committed work (557b7a5) against the §4 checklist by reading the diff and full test source directly. Flutter toolchain is arch-gated in this sandbox (`.tooling/flutter/.../dart` → "Exec format error"); GitNexus re-index/detect_changes also can't run (npm re-install times out; registry not writable — same limitation @codex logged). Relied on source reading + @codex's device-toolchain evidence (analyze clean, focused 32/32, full suite green with 2 pre-existing skips, `git diff --check` clean).
+- AC verified non-vacuously, clause by clause:
+  1. Counters derive from real `feedback` rows (`field='parse_verdict'`, `context='parse_confirm'`) joined to `transactions`; template id + `provenance:"public"` pulled from `confidence_json.parser` via `_publicTemplateId` — the T-073 attribution column flagged in that review is actually used, closing my prior note.
+  2. Promotion requires `confirmedParses >= 20 && amountDirectionCorrections == 0`; a test promotes at exactly 20 and asserts the parse hot path returns 0.97 end-to-end (ParserCascade → matcher → ledger), plus the `model_meta` cache write.
+  3. A single amount OR direction correction blocks promotion and keeps 0.85; demotion is durable (only a new template id resets counters, matching ADR 0005) and self-healing because `refresh()` fully recomputes on every parse-verdict write. Merchant-only correction correctly does NOT demote — explicitly tested.
+  4. `flaggedEntries` surfaces on the dev screen through a watched `templateTrustAlertsProvider`; a widget test asserts the alert banner and template id render, and the high-trust/empty default renders nothing.
+  5. Non-public / generic verdicts are ignored (tested → empty ledger).
+- Plan/privacy/contract: persistence reuses `model_meta.template_trust_ledger_v1` as a compact parse-time cache — no second store, no schema migration; feedback remains authoritative. `refresh()` runs inside the existing atomic parse-verdict transactions in `updateWithFeedback`/`confirmParse` (no new write path). Frozen §6.2 contract untouched (`NormalizedTransactionRecord` absent from diff; existing `withParseConfidence` reused). Only template ids + integer counters are cached — no raw SMS in metadata or logs.
+- Diff scope matches AC exactly (13 files: ledger + matcher/cascade/ingestion wiring, repository refresh hook, dev screen/provider, 2 test files, docs, board) — no stray files. WORKLOG entry complete.
+- Board hygiene: T-074 → Done with the PASS verdict; Done trimmed back to the 20-cap (T-034 archived to docs/tasks-archive.md). Ready still holds the Phase 2.5b parser-trust-loop scope; no @codex task is In Progress, so committing this re-arms the handoff loop for the next Ready `(@codex)` task.
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md (review + board only — no application code changed).
+
 ## 2026-07-10 @codex — T-074
 
 - Did: added a `model_meta`-backed cache rebuilt from public-template `parse_verdict` feedback, then wired public-template parsing to promote at 20 clean confirmations or remain/demote at 0.85 after amount/direction corrections. The Dev diagnostics screen lists flagged template ids for re-authoring.
