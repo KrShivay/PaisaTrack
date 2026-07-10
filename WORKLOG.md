@@ -1,3 +1,9 @@
+## 2026-07-10 @claude — T-077 filed: exports invisible on device (@human field report)
+
+- Both export surfaces write to getApplicationDocumentsDirectory() (app-private, invisible to file managers). Groomed T-077: route backup + debug JSON export through ACTION_CREATE_DOCUMENT (user picks Downloads; no permissions; minSdk-26-safe) with matching ACTION_OPEN_DOCUMENT import, plaintext warning on the debug export, cancel-safe. Slotted ahead of T-075 in Ready.
+- Interim workaround given to @human: adb run-as pull from app_flutter/ (debug builds).
+- Files: TASKS.md, WORKLOG.md
+
 ## 2026-07-10 @claude — Groomed Phase 4 assistant (ADR 0006) at @human direction
 
 - ADR 0006 accepted: in-app assistant admitted into PLAN Phase 4 with a fixed safety envelope — grounded-numbers-only (constrained intent whitelist → deterministic QueryEngine; the model never emits SQL or figures), local-only inference, no advice framing, gated on Phase 3 exit. PLAN §Phase 4 text + exit criteria amended accordingly.

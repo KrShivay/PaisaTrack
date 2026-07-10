@@ -19,6 +19,11 @@ Last updated: 2026-07-10 by @claude
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
+- [ ] T-077 (@codex) [P2] Save exports via system file picker (user-visible destination)
+      AC: both export surfaces — Settings encrypted backup (`paisatrack_export.ptrack`) and the debug transaction JSON export — write through Android's ACTION_CREATE_DOCUMENT (platform channel or maintained plugin per ADR 0002 free/open rule): user picks the destination (e.g. Downloads), file streams to the returned URI, snackbar confirms; no storage permissions requested; works on minSdk 26+; import flow gains the matching ACTION_OPEN_DOCUMENT picker so restores don't depend on the app-private path; debug JSON export keeps its dev-only gating and adds a plaintext warning dialog before the picker (PLAN §8 — normalized data only, still user-sensitive); cancel-safe (picker dismissed → no partial file, snackbar notes cancellation); tests for the Dart-side channel contract + cancel path.
+      Reported: @human 2026-07-10 — exported file invisible on device (app-private dir).
+      Model: gpt-5.6-terra medium
+      Depends: T-046 exit
 - [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
       AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
       Model: gpt-5.6-terra high
