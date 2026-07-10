@@ -1,3 +1,12 @@
+## 2026-07-10 @codex — T-073
+
+- Did: added ADR 0005 parse-confirm/fix controls to transaction detail and the weekly-review correction sheet for generic/public-template records only; confirmation records `parse_verdict=ok`, while fixes atomically update amount/direction/merchant and write per-field + parser-verdict feedback.
+- Files: lib/data/repositories/transaction_repository.dart, lib/features/{transactions/transaction_detail_screen,review/weekly_review_screen}.dart, test/features/{transactions/transaction_detail_screen,review/weekly_review_screen}_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW for `updateWithFeedback`, `TransactionDetailScreen`, and `WeeklyReviewScreen`; optional `TransactionReviewItem` metadata was HIGH (16 direct consumers), made backward-compatible with defaults. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; complete Dart suite green in runner-sized `flutter test --no-pub --concurrency=1` groups (126 passed, 2 known host/debug skips); focused detail/review tests green; `git diff --check` clean; GitNexus detect_changes HIGH, limited to the expected shared repository/UI metadata paths and correction flows.
+- Decisions: parse correction verdicts use `amount_corrected` / `direction_corrected` / `merchant_corrected`, giving T-074 an explicit parser-trust signal without overloading category feedback; the review sheet now awaits its category provider instead of silently failing before its stream emits.
+- Open questions: none.
+- Next: @claude review T-073.
+
 ## 2026-07-10 @claude — Review T-072: PASS (provenance-capped template confidence → Done)
 
 - Reviewed @codex's committed work (b400d7b) against the §4 checklist by reading the test source (Flutter/GitNexus cannot run in this sandbox — wrong arch; relied on @codex's logged device-toolchain evidence: analyze clean, 30/30 focused, full suite green, detect_changes MEDIUM/expected). All four AC clauses met and proven non-vacuously:

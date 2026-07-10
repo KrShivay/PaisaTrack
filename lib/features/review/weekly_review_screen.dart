@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,8 @@ import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../transactions/transactions_providers.dart';
+import '../transactions/transaction_detail_screen.dart'
+    show showParseCorrectionSheet;
 
 class WeeklyReviewScreen extends ConsumerWidget {
   const WeeklyReviewScreen({super.key});
@@ -158,8 +161,9 @@ Future<void> _showCorrectionSheet(
   WidgetRef ref,
   TransactionReviewItem item,
 ) async {
-  final categories = ref.read(categoryListProvider).valueOrNull ?? const [];
-  if (categories.isEmpty) return;
+  final screenContext = context;
+  final categories = await ref.read(categoryListProvider.future);
+  if (!context.mounted || categories.isEmpty) return;
   var selectedId = item.categoryId ?? categories.first.id;
 
   final categoryId = await showModalBottomSheet<String>(
@@ -178,6 +182,58 @@ Future<void> _showCorrectionSheet(
                   'Correct category',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
+                if (item.isLowTrustParse) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Parsed correctly?',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    children: [
+                      FilledButton.tonal(
+                        onPressed: () async {
+                          await _repository(ref).confirmParse(txnId: item.id);
+                          if (screenContext.mounted) {
+                            ScaffoldMessenger.of(screenContext).showSnackBar(
+                              const SnackBar(content: Text('Parse confirmed')),
+                            );
+                          }
+                        },
+                        child: const Text('Confirm parse'),
+                      ),
+                      OutlinedButton(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          final correction = await showParseCorrectionSheet(
+                            screenContext,
+                            amount: item.amount,
+                            direction: item.direction.wireName,
+                            merchantRaw: item.merchantRaw ?? item.displayName,
+                          );
+                          if (correction == null) return;
+                          await _repository(ref).updateWithFeedback(
+                            txnId: item.id,
+                            amount: Value(correction.amount),
+                            direction: Value(correction.direction),
+                            merchantRaw: Value(correction.merchantRaw),
+                            context: 'parse_confirm',
+                            recordParseCorrections: true,
+                          );
+                          if (screenContext.mounted) {
+                            ScaffoldMessenger.of(screenContext).showSnackBar(
+                              const SnackBar(
+                                content: Text('Parse correction saved'),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text('Fix parse'),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   initialValue: selectedId,

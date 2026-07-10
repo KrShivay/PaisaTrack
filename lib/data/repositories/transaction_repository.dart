@@ -68,6 +68,8 @@ class TransactionReviewItem {
     required this.categoryId,
     required this.categoryIcon,
     required this.status,
+    this.merchantRaw,
+    this.isLowTrustParse = false,
   });
 
   final String id;
@@ -79,6 +81,8 @@ class TransactionReviewItem {
   final String? categoryId;
   final String? categoryIcon;
   final String status;
+  final String? merchantRaw;
+  final bool isLowTrustParse;
 }
 
 /// Full detail of a single transaction for the detail screen (T-038):
@@ -90,12 +94,14 @@ class TransactionDetail {
     required this.merchantName,
     required this.categoryName,
     required this.parseConfidence,
+    required this.isLowTrustParse,
   });
 
   final Transaction txn;
   final String? merchantName;
   final String? categoryName;
   final double? parseConfidence;
+  final bool isLowTrustParse;
 }
 
 /// Reads non-deleted, non-suppressed transactions for list and dashboard
@@ -165,6 +171,7 @@ class TransactionRepository {
         merchantName: row.readTableOrNull(_database.merchants)?.canonicalName,
         categoryName: row.readTableOrNull(_database.categories)?.name,
         parseConfidence: _parseConfidenceOf(txn),
+        isLowTrustParse: _isLowTrustParse(txn),
       );
     });
   }
@@ -183,7 +190,11 @@ class TransactionRepository {
     required String txnId,
     Value<String?> categoryId = const Value.absent(),
     Value<String?> description = const Value.absent(),
+    Value<double> amount = const Value.absent(),
+    Value<String> direction = const Value.absent(),
+    Value<String?> merchantRaw = const Value.absent(),
     String context = 'detail_edit',
+    bool recordParseCorrections = false,
     DateTime Function() clock = DateTime.now,
     String Function(String field)? feedbackIdFactory,
   }) {
@@ -193,6 +204,18 @@ class TransactionRepository {
           .getSingle();
       final now = clock().toUtc();
       final confidence = _parseConfidenceOf(row);
+      if (amount.present && amount.value <= 0) {
+        throw ArgumentError.value(amount.value, 'amount', 'must be positive');
+      }
+      if (direction.present &&
+          direction.value != 'debit' &&
+          direction.value != 'credit') {
+        throw ArgumentError.value(
+          direction.value,
+          'direction',
+          'must be debit or credit',
+        );
+      }
       String feedbackId(String field) =>
           feedbackIdFactory?.call(field) ??
           'fb_${txnId}_${field}_${now.microsecondsSinceEpoch}';
@@ -236,6 +259,62 @@ class TransactionRepository {
       if (description.present && description.value != row.description) {
         companion = companion.copyWith(description: description);
       }
+      stageEdit(
+        field: 'amount',
+        edit: amount.present
+            ? Value<String?>(amount.value.toString())
+            : const Value.absent(),
+        oldValue: row.amount.toString(),
+      );
+      if (amount.present && amount.value != row.amount) {
+        companion = companion.copyWith(amount: amount);
+      }
+      stageEdit(
+        field: 'direction',
+        edit: direction,
+        oldValue: row.direction,
+      );
+      if (direction.present && direction.value != row.direction) {
+        companion = companion.copyWith(direction: direction);
+      }
+      stageEdit(
+        field: 'merchant_raw',
+        edit: merchantRaw,
+        oldValue: row.merchantRaw,
+      );
+      if (merchantRaw.present && merchantRaw.value != row.merchantRaw) {
+        companion = companion.copyWith(merchantRaw: merchantRaw);
+      }
+
+      if (recordParseCorrections) {
+        void stageParseVerdict(String field, bool changed) {
+          if (!changed) return;
+          feedbackRows.add(
+            FeedbackCompanion.insert(
+              id: feedbackId('parse_verdict_$field'),
+              txnId: txnId,
+              field: 'parse_verdict',
+              newValue: Value('${field}_corrected'),
+              context: 'parse_confirm',
+              modelConfidenceAtTime: Value(confidence),
+              createdAt: now,
+            ),
+          );
+        }
+
+        stageParseVerdict(
+          'amount',
+          amount.present && amount.value != row.amount,
+        );
+        stageParseVerdict(
+          'direction',
+          direction.present && direction.value != row.direction,
+        );
+        stageParseVerdict(
+          'merchant',
+          merchantRaw.present && merchantRaw.value != row.merchantRaw,
+        );
+      }
 
       if (feedbackRows.isEmpty) return 0;
 
@@ -246,6 +325,35 @@ class TransactionRepository {
         await _database.into(_database.feedback).insert(feedbackRow);
       }
       return feedbackRows.length;
+    });
+  }
+
+  /// Records an explicit parse confirmation without changing transaction data.
+  ///
+  /// This has its own transaction boundary so a low-trust parse verdict is
+  /// durable exactly once and can later feed the template trust ledger.
+  Future<void> confirmParse({
+    required String txnId,
+    DateTime Function() clock = DateTime.now,
+    String Function()? feedbackIdFactory,
+  }) {
+    return _database.transaction(() async {
+      final row = await (_database.select(_database.transactions)
+            ..where((t) => t.id.equals(txnId)))
+          .getSingle();
+      final now = clock().toUtc();
+      await _database.into(_database.feedback).insert(
+            FeedbackCompanion.insert(
+              id: feedbackIdFactory?.call() ??
+                  'fb_${txnId}_parse_verdict_${now.microsecondsSinceEpoch}',
+              txnId: txnId,
+              field: 'parse_verdict',
+              newValue: const Value('ok'),
+              context: 'parse_confirm',
+              modelConfidenceAtTime: Value(_parseConfidenceOf(row)),
+              createdAt: now,
+            ),
+          );
     });
   }
 
@@ -373,6 +481,21 @@ class TransactionRepository {
     }
   }
 
+  /// Low-trust records require a user parse verdict under ADR 0005: generic
+  /// parses, plus public-provenance templates that are capped below auto.
+  bool _isLowTrustParse(Transaction txn) {
+    if (txn.parseSource == 'generic') return true;
+    try {
+      final decoded = jsonDecode(txn.confidenceJson) as Map<String, Object?>;
+      final parser = decoded['parser'] as Map<String, Object?>?;
+      return parser?['provenance'] == 'public';
+    } on FormatException {
+      return false;
+    } on TypeError {
+      return false;
+    }
+  }
+
   /// Persists a manual entry and returns its id.
   ///
   /// Rows land `parse_source='manual'`, `status='confirmed'`, confidence 1.0
@@ -473,6 +596,8 @@ class TransactionRepository {
       categoryId: category?.id,
       categoryIcon: category?.icon,
       status: txn.status,
+      merchantRaw: txn.merchantRaw,
+      isLowTrustParse: _isLowTrustParse(txn),
     );
   }
 }

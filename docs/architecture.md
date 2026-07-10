@@ -103,6 +103,15 @@ confirms (`confirm()`); tap opens a correction sheet that calls
 `correctWithRule(context: 'batch_review')`. An "All caught up" empty state shows
 when the queue is clear.
 
+**Parse confirmation (T-073)** appears only for low-trust parses: generic
+fallback rows or templates marked `public` provenance under ADR 0005. The
+transaction detail and weekly-review correction sheet offer **Confirm** or
+**Fix** for amount, direction, and merchant. Confirm writes one
+`feedback(parse_verdict='ok', context='parse_confirm')` row. Fix updates the
+transaction and records each changed parse field plus a corresponding
+`parse_verdict` correction in the same database transaction. High-trust device
+templates never show this prompt.
+
 ## Verification tooling
 
 `scripts/reconcile_statement.py` reconciles bank-statement XLSX exports against
