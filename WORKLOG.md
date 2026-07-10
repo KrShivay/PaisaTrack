@@ -1,3 +1,11 @@
+## 2026-07-10 @claude — ADR 0005 + Phase 2.5b grooming (parser trust loop, @human proposed)
+
+- @human's synthesis adopted as ADR 0005: fixture provenance tiers (device=gold 0.97 / public=silver capped 0.85, never auto) with promotion by user confirmation — the app asks "parsed correctly?" on low-trust parses, verdicts land as feedback rows, a per-template trust ledger promotes public templates to 0.97 after 20 clean confirms and demotes on any amount/direction correction. Reuses the one-write correction machinery; verdicts double as Phase 3 training data.
+- Groomed Ready (ordered): T-072 provenance-capped template confidence → T-073 parse-confirmation surface + parse_verdict feedback → T-074 trust ledger. Blocked: T-067 regroomed to public-provenance Kotak/Central packs (@claude gathers fixtures — users declined to share dumps, so public sourcing per ADR 0005; needs T-072 first); T-071 donation flow parked pending @human prioritization.
+- T-065 (NEED FIXTURES from users) closed as OBE — superseded by ADR 0005 sourcing strategy.
+- Loop note: committing this dispatches codex onto T-072 (loop is armed).
+- Files: docs/decisions/0005-fixture-provenance-and-parse-trust.md, TASKS.md, WORKLOG.md
+
 ## 2026-07-10 @claude — Review T-069: PASS (rejection-stage label → Done); Phase 2.5 build complete
 
 - Reviewed from the working tree while the dispatch wrapper was still finishing: codex's run completed verification (analyze clean, 3/3 widget, full suite 117/2) AND the wrapper committed it as 14d4681 mid-review — the loop's first fully-autonomous implement→verify→commit cycle. The commit also swept in @claude's staged docs-audit files (git add -A in the wrapper; mixed commit, contents reconciled and correct). Static rejection-path label is correct by cascade construction; test non-vacuous. Review: PASS; T-069 → Done. Follow-up T-070 (per-stage generic rejection reason) filed in Proposed.

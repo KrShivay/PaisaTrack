@@ -3,6 +3,21 @@ Last updated: 2026-07-10 by @claude
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
+<!-- Phase 2.5b — Parser trust loop (ADR 0005: provenance tiers + confirmation-
+     driven promotion; @human approved 2026-07-10). Order matters: T-072 caps
+     public templates BEFORE T-067 ships any. -->
+- [ ] T-072 (@codex) [P2] Provenance-capped template confidence
+      AC: template JSON entries and fixture expected-JSON support optional `"provenance": "public"` (absent = device, back-compat); TemplateRegistry/TemplateMatcher cap parse confidence at 0.85 for public-provenance templates (never >=0.9, so DecisionPolicy can never auto-label them — safety test mirrors T-066's); docs/sms-templates.md documents the tiers per ADR 0005.
+      Model: gpt-5.6-terra medium
+      Depends: T-066
+- [ ] T-073 (@codex) [P2] Parse-confirmation surface + verdict feedback
+      AC: transaction detail (and review sheet) show a compact "Parsed correctly?" confirm/fix affordance for low-trust parses (parse_source generic OR public-provenance template); confirm writes a feedback row (field `parse_verdict`, value `ok`, context `parse_confirm`) in one transaction; "fix" lets the user correct amount/direction/merchant and writes per-field feedback rows + the txn update atomically (extends updateWithFeedback); high-trust parses show nothing (no nag); widget + repository tests.
+      Model: gpt-5.6-terra high
+      Depends: T-072
+- [ ] T-074 (@codex) [P2] Template trust ledger + promotion/demotion
+      AC: per-template counters (confirmed parses, amount/direction corrections) derived from `parse_verdict` feedback rows; a public template with >=20 confirms and 0 amount/direction corrections is promoted to 0.97 (persisted, e.g. model_meta-style table or settings-adjacent store — schema note required); any amount/direction correction demotes to 0.85 and flags the template id in the dev screen; unit tests over promote/demote/flag branches; ADR 0005 rules are the spec.
+      Model: gpt-5.6-terra high
+      Depends: T-073
 <!-- Phase 2.5 — Parser Coverage (field-reported: Kotak + Central Bank users get
      ZERO parsed transactions — SmsFilter allowlists KOTAKB/CENTBK so capture works,
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
@@ -67,13 +82,12 @@ Last updated: 2026-07-10 by @claude
       AC: verifies PLAN §9 Phase 3 exit criteria against T-048..T-063 evidence — after 2 weeks of feedback the classifier auto-labels ≥80% of new transactions with ≤10% correction rate (proven on the T-062 metrics screen); real subscriptions/EMIs all appear in recurring with correct next dates; ≥1 genuine anomaly and ≥1 forecast insight have fired correctly; WORKLOG "PHASE P3 EXIT REVIEW"; blockers listed before Phase 4 grooming.
 
 ## Blocked
-- [ ] T-065 (@human) [P2] NEED FIXTURES: Kotak + Central Bank sanitized real SMS
-      AC: 15+ sanitized transactional SMS per bank from the affected users (debit/credit/UPI variants) via the T-047 adb-dump workflow; no real names/numbers committed.
-      Blocking: T-067; strengthens T-066
-
-- [ ] T-067 (@codex) [P2] Kotak + Central Bank template packs
-      AC: assets/templates/kotak.json + centbk.json with sanitized real fixtures per test/fixtures/sms conventions (fixture-first law, >=5 per shape, <5 occurrences → negative known-gap fixtures); per-bank coverage test includes both banks; docs/sms-templates.md updated.
-      Depends: T-065
+- [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
+      AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
+      Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work
+- [ ] T-071 (@codex) [P2] In-app sanitized SMS donation flow (unparsed screen)
+      AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
+      Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-069 (@codex, review @claude: PASS) [P2] Unparsed dev screen shows rejection stage (2026-07-10)
