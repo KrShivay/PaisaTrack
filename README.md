@@ -30,11 +30,19 @@ all landed. Corrections from either surface flow through one write path
 The ask budget reads the Settings slider; credits only offer income-side
 categories. See [TASKS.md](TASKS.md) for exact state.
 
-**Current focus.** The Phase 2 exit review (T-046) — verifying PLAN §9 exit
-criteria against T-035..T-045 evidence — is the last item before Phase 3
-grooming. T-047 added IndusInd NEFT/ACH-credit templates and reports **99.03%
-statement coverage (407/411 rows)** in the fixture/SMS-dump simulation; final
-device export evidence folds into the T-046 exit pass.
+**Phase 2 exit: PASS (2026-07-10, T-046).** All four PLAN §9 criteria verified
+(daily-usable loop, ≤2 asks/day by construction, correction→rule→auto-label
+traced end-to-end, encrypted export→wipe→import round-trip) plus on-device
+sign-offs. T-047's IndusInd NEFT/ACH-credit templates report **99.03%
+statement coverage (407/411 rows)** in the fixture/SMS-dump simulation.
+
+**Current focus: Phase 2.5 — Parser Coverage.** Field reports showed users on
+untemplated banks (Kotak, Central Bank) got zero parsed transactions. The
+generic fallback parser (T-066, `docs/parser-generic-fallback.md`) now converts
+such SMS into low-confidence, review-routed transactions; bank template packs
+(T-067, fixtures pending) and on-device rejection-stage triage (T-069) follow.
+Development runs on an automated two-agent handoff loop (ADR 0004). Phase 3
+(on-device intelligence) is groomed behind it.
 
 Intelligence is on-device only with free components. No cloud inference path
 exists; see [ADR 0002](docs/decisions/0002-no-cloud-services.md).

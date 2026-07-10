@@ -7,7 +7,7 @@ import 'transaction_export.dart';
 import 'unparsed_sms_providers.dart';
 
 /// Developer diagnostics screen listing raw SMS that never produced a
-/// transaction (unknown template or not yet processed), so parser coverage
+/// transaction, including the parser stages that rejected them, so coverage
 /// gaps are visible without a debugger.
 class UnparsedSmsScreen extends ConsumerWidget {
   const UnparsedSmsScreen({super.key});
@@ -50,7 +50,8 @@ class _ExportTransactionsButton extends ConsumerWidget {
           final path = await ref.read(transactionJsonExportProvider.future);
           messenger.showSnackBar(SnackBar(content: Text('Exported: $path')));
         } catch (error) {
-          messenger.showSnackBar(SnackBar(content: Text('Export failed: $error')));
+          messenger
+              .showSnackBar(SnackBar(content: Text('Export failed: $error')));
         }
       },
     );
@@ -77,8 +78,8 @@ class _UnparsedListView extends StatelessWidget {
           ),
           title: Text(sms.sender),
           subtitle: Text(
-            sms.body,
-            maxLines: 3,
+            '${sms.body}\nTemplate: no match · Generic parser: guard rejected',
+            maxLines: 4,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,

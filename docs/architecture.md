@@ -40,7 +40,9 @@ after permission is granted and the encrypted database is ready.
    rejects OTP/future/failed messages, and emits `src: 'generic'` at <=0.6
    confidence; therefore it can never silently auto-label. Parse success writes
    a transaction; failure leaves the raw SMS `processed=false`, visible on the
-   dev Unparsed screen. No cloud parsing path exists (ADR 0002).
+   dev Unparsed screen, which surfaces the template-miss and generic-guard
+   rejection stages for on-device template-gap triage. No cloud parsing path
+   exists (ADR 0002).
 4. `DuplicateSuppressor` marks cross-source echoes (paired bank+wallet SMS)
    within a 10-minute window; suppressed rows stay stored for audit.
 5. Raw SMS rows are purged after the retention window; transactions persist.

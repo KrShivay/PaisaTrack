@@ -55,3 +55,11 @@ state, never shared truth — TASKS.md remains the single source of truth).
   foreground — blocking the terminal and delaying commands queued behind the
   commit (observed blocking `handoff.sh resume`). Manual re-run remains
   available via `codex exec --sandbox read-only review --commit <sha>`.
+- Amendment 2026-07-10 (operational hardening, details in COLLABORATION §7):
+  (a) control CLI `scripts/handoff.sh {on|off|status|kick|resume}`; (b)
+  failure latch — a dispatched run exiting non-zero auto-pauses the loop
+  until a human runs `handoff.sh on`; (c) commit delegation — the codex
+  sandbox keeps `.git` read-only, so codex writes `.handoff/commit-msg` and
+  the unsandboxed wrapper commits on its behalf; (d) per-task model
+  selection via an optional `Model: <name> [effort]` line in the task block,
+  set at grooming and passed to `codex exec -m` / `model_reasoning_effort`.

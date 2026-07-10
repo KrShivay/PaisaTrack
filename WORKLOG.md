@@ -1,3 +1,18 @@
+## 2026-07-10 @codex — T-069
+
+- Did: updated the dev Unparsed SMS rows to state the complete rejection path: `Template: no match` followed by `Generic parser: guard rejected`.
+- Files: lib/features/dev/unparsed_sms_screen.dart, test/features/dev/unparsed_sms_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: `flutter analyze --no-pub` clean; targeted widget test 3/3; full `flutter test --no-pub --concurrency=1` green (117 passed, 2 known skips); `git diff --check` clean; GitNexus pre-edit impact LOW for UnparsedSmsScreen (4 direct callers, 0 processes) and detect_changes LOW (0 affected processes).
+- Decisions: stage labels are shown only in the debug diagnostics surface; they describe the fixed ParserCascade order and do not change capture, parsing, or persisted SMS data.
+- Open questions: none.
+- Next: @claude review T-069.
+
+## 2026-07-10 @claude — docs/board consistency audit (@human request)
+
+- Audited docs against code and board state. Fixed: (1) Done section held 23 entries — archived T-029/T-016/T-027 to docs/tasks-archive.md, back to the 20 cap; (2) README "Current Status" still ended at "Phase 2 build complete / T-046 pending" — now records Phase 2 exit PASS and the Phase 2.5 parser-coverage focus; (3) Phase 3 board gate comment referenced the already-closed T-046 — now gated on Phase 2.5; (4) docs/architecture.md described the T-069 rejection-stage triage as shipped — reworded as Planned (T-069), docs must not claim unshipped features; (5) ADR 0004 was missing amendments for the control CLI, failure latch, commit delegation, and per-task model selection — added; (6) missing blank line after the In Progress header.
+- Verified consistent: generic-parser spec vs implementation (0.5/0.6 confidences, guard, cascade order), board sections well-formed (In Progress/In Review empty, Ready = T-069 then Phase 3, Blocked = T-065+T-067), .gitignore covers .handoff/, handoff.sh usage matches subcommands, COLLABORATION §7 matches dispatcher behavior. Dart analysis/tests not re-run (sandbox; unchanged code).
+- Files: TASKS.md, docs/tasks-archive.md, docs/architecture.md, docs/decisions/0004-automated-agent-handoff.md, README.md, WORKLOG.md
+
 ## 2026-07-10 @claude — per-task model selection for dispatched codex runs
 
 - TASKS.md task blocks may now carry `Model: <model-name> [low|medium|high]`; agent_handoff.sh extracts it from the In Progress (crash resume) or first Ready (@codex) task and passes `-m` + `model_reasoning_effort` to codex exec. No line -> CLI defaults. Set by @claude at grooming: trivial tasks get cheaper/lower-effort runs, design-heavy tasks get stronger ones.

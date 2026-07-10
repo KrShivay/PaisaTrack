@@ -47,7 +47,13 @@ void main() {
 
     expect(find.text('AX-UNKNOWN'), findsOneWidget);
     expect(
-      find.text('Some unrecognized bank message format'),
+      find.textContaining('Some unrecognized bank message format'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Template: no match · Generic parser: guard rejected',
+      ),
       findsOneWidget,
     );
   });
