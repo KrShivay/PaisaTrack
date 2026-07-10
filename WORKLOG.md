@@ -1,3 +1,10 @@
+## 2026-07-10 @claude — T-066 FIELD VALIDATION (genuine device export) + T-078 filed
+
+- @human supplied a genuine on-device transactions_export.json (BankStatement/, gitignored): 145 rows, 3-month backfill window (Apr 12→Jul 10). An entirely untemplated bank account (xx8613) produced 120 UPI transactions ALL parsed by the T-066 generic fallback — merchant_raw 120/120, counterparty_vpa 116/120, account_hint 120/120, directions 105 debit / 15 credit, amounts ₹0.5..₹30,000. Template side: 25 Axis card rows (xx3446/xx5916) — cascade coexistence confirmed. Statuses 140 needs_review / 3 auto / 2 confirmed: zero generic auto-labels, the <=0.6 safety property holding in production. This is the strongest possible evidence for the ADR 0005 strategy: capture works today; templates + trust loop add precision.
+- Gaps exposed: (1) balance_after null on all 120 generic rows — that bank's balance wording likely defeats the generic balance regex; check against real shapes during T-067 fixture gathering; (2) 140-item review queue is a one-by-one UX wall — filed T-078 (bulk confirm + merchant grouping in weekly review), slotted after T-077.
+- T-073 (parse-confirmation surface) gains urgency: with 120 generic parses on a real device, the confirm/fix verdicts are the promotion fuel ADR 0005 needs.
+- Files: TASKS.md, WORKLOG.md (export itself stays gitignored in BankStatement/).
+
 ## 2026-07-10 @claude — T-077 filed: exports invisible on device (@human field report)
 
 - Both export surfaces write to getApplicationDocumentsDirectory() (app-private, invisible to file managers). Groomed T-077: route backup + debug JSON export through ACTION_CREATE_DOCUMENT (user picks Downloads; no permissions; minSdk-26-safe) with matching ACTION_OPEN_DOCUMENT import, plaintext warning on the debug export, cancel-safe. Slotted ahead of T-075 in Ready.
