@@ -1,3 +1,10 @@
+## 2026-07-10 @claude — per-task model selection for dispatched codex runs
+
+- TASKS.md task blocks may now carry `Model: <model-name> [low|medium|high]`; agent_handoff.sh extracts it from the In Progress (crash resume) or first Ready (@codex) task and passes `-m` + `model_reasoning_effort` to codex exec. No line -> CLI defaults. Set by @claude at grooming: trivial tasks get cheaper/lower-effort runs, design-heavy tasks get stronger ones.
+- Tagged T-069 `Model: gpt-5.6-terra medium` as the first use (UI + cascade-triage plumbing; default effort is low). COLLABORATION §7 documents the convention.
+- Hardening found during testing: (1) awk rule-order bug let an untagged first task inherit the second task's Model line — boundary check now precedes the matcher, verified on a synthetic board; (2) T-067 (Depends: T-065 fixtures) sat above T-069 in Ready, which would have dispatched codex onto an undoable task — moved T-067 to Blocked (grooming rule: dependency-blocked tasks live in Blocked, not Ready); (3) codex prompt now takes the topmost Ready task with SATISFIED Depends, skipping unmet ones.
+- Files: scripts/agent_handoff.sh, scripts/prompts/codex_session.md, TASKS.md, COLLABORATION.md, WORKLOG.md
+
 ## 2026-07-10 @claude — Review T-068: PASS (dead SmsFilter removed → Done)
 
 - Deletion verified independently: com.paisatrack.sms package has zero remaining references (MethodChannel 'com.paisatrack/sms_*' strings are unrelated). @codex evidence: impact LOW, analyze clean, Dart suite 117/2 green, diff check clean. Gradle JVM suite was sandbox-blocked (terminated during Android configuration) and run by @human: BUILD SUCCESSFUL.

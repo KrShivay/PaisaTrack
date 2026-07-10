@@ -4,8 +4,9 @@ to you. Follow COLLABORATION.md exactly.
 
 1. Read TASKS.md fully, the last 3 WORKLOG.md entries, and any new ADRs.
 2. RE-VERIFY the board yourself: you act only if "## In Review" is empty, and
-   EITHER (a) you have no task In Progress and the top unchecked (@codex) task
-   in "## Ready" has all its Depends satisfied (referenced tasks are Done), OR
+   EITHER (a) you have no task In Progress and an unchecked (@codex) task in
+   "## Ready" has all its Depends satisfied (take the TOPMOST such task,
+   skipping over any whose Depends are unmet), OR
    (b) CRASH RESUME: a (@codex) task is already In Progress — since you were
    just dispatched, the previous run died (sleep/shutdown/usage limit).
    Resume it: run `git status`, reconcile any uncommitted working-tree changes

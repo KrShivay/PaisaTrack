@@ -99,18 +99,47 @@ latched() { # latched <target>
   return 1
 }
 
+# Per-task model selection: a task block may carry an optional line
+#   Model: <model-name> [low|medium|high]
+# set by @claude at grooming time (trivial tasks -> cheaper model / lower
+# effort; design-heavy tasks -> stronger). Looks at the In Progress (@codex)
+# task first (crash resume), then the first Ready (@codex) task. Empty -> CLI
+# defaults.
+codex_model_line() {
+  awk '
+    /^## (In Progress|Ready)/ { sec=1; next }
+    /^## / { sec=0 }
+    !sec { next }
+    /^- \[/ && intask { exit }     # first (@codex) task ended without a Model line
+    /^- \[ \] .*\(@codex\)/ { intask=1; next }
+    intask && /^ +Model: / { sub(/^ +Model: /,""); print; exit }
+  ' TASKS.md
+}
+
 dispatch_codex() {
   command -v codex >/dev/null 2>&1 || { log "codex not on PATH; skipped"; return; }
   latched codex && return
+  model_line="$(codex_model_line)"
+  model_args=""
+  if [ -n "$model_line" ]; then
+    model="$(echo "$model_line" | awk '{print $1}')"
+    effort="$(echo "$model_line" | awk '{print $2}')"
+    model_args="-m $model"
+    case "$effort" in
+      low|medium|high) model_args="$model_args -c model_reasoning_effort=$effort" ;;
+    esac
+    log "task model override: $model_line"
+  fi
   log "dispatching codex (log: .handoff/logs/codex-$stamp.log)"
   # network_access: the Flutter test runner binds 127.0.0.1, which the default
   # codex workspace-write sandbox forbids (T-066 run was blocked by this).
   # The codex sandbox keeps .git read-only, so dispatched runs cannot commit.
   # Protocol: codex writes its commit message to .handoff/commit-msg and this
   # wrapper (unsandboxed) commits on its behalf after a clean exit.
-  nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 sh -c '
+  nohup env PAISATRACK_HANDOFF=1 CODEX_SKIP_COMMIT_REVIEW=1 MODEL_ARGS="$model_args" sh -c '
     rm -f .handoff/commit-msg
-    codex exec --full-auto \
+    # shellcheck disable=SC2086 — MODEL_ARGS is deliberately word-split
+    codex exec --full-auto $MODEL_ARGS \
       -c sandbox_workspace_write.network_access=true \
       "$(cat scripts/prompts/codex_session.md)"
     ec=$?

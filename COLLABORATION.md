@@ -121,6 +121,11 @@ Operational notes:
   loop AND kills any running agent; `on` clears pause/latch/stale state and
   re-evaluates the board; `status` shows armed/latched, live pids, board
   counts, latest log; `kick` forces one evaluation.
+- PER-TASK MODEL: a task block may carry `Model: <model-name> [low|medium|high]`
+  (set by @claude at grooming, based on task complexity/cost). The dispatcher
+  passes it to `codex exec` via `-m` / `model_reasoning_effort`; tasks without
+  the line use the CLI defaults. In Progress (@codex) is checked before Ready,
+  so crash resumes keep their model.
 - COMMIT DELEGATION: the codex sandbox keeps `.git` read-only, so dispatched
   codex runs never commit directly — they write the message to
   `.handoff/commit-msg` and the (unsandboxed) dispatch wrapper commits after a

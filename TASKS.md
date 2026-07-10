@@ -8,11 +8,9 @@ Last updated: 2026-07-10 by @claude
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
-- [ ] T-067 (@codex) [P2] Kotak + Central Bank template packs
-      AC: assets/templates/kotak.json + centbk.json with sanitized real fixtures per test/fixtures/sms conventions (fixture-first law, >=5 per shape, <5 occurrences → negative known-gap fixtures); per-bank coverage test includes both banks; docs/sms-templates.md updated.
-      Depends: T-065
 - [ ] T-069 (@codex) [P2] Unparsed dev screen shows rejection stage
       AC: each unparsed row surfaces which stage rejected it (template miss vs generic-parser guard) so new-bank gaps are triageable from the device without adb; widget test.
+      Model: gpt-5.6-terra medium
       Depends: T-066
 
 
@@ -79,6 +77,9 @@ Last updated: 2026-07-10 by @claude
       AC: 15+ sanitized transactional SMS per bank from the affected users (debit/credit/UPI variants) via the T-047 adb-dump workflow; no real names/numbers committed.
       Blocking: T-067; strengthens T-066
 
+- [ ] T-067 (@codex) [P2] Kotak + Central Bank template packs
+      AC: assets/templates/kotak.json + centbk.json with sanitized real fixtures per test/fixtures/sms conventions (fixture-first law, >=5 per shape, <5 occurrences → negative known-gap fixtures); per-bank coverage test includes both banks; docs/sms-templates.md updated.
+      Depends: T-065
 ## In Review
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-068 (@codex, review @claude: PASS) [P2] Delete dead com.paisatrack.sms.SmsFilter (2026-07-10)
