@@ -32,9 +32,6 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
 - [ ] T-054 (@codex) [P3] Decision policy v2 (adaptive thresholds)
       AC: per-category silent thresholds persisted in `model_meta`; PLAN §7.5 adaptation — corrections/auto-labels >15% over trailing 50 in a category → raise threshold +0.03 (cap 0.98); each clean 50 → lower 0.01; policy reads per-category threshold instead of the static constant; back-compat default when no history; branch tests for raise/lower/cap/floor.
       Depends: T-052, T-040
-- [ ] T-055 (@codex) [P3] Recurring detector (nightly batch)
-      AC: PLAN §7.6 — group by merchant_id, sub-cluster by amount (±5%), inter-arrival gaps → periodicity when median gap ∈ known bands and CoV <0.25 with ≥3 occurrences; upsert `recurring_series` with `next_expected_date = last_ts + median_gap`; `rising` when last 3 amounts monotonically increase, `missed` when today > next_expected + 20% grace; fixture tests over synthetic subscription/EMI/income streams.
-      Depends: T-048
 - [ ] T-056 (@codex) [P3] Recurring screen
       AC: lists subscriptions/EMIs/bills/income from `recurring_series` with upcoming renewals, price-creep (`rising`) and missed-payment (`missed`) badges; empty state per design-system §5; tap → underlying transactions; widget tests.
       Depends: T-055
@@ -86,6 +83,10 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-055 (@codex → review @claude) [P3] Recurring detector (nightly batch)
+      AC: PLAN §7.6 — group by merchant_id, sub-cluster by amount (±5%), inter-arrival gaps → periodicity when median gap ∈ known bands and CoV <0.25 with ≥3 occurrences; upsert `recurring_series` with `next_expected_date = last_ts + median_gap`; `rising` when last 3 amounts monotonically increase, `missed` when today > next_expected + 20% grace; fixture tests over synthetic subscription/EMI/income streams.
+      Depends: T-048
+      Evidence: new-module implementation (no existing symbol edits); `flutter analyze --no-pub` clean; focused synthetic subscription/EMI/income/noise tests 4/4; full suite 145 passed / 2 existing skips; `git diff --check` clean. Final detect_changes LOW/0 affected processes (GitNexus does not map untracked new files; complete new source/tests reviewed directly).
 - [ ] T-049 (@codex → review @claude) [P3] Confidence trail per transaction
       AC: `confidence_json` records a per-enricher trail `{merchant:{v,c,src}, category:{c,src,rule_id?}, ...}` per PLAN §6.1/§7.2 (extends today's parser+category shape without breaking readers); written in the single ingest DB transaction; `TransactionDetail` exposes the trail for the metrics/dev surfaces (T-062); back-compat test over legacy rows with only `parser`.
       Depends: T-036

@@ -1,3 +1,12 @@
+## 2026-07-11 @codex — T-055
+
+- Did: added an idempotent atomic recurring-series scanner that groups resolved-merchant transactions by direction, sub-clusters amounts within 5%, checks known median-gap bands with CoV <0.25 and >=3 occurrences, then upserts next date, trend, missed state, and subscription/EMI/bill/income kind.
+- Files: lib/intelligence/recurring_detector.dart, test/intelligence/recurring_detector_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: new-module work required no existing-symbol impact edit. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused synthetic tests 4/4; full suite 145 passed / 2 existing skips; `git diff --check` clean. Final `detect_changes(all)` LOW with no affected processes; GitNexus does not map the untracked new files, so their complete source and fixtures were reviewed directly.
+- Decisions: known bands are weekly 6–8d, monthly 26–35d, quarterly 80–100d, yearly 350–380d; population gap CoV is used. Stable series ids anchor to the earliest transaction. Credits are income; explicit label keywords classify EMI/bill, with other debits treated as subscriptions.
+- Open questions: none.
+- Next: @claude review T-055; @codex continues independent T-057.
+
 ## 2026-07-11 @codex — T-050 BLOCKED (embedding artifact not pinned)
 
 - Checked: T-050 AC, PLAN §2/§7.3, ADR 0002, assets, and dependencies. No embedding model, source/checksum, tokenizer/tensor contract, vector dimension, runtime version, or license record is specified.

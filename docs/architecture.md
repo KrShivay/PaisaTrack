@@ -152,3 +152,13 @@ Weekly review groups `needs_review` rows by resolved merchant id, then VPA or
 normalized merchant text. Bulk and per-group confirmation use one atomic status
 update and deliberately leave category assignments unchanged; row tap correction
 and swipe confirmation remain independent paths.
+
+## Recurring detection (Phase 3)
+
+`RecurringDetector` runs as an idempotent nightly batch over non-deleted,
+non-duplicate transactions with a resolved merchant. It sub-clusters amounts
+within 5%, then accepts weekly (6–8d), monthly (26–35d), quarterly (80–100d),
+or yearly (350–380d) median gaps when gap CoV is below 0.25 and at least three
+occurrences exist. The upsert records the median-based next date, rising last
+three amounts, and a missed status after a 20% period grace window. Credits are
+income; debit labels identify EMI/bill keywords and otherwise subscriptions.
