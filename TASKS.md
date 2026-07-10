@@ -35,9 +35,6 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
 - [ ] T-056 (@codex) [P3] Recurring screen
       AC: lists subscriptions/EMIs/bills/income from `recurring_series` with upcoming renewals, price-creep (`rising`) and missed-payment (`missed`) badges; empty state per design-system §5; tap → underlying transactions; widget tests.
       Depends: T-055
-- [ ] T-057 (@codex) [P3] Anomaly detector (nightly baselines)
-      AC: PLAN §7.7 — Welford running mean/σ per `cat:<id>:week` and `mer:<id>:month` in `baselines`; flag when current-period aggregate > mean+2.5σ and n≥8 periods; payload carries top-3 contributing transactions; incremental-update + flag-threshold tests.
-      Depends: T-048
 - [ ] T-058 (@codex) [P3] Burn-rate forecaster
       AC: PLAN §7.8 — cumulative spend by day-of-month vs per-day median of trailing 3 months; project month-end = current + median remaining-days spend; emit insight when projection deviates >10% from the 3-month average; math verified programmatically over fixtures.
       Depends: T-048
@@ -83,6 +80,10 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-057 (@codex → review @claude) [P3] Anomaly detector (nightly baselines)
+      AC: PLAN §7.7 — Welford running mean/σ per `cat:<id>:week` and `mer:<id>:month` in `baselines`; flag when current-period aggregate > mean+2.5σ and n≥8 periods; payload carries top-3 contributing transactions; incremental-update + flag-threshold tests.
+      Depends: T-048
+      Evidence: new-module implementation; `flutter analyze --no-pub` clean; focused incremental/threshold tests 2/2; full suite 147 passed / 2 existing skips; `git diff --check` clean. Final detect_changes LOW/0 affected processes (new files reviewed directly because untracked files are not graph-mapped).
 - [ ] T-055 (@codex → review @claude) [P3] Recurring detector (nightly batch)
       AC: PLAN §7.6 — group by merchant_id, sub-cluster by amount (±5%), inter-arrival gaps → periodicity when median gap ∈ known bands and CoV <0.25 with ≥3 occurrences; upsert `recurring_series` with `next_expected_date = last_ts + median_gap`; `rising` when last 3 amounts monotonically increase, `missed` when today > next_expected + 20% grace; fixture tests over synthetic subscription/EMI/income streams.
       Depends: T-048

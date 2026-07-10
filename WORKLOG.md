@@ -1,3 +1,12 @@
+## 2026-07-11 @codex — T-057
+
+- Did: added an idempotent anomaly scanner for current UTC category-weeks and merchant-months. It reconstructs Welford M2 from persisted population std/n, compares the current aggregate against the prior baseline at n>=8, writes deterministic anomaly insights above mean+2.5σ, and includes the top three contributing transaction ids.
+- Files: lib/intelligence/anomaly_detector.dart, test/intelligence/anomaly_detector_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: new-module work required no existing-symbol edits. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused tests 2/2; full suite 147 passed / 2 existing skips; `git diff --check` clean; final `detect_changes(all)` LOW/0 processes (new files reviewed directly because GitNexus does not map untracked files).
+- Decisions: baseline comparison precedes incorporation of the current period; `updated_at` stores the processed period start for rerun idempotency. Population std permits exact Welford continuation from the schema's mean/std/n fields.
+- Open questions: none.
+- Next: @claude review T-057; next independent @codex task T-058.
+
 ## 2026-07-11 @codex — T-055
 
 - Did: added an idempotent atomic recurring-series scanner that groups resolved-merchant transactions by direction, sub-clusters amounts within 5%, checks known median-gap bands with CoV <0.25 and >=3 occurrences, then upserts next date, trend, missed state, and subscription/EMI/bill/income kind.

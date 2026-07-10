@@ -162,3 +162,9 @@ or yearly (350–380d) median gaps when gap CoV is below 0.25 and at least three
 occurrences exist. The upsert records the median-based next date, rising last
 three amounts, and a missed status after a 20% period grace window. Credits are
 income; debit labels identify EMI/bill keywords and otherwise subscriptions.
+
+`AnomalyDetector` maintains population mean/standard deviation baselines with
+Welford updates for category-week and merchant-month aggregates. It checkpoints
+each period via `updated_at`, compares against the prior baseline only after
+eight periods, and writes deterministic anomaly insights above 2.5σ with the
+top three contributing transaction ids.
