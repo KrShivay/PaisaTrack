@@ -12,10 +12,6 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
      fallback parser + new template packs. Outranks Phase 3 in the queue; build tasks
      start once T-046 closes. Spec: docs/parser-generic-fallback.md -->
-- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
-      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
-      Model: gpt-5.6-terra high
-      Depends: T-074 (queue order only — no code dependency; Phase-3-parallel safe: new module, no file overlap)
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074; T-048 landed Done, pulled forward as a T-074 dependency)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -80,6 +76,11 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       Depends: T-075, T-064 (Phase 3 exit)
 
 ## Blocked
+- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
+      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
+      Model: gpt-5.6-terra high
+      Depends: T-074 (queue order only — no code dependency; Phase-3-parallel safe: new module, no file overlap)
+      Blocking: @human/@claude must pin one actually downloadable MediaPipe-compatible model artifact (URL, exact SHA-256, model format/runtime version, and license/redistribution record). A family name such as “Gemma-2B-class” is insufficient for a real resumable, integrity-checked download and runtime integration; placeholders would not meet AC.
 - [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
       AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
       Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work

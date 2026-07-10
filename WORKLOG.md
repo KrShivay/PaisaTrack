@@ -1,3 +1,9 @@
+## 2026-07-11 @codex — T-075 BLOCKED (missing pinned model artifact)
+
+- Checked: `AppConstants`, dependencies, PLAN §2/Phase 4, ADR 0002/0006, and the T-075 AC. The repo specifies only a Gemma-2B-class family, not an artifact that can be downloaded and verified.
+- Blocker: need a pinned MediaPipe-compatible artifact URL, exact SHA-256, model format/runtime version, and license/redistribution record. Without those inputs, a download manager could only ship fake placeholders and cannot satisfy integrity/runtime AC.
+- Board: moved T-075 Ready → Blocked; continuing with dependency-satisfied T-049 per @human instruction not to wait for Claude.
+
 ## 2026-07-11 @codex — T-078
 
 - Did: grouped weekly-review rows by resolved merchant, VPA, or normalized merchant text; added row selection, select-all-visible, atomic bulk confirmation, and one-tap group confirmation. Bulk writes update only `status`/`updated_at`; row tap correction, swipe confirmation, and the empty state remain intact.
