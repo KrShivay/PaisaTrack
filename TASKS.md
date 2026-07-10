@@ -1,11 +1,15 @@
 # Task Board
-Last updated: 2026-07-10 by @codex
+Last updated: 2026-07-10 by @claude
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
 <!-- Phase 2.5b — Parser trust loop (ADR 0005: provenance tiers + confirmation-
      driven promotion; @human approved 2026-07-10). Order matters: T-072 caps
-     public templates BEFORE T-067 ships any. -->
+     public templates BEFORE T-067 ships any; T-048 pulled forward BEFORE
+     T-074 since T-074's ledger persistence needs model_meta (schema v3). -->
+- [ ] T-048 (@codex) [P3] Schema v3 migration (analytics tables)
+      AC: adds `recurring_series`, `baselines`, `model_meta`, `insights` tables per PLAN §6.1 (drift table classes + registration); `merchants.embedding` BLOB already exists (v2) — confirm nullable + unused-until-T-050; bump `schemaVersion` 2→3 with an additive `onUpgrade` step (no data loss for existing rows) and a v2→v3 migration test; `docs/schema.md` updated. Indexes per §6.1 where specified (insights by period, recurring_series by merchant_id/next_expected_date).
+      Depends: T-036
 - [ ] T-074 (@codex) [P2] Template trust ledger + promotion/demotion
       AC: per-template counters (confirmed parses, amount/direction corrections) derived from `parse_verdict` feedback rows; a public template with >=20 confirms and 0 amount/direction corrections is promoted to 0.97; any amount/direction correction demotes to 0.85 and flags the template id in the dev screen; PERSISTENCE: reuse `model_meta` from schema v3 — T-048 is pulled forward as a dependency rather than inventing a second store; unit tests over promote/demote/flag branches; ADR 0005 rules are the spec.
       Model: gpt-5.6-terra high
@@ -29,15 +33,13 @@ Last updated: 2026-07-10 by @codex
       AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
       Model: gpt-5.6-terra high
       Depends: T-074 (queue order only — no code dependency; Phase-3-parallel safe: new module, no file overlap)
-## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074; note T-048 is pulled forward as a T-074 dependency)
+## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074; T-048 moved to Ready, pulled forward as a T-074 dependency)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
-     Dependency-ordered; schema v3 (T-048) unblocks the analytics chain, embedder
-     (T-050) unblocks resolver/classifier. Owners provisional (@codex build /
-     @claude review) per COLLABORATION.md; the exit review (T-064) is @claude. -->
-- [ ] T-048 (@codex) [P3] Schema v3 migration (analytics tables)
-      AC: adds `recurring_series`, `baselines`, `model_meta`, `insights` tables per PLAN §6.1 (drift table classes + registration); `merchants.embedding` BLOB already exists (v2) — confirm nullable + unused-until-T-050; bump `schemaVersion` 2→3 with an additive `onUpgrade` step (no data loss for existing rows) and a v2→v3 migration test; `docs/schema.md` updated. Indexes per §6.1 where specified (insights by period, recurring_series by merchant_id/next_expected_date).
-      Depends: T-036
+     Dependency-ordered; schema v3 (T-048, now in Ready) unblocks the analytics
+     chain, embedder (T-050) unblocks resolver/classifier. Owners provisional
+     (@codex build / @claude review) per COLLABORATION.md; the exit review
+     (T-064) is @claude. -->
 - [ ] T-049 (@codex) [P3] Confidence trail per transaction
       AC: `confidence_json` records a per-enricher trail `{merchant:{v,c,src}, category:{c,src,rule_id?}, ...}` per PLAN §6.1/§7.2 (extends today's parser+category shape without breaking readers); written in the single ingest DB transaction; `TransactionDetail` exposes the trail for the metrics/dev surfaces (T-062); back-compat test over legacy rows with only `parser`. 
       Depends: T-036
@@ -102,12 +104,13 @@ Last updated: 2026-07-10 by @codex
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
-- [ ] T-073 (@codex → review @claude) [P2] Parse-confirmation surface + verdict feedback
+## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-073 (@codex, review @claude: PASS) [P2] Parse-confirmation surface + verdict feedback (2026-07-10)
       AC: transaction detail (and review sheet) show a compact "Parsed correctly?" confirm/fix affordance for low-trust parses (parse_source generic OR public-provenance template); confirm writes a feedback row (field `parse_verdict`, value `ok`, context `parse_confirm`) in one transaction; "fix" lets the user correct amount/direction/merchant and writes per-field feedback rows + the txn update atomically (extends updateWithFeedback); high-trust parses show nothing (no nag); widget + repository tests.
       Model: gpt-5.6-terra high
       Depends: T-072
       Evidence: GitNexus pre-edit impact LOW for `updateWithFeedback`, `TransactionDetailScreen`, and `WeeklyReviewScreen`; optional `TransactionReviewItem` metadata was HIGH (16 direct consumers), retained source compatibility with defaults. `flutter analyze --no-pub` clean; full Dart suite green in runner-sized `flutter test --no-pub --concurrency=1` groups (126 passed, 2 known skips); `git diff --check` clean; GitNexus detect_changes HIGH because it includes the expected shared repository/UI metadata paths and existing correction flows — reviewed, with no unrelated files.
-## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+      Review 2026-07-10 @claude: PASS — all AC clauses verified against non-vacuous tests read at commit 4db887c. (1) `_isLowTrustParse` gates on `parse_source == 'generic'` OR `confidence_json.parser.provenance == 'public'`, tested for both cases plus a `findsNothing` assertion proving the high-trust default fixture shows no prompt. (2) `confirmParse` writes exactly one `feedback(field='parse_verdict', newValue='ok', context='parse_confirm')` row in its own transaction; repository test asserts id/field/value/context/confidence/timestamp. (3) `updateWithFeedback(recordParseCorrections: true)` atomically updates amount/direction/merchantRaw and, for each changed field, adds both the existing per-field feedback row (context `parse_confirm`) and a `parse_verdict` correction row (`{field}_corrected`) — test asserts 6 total rows (3 field edits + 3 verdicts) and the txn update, in a single `_database.transaction`. (4) Widget tests cover both surfaces: weekly-review correction sheet shows Confirm/Fix for a low-trust item; detail screen shows the card only when `isLowTrustParse`. docs/architecture.md documents the flow. Re-ran GitNexus `detect_changes(compare, main~1)`: HIGH risk but confined to the expected repository/UI/review symbols (`TransactionRepository`, `TransactionReviewItem`, `TransactionDetail`, `WeeklyReviewScreen`, `_TransactionDetailScreenState`) — no surprise scope. Flutter toolchain not re-runnable in this sandbox (permission-gated); relied on reading test source directly plus @codex's logged device-toolchain evidence, consistent with prior review sessions. Frozen §6.2 contract untouched — no changes to `NormalizedTransactionRecord`. WORKLOG entry complete.
 - [x] T-072 (@codex, review @claude: PASS) [P2] Provenance-capped template confidence (2026-07-10)
       AC: template JSON entries and fixture expected-JSON support optional `"provenance": "public"` (absent = device, back-compat); TemplateRegistry/TemplateMatcher cap parse confidence at 0.85 for public-provenance templates (never >=0.9, so DecisionPolicy can never auto-label them — safety test mirrors T-066's); template matches now record `template_id` (+ provenance) in `confidence_json.parser` so T-074 can attribute parse verdicts per template (extends the existing {c,src} shape, back-compat readers tested); docs/sms-templates.md documents the tiers per ADR 0005.
       Model: gpt-5.6-terra medium
@@ -193,8 +196,6 @@ Last updated: 2026-07-10 by @codex
       AC met — **Phase 1 exit criterion PASSES: 94.4% coverage (388/411 statement rows) in the backfill window 2026-04-06..2026-07-06, criterion >=90%.** Human supplied 3 IndusInd statement XLSX exports (BankStatement/, gitignored) and the on-device parsed-transaction JSON export (400 records via the T-034 debug export button). `scripts/reconcile_statement.py` matched 389/400 device transactions to statement rows (381 by exact UPI/ACH ref, 7 amount+date, 1 unique-amount) with ZERO amount/direction contradictions — no misparses found. The 11 unmatched device transactions have no candidates anywhere in this account's statement (consistent with VPA-template messages belonging to a different linked IndusInd account). All 23 uncovered statement rows are Transfer Credits (NEFT salary, ACH dividends, quarterly interest, MF redemptions, IMPS P2A) — a template-coverage gap for credit shapes, filed as T-047. 4 suppressed duplicates exported and verified as true cross-source echoes. Row-level report: BankStatement/coverage_report.md (uncommitted, contains bank data). See WORKLOG "PHASE P1 EXIT: PASS".
 - [x] T-033 (@claude) [P1] Fix post-commit Codex review hook CLI arguments (2026-07-07)
       AC met: `.githooks/post-commit` invoked the interactive `codex review` TUI subcommand with a positional custom prompt alongside `--commit`, which the CLI rejects (the "argument issue" reported on every commit). Now uses the headless runner form the Codex maintainers document for automation: `codex exec --sandbox read-only review --commit "$sha" --title "$title"` — the commit preset takes `--commit`/`--title` only, no positional prompt; read-only sandbox since review never writes. Skip guard (`CODEX_SKIP_COMMIT_REVIEW=1`), absent-codex guard, and never-block-the-commit exit behavior unchanged. Verified: `sh -n` clean. Live run not possible in this environment (no codex CLI on PATH) — confirm output on the next local commit.
-- [x] T-032 (@codex) [P5] Compress brand illustration PNGs (2026-07-07)
-AC met: `assets/icons/*.png` resized from 1254x1254 to 384x384 PNGs, staying above the 120dp documented max display size while meeting the <=512px requirement. Exact asset sizes are now 126,271-152,466 bytes each (<=150 KiB each), 1,365,425 bytes total, down from 13,632,217 bytes total. Packaged icon entries dropped by 12,266,792 bytes; clean rebuilt `app-debug.apk` is 167,595,102 bytes, and `unzip -lv build/app/outputs/flutter-apk/app-debug.apk 'assets/flutter_assets/assets/icons/*'` confirms the packaged icon entries now total 1,365,425 stored bytes.
 ## Proposed
 - [ ] T-070 (@codex) [P2] Unparsed screen: per-stage generic rejection reason
       AC: GenericTransactionParser exposes a `RejectionReason` (hard-reject term / no direction / no amount / no context signal) and the unparsed dev screen recomputes and shows it per row at display time (no schema change); widget + unit tests. Makes new-bank triage actionable beyond the static T-069 label.
