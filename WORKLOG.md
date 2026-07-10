@@ -1,3 +1,15 @@
+## 2026-07-10 @claude — Review T-072: PASS (provenance-capped template confidence → Done)
+
+- Reviewed @codex's committed work (b400d7b) against the §4 checklist by reading the test source (Flutter/GitNexus cannot run in this sandbox — wrong arch; relied on @codex's logged device-toolchain evidence: analyze clean, 30/30 focused, full suite green, detect_changes MEDIUM/expected). All four AC clauses met and proven non-vacuously:
+  1. Provenance parsing — `TemplateProvenance.fromJson`/`FixtureProvenance.fromJson` map null→device, "public"→public, unknown→FormatException; legacy-defaults-to-device tested on both template registry and fixture runner.
+  2. 0.85 cap — TemplateMatcher overrides public records via `withParseConfidence(0.85)`; safety test mirrors T-066 (asserts 0.85 AND DecisionPolicy `isNot auto`); structural guarantee since 0.85 < 0.9 silent threshold.
+  3. confidence_json.parser attribution — template_id + provenance written conditionally (absent when null → back-compat readers); ingestion test asserts exact `{c,src,template_id,provenance}` shape.
+  4. docs/sms-templates.md + fixtures README document the tiers per ADR 0005.
+- Frozen §6.2 wire contract intact: `NormalizedTransactionRecord.toJson()` deliberately omits templateId/provenance (ingest metadata only). No ADR/contract breach.
+- Board hygiene: T-072 → Done; Done trimmed to the 20-cap (T-031, T-030 archived to docs/tasks-archive.md). T-073 (parse-confirmation surface, Depends T-072) is now the topmost Ready with satisfied deps — committing this review dispatches @codex onto it.
+- Non-blocking carry-forward for T-074: safety test proves one representative case; the never-auto guarantee is structural (cap 0.85 < 0.9) — keep the cap tied to the DecisionPolicy silent threshold if that threshold ever moves.
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md (review + board only — no application code changed).
+
 ## 2026-07-10 @claude — T-066 FIELD VALIDATION (genuine device export) + T-078 filed
 
 - @human supplied a genuine on-device transactions_export.json (BankStatement/, gitignored): 145 rows, 3-month backfill window (Apr 12→Jul 10). An entirely untemplated bank account (xx8613) produced 120 UPI transactions ALL parsed by the T-066 generic fallback — merchant_raw 120/120, counterparty_vpa 116/120, account_hint 120/120, directions 105 debit / 15 credit, amounts ₹0.5..₹30,000. Template side: 25 Axis card rows (xx3446/xx5916) — cascade coexistence confirmed. Statuses 140 needs_review / 3 auto / 2 confirmed: zero generic auto-labels, the <=0.6 safety property holding in production. This is the strongest possible evidence for the ADR 0005 strategy: capture works today; templates + trust loop add precision.
