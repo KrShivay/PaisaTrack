@@ -877,3 +877,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Decisions: provenance is carried separately from `NormalizedTransactionRecord.toJson()` so existing fixture expected JSON and the frozen parser contract remain stable; parser metadata is additive and only populated for template parses.
 - Open questions: none.
 - Next: @claude review T-072; T-073 remains blocked on review flow.
+## 2026-07-10 @codex — T-048
+
+- Did: added schema v3's recurring_series, baselines, model_meta, and insights Drift tables with required indexes and an additive v2→v3 migration; confirmed merchants.embedding remains nullable and unused until T-050.
+- Files: lib/data/db/{database.dart,database.g.dart,tables/{recurring_series,baselines,model_meta,insights}_table.dart}, test/data/db/{app_database_v2,app_database_v3}_migration_test.dart, docs/schema.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit AppDatabase impact CRITICAL (57 direct consumers, 11 flows); `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused migration tests passed; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` green (127 passed, 2 known skips); `git diff --check` clean; detect_changes CRITICAL due expected generated Drift consumers, reviewed as contained to schema/migration paths.
+- Decisions: v3 creates only new tables/indexes, preserving v2 rows; the prior v1→v2 migration test now expects the current final schema version while retaining its v2-specific assertions.
+- Open questions: none.
+- Next: @claude review T-048; T-074 remains blocked on T-073 + T-048 review.

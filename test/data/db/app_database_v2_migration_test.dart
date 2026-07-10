@@ -11,8 +11,7 @@ import 'package:sqlite3/sqlite3.dart';
 /// `is_deleted=1` rows to `duplicate_of_txn_id` links where a unique match
 /// exists, leaving unmatched suppressed rows untouched.
 void main() {
-  test('v1->v2 migration adds columns and backfills duplicate links',
-      () async {
+  test('v1->v2 migration adds columns and backfills duplicate links', () async {
     final tempDir =
         await Directory.systemTemp.createTemp('paisatrack_v2_migration_');
     final dbPath = '${tempDir.path}/paisatrack.db';
@@ -30,13 +29,17 @@ void main() {
 
     final schemaVersion =
         await database.customSelect('PRAGMA user_version').getSingle();
-    expect(schemaVersion.data['user_version'], 2);
+    // Opening a v1 file applies every additive migration through the current
+    // schema, while the assertions below continue to prove the v1->v2 step.
+    expect(schemaVersion.data['user_version'], 3);
 
-    final columns = await database
-        .customSelect("PRAGMA table_info('transactions')")
-        .get();
+    final columns =
+        await database.customSelect("PRAGMA table_info('transactions')").get();
     final columnNames = columns.map((r) => r.data['name']).toSet();
-    expect(columnNames, containsAll(['counterparty_vpa', 'duplicate_of_txn_id']));
+    expect(
+      columnNames,
+      containsAll(['counterparty_vpa', 'duplicate_of_txn_id']),
+    );
 
     final indexRows = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
@@ -115,7 +118,17 @@ void _createV1Database(String path) {
            updated_at)
         VALUES (?, ?, ?, ?, 'upi', ?, ?, 'template', '{}', 'auto', ?, ?, ?)
         ''',
-        [id, ts, amount, direction, merchantRaw, refId, isDeleted ? 1 : 0, ts, ts],
+        [
+          id,
+          ts,
+          amount,
+          direction,
+          merchantRaw,
+          refId,
+          isDeleted ? 1 : 0,
+          ts,
+          ts,
+        ],
       );
     }
 

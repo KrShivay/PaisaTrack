@@ -3,7 +3,7 @@
 Schema source of truth is PLAN.md section 6 plus the Drift definitions under
 `lib/data/db/tables/`.
 
-Implemented in schema version 2:
+Implemented in schema version 3:
 
 - `transactions`: normalized transaction storage with indexes on `ts`,
   `merchant_id`, `category_id`, `ref_id`, `status`, and `duplicate_of_txn_id`.
@@ -20,6 +20,16 @@ Implemented in schema version 2:
 - `rules`: user-taught hard mappings that can set category and description.
 - `feedback`: training/correction records for category, merchant, and
   description edits.
+- `recurring_series`: detected subscriptions, EMIs, bills, and income, indexed
+  by `merchant_id` and `next_expected_date` for the recurring scanner/screen.
+- `baselines`: keyed rolling mean, standard deviation, and sample count for
+  anomaly detection.
+- `model_meta`: key-value state for classifier weights, versions, and policy
+  thresholds.
+- `insights`: dismissable precomputed insight payloads, indexed by period.
+
+`merchants.embedding` remains a nullable BLOB in v3. It is intentionally
+unused until T-050 introduces the on-device embedder.
 
 Migration log:
 
@@ -44,6 +54,11 @@ Migration log:
   the row is left `is_deleted = 1` and logged. No backfill for
   `counterparty_vpa` (v1 rows conflated it into `merchant_raw` at write time;
   provenance is not reliably reconstructible) — only new ingests populate it.
+- 2026-07-10: Schema v3 (T-048). Additive v2→v3 migration adds
+  `recurring_series`, `baselines`, `model_meta`, and `insights`; it does not
+  alter or rewrite existing rows. `insights.period`,
+  `recurring_series.merchant_id`, and `recurring_series.next_expected_date`
+  are indexed.
 
 Encrypted backup archive:
 
