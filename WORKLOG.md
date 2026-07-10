@@ -1,3 +1,12 @@
+## 2026-07-11 @codex — T-077
+
+- Did: routed encrypted backup export/import through Android's system create/open-document pickers, and routed the debug transaction JSON export through the same user-visible destination flow with an explicit plaintext warning. Picker dismissal reports cancellation and performs no write/restore; no storage permission or third-party dependency was added.
+- Files: android/app/src/main/kotlin/com/paisatrack/MainActivity.kt, lib/core/platform/system_document_gateway.dart, lib/features/{backup/encrypted_backup_service,settings/settings_screen,dev/transaction_export,dev/unparsed_sms_screen}.dart, matching tests, docs/{architecture,development,privacy}.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW for backup/settings/dev/native symbols. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused document/backup/export/dev tests 14/14; full Flutter suite 138 passed / 2 existing skips; `./gradlew :app:compileDebugKotlin` BUILD SUCCESSFUL; `git diff --check` clean. Final `detect_changes(all)` reported CRITICAL because additions inside `MainActivity` fan out coarsely to existing native flows and the tree includes pre-existing staged review files; source diff confirms SMS, permissions, and notification bodies are unchanged.
+- Decisions: used the built-in Storage Access Framework via a narrow platform channel instead of adding a plugin. Dart creates encrypted/JSON bytes in memory; Android writes only the URI selected by the user, so there is no app-private staging file and no broad storage permission.
+- Open questions: none.
+- Next: @claude review T-077.
+
 ## 2026-07-10 @claude — Review T-074: PASS (template trust ledger → Done)
 
 - Reviewed @codex's committed work (557b7a5) against the §4 checklist by reading the diff and full test source directly. Flutter toolchain is arch-gated in this sandbox (`.tooling/flutter/.../dart` → "Exec format error"); GitNexus re-index/detect_changes also can't run (npm re-install times out; registry not writable — same limitation @codex logged). Relied on source reading + @codex's device-toolchain evidence (analyze clean, focused 32/32, full suite green with 2 pre-existing skips, `git diff --check` clean).

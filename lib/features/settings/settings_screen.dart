@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../core/platform/system_document_gateway.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
 import '../backup/encrypted_backup_service.dart';
@@ -195,14 +194,19 @@ class SettingsScreen extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final service = await ref.read(encryptedBackupServiceProvider.future);
-      final directory = await ref.read(backupDirectoryProvider.future);
-      final file = await service.exportToFile(
-        directory: directory,
-        passphrase: passphrase,
-      );
+      final bytes = await service.exportBytes(passphrase: passphrase);
+      final saved = await ref.read(systemDocumentGatewayProvider).saveDocument(
+            suggestedName: encryptedBackupFileName,
+            mimeType: 'application/octet-stream',
+            bytes: bytes,
+          );
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Encrypted backup written to ${file.path}')),
+        SnackBar(
+          content: Text(
+            saved ? 'Encrypted backup saved' : 'Export cancelled',
+          ),
+        ),
       );
     } catch (error) {
       if (!context.mounted) return;
@@ -213,6 +217,18 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final bytes = await ref.read(systemDocumentGatewayProvider).openDocument(
+          mimeType: 'application/octet-stream',
+        );
+    if (!context.mounted) return;
+    if (bytes == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Import cancelled')),
+      );
+      return;
+    }
+
     final passphrase = await _askPassphrase(
       context,
       title: 'Import encrypted backup',
@@ -220,12 +236,9 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (passphrase == null || !context.mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final service = await ref.read(encryptedBackupServiceProvider.future);
-      final directory = await ref.read(backupDirectoryProvider.future);
-      final file = File('${directory.path}/$encryptedBackupFileName');
-      await service.importFromFile(file: file, passphrase: passphrase);
+      await service.importBytes(bytes: bytes, passphrase: passphrase);
       if (!context.mounted) return;
       messenger.showSnackBar(
         const SnackBar(content: Text('Encrypted backup imported')),

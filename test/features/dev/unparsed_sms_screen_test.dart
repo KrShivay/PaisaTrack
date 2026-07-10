@@ -8,12 +8,14 @@ import 'package:paisatrack/data/repositories/raw_sms_repository.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_providers.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_screen.dart';
+import 'package:paisatrack/features/dev/transaction_export.dart';
 
 void main() {
   Future<void> pumpScreen(
     WidgetTester tester,
     List<UnparsedSms> messages, {
     List<TemplateTrustEntry> trustAlerts = const [],
+    Future<bool> Function()? exportTransactions,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -24,6 +26,10 @@ void main() {
           templateTrustAlertsProvider.overrideWith(
             (ref) => Stream.value(trustAlerts),
           ),
+          if (exportTransactions != null)
+            transactionJsonExportProvider.overrideWith(
+              (ref) => exportTransactions(),
+            ),
         ],
         child: const MaterialApp(home: UnparsedSmsScreen()),
       ),
@@ -80,6 +86,29 @@ void main() {
 
     expect(find.text('Template trust alert'), findsOneWidget);
     expect(find.textContaining('kotak_upi_v1'), findsOneWidget);
+  });
+
+  testWidgets('warns before plaintext export and handles picker cancellation',
+      (tester) async {
+    var exportCalls = 0;
+    await pumpScreen(
+      tester,
+      const [],
+      exportTransactions: () async {
+        exportCalls++;
+        return false;
+      },
+    );
+
+    await tester.tap(find.byTooltip('Export transactions JSON (debug)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Export plaintext transaction data?'), findsOneWidget);
+    expect(exportCalls, 0);
+
+    await tester.tap(find.text('Choose destination'));
+    await tester.pumpAndSettle();
+    expect(exportCalls, 1);
+    expect(find.text('Export cancelled'), findsOneWidget);
   });
 
   test('repository lists unprocessed raw sms and excludes processed ones',

@@ -136,3 +136,9 @@ the Riverpod database, deletes SQLCipher database sidecars, clears the Android
 Keystore-wrapped passphrase via `com.paisatrack/database_passphrase`, resets
 app-private settings, and reopens a database seeded only with bundled
 categories.
+
+Export/import uses `com.paisatrack/documents`, a narrow platform channel over
+Android `ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`. Dart prepares the
+encrypted backup or debug JSON bytes; native code streams them only to the URI
+the user selected. Picker cancellation returns without a partial file, and no
+storage permission is declared.

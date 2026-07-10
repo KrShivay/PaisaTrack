@@ -79,10 +79,13 @@ For T-042 and later import flows, verify on a debug device:
 ## Encrypted Backup Manual Check
 
 T-043 uses the free/open-source `cryptography` package for Argon2id and
-AES-GCM. Settings exports to app-private `paisatrack_export.ptrack`; import
-reads the same file. Manual check: export with a passphrase, Delete everything,
-import with the same passphrase, and confirm domain rows are restored. Re-run
-with a wrong passphrase and confirm existing rows are unchanged.
+AES-GCM. T-077 routes export through Android's system document picker and
+imports through the matching open-document picker; no storage permission is
+requested. Manual check: export with a passphrase to Downloads, Delete
+everything, select that file for import with the same passphrase, and confirm
+domain rows are restored. Re-run with a wrong passphrase and confirm existing
+rows are unchanged. Dismiss each picker and confirm the app reports cancellation
+without creating or restoring anything.
 
 ## Category Manager Manual Check
 

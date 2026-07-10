@@ -76,10 +76,38 @@ class _ExportTransactionsButton extends ConsumerWidget {
       icon: const Icon(Icons.file_download_outlined),
       tooltip: 'Export transactions JSON (debug)',
       onPressed: () async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Export plaintext transaction data?'),
+            content: const Text(
+              'This JSON contains normalized financial data. Save it only to '
+              'a destination you trust.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Choose destination'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !context.mounted) return;
+
         final messenger = ScaffoldMessenger.of(context);
         try {
-          final path = await ref.read(transactionJsonExportProvider.future);
-          messenger.showSnackBar(SnackBar(content: Text('Exported: $path')));
+          final saved = await ref.read(transactionJsonExportProvider.future);
+          if (!context.mounted) return;
+          messenger.showSnackBar(
+            SnackBar(
+              content:
+                  Text(saved ? 'Transactions exported' : 'Export cancelled'),
+            ),
+          );
         } catch (error) {
           messenger
               .showSnackBar(SnackBar(content: Text('Export failed: $error')));
