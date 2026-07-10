@@ -1,3 +1,12 @@
+## 2026-07-10 @codex — T-074
+
+- Did: added a `model_meta`-backed cache rebuilt from public-template `parse_verdict` feedback, then wired public-template parsing to promote at 20 clean confirmations or remain/demote at 0.85 after amount/direction corrections. The Dev diagnostics screen lists flagged template ids for re-authoring.
+- Files: lib/capture/template_engine/template_trust_ledger.dart, lib/capture/{parser_cascade,sms_ingestion}.dart, lib/capture/template_engine/template_matcher.dart, lib/data/repositories/transaction_repository.dart, lib/features/dev/{unparsed_sms_providers,unparsed_sms_screen}.dart, test/capture/template_engine/template_trust_ledger_test.dart, test/features/dev/unparsed_sms_screen_test.dart, docs/{architecture,schema}.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus impact preflight — `ParserCascade` MEDIUM (6 direct dependents) and `SmsIngestor` MEDIUM (6 direct dependents, 1 capture test flow); `updateWithFeedback`, `confirmParse`, and `UnparsedSmsScreen` LOW. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused 32/32 tests green; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` green (2 pre-existing skips); `git diff --check` clean; detect_changes MEDIUM (20 symbols, only the expected correction-write flows). GitNexus re-index could not complete because the sandbox cannot write `~/.gitnexus/registry.json.tmp`; impact/detect results were cross-checked against source and tests.
+- Decisions: feedback remains authoritative; `model_meta.template_trust_ledger_v1` is deliberately a compact parse-time cache, so no second trust store or schema migration is needed. Merchant-only parse corrections are retained for learning but do not demote parser trust, matching ADR 0005.
+- Open questions: none.
+- Next: @claude review T-074.
+
 ## 2026-07-10 @claude — Review T-048: PASS (schema v3 analytics tables → Done)
 
 - Reviewed @codex's committed work (1c27f02) against the §4 checklist by reading the diff and test source directly (Flutter toolchain permission-gated in this sandbox — relied on @codex's logged evidence: analyze clean, 127/2 full suite green, `git diff --check` clean). All AC clauses verified non-vacuously:

@@ -24,8 +24,9 @@ Implemented in schema version 3:
   by `merchant_id` and `next_expected_date` for the recurring scanner/screen.
 - `baselines`: keyed rolling mean, standard deviation, and sample count for
   anomaly detection.
-- `model_meta`: key-value state for classifier weights, versions, and policy
-  thresholds.
+- `model_meta`: key-value state for classifier weights, versions, policy
+  thresholds, and the ADR 0005 template trust-ledger cache
+  (`template_trust_ledger_v1`).
 - `insights`: dismissable precomputed insight payloads, indexed by period.
 
 `merchants.embedding` remains a nullable BLOB in v3. It is intentionally

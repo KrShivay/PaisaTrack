@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
 import 'rule_repository.dart';
+import '../../capture/template_engine/template_trust_ledger.dart';
 
 /// User input for a manually entered transaction (T-037).
 ///
@@ -324,6 +325,9 @@ class TransactionRepository {
       for (final feedbackRow in feedbackRows) {
         await _database.into(_database.feedback).insert(feedbackRow);
       }
+      if (recordParseCorrections) {
+        await TemplateTrustLedger(_database).refresh();
+      }
       return feedbackRows.length;
     });
   }
@@ -354,6 +358,7 @@ class TransactionRepository {
               createdAt: now,
             ),
           );
+      await TemplateTrustLedger(_database).refresh();
     });
   }
 

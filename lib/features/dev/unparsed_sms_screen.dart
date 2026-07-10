@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/template_engine/template_trust_ledger.dart';
 import '../../data/repositories/raw_sms_repository.dart';
 import 'transaction_export.dart';
 import 'unparsed_sms_providers.dart';
@@ -15,6 +16,8 @@ class UnparsedSmsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unparsed = ref.watch(unparsedSmsListProvider);
+    final trustAlerts = ref.watch(templateTrustAlertsProvider).valueOrNull ??
+        const <TemplateTrustEntry>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -25,13 +28,41 @@ class UnparsedSmsScreen extends ConsumerWidget {
           if (kDebugMode) _ExportTransactionsButton(),
         ],
       ),
-      body: switch (unparsed) {
-        AsyncData(:final value) when value.isEmpty =>
-          const Center(child: Text('No unparsed messages')),
-        AsyncData(:final value) => _UnparsedListView(items: value),
-        AsyncError() => const Center(child: Text('Could not load raw SMS')),
-        _ => const Center(child: CircularProgressIndicator()),
-      },
+      body: Column(
+        children: [
+          if (trustAlerts.isNotEmpty) _TemplateTrustAlert(entries: trustAlerts),
+          Expanded(
+            child: switch (unparsed) {
+              AsyncData(:final value) when value.isEmpty =>
+                const Center(child: Text('No unparsed messages')),
+              AsyncData(:final value) => _UnparsedListView(items: value),
+              AsyncError() =>
+                const Center(child: Text('Could not load raw SMS')),
+              _ => const Center(child: CircularProgressIndicator()),
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shows public template ids whose amount or direction was corrected.
+class _TemplateTrustAlert extends StatelessWidget {
+  const _TemplateTrustAlert({required this.entries});
+
+  final List<TemplateTrustEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final ids = entries.map((entry) => entry.templateId).join(', ');
+    return Material(
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: ListTile(
+        leading: const Icon(Icons.warning_amber_rounded),
+        title: const Text('Template trust alert'),
+        subtitle: Text('Re-author public template: $ids'),
+      ),
     );
   }
 }

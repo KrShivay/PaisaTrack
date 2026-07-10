@@ -112,6 +112,13 @@ transaction and records each changed parse field plus a corresponding
 `parse_verdict` correction in the same database transaction. High-trust device
 templates never show this prompt.
 
+**Template trust ledger (T-074)** rebuilds public-template trust from those
+`parse_verdict` rows. It stores compact per-template counters in `model_meta`:
+20 `ok` confirmations with no amount/direction correction promote a public
+template to 0.97; either correction keeps it at 0.85 and exposes its template
+id on the developer diagnostics screen. The feedback rows remain authoritative;
+the metadata is a parse-time cache only.
+
 ## Verification tooling
 
 `scripts/reconcile_statement.py` reconciles bank-statement XLSX exports against

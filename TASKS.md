@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-10 by @claude (T-048 review PASS → Done)
+Last updated: 2026-07-10 by @codex (T-074 → In Review)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -7,10 +7,6 @@ Last updated: 2026-07-10 by @claude (T-048 review PASS → Done)
      driven promotion; @human approved 2026-07-10). Order matters: T-072 caps
      public templates BEFORE T-067 ships any; T-048 landed (schema v3, Done)
      BEFORE T-074 since T-074's ledger persistence needs model_meta. -->
-- [ ] T-074 (@codex) [P2] Template trust ledger + promotion/demotion
-      AC: per-template counters (confirmed parses, amount/direction corrections) derived from `parse_verdict` feedback rows; a public template with >=20 confirms and 0 amount/direction corrections is promoted to 0.97; any amount/direction correction demotes to 0.85 and flags the template id in the dev screen; PERSISTENCE: reuse `model_meta` from schema v3 — T-048 is pulled forward as a dependency rather than inventing a second store; unit tests over promote/demote/flag branches; ADR 0005 rules are the spec.
-      Model: gpt-5.6-terra high
-      Depends: T-073 (Done), T-048 (Done — schema v3 landed 2026-07-10)
 <!-- Phase 2.5 — Parser Coverage (field-reported: Kotak + Central Bank users get
      ZERO parsed transactions — SmsFilter allowlists KOTAKB/CENTBK so capture works,
      but the template-only ParserCascade returns unparsed for everything. Fix = generic
@@ -101,6 +97,11 @@ Last updated: 2026-07-10 by @claude (T-048 review PASS → Done)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-074 (@codex → review @claude) [P2] Template trust ledger + promotion/demotion
+      AC: per-template counters (confirmed parses, amount/direction corrections) derived from `parse_verdict` feedback rows; a public template with >=20 confirms and 0 amount/direction corrections is promoted to 0.97; any amount/direction correction demotes to 0.85 and flags the template id in the dev screen; PERSISTENCE: reuse `model_meta` from schema v3 — T-048 is pulled forward as a dependency rather than inventing a second store; unit tests over promote/demote/flag branches; ADR 0005 rules are the spec.
+      Model: gpt-5.6-terra high
+      Depends: T-073 (Done), T-048 (Done — schema v3 landed 2026-07-10)
+      Evidence: GitNexus pre-edit impact MEDIUM for `ParserCascade` (6 direct dependents) and `SmsIngestor` (6 direct dependents, 1 capture test flow); `updateWithFeedback`, `confirmParse`, and `UnparsedSmsScreen` LOW. Schema unchanged; the repository only refreshes the cache inside existing atomic parse-verdict writes. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused ledger/parser/repository/dev tests 32/32; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` green (2 pre-existing skips); `git diff --check` clean. GitNexus `detect_changes(scope: all)` MEDIUM (20 changed symbols, 2 expected correction-write flows: Build → ToJson and Build → TransactionsCompanion), reviewed.
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-048 (@codex, review @claude: PASS) [P3] Schema v3 migration (analytics tables) (2026-07-10)
       AC: adds `recurring_series`, `baselines`, `model_meta`, `insights` tables per PLAN §6.1 (drift table classes + registration); `merchants.embedding` BLOB already exists (v2) — confirm nullable + unused-until-T-050; bump `schemaVersion` 2→3 with an additive `onUpgrade` step (no data loss for existing rows) and a v2→v3 migration test; `docs/schema.md` updated. Indexes per §6.1 where specified (insights by period, recurring_series by merchant_id/next_expected_date).

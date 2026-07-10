@@ -5,19 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/raw_sms_repository.dart';
+import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_providers.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_screen.dart';
 
 void main() {
   Future<void> pumpScreen(
     WidgetTester tester,
-    List<UnparsedSms> messages,
-  ) async {
+    List<UnparsedSms> messages, {
+    List<TemplateTrustEntry> trustAlerts = const [],
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           unparsedSmsListProvider.overrideWith(
             (ref) => Stream.value(messages),
+          ),
+          templateTrustAlertsProvider.overrideWith(
+            (ref) => Stream.value(trustAlerts),
           ),
         ],
         child: const MaterialApp(home: UnparsedSmsScreen()),
@@ -56,6 +61,25 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('flags demoted public template ids for developers',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      const [],
+      trustAlerts: const [
+        TemplateTrustEntry(
+          templateId: 'kotak_upi_v1',
+          confirmedParses: 20,
+          amountCorrections: 1,
+          directionCorrections: 0,
+        ),
+      ],
+    );
+
+    expect(find.text('Template trust alert'), findsOneWidget);
+    expect(find.textContaining('kotak_upi_v1'), findsOneWidget);
   });
 
   test('repository lists unprocessed raw sms and excludes processed ones',

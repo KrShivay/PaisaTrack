@@ -2,6 +2,7 @@ import '../../data/models/normalized_transaction_record.dart';
 import '../../data/models/raw_sms.dart';
 import 'field_normalizer.dart';
 import 'template_registry.dart';
+import 'template_trust_ledger.dart';
 
 /// Finds the first sender/template pair that recognizes an incoming SMS.
 ///
@@ -11,17 +12,20 @@ class TemplateMatcher {
   const TemplateMatcher({
     required List<TemplateRegistry> registries,
     FieldNormalizer normalizer = const FieldNormalizer(),
+    TemplateTrustLedger? trustLedger,
   })  : _registries = registries,
-        _normalizer = normalizer;
+        _normalizer = normalizer,
+        _trustLedger = trustLedger;
 
   final List<TemplateRegistry> _registries;
   final FieldNormalizer _normalizer;
+  final TemplateTrustLedger? _trustLedger;
 
   /// Returns a normalized record when any configured template matches [sms].
   ///
   /// Returns `null` for expected misses so [ParserCascade] can try later
   /// strategies without treating the SMS as exceptional.
-  NormalizedTransactionRecord? match(RawSms sms) {
+  Future<NormalizedTransactionRecord?> match(RawSms sms) async {
     for (final registry in _registries) {
       if (!registry.matchesSender(sms.sender)) {
         continue;
@@ -41,9 +45,12 @@ class TemplateMatcher {
           );
           // Public fixtures are useful coverage, but without device/statement
           // evidence they must never enter the silent auto-label band (ADR 0005).
-          return template.provenance == TemplateProvenance.public
-              ? record.withParseConfidence(0.85)
-              : record;
+          if (template.provenance != TemplateProvenance.public) return record;
+          final confidence = await _trustLedger?.confidenceForTemplate(
+                template.id,
+              ) ??
+              0.85;
+          return record.withParseConfidence(confidence);
         } on FormatException {
           continue;
         } on ArgumentError {
