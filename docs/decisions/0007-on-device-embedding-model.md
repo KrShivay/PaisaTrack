@@ -37,13 +37,10 @@ task — fetched lazily from Google's versioned model bucket.
   - The `float32/latest/` alias is byte-identical today (same MD5/CRC32C/
     size, generation 1682480025114200) but is mutable by definition — do not
     reference it in code.
-- SHA-256: `<PENDING — run tool/verify_embedder_model.py once on a networked
-  machine; it verifies size+MD5 against the values above, then prints the
-  SHA-256 to record here and in AppConstants>`. The agent session that
-  authored this ADR could not download the binary (sandbox egress blocked),
-  and no fabricated hash is recorded. Until filled in, integrity enforcement
-  in code MUST use size + MD5 from the metadata above, which came from
-  Google's API, not from a third party.
+- SHA-256: `89ad3c74175dd8caa398cc22b657296d94302d20c525c12b58b29420f7249749`
+  (verified 2026-07-11 by `tool/verify_embedder_model.py` after its size and
+  MD5 checks passed). Runtime integrity enforcement uses the authoritative
+  GCS size + MD5 pin above.
 
 ### Inference contract
 
@@ -59,12 +56,10 @@ task — fetched lazily from Google's versioned model bucket.
   tokenization/preprocessing is in-task (the model carries three string
   input tensors per the task docs; the Tasks API hides this — callers never
   build tensors).
-- Output: one embedding head, float32 vector. Expected dimension: **100**
-  (USE dual-encoder lite family). The dimension is NOT confirmed from a
-  primary Google document; `tool/verify_embedder_model.py --dim` prints the
-  real dimension via the mediapipe Python package, and the T-050
-  deterministic test MUST assert the actual dimension and this ADR MUST be
-  updated with the confirmed value before T-051 stores any embedding.
+- Output: one embedding head, **100-dimensional** float32 vector, confirmed
+  2026-07-11 by the T-050 deterministic integration test on a Motorola edge
+  50 pro (Android 16, arm64). Any model/runtime bump must rerun that test
+  before stored embeddings are reused.
 - Similarity: cosine, via our own pure-Dart implementation over the returned
   vectors (embeddings stored in `merchants.embedding` BLOB as float32
   little-endian, length = confirmed dimension).

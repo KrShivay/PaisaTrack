@@ -8,6 +8,7 @@ import '../../data/models/raw_sms.dart';
 import '../../data/repositories/raw_sms_repository.dart';
 import 'transaction_export.dart';
 import 'unparsed_sms_providers.dart';
+import 'sms_fixture_donation.dart';
 
 /// Developer diagnostics screen listing raw SMS that never produced a
 /// transaction, including the parser stages that rejected them, so coverage
@@ -37,7 +38,10 @@ class UnparsedSmsScreen extends ConsumerWidget {
             child: switch (unparsed) {
               AsyncData(:final value) when value.isEmpty =>
                 const Center(child: Text('No unparsed messages')),
-              AsyncData(:final value) => _UnparsedListView(items: value),
+              AsyncData(:final value) => _UnparsedListView(
+                  items: value,
+                  copier: ref.read(smsFixtureCopierProvider),
+                ),
               AsyncError() =>
                 const Center(child: Text('Could not load raw SMS')),
               _ => const Center(child: CircularProgressIndicator()),
@@ -120,9 +124,10 @@ class _ExportTransactionsButton extends ConsumerWidget {
 }
 
 class _UnparsedListView extends StatelessWidget {
-  const _UnparsedListView({required this.items});
+  const _UnparsedListView({required this.items, required this.copier});
 
   final List<UnparsedSms> items;
+  final SmsFixtureCopier copier;
 
   /// Recomputed at display time (T-070); no schema change, so a parser tweak is
   /// reflected without re-ingesting. Const parser has no per-row state.
@@ -150,8 +155,44 @@ class _UnparsedListView extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          trailing: IconButton(
+            tooltip: 'Share sanitized SMS',
+            icon: const Icon(Icons.ios_share_outlined),
+            onPressed: () => _previewDonation(context, sms),
+          ),
         );
       },
+    );
+  }
+
+  Future<void> _previewDonation(BuildContext context, UnparsedSms sms) async {
+    const donation = SmsFixtureDonation();
+    final fixture = donation.fixture(sms);
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Review sanitized SMS'),
+        content: SingleChildScrollView(
+          child: SelectableText(fixture),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Approve and copy'),
+          ),
+        ],
+      ),
+    );
+    if (approved != true || !context.mounted) return;
+
+    await copier(fixture);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sanitized fixture copied')),
     );
   }
 

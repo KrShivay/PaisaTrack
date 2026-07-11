@@ -8,6 +8,7 @@ import 'package:paisatrack/data/repositories/raw_sms_repository.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_providers.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_screen.dart';
+import 'package:paisatrack/features/dev/sms_fixture_donation.dart';
 import 'package:paisatrack/features/dev/transaction_export.dart';
 
 void main() {
@@ -16,6 +17,7 @@ void main() {
     List<UnparsedSms> messages, {
     List<TemplateTrustEntry> trustAlerts = const [],
     Future<bool> Function()? exportTransactions,
+    SmsFixtureCopier? copyFixture,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -30,6 +32,8 @@ void main() {
             transactionJsonExportProvider.overrideWith(
               (ref) => exportTransactions(),
             ),
+          if (copyFixture != null)
+            smsFixtureCopierProvider.overrideWithValue(copyFixture),
         ],
         child: const MaterialApp(home: UnparsedSmsScreen()),
       ),
@@ -139,6 +143,64 @@ void main() {
     await tester.pumpAndSettle();
     expect(exportCalls, 1);
     expect(find.text('Export cancelled'), findsOneWidget);
+  });
+
+  testWidgets('previews exact sanitized device fixture before copying',
+      (tester) async {
+    String? copied;
+    final sms = UnparsedSms(
+      id: 'sms_donate',
+      sender: 'AX-BANK',
+      body: 'Dear Priya Sharma, Rs. 1,250 debited from A/c XX123456. '
+          'Avl Bal Rs. 9,876.50 Ref No 123456789.',
+      receivedAt: DateTime.utc(2026, 7, 11),
+    );
+    await pumpScreen(
+      tester,
+      [sms],
+      copyFixture: (value) async => copied = value,
+    );
+
+    await tester.tap(find.byTooltip('Share sanitized SMS'));
+    await tester.pumpAndSettle();
+
+    final expected = const SmsFixtureDonation().fixture(sms);
+    expect(find.text('Review sanitized SMS'), findsOneWidget);
+    expect(find.text(expected), findsOneWidget);
+    expect(expected, contains('<NAME>'));
+    expect(expected, contains('<ACCOUNT>'));
+    expect(expected, contains('<BALANCE>'));
+    expect(expected, contains('Rs. 1,250'));
+    expect(expected, contains('"provenance": "device"'));
+    expect(copied, null);
+
+    await tester.tap(find.text('Approve and copy'));
+    await tester.pumpAndSettle();
+    expect(copied, expected);
+    expect(find.text('Sanitized fixture copied'), findsOneWidget);
+  });
+
+  testWidgets('cancel leaves sanitized fixture on device', (tester) async {
+    var copyCalls = 0;
+    await pumpScreen(
+      tester,
+      [
+        UnparsedSms(
+          id: 'sms_cancel',
+          sender: 'AX-BANK',
+          body: 'A/c 123456 debited Rs. 100',
+          receivedAt: DateTime.utc(2026, 7, 11),
+        ),
+      ],
+      copyFixture: (_) async => copyCalls++,
+    );
+
+    await tester.tap(find.byTooltip('Share sanitized SMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(copyCalls, 0);
   });
 
   test('repository lists unprocessed raw sms and excludes processed ones',

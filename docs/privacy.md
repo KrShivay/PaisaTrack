@@ -12,6 +12,11 @@ PaisaTrack is local-first:
   open-weight model files. All intelligence — parsing, classification,
   embeddings, LLM extraction — runs on-device with free components.
 - Release builds must not log raw SMS bodies.
+- Voluntary SMS fixture donation starts only from the unparsed-message dev
+  screen. Names, account/reference digits, and balances are masked on-device;
+  the complete `device`-provenance JSON fixture is shown without truncation,
+  and it is copied only after the user approves that exact preview. Cancelling
+  leaves the fixture on-device.
 - Developer tooling: the dev screen's transactions-JSON export is compiled out
   of release builds (`kDebugMode`). It warns that normalized financial data is
   plaintext before Android's system document picker lets the developer choose
