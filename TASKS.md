@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @claude (T-071 review PASS, moved to Done)
+Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/T-078/T-079 from re-review)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -61,6 +61,23 @@ Last updated: 2026-07-11 by @claude (T-071 review PASS, moved to Done)
 - [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
       AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
       Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work
+## Backlog (ungroomed)
+<!-- 2026-07-11 @claude: follow-ups from the T-071 re-review. The donation flow
+     PASSED on the strength of the human-in-the-loop approval of the exact,
+     untruncated preview; these harden the sanitizer itself so "masks personal
+     names" is a stronger standalone guarantee. Priorities provisional pending
+     @human grooming. -->
+- [ ] T-077 (@codex build / @claude review) [P2] Donation sanitizer: mask untitled and payee/recipient names
+      AC: extend `SmsFixtureDonation.sanitize` (lib/features/dev/sms_fixture_donation.dart) so personal names are masked to `<NAME>` even when not preceded by a title/greeting and when they appear as a transfer counterparty (e.g. "paid to Priya Sharma", "sent to John Doe", trailing "Dear Rahul" with no following anchor). Add unit tests covering: untitled leading name, "to <Name>" payee, name at end-of-string, and mixed titled+payee in one message. Verified gap (2026-07-11): "Rahul Kumar paid Rs 500 to Priya Sharma" and "Sent Rs 500 to John Doe. Ref 123456" currently pass through unmasked.
+      Origin: T-071 review finding #1 (High, privacy)
+- [ ] T-078 (@codex build / @claude review) [P2] Donation sanitizer: mask UPI VPA / email-like handles
+      AC: add a rule that masks the local-part of `@`-handles (UPI VPAs and emails) so identifiers like `swiggy@okhdfc` and `rahul.kumar@paytm` no longer leak; decide token (`<VPA>` or reuse `<ACCOUNT>`) and document it. Unit tests over VPA and email forms, including one embedded in a longer message. Verified gap (2026-07-11): both example handles currently pass through unmasked.
+      Origin: T-071 review finding #2 (High, privacy)
+- [ ] T-079 (@codex build / @claude review) [P3] Donation sanitizer: stop over-masking large comma-less amounts
+      AC: `_longDigits` (mask >=6 consecutive digits) currently destroys transaction amounts with no thousands separator or decimals — "Rs 250000 debited" -> "Rs <ACCOUNT> debited". Narrow the rule (or order it after amount detection) so a currency-adjacent amount is retained while account/reference runs are still masked. Regression test asserting the amount survives and account digits do not.
+      Origin: T-071 review finding #3 (Medium, correctness)
+      Note: docs/privacy.md wording already softened 2026-07-11 to match actual coverage.
+
 ## In Review
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
