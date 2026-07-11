@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../../core/widgets/app_state_views.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -46,8 +47,9 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
               successLabel: 'group transactions confirmed',
             ),
           ),
-        AsyncError() =>
-          const Center(child: Text('Could not load review queue')),
+        AsyncError() => const ErrorStateView(
+            message: 'Could not load the review queue.',
+          ),
         _ => const Center(child: CircularProgressIndicator()),
       },
     );

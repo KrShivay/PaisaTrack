@@ -61,10 +61,40 @@ void main() {
       find.textContaining('Some unrecognized bank message format'),
       findsOneWidget,
     );
+    // No direction keyword in the body → recomputed per-stage reason (T-070).
     expect(
       find.textContaining(
-        'Template: no match · Generic parser: guard rejected',
+        'Template: no match · Generic parser: no debit/credit direction',
       ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('recomputes a distinct generic reason per row (T-070)',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+
+    await pumpScreen(tester, [
+      UnparsedSms(
+        id: 'reject_otp',
+        sender: 'AX-OTP',
+        body: 'Rs. 500 will be debited from A/c XX1234 tomorrow',
+        receivedAt: now,
+      ),
+      UnparsedSms(
+        id: 'reject_no_context',
+        sender: 'AX-CTX',
+        body: 'Rs. 250 debited towards groceries',
+        receivedAt: now,
+      ),
+    ]);
+
+    expect(
+      find.textContaining('Generic parser: non-transaction phrase'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Generic parser: no account/UPI/channel signal'),
       findsOneWidget,
     );
   });

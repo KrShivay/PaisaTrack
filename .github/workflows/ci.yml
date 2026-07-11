@@ -11,13 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install SQLCipher runtime
+        # Lets the host-VM database tests exercise the real encrypted path
+        # (PRAGMA cipher_version) instead of skipping. Installs to
+        # /usr/lib/x86_64-linux-gnu/libsqlcipher.so.0, which the app's loader
+        # discovers automatically (see database_cipher.dart).
+        run: sudo apt-get update && sudo apt-get install -y libsqlcipher0
       - uses: subosito/flutter-action@v2
         with:
+          # Pin to the repo-local SDK version so generator output is
+          # deterministic — a floating `stable` can emit different generated
+          # code and make the staleness guard flap (T-018).
+          flutter-version: 3.44.4
           channel: stable
       - run: flutter pub get
-      - name: Verify generated Drift code is current
+      - name: Verify generated code is current
         run: |
           dart run build_runner build --delete-conflicting-outputs
-          git diff --exit-code -- lib/data/db/database.g.dart
+          # Catch both modified tracked and new untracked *.g.dart so an added
+          # generator target can't slip in uncommitted (T-018).
+          stale="$(git status --porcelain -- '*.g.dart')"
+          if [ -n "$stale" ]; then
+            echo "::error::Generated code is stale or uncommitted. Run: dart run build_runner build --delete-conflicting-outputs"
+            echo "$stale"
+            git diff -- '*.g.dart'
+            exit 1
+          fi
       - run: flutter analyze
       - run: flutter test

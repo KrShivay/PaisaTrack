@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
+Last updated: 2026-07-11 by @claude (T-070 + T-018 implemented → In Review)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -80,6 +80,10 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-070 (@claude, self-executed at @human's "fix all those you can" direction) [P2] Unparsed screen: per-stage generic rejection reason
+      AC met: `GenericParseRejection` enum (hardRejectTerm / noDirection / noAmount / noContextSignal) exposed on `GenericTransactionParser`; `parse()` and new `rejectionReason()` share one private `_evaluate()` so the reported reason can never drift from the guard that decided (behavior-preserving refactor). Unparsed dev screen recomputes the reason per row at display time from the body (no schema change) and renders a specific label per stage; the accepted-but-unparsed edge case is labelled "template-stage miss". Impact pre-edit LOW (1 direct caller ParserCascade, 0 flows). Evidence (repo-local SDK, macOS): `flutter analyze --no-pub` clean on both touched lib files; `flutter test` green — new test/capture/generic_transaction_parser_test.dart (6 cases incl. hard-reject-precedence, each guard, accepted→null, and a mutual-exclusion invariant), updated unparsed_sms_screen_test.dart (per-row reason + a 2-row distinct-reason widget test), parser_cascade regressions all pass (25/25 across the three files).
+- [ ] T-018 (@claude, self-executed at @human's "fix all those you can" direction) [P0] CI generated-code and build_runner guards
+      AC met + hardened: CI already ran build_runner and failed on stale Drift; broadened the guard to fail on ANY modified-or-untracked `*.g.dart` (not just the one hard-coded path, so a future generator target can't slip in uncommitted) via `git status --porcelain -- '*.g.dart'`, and pinned CI to Flutter 3.44.4 so generator output is deterministic. Regeneration command documented in docs/development.md (updated). Evidence: ci.yml validated as YAML; ran `dart run build_runner build --delete-conflicting-outputs` on the repo-local SDK (271 outputs) then the exact guard command — no `*.g.dart` drift, guard passes on the clean tree; committed generated code confirmed current.
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-057 (@codex, review @claude: PASS) [P3] Anomaly detector (nightly baselines) (2026-07-11)
@@ -187,9 +191,3 @@ Last updated: 2026-07-10 by @claude (T-074 review PASS → Done)
 - [x] T-035 (@claude, approved @human) [P2] ADR 0003: dedup rework + counterparty schema spec (2026-07-07)
       AC met: docs/decisions/0003-dedup-and-counterparty.md accepted — `duplicate_of_txn_id` link replaces the `is_deleted` overload (user delete vs system suppression separated, reversible, dev-visible), `counterparty_vpa` column per the frozen §6.2 contract, v1→v2 migration with conservative echo backfill, no `counterparty_vpa` backfill (write-time provenance unknowable). Unblocks T-036.
 ## Proposed
-- [ ] T-070 (@codex) [P2] Unparsed screen: per-stage generic rejection reason
-      AC: GenericTransactionParser exposes a `RejectionReason` (hard-reject term / no direction / no amount / no context signal) and the unparsed dev screen recomputes and shows it per row at display time (no schema change); widget + unit tests. Makes new-bank triage actionable beyond the static T-069 label.
-      Depends: T-066; groom after T-065/T-067 fixture experience
-- [ ] T-018 (@codex) [P0] CI generated-code and build_runner guards
-      AC: CI fails when Drift generated code is stale and documents local build_runner regeneration command
-      Depends: T-008

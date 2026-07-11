@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -89,9 +90,45 @@ QueryExecutor openEncryptedDatabase({
 Future<void> _prepareSqlCipher() async {
   if (Platform.isAndroid) {
     open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+  } else {
+    // Desktop hosts (unit-test VM, CI runners, any future desktop build) don't
+    // load the bundled Flutter libs, so the default resolver finds plain
+    // SQLite with no cipher. Point the sqlite3 loader at a system SQLCipher
+    // build when one is present; otherwise leave the default in place so the
+    // caller's `PRAGMA cipher_version` guard degrades gracefully.
+    final libPath = _findDesktopSqlCipherLib();
+    if (libPath != null) {
+      final os = Platform.isMacOS ? OperatingSystem.macOS : OperatingSystem.linux;
+      open.overrideFor(os, () => DynamicLibrary.open(libPath));
+    }
   }
 
   await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
+}
+
+/// Locates a system SQLCipher shared library on desktop hosts. Honors a
+/// `SQLCIPHER_LIB` env override first (used by CI), then falls back to the
+/// standard Homebrew (macOS) and apt (Linux) install locations. Returns null
+/// when none is found so callers can fail closed on a missing cipher.
+String? _findDesktopSqlCipherLib() {
+  final override = Platform.environment['SQLCIPHER_LIB'];
+  if (override != null && override.isNotEmpty && File(override).existsSync()) {
+    return override;
+  }
+
+  const candidates = <String>[
+    // macOS (Homebrew, Apple Silicon and Intel prefixes).
+    '/opt/homebrew/opt/sqlcipher/lib/libsqlcipher.dylib',
+    '/usr/local/opt/sqlcipher/lib/libsqlcipher.dylib',
+    // Linux (Debian/Ubuntu libsqlcipher0).
+    '/usr/lib/x86_64-linux-gnu/libsqlcipher.so.0',
+    '/usr/lib/aarch64-linux-gnu/libsqlcipher.so.0',
+    '/usr/lib/libsqlcipher.so.0',
+  ];
+  for (final path in candidates) {
+    if (File(path).existsSync()) return path;
+  }
+  return null;
 }
 
 String _escapeSqliteString(String value) {

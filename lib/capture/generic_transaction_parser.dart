@@ -2,6 +2,24 @@ import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import 'template_engine/field_normalizer.dart';
 
+/// Reason the generic fallback declined to emit a record.
+///
+/// Mirrors the ordered guard checks in [GenericTransactionParser.parse] so the
+/// unparsed dev screen can explain a miss without a schema change (T-070).
+enum GenericParseRejection {
+  /// Body matched a hard-reject term (OTP, promo, "will be debited", ...).
+  hardRejectTerm,
+
+  /// No debit/credit direction keyword was found.
+  noDirection,
+
+  /// No usable (non-balance, non-limit) transaction amount was found.
+  noAmount,
+
+  /// No account tail, known channel, or VPA to anchor the transaction.
+  noContextSignal,
+}
+
 /// Conservative, on-device fallback for transactional SMS without a template.
 ///
 /// A record is returned only when direction, amount, and a bank-context signal
@@ -40,12 +58,27 @@ class GenericTransactionParser {
   );
 
   /// Parses [sms] only when its transaction signals meet the fallback guard.
-  NormalizedTransactionRecord? parse(RawSms sms) {
+  NormalizedTransactionRecord? parse(RawSms sms) => _evaluate(sms).record;
+
+  /// Explains why the fallback guard rejected [sms], or null when it parses.
+  ///
+  /// Shares [_evaluate] with [parse] so the reported reason can never drift
+  /// from the guard that actually made the decision.
+  GenericParseRejection? rejectionReason(RawSms sms) => _evaluate(sms).rejection;
+
+  /// Runs the guard once, yielding either the parsed record or the reason the
+  /// guard stopped. Exactly one field is non-null.
+  ({NormalizedTransactionRecord? record, GenericParseRejection? rejection})
+      _evaluate(RawSms sms) {
     final body = sms.body;
-    if (_hardReject.hasMatch(body)) return null;
+    if (_hardReject.hasMatch(body)) {
+      return (record: null, rejection: GenericParseRejection.hardRejectTerm);
+    }
 
     final direction = _direction(body);
-    if (direction == null) return null;
+    if (direction == null) {
+      return (record: null, rejection: GenericParseRejection.noDirection);
+    }
     final balanceRanges = _balance
         .allMatches(body)
         .map((match) => (match.start, match.end))
@@ -60,11 +93,15 @@ class GenericTransactionParser {
       ).hasMatch(body.substring(0, match.start));
       return !isBalance && !isLimit;
     }).toList();
-    if (amounts.isEmpty) return null;
+    if (amounts.isEmpty) {
+      return (record: null, rejection: GenericParseRejection.noAmount);
+    }
 
     final amountMatch = _nearest(amounts, direction.index);
     final amount = _parseAmount(amountMatch.group(1));
-    if (amount == null) return null;
+    if (amount == null) {
+      return (record: null, rejection: GenericParseRejection.noAmount);
+    }
 
     final account = _account.firstMatch(body)?.group(1);
     final channel = _channel(body);
@@ -72,25 +109,28 @@ class GenericTransactionParser {
     if (account == null &&
         channel == TransactionChannel.unknown &&
         vpa == null) {
-      return null;
+      return (record: null, rejection: GenericParseRejection.noContextSignal);
     }
 
     final merchant = _merchant.firstMatch(body)?.group(1)?.trim();
-    return NormalizedTransactionRecord(
-      amount: amount,
-      direction: direction.value,
-      channel: channel,
-      merchantRaw: merchant == null || merchant.isEmpty ? null : merchant,
-      counterpartyVpa: vpa,
-      accountHint: account == null ? null : 'xx$account',
-      balanceAfter: _balanceAmount(body),
-      refId: _ref.firstMatch(body)?.group(1),
-      ts: sms.receivedAt,
-      parseSource: ParseSource.generic,
-      parseConfidence:
-          amounts.length == 1 && merchant != null && merchant.isNotEmpty
-              ? 0.6
-              : 0.5,
+    return (
+      record: NormalizedTransactionRecord(
+        amount: amount,
+        direction: direction.value,
+        channel: channel,
+        merchantRaw: merchant == null || merchant.isEmpty ? null : merchant,
+        counterpartyVpa: vpa,
+        accountHint: account == null ? null : 'xx$account',
+        balanceAfter: _balanceAmount(body),
+        refId: _ref.firstMatch(body)?.group(1),
+        ts: sms.receivedAt,
+        parseSource: ParseSource.generic,
+        parseConfidence:
+            amounts.length == 1 && merchant != null && merchant.isNotEmpty
+                ? 0.6
+                : 0.5,
+      ),
+      rejection: null,
     );
   }
 

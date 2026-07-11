@@ -57,9 +57,12 @@ behavior, database changes, CI changes, and user-facing assets.
 
 ## CI Guardrails
 
-CI runs `dart run build_runner build --delete-conflicting-outputs` and fails if
-`lib/data/db/database.g.dart` changes, so Drift schema edits must commit their
-generated code. CI also runs `flutter analyze` and `flutter test`.
+CI (pinned to Flutter 3.44.4 for reproducible codegen) runs
+`dart run build_runner build --delete-conflicting-outputs` and fails if any
+`*.g.dart` file is modified or newly created and left uncommitted, so Drift
+schema edits (and any future generator targets) must commit their generated
+code. Regenerate locally with the same command. CI also runs `flutter analyze`
+and `flutter test`.
 
 `integration_test/encrypted_database_migration_test.dart` requires an Android
 device or emulator with SQLCipher support. Until CI has a device runner, execute

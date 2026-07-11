@@ -6,6 +6,7 @@ import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../../core/widgets/app_state_views.dart';
 import '../../data/db/database.dart' show Transaction;
 import '../../data/db/database_provider.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -153,8 +154,14 @@ class _TransactionDetailScreenState
       appBar: AppBar(title: const Text('Transaction')),
       body: switch (detail) {
         AsyncData(:final value?) => _buildDetail(context, value),
-        AsyncData() => const Center(child: Text('Transaction not found')),
-        AsyncError() => const Center(child: Text('Could not load transaction')),
+        AsyncData() => const EmptyStateView(
+            illustration: AppIllustrations.spendAnalysis,
+            title: 'Transaction not found',
+            message: 'It may have been deleted.',
+          ),
+        AsyncError() => const ErrorStateView(
+            message: 'Could not load this transaction.',
+          ),
         _ => const Center(child: CircularProgressIndicator()),
       },
     );

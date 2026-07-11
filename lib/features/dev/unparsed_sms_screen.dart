@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/generic_transaction_parser.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
+import '../../data/models/raw_sms.dart';
 import '../../data/repositories/raw_sms_repository.dart';
 import 'transaction_export.dart';
 import 'unparsed_sms_providers.dart';
@@ -122,6 +124,10 @@ class _UnparsedListView extends StatelessWidget {
 
   final List<UnparsedSms> items;
 
+  /// Recomputed at display time (T-070); no schema change, so a parser tweak is
+  /// reflected without re-ingesting. Const parser has no per-row state.
+  static const _parser = GenericTransactionParser();
+
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
@@ -137,7 +143,7 @@ class _UnparsedListView extends StatelessWidget {
           ),
           title: Text(sms.sender),
           subtitle: Text(
-            '${sms.body}\nTemplate: no match · Generic parser: guard rejected',
+            '${sms.body}\nTemplate: no match · ${_genericReason(sms)}',
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -147,5 +153,29 @@ class _UnparsedListView extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Human-readable generic-parser rejection reason for one row.
+  String _genericReason(UnparsedSms sms) {
+    final reason = _parser.rejectionReason(
+      RawSms(
+        id: sms.id,
+        sender: sms.sender,
+        body: sms.body,
+        receivedAt: sms.receivedAt,
+      ),
+    );
+    return switch (reason) {
+      GenericParseRejection.hardRejectTerm =>
+        'Generic parser: non-transaction phrase',
+      GenericParseRejection.noDirection =>
+        'Generic parser: no debit/credit direction',
+      GenericParseRejection.noAmount => 'Generic parser: no transaction amount',
+      GenericParseRejection.noContextSignal =>
+        'Generic parser: no account/UPI/channel signal',
+      // Generic parser would accept it — the miss is upstream (template stage
+      // or a post-parse validation), not the fallback guard.
+      null => 'Generic parser: accepted (template-stage miss)',
+    };
   }
 }

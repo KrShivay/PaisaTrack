@@ -45,6 +45,7 @@ class TransactionListItem {
     required this.categoryName,
     required this.categoryId,
     required this.categoryIcon,
+    this.categoryIsSpending = true,
   });
 
   final String id;
@@ -55,6 +56,12 @@ class TransactionListItem {
   final String? categoryName;
   final String? categoryId;
   final String? categoryIcon;
+
+  /// Whether the category counts toward spending. Transfers and cash
+  /// withdrawals are excluded (PLAN §5) and render in a neutral color rather
+  /// than debit red (design-system.md §5). Defaults to true so callers and
+  /// tests that omit it keep the prior spending behavior.
+  final bool categoryIsSpending;
 }
 
 /// Review/ask queue row with enough context to render review surfaces and build
@@ -614,6 +621,9 @@ class TransactionRepository {
       categoryName: category?.name,
       categoryId: category?.id,
       categoryIcon: category?.icon,
+      // Unknown/uncategorized defaults to spending; only an explicit
+      // non-spending category (transfers, cash withdrawal) flips this.
+      categoryIsSpending: category?.isSpending ?? true,
     );
   }
 

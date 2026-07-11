@@ -83,17 +83,104 @@ void main() {
     expect(tiles, hasLength(2));
 
     expect(find.text('Salary Inc'), findsOneWidget);
-    expect(find.text('Uncategorized'), findsOneWidget);
+    // Subtitle is now "category · time"; match the category prefix only.
+    expect(find.textContaining('Uncategorized'), findsOneWidget);
     expect(find.text('+₹12,34,567.89'), findsOneWidget);
 
     expect(find.text('Amazon'), findsOneWidget);
-    expect(find.text('Shopping'), findsOneWidget);
+    expect(find.textContaining('Shopping'), findsOneWidget);
     expect(find.text('-₹2,00,000.00'), findsOneWidget);
 
     expect(
       tester.getTopLeft(find.widgetWithText(ListTile, 'Salary Inc')).dy,
       lessThan(tester.getTopLeft(find.widgetWithText(ListTile, 'Amazon')).dy),
     );
+  });
+
+  testWidgets('search filters the list by merchant name', (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      item(
+        id: 'a',
+        ts: now,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Amazon',
+      ),
+      item(
+        id: 'b',
+        ts: now,
+        amount: 200,
+        direction: TransactionDirection.credit,
+        displayName: 'Salary Inc',
+      ),
+    ]);
+
+    await tester.enterText(find.byType(TextField), 'amazon');
+    await tester.pump();
+
+    expect(find.text('Amazon'), findsOneWidget);
+    expect(find.text('Salary Inc'), findsNothing);
+  });
+
+  testWidgets('long-press enters multi-select and toggles selection',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      item(
+        id: 'a',
+        ts: now,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Amazon',
+      ),
+      item(
+        id: 'b',
+        ts: now,
+        amount: 200,
+        direction: TransactionDirection.credit,
+        displayName: 'Salary Inc',
+      ),
+    ]);
+
+    await tester.longPress(find.text('Amazon'));
+    await tester.pump();
+    expect(find.text('1 selected'), findsOneWidget);
+
+    // A second tap while in selection mode adds to the selection.
+    await tester.tap(find.text('Salary Inc'));
+    await tester.pump();
+    expect(find.text('2 selected'), findsOneWidget);
+
+    // Clearing exits selection mode.
+    await tester.tap(find.byTooltip('Clear selection'));
+    await tester.pump();
+    expect(find.text('2 selected'), findsNothing);
+    expect(find.text('Transactions'), findsOneWidget);
+  });
+
+  testWidgets('non-spending debit renders in a neutral color, not debit red',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      TransactionListItem(
+        id: 'transfer',
+        ts: now,
+        amount: 500,
+        direction: TransactionDirection.debit,
+        displayName: 'Self transfer',
+        categoryName: 'Transfers',
+        categoryId: 'transfers',
+        categoryIcon: 'swap_horiz',
+        categoryIsSpending: false,
+      ),
+    ]);
+
+    final amount = tester.widget<Text>(find.text('-₹500.00'));
+    final color = amount.style?.color;
+    // Neutral onSurface, never the debit rose hue.
+    expect(color, isNot(const Color(0xFFF48A8A))); // debitDark
+    expect(color, isNot(const Color(0xFFD64545))); // debitLight
   });
 
   test(

@@ -30,9 +30,12 @@ void main() {
 
     expect(cipherVersion, isNotEmpty);
 
+    // A freshly created database is stamped with the app's current schema
+    // version. Assert against database.schemaVersion (not a literal) so this
+    // can't silently rot the next time the schema is bumped.
     final schemaVersion =
         await database.customSelect('PRAGMA user_version').getSingle();
-    expect(schemaVersion.data['user_version'], 1);
+    expect(schemaVersion.data['user_version'], database.schemaVersion);
 
     final tableRows = await database
         .customSelect(
