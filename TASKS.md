@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @claude (T-059 review PASS; T-060 → Ready)
+Last updated: 2026-07-11 by @codex (T-060 → In Review)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -8,9 +8,6 @@ Last updated: 2026-07-11 by @claude (T-059 review PASS; T-060 → Ready)
      Depends are ALL Done are pulled into Ready (T-056 needs T-055 Done; T-058 needs
      T-048 Done). Everything else in Phase 3 below still depends on T-050 (Blocked)
      or on a same-phase task not yet Done — left in place until unblocked. -->
-- [ ] T-060 (@codex) [P3] Insights screen
-      AC: monthly report + savings suggestions + anomaly explanations rendered from `insights`; dismiss control; empty state; widget tests; no raw SMS text surfaced.
-      Depends: T-059
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -67,6 +64,10 @@ Last updated: 2026-07-11 by @claude (T-059 review PASS; T-060 → Ready)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-060 (@codex → review @claude) [P3] Insights screen
+      AC: monthly report + savings suggestions + anomaly explanations rendered from `insights`; dismiss control; empty state; widget tests; no raw SMS text surfaced.
+      Depends: T-059
+      Evidence: dashboard entry point + current-month insights report, deterministic savings/forecast/anomaly copy, persistent dismiss, and empty state covered by 9 focused widget tests; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 186/186; no raw SMS payload field is rendered.
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-059 (@codex, review @claude: PASS) [P3] Deterministic insights engine (2026-07-11)

@@ -5,6 +5,7 @@ import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
+import 'package:paisatrack/features/insights/insights_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
 void main() {
@@ -35,6 +36,7 @@ void main() {
       ProviderScope(
         overrides: [
           transactionListProvider.overrideWith((ref) => Stream.value(items)),
+          activeInsightsProvider.overrideWith((ref) => Stream.value(const [])),
         ],
         child: const MaterialApp(home: DashboardScreen()),
       ),
@@ -50,10 +52,30 @@ void main() {
     final lastMonth = DateTime(now.year, now.month - 1, 15, 12);
 
     await pumpDashboard(tester, [
-      item(id: 'debit_1', ts: thisMonth, amount: 150, direction: TransactionDirection.debit),
-      item(id: 'debit_2', ts: thisMonth, amount: 50, direction: TransactionDirection.debit),
-      item(id: 'credit_1', ts: thisMonth, amount: 100000, direction: TransactionDirection.credit),
-      item(id: 'debit_last_month', ts: lastMonth, amount: 9999, direction: TransactionDirection.debit),
+      item(
+        id: 'debit_1',
+        ts: thisMonth,
+        amount: 150,
+        direction: TransactionDirection.debit,
+      ),
+      item(
+        id: 'debit_2',
+        ts: thisMonth,
+        amount: 50,
+        direction: TransactionDirection.debit,
+      ),
+      item(
+        id: 'credit_1',
+        ts: thisMonth,
+        amount: 100000,
+        direction: TransactionDirection.credit,
+      ),
+      item(
+        id: 'debit_last_month',
+        ts: lastMonth,
+        amount: 9999,
+        direction: TransactionDirection.debit,
+      ),
     ]);
 
     expect(find.text('Spent'), findsOneWidget);
@@ -68,8 +90,18 @@ void main() {
     final thisMonth = DateTime(now.year, now.month, 5, 12);
 
     await pumpDashboard(tester, [
-      item(id: 'd', ts: thisMonth, amount: 200, direction: TransactionDirection.debit),
-      item(id: 'c', ts: thisMonth, amount: 1000, direction: TransactionDirection.credit),
+      item(
+        id: 'd',
+        ts: thisMonth,
+        amount: 200,
+        direction: TransactionDirection.debit,
+      ),
+      item(
+        id: 'c',
+        ts: thisMonth,
+        amount: 1000,
+        direction: TransactionDirection.credit,
+      ),
     ]);
 
     expect(find.byType(NetFlowChip), findsOneWidget);
@@ -82,6 +114,16 @@ void main() {
       (tester) async {
     await pumpDashboard(tester, const []);
     expect(find.text('No transactions yet this month.'), findsOneWidget);
+  });
+
+  testWidgets('opens insights from the app bar', (tester) async {
+    await pumpDashboard(tester, const []);
+
+    await tester.tap(find.byTooltip('Insights'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, 'Insights'), findsOneWidget);
+    expect(find.text('No insights yet'), findsOneWidget);
   });
 
   testWidgets('lays out on a narrow screen with large amounts and long names',

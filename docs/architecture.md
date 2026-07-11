@@ -187,3 +187,9 @@ total, rising recurring prices, category month-over-month changes above 10%, and
 missed debit autopays. IDs include the reporting month so history is retained;
 reruns preserve the user's dismissed flag and remove only stale rows owned by
 this engine. Forecast and anomaly rows remain owned by their dedicated engines.
+
+The Insights screen watches non-dismissed rows for the current UTC reporting
+month. It renders only the engine's structured JSON fields into fixed report,
+savings, forecast, and anomaly copy; transaction ids and raw capture text are
+never displayed. Dismissal persists on the insight row, and an empty state
+explains that reports appear after local patterns are detected.

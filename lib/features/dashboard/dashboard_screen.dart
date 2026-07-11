@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../insights/insights_screen.dart';
 import '../transactions/transactions_screen.dart';
 import 'dashboard_providers.dart';
 import 'dashboard_widgets.dart';
@@ -19,8 +20,18 @@ class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   static const _monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   @override
@@ -40,7 +51,20 @@ class DashboardScreen extends ConsumerWidget {
     final hasActivity = totals.debitTotal > 0 || totals.creditTotal > 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('This month')),
+      appBar: AppBar(
+        title: const Text('This month'),
+        actions: [
+          IconButton(
+            tooltip: 'Insights',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const InsightsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.lightbulb_outline),
+          ),
+        ],
+      ),
       body: ListView(
         padding: AppSpacing.screen,
         children: [

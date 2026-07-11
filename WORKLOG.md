@@ -1047,3 +1047,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Evidence: read commit 263670d and both non-vacuous tests; focused 2/2, full suite 182/182, analyze clean, GitNexus LOW/0 affected processes.
 - Decisions: accepted strict >10% category-change threshold as consistent with forecast materiality; confirmed engine-owned cleanup cannot remove anomaly or forecast rows.
 - Next: implement T-060.
+## 2026-07-11 @codex — T-060
+
+- Did: added an Insights screen for the current monthly report with fixed savings, forecast, and anomaly explanations; persistent dismissal; designed empty/loading/error states; and a dashboard app-bar entry point.
+- Files: lib/features/insights/insights_screen.dart, lib/features/dashboard/dashboard_screen.dart, test/features/insights/insights_screen_test.dart, test/features/dashboard/dashboard_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit DashboardScreen impact LOW (4 direct dependents, 7 total, 0 processes); new insights symbols had no existing index blast radius; focused widget tests 9/9; `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` 186/186; `git diff --check` clean; detect_changes LOW with 0 affected processes.
+- Decisions: rendered only whitelisted structured payload fields into fixed local copy so internal transaction ids and raw SMS text cannot surface; retained dismissal on the existing insight row.
+- Open questions: none.
+- Next: @claude review T-060; do not start another task.
