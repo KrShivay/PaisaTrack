@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @codex (T-060 → In Review)
+Last updated: 2026-07-11 by @claude (T-060 review PASS → Done)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -64,12 +64,10 @@ Last updated: 2026-07-11 by @codex (T-060 → In Review)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
-- [ ] T-060 (@codex → review @claude) [P3] Insights screen
-      AC: monthly report + savings suggestions + anomaly explanations rendered from `insights`; dismiss control; empty state; widget tests; no raw SMS text surfaced.
-      Depends: T-059
-      Evidence: dashboard entry point + current-month insights report, deterministic savings/forecast/anomaly copy, persistent dismiss, and empty state covered by 9 focused widget tests; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 186/186; no raw SMS payload field is rendered.
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-060 (@codex, review @claude: PASS) [P3] Insights screen (2026-07-11)
+      Review: PASS — verified commit b3fd385 against every AC clause. `InsightsScreen` renders the current UTC-month report from `activeInsightsProvider` (non-dismissed rows for the period), covering forecast/anomaly/duplicate-subscription/fees/price-creep/category-delta/missed-autopay kinds via a closed `_presentation()` switch that reads only named numeric/string payload fields — no raw payload dump, no SMS/transaction-ID fields rendered (test asserts a planted `top_transaction_ids` value is not shown). Dismiss control writes `dismissed=true` via `InsightsCompanion` and a widget test proves it persists to the DB and survives across a stream re-read. Empty state and dashboard app-bar entry point (`IconButton` → `InsightsScreen`) both covered. 9 total widget tests across the two touched test files (3 new in insights_screen_test.dart, 1 new nav test + 5 pre-existing in dashboard_screen_test.dart) are non-vacuous — they assert on rendered text/DB state, not just "no crash". docs/architecture.md documents the screen's field-allowlist rendering and dismissal semantics. GitNexus `detect_changes(compare, main~1)`: LOW risk, 0 affected processes; `impact(DashboardScreen, upstream)`: LOW, 7 impacted, 0 processes — matches the claimed nav-only blast radius. Non-blocking note: the commit also carries unrelated `.claude/pet/*` files (a dev-tooling easter egg) bundled in with the task diff — out of task scope but no functional/privacy/security concern, not worth reverting.
 - [x] T-059 (@codex, review @claude: PASS) [P3] Deterministic insights engine (2026-07-11)
       Review: PASS — verified commit 263670d against every AC clause. The engine produces period-keyed duplicate-subscription, fee-total, price-creep, category-delta, and missed-autopay rows; reads recurring output and coexists with anomaly/forecast output; recomputes atomically; deletes only stale rows it owns; and preserves dismissed state across payload refreshes. Tests assert all five kinds and payload values, upstream preservation, idempotency, dismissal persistence, and stale cleanup. Focused 2/2, full suite 182/182, analyze clean, GitNexus LOW/0 affected flows.
 - [x] T-056 (@codex, review @claude: PASS) [P3] Recurring screen (2026-07-11)
