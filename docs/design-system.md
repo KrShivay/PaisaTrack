@@ -115,6 +115,15 @@ alpha background, full-strength icon, 20dp icon size. Category hues are fixed
 across themes so users build recognition (see `category_visuals.dart` for the
 18 seed assignments).
 
+User-created categories choose from the fixed Material icon catalog exposed by
+`CategoryVisuals.iconOptions`. Creation preselects an icon with the local,
+deterministic `suggestIcon(name)` keyword rules; the user may override it in the
+same dialog and edit it later. Suggestions are conveniences, never model output:
+unknown text uses the generic category icon. The initial curated vocabulary
+covers smoking, family transfers, health, housing, personal care, tea/coffee,
+investments/redemptions, bike service, connectivity/recharge, AI subscriptions,
+salary/dividends/stocks, cannabis, and alcohol.
+
 Asset debt (flagged): the PNGs are 1254×1254 and ~1.4 MB each (~14 MB total).
 Before Phase 5 release, resize to ≤512px and re-compress (target ≤150 KB each)
 or move to WebP.

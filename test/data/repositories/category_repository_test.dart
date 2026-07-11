@@ -29,7 +29,12 @@ void main() {
     await repository.renameCategory(
       categoryId: sourceId,
       name: 'Coffee',
+      icon: 'local_cafe',
     );
+    final renamed = await (database.select(database.categories)
+          ..where((row) => row.id.equals(sourceId)))
+        .getSingle();
+    expect(renamed.icon, 'local_cafe');
 
     final now = DateTime.utc(2026, 7, 8, 9);
     await database.into(database.transactions).insert(

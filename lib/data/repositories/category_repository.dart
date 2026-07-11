@@ -46,12 +46,18 @@ class CategoryRepository {
   Future<void> renameCategory({
     required String categoryId,
     required String name,
+    String? icon,
   }) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) throw ArgumentError.value(name, 'name');
     await (_database.update(_database.categories)
           ..where((row) => row.id.equals(categoryId)))
-        .write(CategoriesCompanion(name: Value(trimmed)));
+        .write(
+      CategoriesCompanion(
+        name: Value(trimmed),
+        icon: icon == null ? const Value.absent() : Value(icon),
+      ),
+    );
   }
 
   Future<void> mergeCategory({
