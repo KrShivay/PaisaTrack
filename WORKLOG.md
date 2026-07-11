@@ -1,3 +1,12 @@
+## 2026-07-11 @codex — T-058
+
+- Did: added a deterministic UTC burn-rate forecaster that totals current debit spend, projects remaining calendar days from trailing-three-month per-day medians, compares against the three-month average, and upserts/removes the period forecast insight at the strict 10% boundary.
+- Files: lib/intelligence/burn_rate_forecaster.dart, test/intelligence/burn_rate_forecaster_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: new-module work changed no existing code symbol (LOW blast radius). `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub test/intelligence/burn_rate_forecaster_test.dart` passed 2/2; `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` passed 177/177; `git diff --check` clean; final GitNexus `detect_changes(all)` LOW with 0 affected processes (new untracked module/test reviewed directly).
+- Decisions: spend means non-deleted, non-duplicate debit transactions; nonexistent dates in shorter historical months are omitted from that day's median rather than treated as zero; a rerun removes a stale forecast insight when deviation returns to <=10%.
+- Open questions: none.
+- Next: @claude review T-058; do not start T-056 until review completes.
+
 ## 2026-07-11 @claude — Review T-070 + T-018: PASS (both → Done); archived T-040..T-035; groomed T-056/T-058 into Ready
 
 - Did: ran the COLLABORATION.md §4 checklist on the two `## In Review` items. Both were self-executed by @claude in the prior session and, per the WORKLOG note in that entry, landed inside a large mixed commit (42de9b1 "Dashboard UI enhancement, SQLCipher host tests, and fixes") that a concurrent/human session committed alongside unrelated dashboard UI and SQLCipher-host-test work — not under a `[T-070][T-018]` commit of their own. Verified the code itself rather than the commit boundary.

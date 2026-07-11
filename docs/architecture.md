@@ -168,3 +168,11 @@ Welford updates for category-week and merchant-month aggregates. It checkpoints
 each period via `updated_at`, compares against the prior baseline only after
 eight periods, and writes deterministic anomaly insights above 2.5σ with the
 top three contributing transaction ids.
+
+`BurnRateForecaster` compares current UTC month debit spending with the trailing
+three calendar months. It adds the per-calendar-day median for every remaining
+day to current spend, then compares the projection with the three-month average.
+Deleted and duplicate rows and credits are excluded. A deterministic `forecast`
+insight exists only when absolute deviation is strictly above 10%; reruns remove
+a stale insight. A calendar day absent from a shorter historical month is left
+out of that day's median rather than treated as zero spending.
