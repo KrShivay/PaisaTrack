@@ -15,4 +15,7 @@ if [ -x "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" ]; then
   sh "$(git rev-parse --show-toplevel)/scripts/agent_handoff.sh" || true
 fi
 
+# Refresh the GitNexus knowledge graph in the background (never blocks).
+"$(git rev-parse --git-path hooks)/gitnexus-refresh" || true
+
 exit 0

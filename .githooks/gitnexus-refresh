@@ -1,0 +1,36 @@
+#!/bin/sh
+# Shared GitNexus refresh, invoked by the post-commit and post-checkout hooks.
+#
+# Runs `node .gitnexus/run.cjs analyze` in the background so it never blocks the
+# triggering git operation. Log and lock live under the git dir so they never
+# appear in `git status`. Not a git hook itself (unrecognized name), so git
+# won't run it directly. No-ops cleanly when Node or the runner is absent.
+
+set -u
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -f "$root/.gitnexus/run.cjs" ] || exit 0
+command -v node >/dev/null 2>&1 || exit 0
+
+git_dir="$(git rev-parse --git-dir 2>/dev/null)" || exit 0
+case "$git_dir" in
+  /*) ;;
+  *) git_dir="$root/$git_dir" ;;
+esac
+
+# Avoid an analyze storm while a rebase / merge / cherry-pick replays commits
+# (each replay fires post-commit and post-checkout); refresh once it finishes.
+if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ] \
+   || [ -f "$git_dir/MERGE_HEAD" ] || [ -f "$git_dir/CHERRY_PICK_HEAD" ]; then
+  exit 0
+fi
+
+# Single-flight: if an analyze is already running, let it finish rather than
+# spawning a second one that would race on the same index.
+lock="$git_dir/gitnexus-analyze.lock"
+mkdir "$lock" 2>/dev/null || exit 0
+
+log="$git_dir/gitnexus-analyze.log"
+( cd "$root" && node .gitnexus/run.cjs analyze >"$log" 2>&1; rmdir "$lock" 2>/dev/null ) >/dev/null 2>&1 &
+
+exit 0
