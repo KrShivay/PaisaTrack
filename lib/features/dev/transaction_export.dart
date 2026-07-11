@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../../core/platform/system_document_gateway.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 
@@ -12,11 +12,10 @@ import '../../data/db/database_provider.dart';
 /// bank-statement reconciliation (`scripts/reconcile_statement.py
 /// --transactions <file>`).
 ///
-/// Privacy: the export is written to the app-private documents directory
-/// (`/data/data/com.paisatrack/app_flutter/`), never external storage, and the
-/// UI entry point is compiled out of release builds (kDebugMode guard on the
-/// dev screen). Retrieval is via adb `run-as`, which only works on debuggable
-/// builds. This is NOT the user-facing encrypted export (Phase 2, T-043).
+/// Privacy: the UI entry point is compiled out of release builds (kDebugMode
+/// guard on the dev screen) and warns before writing normalized, sensitive
+/// plaintext data to a user-selected document. This is NOT the user-facing
+/// encrypted export (Phase 2, T-043).
 class TransactionJsonExporter {
   const TransactionJsonExporter(this._database);
 
@@ -51,19 +50,32 @@ class TransactionJsonExporter {
     ];
   }
 
+  /// Encodes all transaction rows for a system-selected document destination.
+  Future<Uint8List> exportBytes() async {
+    final records = await serializeAll();
+    return Uint8List.fromList(
+      utf8.encode(const JsonEncoder.withIndent('  ').convert(records)),
+    );
+  }
+
   /// Writes the export into [directory] and returns the created file.
   Future<File> exportTo(Directory directory) async {
     final records = await serializeAll();
     final file = File('${directory.path}${Platform.pathSeparator}$fileName');
-    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(records));
+    await file
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(records));
     return file;
   }
 }
 
-/// Runs the export into the app documents directory and returns the file path.
-final transactionJsonExportProvider = FutureProvider.autoDispose<String>((ref) async {
+/// Writes the debug export to a user-selected document.
+final transactionJsonExportProvider =
+    FutureProvider.autoDispose<bool>((ref) async {
   final database = await ref.watch(appDatabaseProvider.future);
-  final directory = await getApplicationDocumentsDirectory();
-  final file = await TransactionJsonExporter(database).exportTo(directory);
-  return file.path;
+  final bytes = await TransactionJsonExporter(database).exportBytes();
+  return ref.read(systemDocumentGatewayProvider).saveDocument(
+        suggestedName: TransactionJsonExporter.fileName,
+        mimeType: 'application/json',
+        bytes: bytes,
+      );
 });

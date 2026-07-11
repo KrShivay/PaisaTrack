@@ -1,3 +1,137 @@
+## 2026-07-11 @claude — T-070 + T-018 (self-executed at @human's "fix all those you can" direction)
+
+- Did: implemented the two open board items that did not need a human decision or an external artifact. T-070: added `GenericParseRejection` enum and a `rejectionReason()` method on `GenericTransactionParser`, refactoring `parse()` and `rejectionReason()` to share a single private `_evaluate()` (one source of truth — the reported reason cannot drift from the guard that decided); the unparsed dev screen now recomputes and shows the specific per-stage reason per row at display time (no schema change), replacing the static "guard rejected" label. T-018: hardened the existing CI codegen guard to fail on any modified-or-untracked `*.g.dart` (was a single hard-coded path) and pinned CI to Flutter 3.44.4 for deterministic generation; documented regeneration in development.md.
+- Files: lib/capture/generic_transaction_parser.dart, lib/features/dev/unparsed_sms_screen.dart, test/capture/generic_transaction_parser_test.dart (new), test/features/dev/unparsed_sms_screen_test.dart, .github/workflows/ci.yml, docs/development.md, TASKS.md, WORKLOG.md.
+- Evidence: repo-local SDK runs on this macOS host (Flutter 3.44.4) — the "wrong-arch" gate was the Linux sandbox only. GitNexus impact pre-edit on `GenericTransactionParser` LOW (1 direct caller `ParserCascade`, 0 flows; behavior of `parse()` preserved). `flutter analyze --no-pub` clean on both touched lib files. `flutter test --no-pub --concurrency=1` green across the three affected files (25/25: new generic-parser unit test 6 cases incl. hard-reject precedence + each guard + accepted→null + mutual-exclusion invariant; updated unparsed-screen widget test incl. a 2-row distinct-reason case; parser_cascade regressions intact). T-018: `dart run build_runner build --delete-conflicting-outputs` ran cleanly (271 outputs) and the new guard command `git status --porcelain -- '*.g.dart'` reports no drift — generated code is current; ci.yml validated as YAML.
+- Decisions: did NOT touch the four still-blocked items — T-050/T-075 need @human/@claude to pin real embedder/LLM artifacts (SHA-256, license, tensor/runtime contract; fabricating them would validate a fake), T-067 needs real public SMS fixtures gathered (no fabrication), T-071 needs a @human product-priority decision. Left both new tasks in In Review rather than Done — @claude review is a separate gate per COLLABORATION.md and I don't self-approve.
+- Open questions / WARNING: the working tree already contained un-committed changes I did NOT author when I started (session began "clean" per git, then these appeared) — `lib/features/dashboard/{dashboard_providers,dashboard_screen}.dart`, `lib/features/dashboard/dashboard_widgets.dart` (untracked), `test/features/dashboard/*`, and `UI_ENHANCEMENT_PLAN.md` (untracked). These look like a concurrent session's UI work. I left all of them untouched; they are unrelated to T-070/T-018. Whoever commits should stage the two feature sets separately.
+- Next: @claude review T-070 + T-018; reconcile the concurrent dashboard/UI changes with their owning session before any commit.
+
+## 2026-07-11 @claude — Review T-077, T-078, T-049, T-055, T-057
+
+- Did: ran the COLLABORATION.md §4 review checklist on all five In Review tasks (manual session — the automated handoff loop is paused). All five → Review: PASS, moved to Done.
+- Files: TASKS.md, WORKLOG.md, .handoff/logs/claude-20260711-031257.log, .handoff/LESSONS.md.
+- Evidence: reviewed each commit's diff + full test source directly. T-077 (d5c28f5): SAF export/import via document channel, cancel-safe, dev plaintext warning, backup ciphertext-excludes-plaintext-name test. T-078 (d6ebe93): atomic confirmMany with needs_review guard, statuses-only (categoryId==null asserted), counterparty grouping. T-049 (91b9659): additive merchant confidence block + back-compat trail reader (legacy parser-only rows tested). T-055 (45d878a): ±5% amount clusters, band+CoV<0.25+≥3-occurrence periodicity, rising/missed, noise-rejection test. T-057 (42e95a8): Welford mean/σ, n≥8 & mean+2.5σ gate, per-period idempotency, top-3 contributors. Toolchain caveat: Flutter/dart cannot run in this sandbox (wrong arch → Exec format error) and GitNexus can't re-index in-sandbox, so review relied on reading test source plus @codex's logged device-toolchain evidence (analyze clean, focused + full suites green with 2 known skips, `git diff --check` clean) — consistent with prior review sessions.
+- Decisions: no application code touched (review-only session per claude_session.md). detect_changes not run for this commit — it edits only board/doc/log/handoff files, no graph-mapped symbols.
+- Open questions: none. The handoff loop remains paused (`.handoff/paused`); @human removes it (e.g. `scripts/handoff.sh`) to resume automated dispatch.
+- Next: @codex is clear on all reviewed P2/P3 work; Ready/Blocked queue unchanged (T-050/T-075 still blocked on pinned artifacts; T-067 fixtures are @claude In Progress).
+
+## 2026-07-11 @codex — T-057
+
+- Did: added an idempotent anomaly scanner for current UTC category-weeks and merchant-months. It reconstructs Welford M2 from persisted population std/n, compares the current aggregate against the prior baseline at n>=8, writes deterministic anomaly insights above mean+2.5σ, and includes the top three contributing transaction ids.
+- Files: lib/intelligence/anomaly_detector.dart, test/intelligence/anomaly_detector_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: new-module work required no existing-symbol edits. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused tests 2/2; full suite 147 passed / 2 existing skips; `git diff --check` clean; final `detect_changes(all)` LOW/0 processes (new files reviewed directly because GitNexus does not map untracked files).
+- Decisions: baseline comparison precedes incorporation of the current period; `updated_at` stores the processed period start for rerun idempotency. Population std permits exact Welford continuation from the schema's mean/std/n fields.
+- Open questions: none.
+- Next: @claude review T-057; next independent @codex task T-058.
+
+## 2026-07-11 @codex — T-055
+
+- Did: added an idempotent atomic recurring-series scanner that groups resolved-merchant transactions by direction, sub-clusters amounts within 5%, checks known median-gap bands with CoV <0.25 and >=3 occurrences, then upserts next date, trend, missed state, and subscription/EMI/bill/income kind.
+- Files: lib/intelligence/recurring_detector.dart, test/intelligence/recurring_detector_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: new-module work required no existing-symbol impact edit. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused synthetic tests 4/4; full suite 145 passed / 2 existing skips; `git diff --check` clean. Final `detect_changes(all)` LOW with no affected processes; GitNexus does not map the untracked new files, so their complete source and fixtures were reviewed directly.
+- Decisions: known bands are weekly 6–8d, monthly 26–35d, quarterly 80–100d, yearly 350–380d; population gap CoV is used. Stable series ids anchor to the earliest transaction. Credits are income; explicit label keywords classify EMI/bill, with other debits treated as subscriptions.
+- Open questions: none.
+- Next: @claude review T-055; @codex continues independent T-057.
+
+## 2026-07-11 @codex — T-050 BLOCKED (embedding artifact not pinned)
+
+- Checked: T-050 AC, PLAN §2/§7.3, ADR 0002, assets, and dependencies. No embedding model, source/checksum, tokenizer/tensor contract, vector dimension, runtime version, or license record is specified.
+- Blocker: those exact inputs are required to prove deterministic output from a real TFLite/MediaPipe model. A hand-written hash/vector placeholder would not satisfy AC and would contaminate T-051 similarity behavior.
+- Board: moved T-050 to Blocked; T-051/T-052 and their dependents remain unavailable. Continuing with dependency-satisfied T-055.
+
+## 2026-07-11 @codex — T-049
+
+- Did: extended each new ingest's `confidence_json` with provisional merchant evidence (`v`, `c`, `src`) alongside the existing parser/category blocks, all inside the existing atomic ingest transaction. Added a typed `TransactionConfidenceTrail` reader, exposed it on `TransactionDetail`, and replaced the detail-screen placeholder with parser/merchant/category evidence rows.
+- Files: lib/data/models/transaction_confidence_trail.dart, lib/capture/sms_ingestion.dart, lib/data/repositories/transaction_repository.dart, lib/features/transactions/transaction_detail_screen.dart, test/capture/sms_ingestion_test.dart, test/features/transactions/transaction_detail_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit MEDIUM for `SmsIngestor`/`TransactionDetail`, LOW for `_transactionCompanionFor`, `watchDetail`, and detail rendering. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused ingest/detail/backfill tests 28/28; full suite 141 passed / 2 existing skips; `git diff --check` clean; final `detect_changes(all)` LOW with no affected processes.
+- Decisions: until T-051 resolves canonical merchants, the merchant trail records the parser's merchant/VPA signal and parse confidence/source; T-051 can replace the block with alias/embedding evidence. Malformed or legacy parser-only JSON degrades to absent optional entries, not a read failure. Frozen §6.2 record unchanged.
+- Open questions: none.
+- Next: @claude review T-049.
+
+## 2026-07-11 @codex — T-075 BLOCKED (missing pinned model artifact)
+
+- Checked: `AppConstants`, dependencies, PLAN §2/Phase 4, ADR 0002/0006, and the T-075 AC. The repo specifies only a Gemma-2B-class family, not an artifact that can be downloaded and verified.
+- Blocker: need a pinned MediaPipe-compatible artifact URL, exact SHA-256, model format/runtime version, and license/redistribution record. Without those inputs, a download manager could only ship fake placeholders and cannot satisfy integrity/runtime AC.
+- Board: moved T-075 Ready → Blocked; continuing with dependency-satisfied T-049 per @human instruction not to wait for Claude.
+
+## 2026-07-11 @codex — T-078
+
+- Did: grouped weekly-review rows by resolved merchant, VPA, or normalized merchant text; added row selection, select-all-visible, atomic bulk confirmation, and one-tap group confirmation. Bulk writes update only `status`/`updated_at`; row tap correction, swipe confirmation, and the empty state remain intact.
+- Files: lib/data/repositories/transaction_repository.dart, lib/features/review/weekly_review_screen.dart, test/features/review/weekly_review_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit HIGH for additive `TransactionReviewItem` metadata (16 direct imports/constructors; optional default preserves compatibility), LOW for `confirm`, `_toReviewItem`, and the screen. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused review tests 5/5; full Flutter suite 140 passed / 2 existing skips; `git diff --check` clean. Final `detect_changes(all)` HIGH from the expected shared review-model/screen fan-out; ask-now and correction/rule paths passed regression coverage.
+- Decisions: used one set-based Drift update guarded by `status='needs_review'`, preventing stale bulk selections from overwriting newer workflow states. Group keys prefer merchant id, then normalized VPA, then normalized merchant text.
+- Open questions: none.
+- Next: @claude review T-078.
+
+## 2026-07-11 @codex — T-077
+
+- Did: routed encrypted backup export/import through Android's system create/open-document pickers, and routed the debug transaction JSON export through the same user-visible destination flow with an explicit plaintext warning. Picker dismissal reports cancellation and performs no write/restore; no storage permission or third-party dependency was added.
+- Files: android/app/src/main/kotlin/com/paisatrack/MainActivity.kt, lib/core/platform/system_document_gateway.dart, lib/features/{backup/encrypted_backup_service,settings/settings_screen,dev/transaction_export,dev/unparsed_sms_screen}.dart, matching tests, docs/{architecture,development,privacy}.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW for backup/settings/dev/native symbols. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused document/backup/export/dev tests 14/14; full Flutter suite 138 passed / 2 existing skips; `./gradlew :app:compileDebugKotlin` BUILD SUCCESSFUL; `git diff --check` clean. Final `detect_changes(all)` reported CRITICAL because additions inside `MainActivity` fan out coarsely to existing native flows and the tree includes pre-existing staged review files; source diff confirms SMS, permissions, and notification bodies are unchanged.
+- Decisions: used the built-in Storage Access Framework via a narrow platform channel instead of adding a plugin. Dart creates encrypted/JSON bytes in memory; Android writes only the URI selected by the user, so there is no app-private staging file and no broad storage permission.
+- Open questions: none.
+- Next: @claude review T-077.
+
+## 2026-07-10 @claude — Review T-074: PASS (template trust ledger → Done)
+
+- Reviewed @codex's committed work (557b7a5) against the §4 checklist by reading the diff and full test source directly. Flutter toolchain is arch-gated in this sandbox (`.tooling/flutter/.../dart` → "Exec format error"); GitNexus re-index/detect_changes also can't run (npm re-install times out; registry not writable — same limitation @codex logged). Relied on source reading + @codex's device-toolchain evidence (analyze clean, focused 32/32, full suite green with 2 pre-existing skips, `git diff --check` clean).
+- AC verified non-vacuously, clause by clause:
+  1. Counters derive from real `feedback` rows (`field='parse_verdict'`, `context='parse_confirm'`) joined to `transactions`; template id + `provenance:"public"` pulled from `confidence_json.parser` via `_publicTemplateId` — the T-073 attribution column flagged in that review is actually used, closing my prior note.
+  2. Promotion requires `confirmedParses >= 20 && amountDirectionCorrections == 0`; a test promotes at exactly 20 and asserts the parse hot path returns 0.97 end-to-end (ParserCascade → matcher → ledger), plus the `model_meta` cache write.
+  3. A single amount OR direction correction blocks promotion and keeps 0.85; demotion is durable (only a new template id resets counters, matching ADR 0005) and self-healing because `refresh()` fully recomputes on every parse-verdict write. Merchant-only correction correctly does NOT demote — explicitly tested.
+  4. `flaggedEntries` surfaces on the dev screen through a watched `templateTrustAlertsProvider`; a widget test asserts the alert banner and template id render, and the high-trust/empty default renders nothing.
+  5. Non-public / generic verdicts are ignored (tested → empty ledger).
+- Plan/privacy/contract: persistence reuses `model_meta.template_trust_ledger_v1` as a compact parse-time cache — no second store, no schema migration; feedback remains authoritative. `refresh()` runs inside the existing atomic parse-verdict transactions in `updateWithFeedback`/`confirmParse` (no new write path). Frozen §6.2 contract untouched (`NormalizedTransactionRecord` absent from diff; existing `withParseConfidence` reused). Only template ids + integer counters are cached — no raw SMS in metadata or logs.
+- Diff scope matches AC exactly (13 files: ledger + matcher/cascade/ingestion wiring, repository refresh hook, dev screen/provider, 2 test files, docs, board) — no stray files. WORKLOG entry complete.
+- Board hygiene: T-074 → Done with the PASS verdict; Done trimmed back to the 20-cap (T-034 archived to docs/tasks-archive.md). Ready still holds the Phase 2.5b parser-trust-loop scope; no @codex task is In Progress, so committing this re-arms the handoff loop for the next Ready `(@codex)` task.
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md (review + board only — no application code changed).
+
+## 2026-07-10 @codex — T-074
+
+- Did: added a `model_meta`-backed cache rebuilt from public-template `parse_verdict` feedback, then wired public-template parsing to promote at 20 clean confirmations or remain/demote at 0.85 after amount/direction corrections. The Dev diagnostics screen lists flagged template ids for re-authoring.
+- Files: lib/capture/template_engine/template_trust_ledger.dart, lib/capture/{parser_cascade,sms_ingestion}.dart, lib/capture/template_engine/template_matcher.dart, lib/data/repositories/transaction_repository.dart, lib/features/dev/{unparsed_sms_providers,unparsed_sms_screen}.dart, test/capture/template_engine/template_trust_ledger_test.dart, test/features/dev/unparsed_sms_screen_test.dart, docs/{architecture,schema}.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus impact preflight — `ParserCascade` MEDIUM (6 direct dependents) and `SmsIngestor` MEDIUM (6 direct dependents, 1 capture test flow); `updateWithFeedback`, `confirmParse`, and `UnparsedSmsScreen` LOW. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused 32/32 tests green; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` green (2 pre-existing skips); `git diff --check` clean; detect_changes MEDIUM (20 symbols, only the expected correction-write flows). GitNexus re-index could not complete because the sandbox cannot write `~/.gitnexus/registry.json.tmp`; impact/detect results were cross-checked against source and tests.
+- Decisions: feedback remains authoritative; `model_meta.template_trust_ledger_v1` is deliberately a compact parse-time cache, so no second trust store or schema migration is needed. Merchant-only parse corrections are retained for learning but do not demote parser trust, matching ADR 0005.
+- Open questions: none.
+- Next: @claude review T-074.
+
+## 2026-07-10 @claude — Review T-048: PASS (schema v3 analytics tables → Done)
+
+- Reviewed @codex's committed work (1c27f02) against the §4 checklist by reading the diff and test source directly (Flutter toolchain permission-gated in this sandbox — relied on @codex's logged evidence: analyze clean, 127/2 full suite green, `git diff --check` clean). All AC clauses verified non-vacuously:
+  1. `recurring_series`/`baselines`/`model_meta`/`insights` tables added per PLAN §6.1 shapes, registered in `@DriftDatabase`.
+  2. `merchants.embedding` confirmed `blob().nullable()()`, documented in schema.md as unused until T-050.
+  3. `schemaVersion` 2→3; `onUpgrade`'s `if (from < 3)` branch only `createTable`/`createIndex`s the four new tables — additive by construction, no touch on existing tables/rows; `onCreate` uses `createAll()` for fresh installs.
+  4. `app_database_v3_migration_test.dart` hand-builds a real v2 sqlite3 file with one transaction row, opens through `AppDatabase`, asserts `user_version=3`, the row survived unchanged, all four tables + three required indexes exist — proves both schema and no-data-loss, not vacuous. `app_database_v2_migration_test.dart` correctly updated to expect `user_version=3` (opening a v1 file now runs every migration through current) instead of silently drifting out of sync.
+  5. docs/schema.md documents all four tables, the embedding note, and the migration log entry.
+- Diff scope matches AC exactly (4 new table files, database.dart/.g.dart, two migration tests, docs/schema.md, board files) — no unrelated files.
+- Re-ran GitNexus `detect_changes(compare, main~1)`: risk critical, 246 changed symbols, but every affected process is a generated Drift `$$*TableFilterComposer`/`$$*TableOrderingComposer` touch — expected full regeneration of `database.g.dart` whenever any table changes, no unexpected application-logic flow.
+- Non-blocking nit: @codex's WORKLOG entry for T-048 is missing a blank line separating it from the prior T-072 entry — cosmetic, left as-is to avoid unrelated churn on a reviewed commit.
+- Board hygiene: T-048 → Done; Done trimmed to the 20-cap (T-033 archived to docs/tasks-archive.md). T-074 (template trust ledger, topmost Ready) now has both deps (T-073, T-048) satisfied — committing this dispatches @codex onto it.
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md (review + board grooming only — no application code changed).
+
+## 2026-07-10 @claude — Review T-073: PASS (parse-confirmation surface → Done); T-048 groomed into Ready
+
+- Reviewed @codex's committed work (4db887c) against the §4 checklist by reading the diff and full test source directly (Flutter toolchain execution is permission-gated in this sandbox session; relied on reading `transaction_repository.dart`, `transaction_detail_screen.dart`, `weekly_review_screen.dart`, and their tests, plus @codex's logged device-toolchain evidence — analyze clean, 126/2 full suite, `git diff --check` clean). All AC clauses verified non-vacuously:
+  1. Confirm/fix affordance gated on `_isLowTrustParse` (`parse_source == 'generic'` OR `confidence_json.parser.provenance == 'public'`); a repository test asserts both trigger conditions, and a widget test proves the high-trust default fixture renders `findsNothing` for "Parsed correctly?" — the no-nag guarantee is actually tested, not assumed.
+  2. `confirmParse()` writes exactly one `feedback(field='parse_verdict', newValue='ok', context='parse_confirm')` row in its own `_database.transaction`; test asserts id/field/value/context/confidence/timestamp.
+  3. `updateWithFeedback(recordParseCorrections: true)` extends the existing atomic edit path: per changed field it stages both the standard field-feedback row (context `parse_confirm`) and a `parse_verdict` correction row (`amount_corrected`/`direction_corrected`/`merchant_corrected`); test on a 3-field fix asserts 6 total feedback rows plus the txn update, all in one transaction — exactly the trust-ledger signal ADR 0005 and T-074 need.
+  4. Widget tests cover both surfaces (detail screen card, weekly-review sheet buttons) with real provider overrides, not stubbed no-ops.
+- docs/architecture.md documents the flow under a new "Parse confirmation (T-073)" subsection. Frozen §6.2 wire contract untouched — no changes to `NormalizedTransactionRecord`.
+- Re-ran `mcp__gitnexus__detect_changes(scope: compare, base_ref: main~1)`: HIGH risk but confined to the expected symbols (`TransactionRepository`, `TransactionReviewItem`, `TransactionDetail`, `WeeklyReviewScreen`, `_TransactionDetailScreenState`) — matches @codex's logged claim, no surprise scope.
+- Board hygiene: T-073 → Done; Done trimmed back to the 20-cap (T-032 archived to docs/tasks-archive.md). T-074 (template trust ledger) lists `Depends: T-073, T-048` — T-048 (schema v3 migration) was flagged in a prior grooming session as "pulled forward" but was left sitting in the Phase 3 backlog, physically unreachable in `## Ready`; moved its task block into Ready ahead of T-074 (AC/Depends unchanged, `Depends: T-036` which is already Done) so the trust-ledger work is actually startable. Phase 3 section header comment updated to reflect the move.
+- Non-blocking note for T-074: once template counters are live, revisit whether `parse_verdict` rows from `confirmParse`/`updateWithFeedback` need a `template_id` join back through `confidence_json.parser.template_id` (T-072) for per-template attribution — the column is there, just confirm the ledger query actually uses it.
+- Files: TASKS.md, WORKLOG.md, docs/tasks-archive.md (review + board grooming only — no application code changed).
+
+## 2026-07-10 @codex — T-073
+
+- Did: added ADR 0005 parse-confirm/fix controls to transaction detail and the weekly-review correction sheet for generic/public-template records only; confirmation records `parse_verdict=ok`, while fixes atomically update amount/direction/merchant and write per-field + parser-verdict feedback.
+- Files: lib/data/repositories/transaction_repository.dart, lib/features/{transactions/transaction_detail_screen,review/weekly_review_screen}.dart, test/features/{transactions/transaction_detail_screen,review/weekly_review_screen}_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW for `updateWithFeedback`, `TransactionDetailScreen`, and `WeeklyReviewScreen`; optional `TransactionReviewItem` metadata was HIGH (16 direct consumers), made backward-compatible with defaults. `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; complete Dart suite green in runner-sized `flutter test --no-pub --concurrency=1` groups (126 passed, 2 known host/debug skips); focused detail/review tests green; `git diff --check` clean; GitNexus detect_changes HIGH, limited to the expected shared repository/UI metadata paths and correction flows.
+- Decisions: parse correction verdicts use `amount_corrected` / `direction_corrected` / `merchant_corrected`, giving T-074 an explicit parser-trust signal without overloading category feedback; the review sheet now awaits its category provider instead of silently failing before its stream emits.
+- Open questions: none.
+- Next: @claude review T-073.
+
 ## 2026-07-10 @claude — Review T-072: PASS (provenance-capped template confidence → Done)
 
 - Reviewed @codex's committed work (b400d7b) against the §4 checklist by reading the test source (Flutter/GitNexus cannot run in this sandbox — wrong arch; relied on @codex's logged device-toolchain evidence: analyze clean, 30/30 focused, full suite green, detect_changes MEDIUM/expected). All four AC clauses met and proven non-vacuously:
@@ -855,3 +989,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Decisions: provenance is carried separately from `NormalizedTransactionRecord.toJson()` so existing fixture expected JSON and the frozen parser contract remain stable; parser metadata is additive and only populated for template parses.
 - Open questions: none.
 - Next: @claude review T-072; T-073 remains blocked on review flow.
+## 2026-07-10 @codex — T-048
+
+- Did: added schema v3's recurring_series, baselines, model_meta, and insights Drift tables with required indexes and an additive v2→v3 migration; confirmed merchants.embedding remains nullable and unused until T-050.
+- Files: lib/data/db/{database.dart,database.g.dart,tables/{recurring_series,baselines,model_meta,insights}_table.dart}, test/data/db/{app_database_v2,app_database_v3}_migration_test.dart, docs/schema.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit AppDatabase impact CRITICAL (57 direct consumers, 11 flows); `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter analyze --no-pub` clean; focused migration tests passed; full `HOME="$PWD/.tooling/_home" .tooling/flutter/bin/flutter test --no-pub --concurrency=1` green (127 passed, 2 known skips); `git diff --check` clean; detect_changes CRITICAL due expected generated Drift consumers, reviewed as contained to schema/migration paths.
+- Decisions: v3 creates only new tables/indexes, preserving v2 rows; the prior v1→v2 migration test now expects the current final schema version while retaining its v2-specific assertions.
+- Open questions: none.
+- Next: @claude review T-048; T-074 remains blocked on T-073 + T-048 review.

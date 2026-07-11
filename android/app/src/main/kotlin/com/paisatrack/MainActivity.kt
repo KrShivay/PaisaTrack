@@ -1,7 +1,9 @@
 package com.paisatrack
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -28,6 +30,7 @@ class MainActivity : FlutterActivity() {
     private val capturedSmsBridge = CapturedSmsEventChannelBridge()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var pendingDocumentRequest: PendingDocumentRequest? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -122,15 +125,125 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/documents",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "saveDocument" -> saveDocument(call, result)
+                "openDocument" -> openDocument(call, result)
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        pendingDocumentRequest?.result?.error(
+            "engine_detached",
+            "Document picker was interrupted.",
+            null,
+        )
+        pendingDocumentRequest = null
         if (CapturedSmsSink.current === capturedSmsBridge) {
             CapturedSmsSink.current = CapturedSmsSink { }
         }
         capturedSmsBridge.detach()
         backfillExecutor.shutdown()
         super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    private fun saveDocument(call: MethodCall, result: MethodChannel.Result) {
+        val suggestedName = call.argument<String>("suggestedName")
+        val mimeType = call.argument<String>("mimeType")
+        val bytes = call.argument<ByteArray>("bytes")
+        if (suggestedName == null || mimeType == null || bytes == null) {
+            result.error("invalid_arguments", "Missing document save arguments.", null)
+            return
+        }
+        if (!reserveDocumentRequest(PendingDocumentRequest.Save(result, bytes))) return
+
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeType
+            putExtra(Intent.EXTRA_TITLE, suggestedName)
+        }
+        launchDocumentPicker(intent, SaveDocumentRequestCode, result)
+    }
+
+    private fun openDocument(call: MethodCall, result: MethodChannel.Result) {
+        val mimeType = call.argument<String>("mimeType")
+        if (mimeType == null) {
+            result.error("invalid_arguments", "Missing document MIME type.", null)
+            return
+        }
+        if (!reserveDocumentRequest(PendingDocumentRequest.Open(result))) return
+
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeType
+        }
+        launchDocumentPicker(intent, OpenDocumentRequestCode, result)
+    }
+
+    private fun reserveDocumentRequest(request: PendingDocumentRequest): Boolean {
+        if (pendingDocumentRequest != null) {
+            request.result.error("in_progress", "A document picker is already open.", null)
+            return false
+        }
+        pendingDocumentRequest = request
+        return true
+    }
+
+    private fun launchDocumentPicker(
+        intent: Intent,
+        requestCode: Int,
+        result: MethodChannel.Result,
+    ) {
+        try {
+            startActivityForResult(intent, requestCode)
+        } catch (error: Exception) {
+            pendingDocumentRequest = null
+            result.error("document_picker", error.message, null)
+        }
+    }
+
+    @Deprecated("Uses the stable activity-result bridge required by FlutterActivity.")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != SaveDocumentRequestCode && requestCode != OpenDocumentRequestCode) {
+            return
+        }
+
+        val request = pendingDocumentRequest ?: return
+        pendingDocumentRequest = null
+        if (resultCode != Activity.RESULT_OK || data?.data == null) {
+            request.result.success(null)
+            return
+        }
+
+        try {
+            val uri = data.data!!
+            when (request) {
+                is PendingDocumentRequest.Save -> {
+                    contentResolver.openOutputStream(uri, "w").use { stream ->
+                        checkNotNull(stream) { "Could not open the selected document." }
+                        stream.write(request.bytes)
+                        stream.flush()
+                    }
+                    request.result.success(true)
+                }
+                is PendingDocumentRequest.Open -> {
+                    val bytes = contentResolver.openInputStream(uri).use { stream ->
+                        checkNotNull(stream) { "Could not open the selected document." }
+                        stream.readBytes()
+                    }
+                    request.result.success(bytes)
+                }
+            }
+        } catch (error: Exception) {
+            request.result.error("document_io", error.message, null)
+        }
     }
 
     private fun readInbox(
@@ -274,10 +387,23 @@ class MainActivity : FlutterActivity() {
     private companion object {
         const val SmsPermissionRequestCode = 4201
         const val NotificationPermissionRequestCode = 4202
+        const val SaveDocumentRequestCode = 4301
+        const val OpenDocumentRequestCode = 4302
         const val STATUS_GRANTED = "granted"
         const val STATUS_DENIED = "denied"
         const val STATUS_PERMANENTLY_DENIED = "permanentlyDenied"
     }
+}
+
+private sealed class PendingDocumentRequest(open val result: MethodChannel.Result) {
+    data class Save(
+        override val result: MethodChannel.Result,
+        val bytes: ByteArray,
+    ) : PendingDocumentRequest(result)
+
+    data class Open(
+        override val result: MethodChannel.Result,
+    ) : PendingDocumentRequest(result)
 }
 
 private data class PendingAskNowRequest(

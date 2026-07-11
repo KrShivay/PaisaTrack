@@ -117,8 +117,15 @@ void main() {
     // T-039: the ingest pipeline runs the categorizer ladder — 'AMZN*MKTPLC'
     // hits the bundled seed map ('amzn' -> shopping) at 0.8.
     expect(transactions.single.categoryId, 'shopping');
-    expect(transactions.single.confidenceJson, contains('"category"'));
-    expect(transactions.single.confidenceJson, contains('"src":"seed"'));
+    final confidence =
+        jsonDecode(transactions.single.confidenceJson) as Map<String, Object?>;
+    expect(confidence['parser'], {'c': 0.97, 'src': 'template'});
+    expect(confidence['merchant'], {
+      'v': 'AMZN*MKTPLC',
+      'c': 0.97,
+      'src': 'template',
+    });
+    expect(confidence['category'], {'c': 0.8, 'src': 'seed'});
   });
 
   test(

@@ -7,10 +7,14 @@ import 'package:flutter/services.dart';
 import '../../core/constants.dart';
 import '../dedup/duplicate_match_rule.dart';
 import 'tables/categories_table.dart';
+import 'tables/baselines_table.dart';
 import 'tables/feedback_table.dart';
+import 'tables/insights_table.dart';
 import 'tables/merchant_aliases_table.dart';
 import 'tables/merchants_table.dart';
+import 'tables/model_meta_table.dart';
 import 'tables/raw_sms_table.dart';
+import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
 import 'tables/transactions_table.dart';
 
@@ -22,11 +26,15 @@ part 'database.g.dart';
 /// `docs/schema.md` in the same change.
 @DriftDatabase(
   tables: [
+    Baselines,
     Categories,
     Feedback,
+    Insights,
     MerchantAliases,
     Merchants,
+    ModelMeta,
     RawSms,
+    RecurringSeries,
     Rules,
     Transactions,
   ],
@@ -59,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -74,6 +82,15 @@ class AppDatabase extends _$AppDatabase {
           await migrator.addColumn(transactions, transactions.duplicateOfTxnId);
           await migrator.createIndex(idxTransactionsDuplicateOfTxnId);
           await _backfillDuplicateLinks();
+        }
+        if (from < 3) {
+          await migrator.createTable(baselines);
+          await migrator.createTable(insights);
+          await migrator.createTable(modelMeta);
+          await migrator.createTable(recurringSeries);
+          await migrator.createIndex(idxInsightsPeriod);
+          await migrator.createIndex(idxRecurringSeriesMerchantId);
+          await migrator.createIndex(idxRecurringSeriesNextExpectedDate);
         }
       },
       beforeOpen: (details) async {
@@ -90,9 +107,9 @@ class AppDatabase extends _$AppDatabase {
   /// than one candidate) is conservative: the row stays hidden
   /// (`is_deleted=1`) rather than guessing, and is logged for manual review.
   Future<void> _backfillDuplicateLinks() async {
-    final suppressed =
-        await (select(transactions)..where((t) => t.isDeleted.equals(true)))
-            .get();
+    final suppressed = await (select(transactions)
+          ..where((t) => t.isDeleted.equals(true)))
+        .get();
     if (suppressed.isEmpty) return;
 
     const rule = DuplicateMatchRule(

@@ -88,4 +88,14 @@ void main() {
     expect(decoded, hasLength(1));
     expect((decoded.single as Map<String, dynamic>)['amount'], 60.0);
   });
+
+  test('exportBytes encodes parseable JSON for the document picker', () async {
+    await insertTxn(id: 'txn_1', amount: 75.0, direction: 'debit');
+
+    final bytes = await TransactionJsonExporter(database).exportBytes();
+    final decoded = jsonDecode(utf8.decode(bytes)) as List<dynamic>;
+
+    expect(decoded, hasLength(1));
+    expect((decoded.single as Map<String, dynamic>)['amount'], 75.0);
+  });
 }

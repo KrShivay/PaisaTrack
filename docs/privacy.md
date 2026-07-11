@@ -13,15 +13,16 @@ PaisaTrack is local-first:
   embeddings, LLM extraction — runs on-device with free components.
 - Release builds must not log raw SMS bodies.
 - Developer tooling: the dev screen's transactions-JSON export is compiled out
-  of release builds (`kDebugMode`), writes only to the app-private documents
-  directory (never external storage), and is retrievable only via `adb run-as`
-  on debuggable builds. Bank statements and reconciliation reports used for
-  Phase 1 verification live in the gitignored `BankStatement/` folder and are
-  never committed; the same applies to on-device transaction exports
-  (`export.json`, gitignored).
+  of release builds (`kDebugMode`). It warns that normalized financial data is
+  plaintext before Android's system document picker lets the developer choose
+  a destination. Bank statements and reconciliation reports used for Phase 1
+  verification live in the gitignored `BankStatement/` folder and are never
+  committed; the same applies to copied on-device transaction exports.
 - Settings `Delete everything` closes the local database, deletes SQLCipher
   database files, clears Android Keystore-wrapped passphrase material, resets
   app-private settings, and recreates the database with bundled categories only.
 - User-facing backup export/import writes `paisatrack_export.ptrack`, a
   passphrase-encrypted JSON archive using Argon2id and AES-GCM. Plaintext domain
-  JSON is kept in memory only and is never written as a temp file.
+  JSON is kept in memory only and is never written as a temp file. Android's
+  Storage Access Framework writes/reads only the document the user selects and
+  requires no broad storage permission.

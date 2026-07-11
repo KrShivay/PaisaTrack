@@ -57,9 +57,12 @@ behavior, database changes, CI changes, and user-facing assets.
 
 ## CI Guardrails
 
-CI runs `dart run build_runner build --delete-conflicting-outputs` and fails if
-`lib/data/db/database.g.dart` changes, so Drift schema edits must commit their
-generated code. CI also runs `flutter analyze` and `flutter test`.
+CI (pinned to Flutter 3.44.4 for reproducible codegen) runs
+`dart run build_runner build --delete-conflicting-outputs` and fails if any
+`*.g.dart` file is modified or newly created and left uncommitted, so Drift
+schema edits (and any future generator targets) must commit their generated
+code. Regenerate locally with the same command. CI also runs `flutter analyze`
+and `flutter test`.
 
 `integration_test/encrypted_database_migration_test.dart` requires an Android
 device or emulator with SQLCipher support. Until CI has a device runner, execute
@@ -79,10 +82,13 @@ For T-042 and later import flows, verify on a debug device:
 ## Encrypted Backup Manual Check
 
 T-043 uses the free/open-source `cryptography` package for Argon2id and
-AES-GCM. Settings exports to app-private `paisatrack_export.ptrack`; import
-reads the same file. Manual check: export with a passphrase, Delete everything,
-import with the same passphrase, and confirm domain rows are restored. Re-run
-with a wrong passphrase and confirm existing rows are unchanged.
+AES-GCM. T-077 routes export through Android's system document picker and
+imports through the matching open-document picker; no storage permission is
+requested. Manual check: export with a passphrase to Downloads, Delete
+everything, select that file for import with the same passphrase, and confirm
+domain rows are restored. Re-run with a wrong passphrase and confirm existing
+rows are unchanged. Dismiss each picker and confirm the app reports cancellation
+without creating or restoring anything.
 
 ## Category Manager Manual Check
 

@@ -73,4 +73,19 @@ void main() {
     final after = await database.select(database.categories).get();
     expect(after.map((row) => row.toJson()), before.map((row) => row.toJson()));
   });
+
+  test('in-memory export import round-trips for document picker', () async {
+    final before = await database.select(database.categories).get();
+    final bytes = await service().exportBytes(passphrase: 'picker-passphrase');
+
+    expect(String.fromCharCodes(bytes), isNot(contains(before.first.name)));
+    await database.delete(database.categories).go();
+    await service().importBytes(
+      bytes: bytes,
+      passphrase: 'picker-passphrase',
+    );
+
+    final after = await database.select(database.categories).get();
+    expect(after.map((row) => row.toJson()), before.map((row) => row.toJson()));
+  });
 }

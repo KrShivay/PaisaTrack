@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/database_provider.dart';
 import '../../data/repositories/raw_sms_repository.dart';
+import '../../capture/template_engine/template_trust_ledger.dart';
 
 /// Live-updating list of raw SMS that have not produced a transaction.
 ///
@@ -18,3 +19,18 @@ final unparsedSmsListProvider = StreamProvider<List<UnparsedSms>>((ref) {
         Stream<List<UnparsedSms>>.error(error, stackTrace),
   );
 });
+
+/// Watches developer-visible public-template demotion alerts from the ledger.
+final templateTrustAlertsProvider = StreamProvider<List<TemplateTrustEntry>>(
+  (ref) {
+    final databaseAsync = ref.watch(appDatabaseProvider);
+    return databaseAsync.when(
+      data: (database) => TemplateTrustLedger(database)
+          .watch()
+          .map((snapshot) => snapshot.flaggedEntries),
+      loading: () => const Stream<List<TemplateTrustEntry>>.empty(),
+      error: (error, stackTrace) =>
+          Stream<List<TemplateTrustEntry>>.error(error, stackTrace),
+    );
+  },
+);

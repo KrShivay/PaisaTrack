@@ -22,9 +22,11 @@ import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
 import 'template_engine/template_matcher.dart';
 import 'template_engine/template_registry.dart';
+import 'template_engine/template_trust_ledger.dart';
 
 /// Parser cascade used by live SMS ingestion.
 final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
+  final database = await ref.watch(appDatabaseProvider.future);
   final registries = await Future.wait(
     const [
       'assets/templates/axisbk.json',
@@ -38,7 +40,10 @@ final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
   );
 
   return ParserCascade(
-    templateMatcher: TemplateMatcher(registries: registries),
+    templateMatcher: TemplateMatcher(
+      registries: registries,
+      trustLedger: TemplateTrustLedger(database),
+    ),
   );
 });
 
@@ -351,6 +356,11 @@ class SmsIngestor {
           if (record.templateId != null) 'template_id': record.templateId,
           if (record.templateProvenance != null)
             'provenance': record.templateProvenance,
+        },
+        'merchant': {
+          'v': record.merchantRaw ?? record.counterpartyVpa,
+          'c': record.parseConfidence,
+          'src': record.parseSource.wireName,
         },
         if (categorization != null)
           'category': {

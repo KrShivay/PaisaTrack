@@ -56,7 +56,12 @@ maintained) → bundled seed keyword map (`assets/seed/category_seed.json`,
 longest-key-first substring match, 0.8) → `other` at 0.3. Both live capture
 and backfill construct `SmsIngestor` with the categorizer
 (`categorizerProvider`), and the outcome is recorded in the transaction's
-`confidence_json` under `category` (`c`, `src`, optional `rule_id`). The
+`confidence_json` under `category` (`c`, `src`, optional `rule_id`). The same
+atomic transaction records provisional merchant evidence (`v`, `c`, `src`)
+from the parser until the Phase 3 merchant resolver replaces that block.
+`TransactionConfidenceTrail` reads parser/merchant/category blocks without
+breaking legacy parser-only rows and exposes them through transaction detail.
+The
 classifier (step 2) and on-device LLM (step 4) slot in during later phases.
 
 `DecisionPolicy` implements static PLAN §7.5 thresholds from `AppConstants`.
@@ -103,6 +108,22 @@ confirms (`confirm()`); tap opens a correction sheet that calls
 `correctWithRule(context: 'batch_review')`. An "All caught up" empty state shows
 when the queue is clear.
 
+**Parse confirmation (T-073)** appears only for low-trust parses: generic
+fallback rows or templates marked `public` provenance under ADR 0005. The
+transaction detail and weekly-review correction sheet offer **Confirm** or
+**Fix** for amount, direction, and merchant. Confirm writes one
+`feedback(parse_verdict='ok', context='parse_confirm')` row. Fix updates the
+transaction and records each changed parse field plus a corresponding
+`parse_verdict` correction in the same database transaction. High-trust device
+templates never show this prompt.
+
+**Template trust ledger (T-074)** rebuilds public-template trust from those
+`parse_verdict` rows. It stores compact per-template counters in `model_meta`:
+20 `ok` confirmations with no amount/direction correction promote a public
+template to 0.97; either correction keeps it at 0.85 and exposes its template
+id on the developer diagnostics screen. The feedback rows remain authoritative;
+the metadata is a parse-time cache only.
+
 ## Verification tooling
 
 `scripts/reconcile_statement.py` reconciles bank-statement XLSX exports against
@@ -120,3 +141,30 @@ the Riverpod database, deletes SQLCipher database sidecars, clears the Android
 Keystore-wrapped passphrase via `com.paisatrack/database_passphrase`, resets
 app-private settings, and reopens a database seeded only with bundled
 categories.
+
+Export/import uses `com.paisatrack/documents`, a narrow platform channel over
+Android `ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`. Dart prepares the
+encrypted backup or debug JSON bytes; native code streams them only to the URI
+the user selected. Picker cancellation returns without a partial file, and no
+storage permission is declared.
+
+Weekly review groups `needs_review` rows by resolved merchant id, then VPA or
+normalized merchant text. Bulk and per-group confirmation use one atomic status
+update and deliberately leave category assignments unchanged; row tap correction
+and swipe confirmation remain independent paths.
+
+## Recurring detection (Phase 3)
+
+`RecurringDetector` runs as an idempotent nightly batch over non-deleted,
+non-duplicate transactions with a resolved merchant. It sub-clusters amounts
+within 5%, then accepts weekly (6–8d), monthly (26–35d), quarterly (80–100d),
+or yearly (350–380d) median gaps when gap CoV is below 0.25 and at least three
+occurrences exist. The upsert records the median-based next date, rising last
+three amounts, and a missed status after a 20% period grace window. Credits are
+income; debit labels identify EMI/bill keywords and otherwise subscriptions.
+
+`AnomalyDetector` maintains population mean/standard deviation baselines with
+Welford updates for category-week and merchant-month aggregates. It checkpoints
+each period via `updated_at`, compares against the prior baseline only after
+eight periods, and writes deterministic anomaly insights above 2.5σ with the
+top three contributing transaction ids.

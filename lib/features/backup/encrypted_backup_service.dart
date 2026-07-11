@@ -6,7 +6,6 @@ import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
@@ -48,15 +47,21 @@ class EncryptedBackupService {
     required Directory directory,
     required String passphrase,
   }) async {
+    final bytes = await exportBytes(passphrase: passphrase);
+    await directory.create(recursive: true);
+    final file = File(p.join(directory.path, encryptedBackupFileName));
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  /// Builds the encrypted archive in memory for a system document destination.
+  Future<Uint8List> exportBytes({required String passphrase}) async {
     final archive = await _readArchive();
     final payload = await _encrypt(
       utf8.encode(jsonEncode(archive)),
       passphrase: passphrase,
     );
-    await directory.create(recursive: true);
-    final file = File(p.join(directory.path, encryptedBackupFileName));
-    await file.writeAsString(jsonEncode(payload), flush: true);
-    return file;
+    return Uint8List.fromList(utf8.encode(jsonEncode(payload)));
   }
 
   Future<void> importFromFile({
@@ -67,8 +72,18 @@ class EncryptedBackupService {
       throw const EncryptedBackupException('Encrypted export file not found');
     }
 
-    final payload =
-        jsonDecode(await file.readAsString()) as Map<String, Object?>;
+    await importBytes(
+      bytes: await file.readAsBytes(),
+      passphrase: passphrase,
+    );
+  }
+
+  /// Restores an encrypted archive selected through the system picker.
+  Future<void> importBytes({
+    required Uint8List bytes,
+    required String passphrase,
+  }) async {
+    final payload = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
     final plaintext = await _decrypt(payload, passphrase: passphrase);
     final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, Object?>;
     _validateArchive(archive);
@@ -232,10 +247,6 @@ class EncryptedBackupService {
     return List<int>.generate(length, (_) => _random.nextInt(256));
   }
 }
-
-final backupDirectoryProvider = FutureProvider<Directory>((ref) {
-  return getApplicationDocumentsDirectory();
-});
 
 final encryptedBackupServiceProvider =
     FutureProvider<EncryptedBackupService>((ref) async {

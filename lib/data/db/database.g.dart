@@ -3,6 +3,301 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
+class $BaselinesTable extends Baselines
+    with TableInfo<$BaselinesTable, Baseline> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BaselinesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+      'key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _meanMeta = const VerificationMeta('mean');
+  @override
+  late final GeneratedColumn<double> mean = GeneratedColumn<double>(
+      'mean', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _stdMeta = const VerificationMeta('std');
+  @override
+  late final GeneratedColumn<double> std = GeneratedColumn<double>(
+      'std', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _nMeta = const VerificationMeta('n');
+  @override
+  late final GeneratedColumn<int> n = GeneratedColumn<int>(
+      'n', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [key, mean, std, n, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'baselines';
+  @override
+  VerificationContext validateIntegrity(Insertable<Baseline> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('mean')) {
+      context.handle(
+          _meanMeta, mean.isAcceptableOrUnknown(data['mean']!, _meanMeta));
+    } else if (isInserting) {
+      context.missing(_meanMeta);
+    }
+    if (data.containsKey('std')) {
+      context.handle(
+          _stdMeta, std.isAcceptableOrUnknown(data['std']!, _stdMeta));
+    } else if (isInserting) {
+      context.missing(_stdMeta);
+    }
+    if (data.containsKey('n')) {
+      context.handle(_nMeta, n.isAcceptableOrUnknown(data['n']!, _nMeta));
+    } else if (isInserting) {
+      context.missing(_nMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  Baseline map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Baseline(
+      key: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      mean: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}mean'])!,
+      std: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}std'])!,
+      n: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}n'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $BaselinesTable createAlias(String alias) {
+    return $BaselinesTable(attachedDatabase, alias);
+  }
+}
+
+class Baseline extends DataClass implements Insertable<Baseline> {
+  final String key;
+  final double mean;
+  final double std;
+  final int n;
+  final DateTime updatedAt;
+  const Baseline(
+      {required this.key,
+      required this.mean,
+      required this.std,
+      required this.n,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['mean'] = Variable<double>(mean);
+    map['std'] = Variable<double>(std);
+    map['n'] = Variable<int>(n);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  BaselinesCompanion toCompanion(bool nullToAbsent) {
+    return BaselinesCompanion(
+      key: Value(key),
+      mean: Value(mean),
+      std: Value(std),
+      n: Value(n),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Baseline.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Baseline(
+      key: serializer.fromJson<String>(json['key']),
+      mean: serializer.fromJson<double>(json['mean']),
+      std: serializer.fromJson<double>(json['std']),
+      n: serializer.fromJson<int>(json['n']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'mean': serializer.toJson<double>(mean),
+      'std': serializer.toJson<double>(std),
+      'n': serializer.toJson<int>(n),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  Baseline copyWith(
+          {String? key,
+          double? mean,
+          double? std,
+          int? n,
+          DateTime? updatedAt}) =>
+      Baseline(
+        key: key ?? this.key,
+        mean: mean ?? this.mean,
+        std: std ?? this.std,
+        n: n ?? this.n,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Baseline(')
+          ..write('key: $key, ')
+          ..write('mean: $mean, ')
+          ..write('std: $std, ')
+          ..write('n: $n, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, mean, std, n, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Baseline &&
+          other.key == this.key &&
+          other.mean == this.mean &&
+          other.std == this.std &&
+          other.n == this.n &&
+          other.updatedAt == this.updatedAt);
+}
+
+class BaselinesCompanion extends UpdateCompanion<Baseline> {
+  final Value<String> key;
+  final Value<double> mean;
+  final Value<double> std;
+  final Value<int> n;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const BaselinesCompanion({
+    this.key = const Value.absent(),
+    this.mean = const Value.absent(),
+    this.std = const Value.absent(),
+    this.n = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BaselinesCompanion.insert({
+    required String key,
+    required double mean,
+    required double std,
+    required int n,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        mean = Value(mean),
+        std = Value(std),
+        n = Value(n),
+        updatedAt = Value(updatedAt);
+  static Insertable<Baseline> custom({
+    Expression<String>? key,
+    Expression<double>? mean,
+    Expression<double>? std,
+    Expression<int>? n,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (mean != null) 'mean': mean,
+      if (std != null) 'std': std,
+      if (n != null) 'n': n,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BaselinesCompanion copyWith(
+      {Value<String>? key,
+      Value<double>? mean,
+      Value<double>? std,
+      Value<int>? n,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return BaselinesCompanion(
+      key: key ?? this.key,
+      mean: mean ?? this.mean,
+      std: std ?? this.std,
+      n: n ?? this.n,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (mean.present) {
+      map['mean'] = Variable<double>(mean.value);
+    }
+    if (std.present) {
+      map['std'] = Variable<double>(std.value);
+    }
+    if (n.present) {
+      map['n'] = Variable<int>(n.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BaselinesCompanion(')
+          ..write('key: $key, ')
+          ..write('mean: $mean, ')
+          ..write('std: $std, ')
+          ..write('n: $n, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CategoriesTable extends Categories
     with TableInfo<$CategoriesTable, Category> {
   @override
@@ -2498,6 +2793,305 @@ class FeedbackCompanion extends UpdateCompanion<FeedbackData> {
   }
 }
 
+class $InsightsTable extends Insights with TableInfo<$InsightsTable, Insight> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InsightsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _periodMeta = const VerificationMeta('period');
+  @override
+  late final GeneratedColumn<String> period = GeneratedColumn<String>(
+      'period', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _payloadJsonMeta =
+      const VerificationMeta('payloadJson');
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+      'payload_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _dismissedMeta =
+      const VerificationMeta('dismissed');
+  @override
+  late final GeneratedColumn<bool> dismissed = GeneratedColumn<bool>(
+      'dismissed', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("dismissed" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, period, kind, payloadJson, dismissed];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'insights';
+  @override
+  VerificationContext validateIntegrity(Insertable<Insight> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('period')) {
+      context.handle(_periodMeta,
+          period.isAcceptableOrUnknown(data['period']!, _periodMeta));
+    } else if (isInserting) {
+      context.missing(_periodMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+          _payloadJsonMeta,
+          payloadJson.isAcceptableOrUnknown(
+              data['payload_json']!, _payloadJsonMeta));
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('dismissed')) {
+      context.handle(_dismissedMeta,
+          dismissed.isAcceptableOrUnknown(data['dismissed']!, _dismissedMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Insight map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Insight(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      period: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}period'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      payloadJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payload_json'])!,
+      dismissed: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}dismissed'])!,
+    );
+  }
+
+  @override
+  $InsightsTable createAlias(String alias) {
+    return $InsightsTable(attachedDatabase, alias);
+  }
+}
+
+class Insight extends DataClass implements Insertable<Insight> {
+  final String id;
+  final String period;
+  final String kind;
+  final String payloadJson;
+  final bool dismissed;
+  const Insight(
+      {required this.id,
+      required this.period,
+      required this.kind,
+      required this.payloadJson,
+      required this.dismissed});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['period'] = Variable<String>(period);
+    map['kind'] = Variable<String>(kind);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['dismissed'] = Variable<bool>(dismissed);
+    return map;
+  }
+
+  InsightsCompanion toCompanion(bool nullToAbsent) {
+    return InsightsCompanion(
+      id: Value(id),
+      period: Value(period),
+      kind: Value(kind),
+      payloadJson: Value(payloadJson),
+      dismissed: Value(dismissed),
+    );
+  }
+
+  factory Insight.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Insight(
+      id: serializer.fromJson<String>(json['id']),
+      period: serializer.fromJson<String>(json['period']),
+      kind: serializer.fromJson<String>(json['kind']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      dismissed: serializer.fromJson<bool>(json['dismissed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'period': serializer.toJson<String>(period),
+      'kind': serializer.toJson<String>(kind),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'dismissed': serializer.toJson<bool>(dismissed),
+    };
+  }
+
+  Insight copyWith(
+          {String? id,
+          String? period,
+          String? kind,
+          String? payloadJson,
+          bool? dismissed}) =>
+      Insight(
+        id: id ?? this.id,
+        period: period ?? this.period,
+        kind: kind ?? this.kind,
+        payloadJson: payloadJson ?? this.payloadJson,
+        dismissed: dismissed ?? this.dismissed,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Insight(')
+          ..write('id: $id, ')
+          ..write('period: $period, ')
+          ..write('kind: $kind, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('dismissed: $dismissed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, period, kind, payloadJson, dismissed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Insight &&
+          other.id == this.id &&
+          other.period == this.period &&
+          other.kind == this.kind &&
+          other.payloadJson == this.payloadJson &&
+          other.dismissed == this.dismissed);
+}
+
+class InsightsCompanion extends UpdateCompanion<Insight> {
+  final Value<String> id;
+  final Value<String> period;
+  final Value<String> kind;
+  final Value<String> payloadJson;
+  final Value<bool> dismissed;
+  final Value<int> rowid;
+  const InsightsCompanion({
+    this.id = const Value.absent(),
+    this.period = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.dismissed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InsightsCompanion.insert({
+    required String id,
+    required String period,
+    required String kind,
+    required String payloadJson,
+    this.dismissed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        period = Value(period),
+        kind = Value(kind),
+        payloadJson = Value(payloadJson);
+  static Insertable<Insight> custom({
+    Expression<String>? id,
+    Expression<String>? period,
+    Expression<String>? kind,
+    Expression<String>? payloadJson,
+    Expression<bool>? dismissed,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (period != null) 'period': period,
+      if (kind != null) 'kind': kind,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (dismissed != null) 'dismissed': dismissed,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InsightsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? period,
+      Value<String>? kind,
+      Value<String>? payloadJson,
+      Value<bool>? dismissed,
+      Value<int>? rowid}) {
+    return InsightsCompanion(
+      id: id ?? this.id,
+      period: period ?? this.period,
+      kind: kind ?? this.kind,
+      payloadJson: payloadJson ?? this.payloadJson,
+      dismissed: dismissed ?? this.dismissed,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (period.present) {
+      map['period'] = Variable<String>(period.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (dismissed.present) {
+      map['dismissed'] = Variable<bool>(dismissed.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InsightsCompanion(')
+          ..write('id: $id, ')
+          ..write('period: $period, ')
+          ..write('kind: $kind, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('dismissed: $dismissed, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $MerchantAliasesTable extends MerchantAliases
     with TableInfo<$MerchantAliasesTable, MerchantAliase> {
   @override
@@ -2761,6 +3355,817 @@ class MerchantAliasesCompanion extends UpdateCompanion<MerchantAliase> {
           ..write('merchantId: $merchantId, ')
           ..write('source: $source, ')
           ..write('confidence: $confidence, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ModelMetaTable extends ModelMeta
+    with TableInfo<$ModelMetaTable, ModelMetaData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ModelMetaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+      'key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+      'value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'model_meta';
+  @override
+  VerificationContext validateIntegrity(Insertable<ModelMetaData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+          _valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  ModelMetaData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ModelMetaData(
+      key: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      value: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}value'])!,
+    );
+  }
+
+  @override
+  $ModelMetaTable createAlias(String alias) {
+    return $ModelMetaTable(attachedDatabase, alias);
+  }
+}
+
+class ModelMetaData extends DataClass implements Insertable<ModelMetaData> {
+  final String key;
+  final String value;
+  const ModelMetaData({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  ModelMetaCompanion toCompanion(bool nullToAbsent) {
+    return ModelMetaCompanion(
+      key: Value(key),
+      value: Value(value),
+    );
+  }
+
+  factory ModelMetaData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ModelMetaData(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  ModelMetaData copyWith({String? key, String? value}) => ModelMetaData(
+        key: key ?? this.key,
+        value: value ?? this.value,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('ModelMetaData(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ModelMetaData &&
+          other.key == this.key &&
+          other.value == this.value);
+}
+
+class ModelMetaCompanion extends UpdateCompanion<ModelMetaData> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<int> rowid;
+  const ModelMetaCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ModelMetaCompanion.insert({
+    required String key,
+    required String value,
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        value = Value(value);
+  static Insertable<ModelMetaData> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ModelMetaCompanion copyWith(
+      {Value<String>? key, Value<String>? value, Value<int>? rowid}) {
+    return ModelMetaCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ModelMetaCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RecurringSeriesTable extends RecurringSeries
+    with TableInfo<$RecurringSeriesTable, RecurringSery> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecurringSeriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _merchantIdMeta =
+      const VerificationMeta('merchantId');
+  @override
+  late final GeneratedColumn<String> merchantId = GeneratedColumn<String>(
+      'merchant_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES merchants (id)'));
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+      'label', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _expectedAmountMeta =
+      const VerificationMeta('expectedAmount');
+  @override
+  late final GeneratedColumn<double> expectedAmount = GeneratedColumn<double>(
+      'expected_amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _tolerancePctMeta =
+      const VerificationMeta('tolerancePct');
+  @override
+  late final GeneratedColumn<double> tolerancePct = GeneratedColumn<double>(
+      'tolerance_pct', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _periodMeta = const VerificationMeta('period');
+  @override
+  late final GeneratedColumn<String> period = GeneratedColumn<String>(
+      'period', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _periodDaysMeta =
+      const VerificationMeta('periodDays');
+  @override
+  late final GeneratedColumn<int> periodDays = GeneratedColumn<int>(
+      'period_days', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _nextExpectedDateMeta =
+      const VerificationMeta('nextExpectedDate');
+  @override
+  late final GeneratedColumn<DateTime> nextExpectedDate =
+      GeneratedColumn<DateTime>('next_expected_date', aliasedName, false,
+          type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _lastAmountMeta =
+      const VerificationMeta('lastAmount');
+  @override
+  late final GeneratedColumn<double> lastAmount = GeneratedColumn<double>(
+      'last_amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _amountTrendMeta =
+      const VerificationMeta('amountTrend');
+  @override
+  late final GeneratedColumn<String> amountTrend = GeneratedColumn<String>(
+      'amount_trend', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _occurrencesMeta =
+      const VerificationMeta('occurrences');
+  @override
+  late final GeneratedColumn<int> occurrences = GeneratedColumn<int>(
+      'occurrences', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        merchantId,
+        label,
+        expectedAmount,
+        tolerancePct,
+        period,
+        periodDays,
+        nextExpectedDate,
+        lastAmount,
+        amountTrend,
+        occurrences,
+        status,
+        kind
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recurring_series';
+  @override
+  VerificationContext validateIntegrity(Insertable<RecurringSery> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('merchant_id')) {
+      context.handle(
+          _merchantIdMeta,
+          merchantId.isAcceptableOrUnknown(
+              data['merchant_id']!, _merchantIdMeta));
+    } else if (isInserting) {
+      context.missing(_merchantIdMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+          _labelMeta, label.isAcceptableOrUnknown(data['label']!, _labelMeta));
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('expected_amount')) {
+      context.handle(
+          _expectedAmountMeta,
+          expectedAmount.isAcceptableOrUnknown(
+              data['expected_amount']!, _expectedAmountMeta));
+    } else if (isInserting) {
+      context.missing(_expectedAmountMeta);
+    }
+    if (data.containsKey('tolerance_pct')) {
+      context.handle(
+          _tolerancePctMeta,
+          tolerancePct.isAcceptableOrUnknown(
+              data['tolerance_pct']!, _tolerancePctMeta));
+    } else if (isInserting) {
+      context.missing(_tolerancePctMeta);
+    }
+    if (data.containsKey('period')) {
+      context.handle(_periodMeta,
+          period.isAcceptableOrUnknown(data['period']!, _periodMeta));
+    } else if (isInserting) {
+      context.missing(_periodMeta);
+    }
+    if (data.containsKey('period_days')) {
+      context.handle(
+          _periodDaysMeta,
+          periodDays.isAcceptableOrUnknown(
+              data['period_days']!, _periodDaysMeta));
+    } else if (isInserting) {
+      context.missing(_periodDaysMeta);
+    }
+    if (data.containsKey('next_expected_date')) {
+      context.handle(
+          _nextExpectedDateMeta,
+          nextExpectedDate.isAcceptableOrUnknown(
+              data['next_expected_date']!, _nextExpectedDateMeta));
+    } else if (isInserting) {
+      context.missing(_nextExpectedDateMeta);
+    }
+    if (data.containsKey('last_amount')) {
+      context.handle(
+          _lastAmountMeta,
+          lastAmount.isAcceptableOrUnknown(
+              data['last_amount']!, _lastAmountMeta));
+    } else if (isInserting) {
+      context.missing(_lastAmountMeta);
+    }
+    if (data.containsKey('amount_trend')) {
+      context.handle(
+          _amountTrendMeta,
+          amountTrend.isAcceptableOrUnknown(
+              data['amount_trend']!, _amountTrendMeta));
+    } else if (isInserting) {
+      context.missing(_amountTrendMeta);
+    }
+    if (data.containsKey('occurrences')) {
+      context.handle(
+          _occurrencesMeta,
+          occurrences.isAcceptableOrUnknown(
+              data['occurrences']!, _occurrencesMeta));
+    } else if (isInserting) {
+      context.missing(_occurrencesMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RecurringSery map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecurringSery(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      merchantId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}merchant_id'])!,
+      label: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}label'])!,
+      expectedAmount: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}expected_amount'])!,
+      tolerancePct: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}tolerance_pct'])!,
+      period: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}period'])!,
+      periodDays: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}period_days'])!,
+      nextExpectedDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}next_expected_date'])!,
+      lastAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}last_amount'])!,
+      amountTrend: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}amount_trend'])!,
+      occurrences: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}occurrences'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+    );
+  }
+
+  @override
+  $RecurringSeriesTable createAlias(String alias) {
+    return $RecurringSeriesTable(attachedDatabase, alias);
+  }
+}
+
+class RecurringSery extends DataClass implements Insertable<RecurringSery> {
+  final String id;
+  final String merchantId;
+  final String label;
+  final double expectedAmount;
+  final double tolerancePct;
+  final String period;
+  final int periodDays;
+  final DateTime nextExpectedDate;
+  final double lastAmount;
+  final String amountTrend;
+  final int occurrences;
+  final String status;
+  final String kind;
+  const RecurringSery(
+      {required this.id,
+      required this.merchantId,
+      required this.label,
+      required this.expectedAmount,
+      required this.tolerancePct,
+      required this.period,
+      required this.periodDays,
+      required this.nextExpectedDate,
+      required this.lastAmount,
+      required this.amountTrend,
+      required this.occurrences,
+      required this.status,
+      required this.kind});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['merchant_id'] = Variable<String>(merchantId);
+    map['label'] = Variable<String>(label);
+    map['expected_amount'] = Variable<double>(expectedAmount);
+    map['tolerance_pct'] = Variable<double>(tolerancePct);
+    map['period'] = Variable<String>(period);
+    map['period_days'] = Variable<int>(periodDays);
+    map['next_expected_date'] = Variable<DateTime>(nextExpectedDate);
+    map['last_amount'] = Variable<double>(lastAmount);
+    map['amount_trend'] = Variable<String>(amountTrend);
+    map['occurrences'] = Variable<int>(occurrences);
+    map['status'] = Variable<String>(status);
+    map['kind'] = Variable<String>(kind);
+    return map;
+  }
+
+  RecurringSeriesCompanion toCompanion(bool nullToAbsent) {
+    return RecurringSeriesCompanion(
+      id: Value(id),
+      merchantId: Value(merchantId),
+      label: Value(label),
+      expectedAmount: Value(expectedAmount),
+      tolerancePct: Value(tolerancePct),
+      period: Value(period),
+      periodDays: Value(periodDays),
+      nextExpectedDate: Value(nextExpectedDate),
+      lastAmount: Value(lastAmount),
+      amountTrend: Value(amountTrend),
+      occurrences: Value(occurrences),
+      status: Value(status),
+      kind: Value(kind),
+    );
+  }
+
+  factory RecurringSery.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecurringSery(
+      id: serializer.fromJson<String>(json['id']),
+      merchantId: serializer.fromJson<String>(json['merchantId']),
+      label: serializer.fromJson<String>(json['label']),
+      expectedAmount: serializer.fromJson<double>(json['expectedAmount']),
+      tolerancePct: serializer.fromJson<double>(json['tolerancePct']),
+      period: serializer.fromJson<String>(json['period']),
+      periodDays: serializer.fromJson<int>(json['periodDays']),
+      nextExpectedDate: serializer.fromJson<DateTime>(json['nextExpectedDate']),
+      lastAmount: serializer.fromJson<double>(json['lastAmount']),
+      amountTrend: serializer.fromJson<String>(json['amountTrend']),
+      occurrences: serializer.fromJson<int>(json['occurrences']),
+      status: serializer.fromJson<String>(json['status']),
+      kind: serializer.fromJson<String>(json['kind']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'merchantId': serializer.toJson<String>(merchantId),
+      'label': serializer.toJson<String>(label),
+      'expectedAmount': serializer.toJson<double>(expectedAmount),
+      'tolerancePct': serializer.toJson<double>(tolerancePct),
+      'period': serializer.toJson<String>(period),
+      'periodDays': serializer.toJson<int>(periodDays),
+      'nextExpectedDate': serializer.toJson<DateTime>(nextExpectedDate),
+      'lastAmount': serializer.toJson<double>(lastAmount),
+      'amountTrend': serializer.toJson<String>(amountTrend),
+      'occurrences': serializer.toJson<int>(occurrences),
+      'status': serializer.toJson<String>(status),
+      'kind': serializer.toJson<String>(kind),
+    };
+  }
+
+  RecurringSery copyWith(
+          {String? id,
+          String? merchantId,
+          String? label,
+          double? expectedAmount,
+          double? tolerancePct,
+          String? period,
+          int? periodDays,
+          DateTime? nextExpectedDate,
+          double? lastAmount,
+          String? amountTrend,
+          int? occurrences,
+          String? status,
+          String? kind}) =>
+      RecurringSery(
+        id: id ?? this.id,
+        merchantId: merchantId ?? this.merchantId,
+        label: label ?? this.label,
+        expectedAmount: expectedAmount ?? this.expectedAmount,
+        tolerancePct: tolerancePct ?? this.tolerancePct,
+        period: period ?? this.period,
+        periodDays: periodDays ?? this.periodDays,
+        nextExpectedDate: nextExpectedDate ?? this.nextExpectedDate,
+        lastAmount: lastAmount ?? this.lastAmount,
+        amountTrend: amountTrend ?? this.amountTrend,
+        occurrences: occurrences ?? this.occurrences,
+        status: status ?? this.status,
+        kind: kind ?? this.kind,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('RecurringSery(')
+          ..write('id: $id, ')
+          ..write('merchantId: $merchantId, ')
+          ..write('label: $label, ')
+          ..write('expectedAmount: $expectedAmount, ')
+          ..write('tolerancePct: $tolerancePct, ')
+          ..write('period: $period, ')
+          ..write('periodDays: $periodDays, ')
+          ..write('nextExpectedDate: $nextExpectedDate, ')
+          ..write('lastAmount: $lastAmount, ')
+          ..write('amountTrend: $amountTrend, ')
+          ..write('occurrences: $occurrences, ')
+          ..write('status: $status, ')
+          ..write('kind: $kind')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      merchantId,
+      label,
+      expectedAmount,
+      tolerancePct,
+      period,
+      periodDays,
+      nextExpectedDate,
+      lastAmount,
+      amountTrend,
+      occurrences,
+      status,
+      kind);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecurringSery &&
+          other.id == this.id &&
+          other.merchantId == this.merchantId &&
+          other.label == this.label &&
+          other.expectedAmount == this.expectedAmount &&
+          other.tolerancePct == this.tolerancePct &&
+          other.period == this.period &&
+          other.periodDays == this.periodDays &&
+          other.nextExpectedDate == this.nextExpectedDate &&
+          other.lastAmount == this.lastAmount &&
+          other.amountTrend == this.amountTrend &&
+          other.occurrences == this.occurrences &&
+          other.status == this.status &&
+          other.kind == this.kind);
+}
+
+class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
+  final Value<String> id;
+  final Value<String> merchantId;
+  final Value<String> label;
+  final Value<double> expectedAmount;
+  final Value<double> tolerancePct;
+  final Value<String> period;
+  final Value<int> periodDays;
+  final Value<DateTime> nextExpectedDate;
+  final Value<double> lastAmount;
+  final Value<String> amountTrend;
+  final Value<int> occurrences;
+  final Value<String> status;
+  final Value<String> kind;
+  final Value<int> rowid;
+  const RecurringSeriesCompanion({
+    this.id = const Value.absent(),
+    this.merchantId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.expectedAmount = const Value.absent(),
+    this.tolerancePct = const Value.absent(),
+    this.period = const Value.absent(),
+    this.periodDays = const Value.absent(),
+    this.nextExpectedDate = const Value.absent(),
+    this.lastAmount = const Value.absent(),
+    this.amountTrend = const Value.absent(),
+    this.occurrences = const Value.absent(),
+    this.status = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecurringSeriesCompanion.insert({
+    required String id,
+    required String merchantId,
+    required String label,
+    required double expectedAmount,
+    required double tolerancePct,
+    required String period,
+    required int periodDays,
+    required DateTime nextExpectedDate,
+    required double lastAmount,
+    required String amountTrend,
+    required int occurrences,
+    required String status,
+    required String kind,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        merchantId = Value(merchantId),
+        label = Value(label),
+        expectedAmount = Value(expectedAmount),
+        tolerancePct = Value(tolerancePct),
+        period = Value(period),
+        periodDays = Value(periodDays),
+        nextExpectedDate = Value(nextExpectedDate),
+        lastAmount = Value(lastAmount),
+        amountTrend = Value(amountTrend),
+        occurrences = Value(occurrences),
+        status = Value(status),
+        kind = Value(kind);
+  static Insertable<RecurringSery> custom({
+    Expression<String>? id,
+    Expression<String>? merchantId,
+    Expression<String>? label,
+    Expression<double>? expectedAmount,
+    Expression<double>? tolerancePct,
+    Expression<String>? period,
+    Expression<int>? periodDays,
+    Expression<DateTime>? nextExpectedDate,
+    Expression<double>? lastAmount,
+    Expression<String>? amountTrend,
+    Expression<int>? occurrences,
+    Expression<String>? status,
+    Expression<String>? kind,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (merchantId != null) 'merchant_id': merchantId,
+      if (label != null) 'label': label,
+      if (expectedAmount != null) 'expected_amount': expectedAmount,
+      if (tolerancePct != null) 'tolerance_pct': tolerancePct,
+      if (period != null) 'period': period,
+      if (periodDays != null) 'period_days': periodDays,
+      if (nextExpectedDate != null) 'next_expected_date': nextExpectedDate,
+      if (lastAmount != null) 'last_amount': lastAmount,
+      if (amountTrend != null) 'amount_trend': amountTrend,
+      if (occurrences != null) 'occurrences': occurrences,
+      if (status != null) 'status': status,
+      if (kind != null) 'kind': kind,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecurringSeriesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? merchantId,
+      Value<String>? label,
+      Value<double>? expectedAmount,
+      Value<double>? tolerancePct,
+      Value<String>? period,
+      Value<int>? periodDays,
+      Value<DateTime>? nextExpectedDate,
+      Value<double>? lastAmount,
+      Value<String>? amountTrend,
+      Value<int>? occurrences,
+      Value<String>? status,
+      Value<String>? kind,
+      Value<int>? rowid}) {
+    return RecurringSeriesCompanion(
+      id: id ?? this.id,
+      merchantId: merchantId ?? this.merchantId,
+      label: label ?? this.label,
+      expectedAmount: expectedAmount ?? this.expectedAmount,
+      tolerancePct: tolerancePct ?? this.tolerancePct,
+      period: period ?? this.period,
+      periodDays: periodDays ?? this.periodDays,
+      nextExpectedDate: nextExpectedDate ?? this.nextExpectedDate,
+      lastAmount: lastAmount ?? this.lastAmount,
+      amountTrend: amountTrend ?? this.amountTrend,
+      occurrences: occurrences ?? this.occurrences,
+      status: status ?? this.status,
+      kind: kind ?? this.kind,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (merchantId.present) {
+      map['merchant_id'] = Variable<String>(merchantId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (expectedAmount.present) {
+      map['expected_amount'] = Variable<double>(expectedAmount.value);
+    }
+    if (tolerancePct.present) {
+      map['tolerance_pct'] = Variable<double>(tolerancePct.value);
+    }
+    if (period.present) {
+      map['period'] = Variable<String>(period.value);
+    }
+    if (periodDays.present) {
+      map['period_days'] = Variable<int>(periodDays.value);
+    }
+    if (nextExpectedDate.present) {
+      map['next_expected_date'] = Variable<DateTime>(nextExpectedDate.value);
+    }
+    if (lastAmount.present) {
+      map['last_amount'] = Variable<double>(lastAmount.value);
+    }
+    if (amountTrend.present) {
+      map['amount_trend'] = Variable<String>(amountTrend.value);
+    }
+    if (occurrences.present) {
+      map['occurrences'] = Variable<int>(occurrences.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurringSeriesCompanion(')
+          ..write('id: $id, ')
+          ..write('merchantId: $merchantId, ')
+          ..write('label: $label, ')
+          ..write('expectedAmount: $expectedAmount, ')
+          ..write('tolerancePct: $tolerancePct, ')
+          ..write('period: $period, ')
+          ..write('periodDays: $periodDays, ')
+          ..write('nextExpectedDate: $nextExpectedDate, ')
+          ..write('lastAmount: $lastAmount, ')
+          ..write('amountTrend: $amountTrend, ')
+          ..write('occurrences: $occurrences, ')
+          ..write('status: $status, ')
+          ..write('kind: $kind, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3205,14 +4610,27 @@ class RulesCompanion extends UpdateCompanion<Rule> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   _$AppDatabaseManager get managers => _$AppDatabaseManager(this);
+  late final $BaselinesTable baselines = $BaselinesTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $MerchantsTable merchants = $MerchantsTable(this);
   late final $RawSmsTable rawSms = $RawSmsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $FeedbackTable feedback = $FeedbackTable(this);
+  late final $InsightsTable insights = $InsightsTable(this);
   late final $MerchantAliasesTable merchantAliases =
       $MerchantAliasesTable(this);
+  late final $ModelMetaTable modelMeta = $ModelMetaTable(this);
+  late final $RecurringSeriesTable recurringSeries =
+      $RecurringSeriesTable(this);
   late final $RulesTable rules = $RulesTable(this);
+  late final Index idxInsightsPeriod = Index('idx_insights_period',
+      'CREATE INDEX idx_insights_period ON insights (period)');
+  late final Index idxRecurringSeriesMerchantId = Index(
+      'idx_recurring_series_merchant_id',
+      'CREATE INDEX idx_recurring_series_merchant_id ON recurring_series (merchant_id)');
+  late final Index idxRecurringSeriesNextExpectedDate = Index(
+      'idx_recurring_series_next_expected_date',
+      'CREATE INDEX idx_recurring_series_next_expected_date ON recurring_series (next_expected_date)');
   late final Index idxTransactionsTs = Index('idx_transactions_ts',
       'CREATE INDEX idx_transactions_ts ON transactions (ts)');
   late final Index idxTransactionsMerchantId = Index(
@@ -3233,13 +4651,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
+        baselines,
         categories,
         merchants,
         rawSms,
         transactions,
         feedback,
+        insights,
         merchantAliases,
+        modelMeta,
+        recurringSeries,
         rules,
+        idxInsightsPeriod,
+        idxRecurringSeriesMerchantId,
+        idxRecurringSeriesNextExpectedDate,
         idxTransactionsTs,
         idxTransactionsMerchantId,
         idxTransactionsCategoryId,
@@ -3247,6 +4672,147 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         idxTransactionsStatus,
         idxTransactionsDuplicateOfTxnId
       ];
+}
+
+typedef $$BaselinesTableInsertCompanionBuilder = BaselinesCompanion Function({
+  required String key,
+  required double mean,
+  required double std,
+  required int n,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$BaselinesTableUpdateCompanionBuilder = BaselinesCompanion Function({
+  Value<String> key,
+  Value<double> mean,
+  Value<double> std,
+  Value<int> n,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$BaselinesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $BaselinesTable,
+    Baseline,
+    $$BaselinesTableFilterComposer,
+    $$BaselinesTableOrderingComposer,
+    $$BaselinesTableProcessedTableManager,
+    $$BaselinesTableInsertCompanionBuilder,
+    $$BaselinesTableUpdateCompanionBuilder> {
+  $$BaselinesTableTableManager(_$AppDatabase db, $BaselinesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$BaselinesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$BaselinesTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$BaselinesTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> key = const Value.absent(),
+            Value<double> mean = const Value.absent(),
+            Value<double> std = const Value.absent(),
+            Value<int> n = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BaselinesCompanion(
+            key: key,
+            mean: mean,
+            std: std,
+            n: n,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String key,
+            required double mean,
+            required double std,
+            required int n,
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              BaselinesCompanion.insert(
+            key: key,
+            mean: mean,
+            std: std,
+            n: n,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$BaselinesTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $BaselinesTable,
+    Baseline,
+    $$BaselinesTableFilterComposer,
+    $$BaselinesTableOrderingComposer,
+    $$BaselinesTableProcessedTableManager,
+    $$BaselinesTableInsertCompanionBuilder,
+    $$BaselinesTableUpdateCompanionBuilder> {
+  $$BaselinesTableProcessedTableManager(super.$state);
+}
+
+class $$BaselinesTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $BaselinesTable> {
+  $$BaselinesTableFilterComposer(super.$state);
+  ColumnFilters<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get mean => $state.composableBuilder(
+      column: $state.table.mean,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get std => $state.composableBuilder(
+      column: $state.table.std,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get n => $state.composableBuilder(
+      column: $state.table.n,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$BaselinesTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $BaselinesTable> {
+  $$BaselinesTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get mean => $state.composableBuilder(
+      column: $state.table.mean,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get std => $state.composableBuilder(
+      column: $state.table.std,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get n => $state.composableBuilder(
+      column: $state.table.n,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
 typedef $$CategoriesTableInsertCompanionBuilder = CategoriesCompanion Function({
@@ -3619,6 +5185,20 @@ class $$MerchantsTableFilterComposer
             builder: (joinBuilder, parentComposers) =>
                 $$MerchantAliasesTableFilterComposer(ComposerState($state.db,
                     $state.db.merchantAliases, joinBuilder, parentComposers)));
+    return f(composer);
+  }
+
+  ComposableFilter recurringSeriesRefs(
+      ComposableFilter Function($$RecurringSeriesTableFilterComposer f) f) {
+    final $$RecurringSeriesTableFilterComposer composer =
+        $state.composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $state.db.recurringSeries,
+            getReferencedColumn: (t) => t.merchantId,
+            builder: (joinBuilder, parentComposers) =>
+                $$RecurringSeriesTableFilterComposer(ComposerState($state.db,
+                    $state.db.recurringSeries, joinBuilder, parentComposers)));
     return f(composer);
   }
 }
@@ -4515,6 +6095,147 @@ class $$FeedbackTableOrderingComposer
   }
 }
 
+typedef $$InsightsTableInsertCompanionBuilder = InsightsCompanion Function({
+  required String id,
+  required String period,
+  required String kind,
+  required String payloadJson,
+  Value<bool> dismissed,
+  Value<int> rowid,
+});
+typedef $$InsightsTableUpdateCompanionBuilder = InsightsCompanion Function({
+  Value<String> id,
+  Value<String> period,
+  Value<String> kind,
+  Value<String> payloadJson,
+  Value<bool> dismissed,
+  Value<int> rowid,
+});
+
+class $$InsightsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $InsightsTable,
+    Insight,
+    $$InsightsTableFilterComposer,
+    $$InsightsTableOrderingComposer,
+    $$InsightsTableProcessedTableManager,
+    $$InsightsTableInsertCompanionBuilder,
+    $$InsightsTableUpdateCompanionBuilder> {
+  $$InsightsTableTableManager(_$AppDatabase db, $InsightsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$InsightsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$InsightsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$InsightsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> period = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> payloadJson = const Value.absent(),
+            Value<bool> dismissed = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              InsightsCompanion(
+            id: id,
+            period: period,
+            kind: kind,
+            payloadJson: payloadJson,
+            dismissed: dismissed,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String period,
+            required String kind,
+            required String payloadJson,
+            Value<bool> dismissed = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              InsightsCompanion.insert(
+            id: id,
+            period: period,
+            kind: kind,
+            payloadJson: payloadJson,
+            dismissed: dismissed,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$InsightsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $InsightsTable,
+    Insight,
+    $$InsightsTableFilterComposer,
+    $$InsightsTableOrderingComposer,
+    $$InsightsTableProcessedTableManager,
+    $$InsightsTableInsertCompanionBuilder,
+    $$InsightsTableUpdateCompanionBuilder> {
+  $$InsightsTableProcessedTableManager(super.$state);
+}
+
+class $$InsightsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $InsightsTable> {
+  $$InsightsTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get period => $state.composableBuilder(
+      column: $state.table.period,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get payloadJson => $state.composableBuilder(
+      column: $state.table.payloadJson,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get dismissed => $state.composableBuilder(
+      column: $state.table.dismissed,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$InsightsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $InsightsTable> {
+  $$InsightsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get period => $state.composableBuilder(
+      column: $state.table.period,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get payloadJson => $state.composableBuilder(
+      column: $state.table.payloadJson,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get dismissed => $state.composableBuilder(
+      column: $state.table.dismissed,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$MerchantAliasesTableInsertCompanionBuilder = MerchantAliasesCompanion
     Function({
   required String alias,
@@ -4641,6 +6362,385 @@ class $$MerchantAliasesTableOrderingComposer
 
   ColumnOrderings<double> get confidence => $state.composableBuilder(
       column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  $$MerchantsTableOrderingComposer get merchantId {
+    final $$MerchantsTableOrderingComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.merchantId,
+        referencedTable: $state.db.merchants,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$MerchantsTableOrderingComposer(ComposerState(
+                $state.db, $state.db.merchants, joinBuilder, parentComposers)));
+    return composer;
+  }
+}
+
+typedef $$ModelMetaTableInsertCompanionBuilder = ModelMetaCompanion Function({
+  required String key,
+  required String value,
+  Value<int> rowid,
+});
+typedef $$ModelMetaTableUpdateCompanionBuilder = ModelMetaCompanion Function({
+  Value<String> key,
+  Value<String> value,
+  Value<int> rowid,
+});
+
+class $$ModelMetaTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ModelMetaTable,
+    ModelMetaData,
+    $$ModelMetaTableFilterComposer,
+    $$ModelMetaTableOrderingComposer,
+    $$ModelMetaTableProcessedTableManager,
+    $$ModelMetaTableInsertCompanionBuilder,
+    $$ModelMetaTableUpdateCompanionBuilder> {
+  $$ModelMetaTableTableManager(_$AppDatabase db, $ModelMetaTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ModelMetaTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ModelMetaTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$ModelMetaTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ModelMetaCompanion(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String key,
+            required String value,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ModelMetaCompanion.insert(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ModelMetaTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $ModelMetaTable,
+    ModelMetaData,
+    $$ModelMetaTableFilterComposer,
+    $$ModelMetaTableOrderingComposer,
+    $$ModelMetaTableProcessedTableManager,
+    $$ModelMetaTableInsertCompanionBuilder,
+    $$ModelMetaTableUpdateCompanionBuilder> {
+  $$ModelMetaTableProcessedTableManager(super.$state);
+}
+
+class $$ModelMetaTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $ModelMetaTable> {
+  $$ModelMetaTableFilterComposer(super.$state);
+  ColumnFilters<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ModelMetaTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $ModelMetaTable> {
+  $$ModelMetaTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$RecurringSeriesTableInsertCompanionBuilder = RecurringSeriesCompanion
+    Function({
+  required String id,
+  required String merchantId,
+  required String label,
+  required double expectedAmount,
+  required double tolerancePct,
+  required String period,
+  required int periodDays,
+  required DateTime nextExpectedDate,
+  required double lastAmount,
+  required String amountTrend,
+  required int occurrences,
+  required String status,
+  required String kind,
+  Value<int> rowid,
+});
+typedef $$RecurringSeriesTableUpdateCompanionBuilder = RecurringSeriesCompanion
+    Function({
+  Value<String> id,
+  Value<String> merchantId,
+  Value<String> label,
+  Value<double> expectedAmount,
+  Value<double> tolerancePct,
+  Value<String> period,
+  Value<int> periodDays,
+  Value<DateTime> nextExpectedDate,
+  Value<double> lastAmount,
+  Value<String> amountTrend,
+  Value<int> occurrences,
+  Value<String> status,
+  Value<String> kind,
+  Value<int> rowid,
+});
+
+class $$RecurringSeriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $RecurringSeriesTable,
+    RecurringSery,
+    $$RecurringSeriesTableFilterComposer,
+    $$RecurringSeriesTableOrderingComposer,
+    $$RecurringSeriesTableProcessedTableManager,
+    $$RecurringSeriesTableInsertCompanionBuilder,
+    $$RecurringSeriesTableUpdateCompanionBuilder> {
+  $$RecurringSeriesTableTableManager(
+      _$AppDatabase db, $RecurringSeriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$RecurringSeriesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$RecurringSeriesTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$RecurringSeriesTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> merchantId = const Value.absent(),
+            Value<String> label = const Value.absent(),
+            Value<double> expectedAmount = const Value.absent(),
+            Value<double> tolerancePct = const Value.absent(),
+            Value<String> period = const Value.absent(),
+            Value<int> periodDays = const Value.absent(),
+            Value<DateTime> nextExpectedDate = const Value.absent(),
+            Value<double> lastAmount = const Value.absent(),
+            Value<String> amountTrend = const Value.absent(),
+            Value<int> occurrences = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecurringSeriesCompanion(
+            id: id,
+            merchantId: merchantId,
+            label: label,
+            expectedAmount: expectedAmount,
+            tolerancePct: tolerancePct,
+            period: period,
+            periodDays: periodDays,
+            nextExpectedDate: nextExpectedDate,
+            lastAmount: lastAmount,
+            amountTrend: amountTrend,
+            occurrences: occurrences,
+            status: status,
+            kind: kind,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String merchantId,
+            required String label,
+            required double expectedAmount,
+            required double tolerancePct,
+            required String period,
+            required int periodDays,
+            required DateTime nextExpectedDate,
+            required double lastAmount,
+            required String amountTrend,
+            required int occurrences,
+            required String status,
+            required String kind,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecurringSeriesCompanion.insert(
+            id: id,
+            merchantId: merchantId,
+            label: label,
+            expectedAmount: expectedAmount,
+            tolerancePct: tolerancePct,
+            period: period,
+            periodDays: periodDays,
+            nextExpectedDate: nextExpectedDate,
+            lastAmount: lastAmount,
+            amountTrend: amountTrend,
+            occurrences: occurrences,
+            status: status,
+            kind: kind,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$RecurringSeriesTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $RecurringSeriesTable,
+    RecurringSery,
+    $$RecurringSeriesTableFilterComposer,
+    $$RecurringSeriesTableOrderingComposer,
+    $$RecurringSeriesTableProcessedTableManager,
+    $$RecurringSeriesTableInsertCompanionBuilder,
+    $$RecurringSeriesTableUpdateCompanionBuilder> {
+  $$RecurringSeriesTableProcessedTableManager(super.$state);
+}
+
+class $$RecurringSeriesTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $RecurringSeriesTable> {
+  $$RecurringSeriesTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get label => $state.composableBuilder(
+      column: $state.table.label,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get expectedAmount => $state.composableBuilder(
+      column: $state.table.expectedAmount,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get tolerancePct => $state.composableBuilder(
+      column: $state.table.tolerancePct,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get period => $state.composableBuilder(
+      column: $state.table.period,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get periodDays => $state.composableBuilder(
+      column: $state.table.periodDays,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get nextExpectedDate => $state.composableBuilder(
+      column: $state.table.nextExpectedDate,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get lastAmount => $state.composableBuilder(
+      column: $state.table.lastAmount,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get amountTrend => $state.composableBuilder(
+      column: $state.table.amountTrend,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get occurrences => $state.composableBuilder(
+      column: $state.table.occurrences,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get status => $state.composableBuilder(
+      column: $state.table.status,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  $$MerchantsTableFilterComposer get merchantId {
+    final $$MerchantsTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.merchantId,
+        referencedTable: $state.db.merchants,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$MerchantsTableFilterComposer(ComposerState(
+                $state.db, $state.db.merchants, joinBuilder, parentComposers)));
+    return composer;
+  }
+}
+
+class $$RecurringSeriesTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $RecurringSeriesTable> {
+  $$RecurringSeriesTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get label => $state.composableBuilder(
+      column: $state.table.label,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get expectedAmount => $state.composableBuilder(
+      column: $state.table.expectedAmount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get tolerancePct => $state.composableBuilder(
+      column: $state.table.tolerancePct,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get period => $state.composableBuilder(
+      column: $state.table.period,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get periodDays => $state.composableBuilder(
+      column: $state.table.periodDays,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get nextExpectedDate => $state.composableBuilder(
+      column: $state.table.nextExpectedDate,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get lastAmount => $state.composableBuilder(
+      column: $state.table.lastAmount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get amountTrend => $state.composableBuilder(
+      column: $state.table.amountTrend,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get occurrences => $state.composableBuilder(
+      column: $state.table.occurrences,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get status => $state.composableBuilder(
+      column: $state.table.status,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -4876,6 +6976,8 @@ class $$RulesTableOrderingComposer
 class _$AppDatabaseManager {
   final _$AppDatabase _db;
   _$AppDatabaseManager(this._db);
+  $$BaselinesTableTableManager get baselines =>
+      $$BaselinesTableTableManager(_db, _db.baselines);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
   $$MerchantsTableTableManager get merchants =>
@@ -4886,8 +6988,14 @@ class _$AppDatabaseManager {
       $$TransactionsTableTableManager(_db, _db.transactions);
   $$FeedbackTableTableManager get feedback =>
       $$FeedbackTableTableManager(_db, _db.feedback);
+  $$InsightsTableTableManager get insights =>
+      $$InsightsTableTableManager(_db, _db.insights);
   $$MerchantAliasesTableTableManager get merchantAliases =>
       $$MerchantAliasesTableTableManager(_db, _db.merchantAliases);
+  $$ModelMetaTableTableManager get modelMeta =>
+      $$ModelMetaTableTableManager(_db, _db.modelMeta);
+  $$RecurringSeriesTableTableManager get recurringSeries =>
+      $$RecurringSeriesTableTableManager(_db, _db.recurringSeries);
   $$RulesTableTableManager get rules =>
       $$RulesTableTableManager(_db, _db.rules);
 }

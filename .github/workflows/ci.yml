@@ -11,13 +11,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install SQLCipher runtime
+        # Lets the host-VM database tests exercise the real encrypted path
+        # (PRAGMA cipher_version) instead of skipping. Noble ships the runtime
+        # as libsqlcipher1 (pulled by -dev); the soname is versioned, so resolve
+        # the actual .so and hand it to the loader via SQLCIPHER_LIB rather than
+        # hard-coding a path (see database_cipher.dart).
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libsqlcipher-dev
+          lib="$(ls /usr/lib/*/libsqlcipher.so* /usr/lib/libsqlcipher.so* 2>/dev/null | head -n1 || true)"
+          if [ -z "${lib:-}" ]; then
+            echo "::error::libsqlcipher shared library not found after install"
+            exit 1
+          fi
+          echo "Using SQLCipher at: $lib"
+          echo "SQLCIPHER_LIB=$lib" >> "$GITHUB_ENV"
       - uses: subosito/flutter-action@v2
         with:
+          # Pin to the repo-local SDK version so generator output is
+          # deterministic — a floating `stable` can emit different generated
+          # code and make the staleness guard flap (T-018).
+          flutter-version: 3.44.4
           channel: stable
       - run: flutter pub get
-      - name: Verify generated Drift code is current
+      - name: Verify generated code is current
         run: |
           dart run build_runner build --delete-conflicting-outputs
-          git diff --exit-code -- lib/data/db/database.g.dart
+          # Catch both modified tracked and new untracked *.g.dart so an added
+          # generator target can't slip in uncommitted (T-018).
+          stale="$(git status --porcelain -- '*.g.dart')"
+          if [ -n "$stale" ]; then
+            echo "::error::Generated code is stale or uncommitted. Run: dart run build_runner build --delete-conflicting-outputs"
+            echo "$stale"
+            git diff -- '*.g.dart'
+            exit 1
+          fi
       - run: flutter analyze
       - run: flutter test

@@ -27,7 +27,7 @@ class ParserCascade {
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
     RawSms sms,
   ) async {
-    final templateResult = _templateMatcher.match(sms);
+    final templateResult = await _templateMatcher.match(sms);
     if (templateResult != null) {
       return Ok(templateResult);
     }

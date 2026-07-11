@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,7 +73,108 @@ void main() {
   });
 
   group('repository.updateWithFeedback', () {
-    test('writes one feedback row per changed field, atomically with the '
+    test('records an explicit low-trust parse confirmation', () async {
+      final clockNow = DateTime.utc(2026, 7, 10, 10);
+
+      await repository.confirmParse(
+        txnId: 'txn_1',
+        clock: () => clockNow,
+        feedbackIdFactory: () => 'parse_ok',
+      );
+
+      final feedback = await database.select(database.feedback).getSingle();
+      expect(feedback.id, 'parse_ok');
+      expect(feedback.field, 'parse_verdict');
+      expect(feedback.oldValue, isNull);
+      expect(feedback.newValue, 'ok');
+      expect(feedback.context, 'parse_confirm');
+      expect(feedback.modelConfidenceAtTime, 0.97);
+      expect(feedback.createdAt.toUtc(), clockNow);
+    });
+
+    test('marks generic and public-template parses as low trust', () async {
+      await (database.update(database.transactions)
+            ..where((t) => t.id.equals('txn_1')))
+          .write(
+        const TransactionsCompanion(
+          parseSource: Value('generic'),
+          confidenceJson: Value('{"parser":{"c":0.6,"src":"generic"}}'),
+        ),
+      );
+      expect(
+        (await repository.watchDetail('txn_1').first)!.isLowTrustParse,
+        isTrue,
+      );
+
+      await (database.update(database.transactions)
+            ..where((t) => t.id.equals('txn_1')))
+          .write(
+        const TransactionsCompanion(
+          parseSource: Value('template'),
+          confidenceJson: Value(
+            '{"parser":{"c":0.85,"src":"template","provenance":"public"}}',
+          ),
+        ),
+      );
+      expect(
+        (await repository.watchDetail('txn_1').first)!.isLowTrustParse,
+        isTrue,
+      );
+    });
+
+    test('legacy parser-only confidence rows remain readable', () async {
+      final detail = await repository.watchDetail('txn_1').first;
+
+      expect(detail, isNotNull);
+      expect(detail!.confidenceTrail.parser?.confidence, 0.97);
+      expect(detail.confidenceTrail.parser?.source, 'template');
+      expect(detail.confidenceTrail.merchant, isNull);
+      expect(detail.confidenceTrail.category, isNull);
+    });
+
+    test('parse corrections atomically update fields and record verdicts',
+        () async {
+      final written = await repository.updateWithFeedback(
+        txnId: 'txn_1',
+        amount: const Value(520),
+        direction: const Value('credit'),
+        merchantRaw: const Value('AMAZON INDIA'),
+        context: 'parse_confirm',
+        recordParseCorrections: true,
+        feedbackIdFactory: (field) => 'parse_$field',
+      );
+      expect(written, 6);
+
+      final txn = await (database.select(database.transactions)
+            ..where((t) => t.id.equals('txn_1')))
+          .getSingle();
+      expect(txn.amount, 520);
+      expect(txn.direction, 'credit');
+      expect(txn.merchantRaw, 'AMAZON INDIA');
+
+      final feedback = await database.select(database.feedback).get();
+      expect(
+        feedback.where((row) => row.field == 'parse_verdict'),
+        hasLength(3),
+      );
+      expect(
+        feedback
+            .where((row) => row.field == 'parse_verdict')
+            .map((row) => row.newValue)
+            .toSet(),
+        {'amount_corrected', 'direction_corrected', 'merchant_corrected'},
+      );
+      expect(
+        feedback
+            .where((row) => row.field != 'parse_verdict')
+            .map((row) => row.context)
+            .toSet(),
+        {'parse_confirm'},
+      );
+    });
+
+    test(
+        'writes one feedback row per changed field, atomically with the '
         'update', () async {
       final clockNow = DateTime.utc(2026, 7, 7, 15);
 
@@ -152,6 +253,7 @@ void main() {
           txnId: 'txn_1',
           categoryId: const Value('shopping'),
           description: const Value('Books order'),
+          amount: const Value(520),
           feedbackIdFactory: (field) => 'fb_conflict_$field',
         ),
         throwsA(anything),
@@ -163,6 +265,7 @@ void main() {
           .getSingle();
       expect(txn.categoryId, 'food_dining');
       expect(txn.description, isNull);
+      expect(txn.amount, 449);
 
       final feedbackRows = await database.select(database.feedback).get();
       expect(feedbackRows, hasLength(1));
@@ -227,8 +330,8 @@ void main() {
       }
     }
 
-    testWidgets('renders the frozen-contract fields and confidence trail '
-        'placeholder', (tester) async {
+    testWidgets('renders the frozen-contract fields and confidence trail',
+        (tester) async {
       await pumpDetail(tester);
 
       expect(find.text('-₹449.00'), findsOneWidget);
@@ -239,6 +342,7 @@ void main() {
       expect(find.text('xx4521'), findsOneWidget);
       expect(find.text('₹12,384.50'), findsOneWidget);
       expect(find.text('615223847712'), findsOneWidget);
+      expect(find.text('Parsed correctly?'), findsNothing);
 
       // The remaining fields sit below the 600x800 test viewport and the
       // ListView builds lazily, so scroll each into view before asserting.
