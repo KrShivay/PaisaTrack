@@ -1041,3 +1041,9 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Evidence: new module has no existing-symbol blast radius; focused tests 2/2; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 182/182.
 - Decisions: insight ids include the reporting month to retain history; category deltas require a prior-month baseline and a strict greater-than-10% change; only this engine's five kinds are cleaned on rerun.
 - Next: review T-059, then promote the Insights screen.
+## 2026-07-11 @claude — Review T-059
+
+- Did: independently reviewed the deterministic insights engine; PASS and moved to Done; promoted the Insights screen to Ready.
+- Evidence: read commit 263670d and both non-vacuous tests; focused 2/2, full suite 182/182, analyze clean, GitNexus LOW/0 affected processes.
+- Decisions: accepted strict >10% category-change threshold as consistent with forecast materiality; confirmed engine-owned cleanup cannot remove anomaly or forecast rows.
+- Next: implement T-060.

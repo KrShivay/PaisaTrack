@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @codex (T-059 → In Review)
+Last updated: 2026-07-11 by @claude (T-059 review PASS; T-060 → Ready)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -8,6 +8,9 @@ Last updated: 2026-07-11 by @codex (T-059 → In Review)
      Depends are ALL Done are pulled into Ready (T-056 needs T-055 Done; T-058 needs
      T-048 Done). Everything else in Phase 3 below still depends on T-050 (Blocked)
      or on a same-phase task not yet Done — left in place until unblocked. -->
+- [ ] T-060 (@codex) [P3] Insights screen
+      AC: monthly report + savings suggestions + anomaly explanations rendered from `insights`; dismiss control; empty state; widget tests; no raw SMS text surfaced.
+      Depends: T-059
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -28,9 +31,6 @@ Last updated: 2026-07-11 by @codex (T-059 → In Review)
 - [ ] T-054 (@codex) [P3] Decision policy v2 (adaptive thresholds)
       AC: per-category silent thresholds persisted in `model_meta`; PLAN §7.5 adaptation — corrections/auto-labels >15% over trailing 50 in a category → raise threshold +0.03 (cap 0.98); each clean 50 → lower 0.01; policy reads per-category threshold instead of the static constant; back-compat default when no history; branch tests for raise/lower/cap/floor.
       Depends: T-052, T-040
-- [ ] T-060 (@codex) [P3] Insights screen
-      AC: monthly report + savings suggestions + anomaly explanations rendered from `insights`; dismiss control; empty state; widget tests; no raw SMS text surfaced.
-      Depends: T-059
 - [ ] T-061 (@codex) [P3] Nightly job orchestrator (WorkManager)
       AC: PLAN §7.9 pipeline in order — purge expired raw_sms → recurring scan → baselines → retrain (if ≥30 new feedback) → recompute thresholds → precompute insights; WorkManager constraints device idle + charging, hard cap 3 min, resumable/checkpointed; single run wires the whole nightly batch; integration test over a seeded DB asserts each stage ran and is resumable.
       Depends: T-053, T-055, T-057, T-058, T-059
@@ -67,12 +67,10 @@ Last updated: 2026-07-11 by @codex (T-059 → In Review)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
-- [ ] T-059 (@codex → review @claude) [P3] Deterministic insights engine
-      AC: no-LLM detectors precomputed into `insights` (period keyed): duplicate subscriptions, fee/penalty totals, price creep, category month-over-month deltas, missed autopay; consumes T-055/T-057/T-058 outputs; idempotent per period; dismissable flag; detector unit tests.
-      Depends: T-055, T-057, T-058
-      Evidence: focused tests 2/2; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 182/182; `git diff --check` clean. Tests assert every required kind, upstream forecast preservation, exact fee/category payloads, idempotency, dismissal persistence, and stale-row cleanup.
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
+- [x] T-059 (@codex, review @claude: PASS) [P3] Deterministic insights engine (2026-07-11)
+      Review: PASS — verified commit 263670d against every AC clause. The engine produces period-keyed duplicate-subscription, fee-total, price-creep, category-delta, and missed-autopay rows; reads recurring output and coexists with anomaly/forecast output; recomputes atomically; deletes only stale rows it owns; and preserves dismissed state across payload refreshes. Tests assert all five kinds and payload values, upstream preservation, idempotency, dismissal persistence, and stale cleanup. Focused 2/2, full suite 182/182, analyze clean, GitNexus LOW/0 affected flows.
 - [x] T-056 (@codex, review @claude: PASS) [P3] Recurring screen (2026-07-11)
       Review: PASS — verified implementation commit ed800a1 against the AC and reran evidence. The Recurring tab watches `recurring_series` ordered by next expected date; subscription/EMI/bill/income labels and icons are deterministic; amount, cadence, occurrence count, and upcoming date are visible; rising and missed states use explicit warning chips; the empty state follows the illustration/title/message design recipe. Tap-through reuses the existing merchant-filtered transaction list and is covered by a widget test. Focused tests 3/3, full suite 180/180, analyze clean, GitNexus LOW/0 affected flows.
 - [x] T-058 (@codex, review @claude: PASS) [P3] Burn-rate forecaster (2026-07-11)
