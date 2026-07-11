@@ -10,7 +10,7 @@ jobs:
   flutter-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install SQLCipher runtime
         # Lets the host-VM database tests exercise the real encrypted path
         # (PRAGMA cipher_version) instead of skipping. Noble ships the runtime
