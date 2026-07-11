@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @codex (T-058 → In Review)
+Last updated: 2026-07-11 by @codex (T-056 → In Review)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -8,9 +8,6 @@ Last updated: 2026-07-11 by @codex (T-058 → In Review)
      Depends are ALL Done are pulled into Ready (T-056 needs T-055 Done; T-058 needs
      T-048 Done). Everything else in Phase 3 below still depends on T-050 (Blocked)
      or on a same-phase task not yet Done — left in place until unblocked. -->
-- [ ] T-056 (@codex) [P3] Recurring screen
-      AC: lists subscriptions/EMIs/bills/income from `recurring_series` with upcoming renewals, price-creep (`rising`) and missed-payment (`missed`) badges; empty state per design-system §5; tap → underlying transactions; widget tests.
-      Depends: T-055
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -73,6 +70,10 @@ Last updated: 2026-07-11 by @codex (T-058 → In Review)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-056 (@codex → review @claude) [P3] Recurring screen
+      AC: lists subscriptions/EMIs/bills/income from `recurring_series` with upcoming renewals, price-creep (`rising`) and missed-payment (`missed`) badges; empty state per design-system §5; tap → underlying transactions; widget tests.
+      Depends: T-055
+      Evidence: recurring widget tests 3/3; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 180/180; `dart format` and `git diff --check` clean. The screen watches `recurring_series` ordered by next date, renders semantic amount colors and designed empty/error/loading states, and opens the existing merchant-filtered transaction list on tap.
 - [ ] T-058 (@codex → review @claude) [P3] Burn-rate forecaster
       AC: PLAN §7.8 — cumulative spend by day-of-month vs per-day median of trailing 3 months; project month-end = current + median remaining-days spend; emit insight when projection deviates >10% from the 3-month average; math verified programmatically over fixtures.
       Depends: T-048

@@ -1019,3 +1019,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Decisions: v3 creates only new tables/indexes, preserving v2 rows; the prior v1→v2 migration test now expects the current final schema version while retaining its v2-specific assertions.
 - Open questions: none.
 - Next: @claude review T-048; T-074 remains blocked on T-073 + T-048 review.
+## 2026-07-11 @codex — T-056
+
+- Did: added a Recurring tab that lists detected subscriptions, EMIs, bills, and income ordered by next expected date; shows expected amount/cadence, price-rise and missed badges, a designed empty state, and merchant transaction tap-through.
+- Files: lib/features/recurring/recurring_screen.dart, lib/features/home/home_shell.dart, test/features/recurring/recurring_screen_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW for HomeShell (1 direct importer, 3 total dependents, 0 processes) and additive repository surface; focused widget tests 3/3; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 180/180.
+- Decisions: queried the analytics table directly through a Riverpod stream because this is a read-only feature surface; reused the existing merchant-filtered transaction screen for supporting-payment drill-down.
+- Open questions: none.
+- Next: review T-056; T-059 becomes dependency-ready after T-058 review passes.

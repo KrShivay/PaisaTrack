@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../dashboard/dashboard_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
+import '../recurring/recurring_screen.dart';
 import '../review/weekly_review_screen.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transactions_screen.dart';
@@ -38,6 +39,12 @@ class _HomeShellState extends State<HomeShell> {
     selectedIcon: Icons.fact_check,
     label: 'Review',
   );
+  static const _recurring = _Tab(
+    screen: RecurringScreen(),
+    icon: Icons.autorenew_outlined,
+    selectedIcon: Icons.autorenew,
+    label: 'Recurring',
+  );
   static const _dev = _Tab(
     screen: UnparsedSmsScreen(),
     icon: Icons.bug_report_outlined,
@@ -55,6 +62,7 @@ class _HomeShellState extends State<HomeShell> {
     _dashboard,
     _transactions,
     _review,
+    _recurring,
     if (kDebugMode) _dev,
     _settings,
   ];

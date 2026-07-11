@@ -162,6 +162,10 @@ or yearly (350–380d) median gaps when gap CoV is below 0.25 and at least three
 occurrences exist. The upsert records the median-based next date, rising last
 three amounts, and a missed status after a 20% period grace window. Credits are
 income; debit labels identify EMI/bill keywords and otherwise subscriptions.
+The Recurring tab watches these rows ordered by next expected date, shows the
+expected amount and cadence, and calls out rising prices or missed occurrences.
+Selecting a series opens the transaction list filtered to its merchant so the
+user can inspect the supporting payments.
 
 `AnomalyDetector` maintains population mean/standard deviation baselines with
 Welford updates for category-week and merchant-month aggregates. It checkpoints
