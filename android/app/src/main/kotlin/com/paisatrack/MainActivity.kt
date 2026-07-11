@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import com.paisatrack.capture.CapturedSms
 import com.paisatrack.capture.CapturedSmsSink
 import com.paisatrack.capture.SmsInboxReader
+import com.paisatrack.intelligence.EmbedderBridge
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity() {
     private val capturedSmsBridge = CapturedSmsEventChannelBridge()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val embedderExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var pendingDocumentRequest: PendingDocumentRequest? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -136,6 +138,52 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // T-050 (ADR 0007): on-device text embedder. Inference is file+CPU
+        // only; downloadModel is the app's sole permitted network use (ADR
+        // 0002) and carries no user data. All work runs off the main thread.
+        val embedderBridge = EmbedderBridge(applicationContext)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/embedder",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isModelAvailable" -> runOnEmbedderExecutor(result) {
+                    embedderBridge.isModelAvailable()
+                }
+                "downloadModel" -> runOnEmbedderExecutor(result) {
+                    embedderBridge.downloadModel()
+                }
+                "deleteModel" -> runOnEmbedderExecutor(result) {
+                    embedderBridge.deleteModel()
+                }
+                "embed" -> {
+                    val text = call.argument<String>("text")
+                    if (text == null) {
+                        result.error("invalid_arguments", "Missing embed text.", null)
+                    } else {
+                        runOnEmbedderExecutor(result) { embedderBridge.embed(text) }
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun runOnEmbedderExecutor(result: MethodChannel.Result, block: () -> Any?) {
+        embedderExecutor.execute {
+            val outcome = try {
+                Result.success(block())
+            } catch (error: Exception) {
+                Result.failure(error)
+            }
+            mainHandler.post {
+                outcome.fold(
+                    onSuccess = { result.success(it) },
+                    onFailure = { result.error("embedder_failure", it.message, null) },
+                )
+            }
+        }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -150,6 +198,7 @@ class MainActivity : FlutterActivity() {
         }
         capturedSmsBridge.detach()
         backfillExecutor.shutdown()
+        embedderExecutor.shutdown()
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

@@ -193,3 +193,28 @@ month. It renders only the engine's structured JSON fields into fixed report,
 savings, forecast, and anomaly copy; transaction ids and raw capture text are
 never displayed. Dismissal persists on the insight row, and an empty state
 explains that reports appear after local patterns are detected.
+
+## On-device text embedder (Phase 3, T-050)
+
+`Embedder` (`lib/intelligence/models/embedder.dart`) returns a fixed-dimension
+float32 vector for a normalized merchant string, backed by the pinned MediaPipe
+Universal Sentence Encoder (ADR 0007) through the `com.paisatrack/embedder`
+platform channel. `EmbedderBridge` on the Kotlin side owns the model lifecycle:
+`downloadModel` fetches the generation-pinned artifact into app-private storage
+via a temp file, verifies size and MD5 against the ADR pin, and installs it
+atomically — a partial or unverified file is never left behind; `deleteModel`
+is the Settings-facing delete control; `embed` maps the verified file as a
+read-only buffer into a lazily created MediaPipe `TextEmbedder` and runs on a
+dedicated single-thread executor. Inference never touches the network; the
+download method is the app's only network use (ADR 0002) and prompted the
+INTERNET manifest permission, documented inline in the manifest.
+
+The Dart service never throws: model-missing, native failure, and
+missing-plugin (test host) paths all return `null` so ingest and the T-051
+merchant resolver degrade to alias/creation behavior without blocking.
+`NoopEmbedder` serves widget/unit tests. Determinism is proven on-device by
+`integration_test/embedder_determinism_test.dart`, which downloads/verifies
+the pin, asserts bit-exact repeat embeddings over fixed inputs, distinct
+vectors for distinct inputs, a stable dimension, and prints the dimension for
+back-filling ADR 0007 before T-051 stores embeddings in
+`merchants.embedding` (float32 little-endian BLOB).

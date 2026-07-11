@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
     <uses-permission android:name="android.permission.READ_SMS"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- ADR 0002/0007: INTERNET exists ONLY for pinned, integrity-checked
+         model downloads (EmbedderBridge.downloadModel; Phase 4 LlmRuntime
+         download later). No user data crosses the network in either
+         direction; inference paths never open a connection. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="paisatrack"
         android:name="${applicationName}"

@@ -26,3 +26,8 @@ PaisaTrack is local-first:
   JSON is kept in memory only and is never written as a temp file. Android's
   Storage Access Framework writes/reads only the document the user selects and
   requires no broad storage permission.
+- The Android manifest gained the INTERNET permission for exactly one purpose:
+  downloading pinned, integrity-checked open-weight model files (ADR 0007 now;
+  ADR 0008's Phase 4 LLM later). The download request carries no user data and
+  inference code paths never open a network connection; the permission's scope
+  is documented inline in the manifest and enforced by review.

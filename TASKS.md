@@ -1,13 +1,26 @@
 # Task Board
-Last updated: 2026-07-11 by @claude (T-060 review PASS → Done)
+Last updated: 2026-07-11 by @claude (ADR 0007/0008 pin the T-050 embedder + T-075 LLM → both Ready; @human prioritized T-071 → Ready)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
 <!-- Phase 2.5b trust loop (T-072..T-074) is fully Done as of 2026-07-11 — Phase 3
      gate cleared. Groomed forward 2026-07-11 @claude: only Phase 3 tasks whose
      Depends are ALL Done are pulled into Ready (T-056 needs T-055 Done; T-058 needs
-     T-048 Done). Everything else in Phase 3 below still depends on T-050 (Blocked)
-     or on a same-phase task not yet Done — left in place until unblocked. -->
+     T-048 Done). Everything else in Phase 3 below still depends on T-050 (now in
+     Ready, see below) or on a same-phase task not yet Done — left until Done. -->
+<!-- 2026-07-11 @claude: T-050 unblocked by ADR 0007 (pinned MediaPipe Universal
+     Sentence Encoder float32 TFLite, GCS generation 1682480025058456, size+MD5
+     integrity record; SHA-256 recorded after one run of
+     tool/verify_embedder_model.py — see ADR). T-071 groomed to Ready on @human
+     decision (prioritized 2026-07-11; T-074 precondition already Done). -->
+- [ ] T-071 (@codex) [P2] In-app sanitized SMS donation flow (unparsed screen)
+      AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
+      Depends: T-074 (Done). Groomed to Ready 2026-07-11: @human decision to prioritize recorded.
+- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
+      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API primary per PLAN §2 as amended by ADR 0008 (pinned artifact: Qwen2.5-1.5B-Instruct q8 ekv4096 `.task`, revision-pinned HF URL, SHA-256 `82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3`, size 1598556720, Apache-2.0, ungated; runtime `com.google.mediapipe:tasks-genai:0.10.24`), `llama.cpp` FFI recorded as fallback option (GGUF same model family); user-initiated model download (resumable via HTTP Range, SHA-256 integrity-checked against the ADR 0008 pin, app-private storage, size shown before download, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported/low-RAM device (~2.2 GB peak RSS required) → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
+      Model: gpt-5.6-terra high
+      Depends: T-074 (Done; queue order only — Phase-3-parallel safe: new module, no file overlap)
+      Pin: docs/decisions/0008-on-device-llm-model.md (unblocked 2026-07-11 — SHA-256 is authoritative from the HF LFS API, enforceable in code immediately).
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -48,22 +61,16 @@ Last updated: 2026-07-11 by @claude (T-060 review PASS → Done)
       Depends: T-075, T-064 (Phase 3 exit)
 
 ## Blocked
-- [ ] T-050 (@codex) [P3] On-device text embedder
-      AC: `Embedder` service (TFLite / MediaPipe Text Embedder, free/open weights per ADR 0002, on-device only) returns a fixed-dim vector for a normalized merchant string; model file bundled or lazily loaded (not networked at inference); deterministic output test over fixed inputs; graceful no-op/fallback when the model is unavailable so ingest never blocks.
-      Depends: T-048
-      Blocking: @human/@claude must pin an open embedding artifact and inference contract: exact model file/source + SHA-256, license/redistribution record, tokenizer/input tensor contract, output tensor/dimension, and TFLite/MediaPipe runtime version. Without that, deterministic fixed-vector tests would validate a fabricated embedder rather than the required model.
-- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
-      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API (Gemma-2B-class, open weights) primary per PLAN §2, `llama.cpp` FFI recorded as fallback option in the task; user-initiated model download (resumable, SHA-256 integrity-checked, app-private storage, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported device → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
-      Model: gpt-5.6-terra high
-      Depends: T-074 (queue order only — no code dependency; Phase-3-parallel safe: new module, no file overlap)
-      Blocking: @human/@claude must pin one actually downloadable MediaPipe-compatible model artifact (URL, exact SHA-256, model format/runtime version, and license/redistribution record). A family name such as “Gemma-2B-class” is insufficient for a real resumable, integrity-checked download and runtime integration; placeholders would not meet AC.
 - [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
       AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
       Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work
-- [ ] T-071 (@codex) [P2] In-app sanitized SMS donation flow (unparsed screen)
-      AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
-      Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-050 (@claude implemented 2026-07-11; verification sandbox-blocked → @human/@codex must run toolchain before review PASS) [P3] On-device text embedder
+      AC: `Embedder` service (TFLite / MediaPipe Text Embedder, free/open weights per ADR 0002, on-device only) returns a fixed-dim vector for a normalized merchant string; model file lazily downloaded per ADR 0007 (generation-pinned URL, size+MD5 integrity check; never bundled/committed — no redistribution grant; not networked at inference); runtime pinned `com.google.mediapipe:tasks-text:0.10.26` via platform channel; deterministic output test over fixed inputs (on-device golden vectors; unit suite uses the no-op fake); T-050 test must assert the real output dimension and record it in ADR 0007 (expected 100, unconfirmed) before T-051 stores embeddings; graceful no-op/fallback when the model is unavailable so ingest never blocks.
+      Depends: T-048 (Done)
+      Pin: docs/decisions/0007-on-device-embedding-model.md + tool/verify_embedder_model.py (SHA-256 backfill is one script run on a networked machine).
+      Files: lib/intelligence/models/embedder.dart, test/intelligence/models/embedder_test.dart, integration_test/embedder_determinism_test.dart, android/.../intelligence/EmbedderBridge.kt, android/.../MainActivity.kt (additive channel registration only — same LOW pattern as T-077), android/app/build.gradle.kts (tasks-text dep), AndroidManifest.xml (INTERNET, scoped comment), docs/architecture.md, docs/privacy.md.
+      Verification needed (sandbox toolchain arch-gated, per the T-068 protocol): (1) `flutter analyze --no-pub`; (2) `flutter test --no-pub --concurrency=1` (11 new embedder unit tests); (3) `./gradlew :app:compileDebugKotlin`; (4) on device: `flutter test integration_test/embedder_determinism_test.dart -d <device>` → record printed dimension + script SHA-256 in ADR 0007; (5) GitNexus impact/detect_changes (CLI could not install in sandbox).
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-060 (@codex, review @claude: PASS) [P3] Insights screen (2026-07-11)

@@ -42,6 +42,9 @@ kotlin {
 }
 
 dependencies {
+    // T-050 (ADR 0007): MediaPipe Text Embedder runtime — pin exactly;
+    // bumping requires re-running the determinism test and an ADR update.
+    implementation("com.google.mediapipe:tasks-text:0.10.26")
     debugImplementation("androidx.test.espresso:espresso-core:3.7.0")
     testImplementation("junit:junit:4.13.2")
 }
