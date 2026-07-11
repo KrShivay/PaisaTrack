@@ -180,3 +180,10 @@ Deleted and duplicate rows and credits are excluded. A deterministic `forecast`
 insight exists only when absolute deviation is strictly above 10%; reruns remove
 a stale insight. A calendar day absent from a shorter historical month is left
 out of that day's median rather than treated as zero spending.
+
+`InsightsEngine` atomically recomputes five no-LLM insight types for each UTC
+month: multiple active subscription series for one merchant, fees and penalties
+total, rising recurring prices, category month-over-month changes above 10%, and
+missed debit autopays. IDs include the reporting month so history is retained;
+reruns preserve the user's dismissed flag and remove only stale rows owned by
+this engine. Forecast and anomaly rows remain owned by their dedicated engines.

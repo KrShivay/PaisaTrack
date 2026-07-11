@@ -1034,3 +1034,10 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Evidence: read both implementation commits and their full tests; T-056 focused 3/3, T-058 focused 2/2, current full suite 180/180, analyze clean, prior GitNexus change reports LOW with no affected processes.
 - Decisions: accepted merchant-filtered transaction drill-down as the underlying-payment surface; accepted zero-spend historical days in the per-day median because the forecast compares calendar-day spending curves.
 - Next: implement T-059.
+## 2026-07-11 @codex — T-059
+
+- Did: added the deterministic insights engine for duplicate subscriptions, fee totals, rising recurring prices, category month-over-month changes, and missed debit autopays; preserves anomaly/forecast ownership and user dismissal state.
+- Files: lib/intelligence/insights_engine.dart, test/intelligence/insights_engine_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: new module has no existing-symbol blast radius; focused tests 2/2; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 182/182.
+- Decisions: insight ids include the reporting month to retain history; category deltas require a prior-month baseline and a strict greater-than-10% change; only this engine's five kinds are cleaned on rerun.
+- Next: review T-059, then promote the Insights screen.

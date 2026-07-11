@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @claude (T-056/T-058 review PASS; T-059 → Ready)
+Last updated: 2026-07-11 by @codex (T-059 → In Review)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -8,9 +8,6 @@ Last updated: 2026-07-11 by @claude (T-056/T-058 review PASS; T-059 → Ready)
      Depends are ALL Done are pulled into Ready (T-056 needs T-055 Done; T-058 needs
      T-048 Done). Everything else in Phase 3 below still depends on T-050 (Blocked)
      or on a same-phase task not yet Done — left in place until unblocked. -->
-- [ ] T-059 (@codex) [P3] Deterministic insights engine
-      AC: no-LLM detectors precomputed into `insights` (period keyed): duplicate subscriptions, fee/penalty totals, price creep, category month-over-month deltas, missed autopay; consumes T-055/T-057/T-058 outputs; idempotent per period; dismissable flag; detector unit tests.
-      Depends: T-055, T-057, T-058
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -70,6 +67,10 @@ Last updated: 2026-07-11 by @claude (T-056/T-058 review PASS; T-059 → Ready)
       AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
       Blocked on: @human decision to prioritize (target users must opt in); groom to Ready after T-074
 ## In Review
+- [ ] T-059 (@codex → review @claude) [P3] Deterministic insights engine
+      AC: no-LLM detectors precomputed into `insights` (period keyed): duplicate subscriptions, fee/penalty totals, price creep, category month-over-month deltas, missed autopay; consumes T-055/T-057/T-058 outputs; idempotent per period; dismissable flag; detector unit tests.
+      Depends: T-055, T-057, T-058
+      Evidence: focused tests 2/2; `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 182/182; `git diff --check` clean. Tests assert every required kind, upstream forecast preservation, exact fee/category payloads, idempotency, dismissal persistence, and stale-row cleanup.
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-056 (@codex, review @claude: PASS) [P3] Recurring screen (2026-07-11)
