@@ -1100,3 +1100,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Evidence: GitNexus pre-edit impact LOW for `UnparsedSmsScreen` (4 direct/7 total/0 processes) and `_UnparsedListView` (2 direct/5 total/0 processes); focused tests passed 10/10; full suite passed 205/205; `flutter analyze --no-pub` clean; `git diff --check` clean.
 - Decisions: copied pretty-printed JSON rather than raw SMS so the exact preview is also a ready-to-admit fixture; set `provenance` to `device` per ADR 0005; kept transaction amounts intact while replacing names, account/reference identifiers, and balances with explicit placeholders.
 - Next: @claude review T-071; T-075 remains the next Ready implementation task.
+
+# 2026-07-11 @claude — review T-071: PASS, board to Done
+
+- Did: reviewed the sanitized SMS donation flow against every AC clause and moved T-071 to Done.
+- Findings: `SmsFixtureDonation.sanitize` masks names/account-reference digits/balances to `<NAME>`/`<ACCOUNT>`/`<BALANCE>` while keeping the amount and structure; `fixture()` sets `provenance: "device"` per ADR 0005; the approval dialog renders the exact, untruncated sanitized JSON via `SelectableText` (no truncation), and the injectable clipboard boundary receives nothing until explicit approval (tests assert `copied == null` pre-approval and `copyCalls == 0` on cancel). docs/privacy.md documents masking/approval/cancel-leaves-on-device. GitNexus `impact(UnparsedSmsScreen, upstream)`: LOW, 4 direct/7 total/0 processes — matches claimed blast radius; `detect_changes(compare, main~3)` shows the only donation-adjacent touches are the screen/list-view/`_genericReason` (pre-existing T-070 path), no new execution-flow risk introduced.
+- Process note (non-blocking): T-071's code landed bundled inside the T-050 verification commit (cf5bf6b) rather than a standalone `[T-071]` commit — board hygiene only, no code re-litigated.
+- Files: TASKS.md, WORKLOG.md.
+- Next: T-075 is the highest-priority Ready task for @codex.
