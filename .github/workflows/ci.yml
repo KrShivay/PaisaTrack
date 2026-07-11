@@ -13,10 +13,21 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install SQLCipher runtime
         # Lets the host-VM database tests exercise the real encrypted path
-        # (PRAGMA cipher_version) instead of skipping. Installs to
-        # /usr/lib/x86_64-linux-gnu/libsqlcipher.so.0, which the app's loader
-        # discovers automatically (see database_cipher.dart).
-        run: sudo apt-get update && sudo apt-get install -y libsqlcipher0
+        # (PRAGMA cipher_version) instead of skipping. Noble ships the runtime
+        # as libsqlcipher1 (pulled by -dev); the soname is versioned, so resolve
+        # the actual .so and hand it to the loader via SQLCIPHER_LIB rather than
+        # hard-coding a path (see database_cipher.dart).
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libsqlcipher-dev
+          lib="$(ls /usr/lib/*/libsqlcipher.so* /usr/lib/libsqlcipher.so* 2>/dev/null | head -n1 || true)"
+          if [ -z "${lib:-}" ]; then
+            echo "::error::libsqlcipher shared library not found after install"
+            exit 1
+          fi
+          echo "Using SQLCipher at: $lib"
+          echo "SQLCIPHER_LIB=$lib" >> "$GITHUB_ENV"
       - uses: subosito/flutter-action@v2
         with:
           # Pin to the repo-local SDK version so generator output is

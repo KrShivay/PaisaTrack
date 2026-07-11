@@ -120,10 +120,19 @@ String? _findDesktopSqlCipherLib() {
     // macOS (Homebrew, Apple Silicon and Intel prefixes).
     '/opt/homebrew/opt/sqlcipher/lib/libsqlcipher.dylib',
     '/usr/local/opt/sqlcipher/lib/libsqlcipher.dylib',
-    // Linux (Debian/Ubuntu libsqlcipher0).
+    // Linux (Debian/Ubuntu). The unversioned dev symlink is stable across
+    // soname bumps; the versioned names cover a runtime-only install
+    // (libsqlcipher1 on noble, libsqlcipher0 on older releases).
+    '/usr/lib/x86_64-linux-gnu/libsqlcipher.so',
+    '/usr/lib/x86_64-linux-gnu/libsqlcipher.so.1',
     '/usr/lib/x86_64-linux-gnu/libsqlcipher.so.0',
+    '/usr/lib/aarch64-linux-gnu/libsqlcipher.so',
+    '/usr/lib/aarch64-linux-gnu/libsqlcipher.so.1',
     '/usr/lib/aarch64-linux-gnu/libsqlcipher.so.0',
+    '/usr/lib/libsqlcipher.so',
     '/usr/lib/libsqlcipher.so.0',
+    // Source build (`make install`) default prefix.
+    '/usr/local/lib/libsqlcipher.so',
   ];
   for (final path in candidates) {
     if (File(path).existsSync()) return path;
