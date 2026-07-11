@@ -1027,3 +1027,10 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Decisions: queried the analytics table directly through a Riverpod stream because this is a read-only feature surface; reused the existing merchant-filtered transaction screen for supporting-payment drill-down.
 - Open questions: none.
 - Next: review T-056; T-059 becomes dependency-ready after T-058 review passes.
+
+## 2026-07-11 @claude — Review T-056 and T-058
+
+- Did: independently reviewed the recurring screen and burn-rate forecaster against their acceptance criteria; both PASS and moved to Done; promoted the now-unblocked deterministic insights engine to Ready.
+- Evidence: read both implementation commits and their full tests; T-056 focused 3/3, T-058 focused 2/2, current full suite 180/180, analyze clean, prior GitNexus change reports LOW with no affected processes.
+- Decisions: accepted merchant-filtered transaction drill-down as the underlying-payment surface; accepted zero-spend historical days in the per-day median because the forecast compares calendar-day spending curves.
+- Next: implement T-059.
