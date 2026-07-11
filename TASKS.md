@@ -2,9 +2,6 @@
 Last updated: 2026-07-11 by @codex (T-050 verification PASS; 100-dimensional output and SHA-256 recorded)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
-- [ ] T-071 (@codex) [P2] In-app sanitized SMS donation flow (unparsed screen)
-      AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
-      Depends: T-074 (Done).
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
 <!-- Phase 2.5b trust loop (T-072..T-074) is fully Done as of 2026-07-11 — Phase 3
      gate cleared. Groomed forward 2026-07-11 @claude: only Phase 3 tasks whose
@@ -65,6 +62,11 @@ Last updated: 2026-07-11 by @codex (T-050 verification PASS; 100-dimensional out
       AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
       Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work
 ## In Review
+- [ ] T-071 (@codex implemented 2026-07-11; review @claude) [P2] In-app sanitized SMS donation flow (unparsed screen)
+      AC: unparsed dev screen gains "share sanitized" — on-device masking (names/account digits/balances → placeholders, structure preserved), full preview shown for explicit user approval before anything is copied out; nothing leaves the device without the user seeing the exact text; donated fixtures enter as `device` provenance per ADR 0005; widget tests incl. masking cases.
+      Evidence: pure `SmsFixtureDonation` masks names, account/reference identifiers, and balances while retaining transaction amounts and structure; exact pretty-printed `device`-provenance JSON is displayed in a selectable, untruncated approval dialog and passed unchanged to an injectable clipboard boundary only after approval. Focused tests 10/10; full suite 205/205; analyze clean; `git diff --check` clean. GitNexus pre-edit impact LOW (UnparsedSmsScreen: 4 direct/7 total/0 flows; _UnparsedListView: 2 direct/5 total/0 flows).
+      Files: lib/features/dev/sms_fixture_donation.dart, lib/features/dev/unparsed_sms_screen.dart, test/features/dev/sms_fixture_donation_test.dart, test/features/dev/unparsed_sms_screen_test.dart, docs/privacy.md.
+      Depends: T-074 (Done).
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-050 (@claude, verification/review @codex: PASS) [P3] On-device text embedder (2026-07-11)

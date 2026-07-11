@@ -1092,3 +1092,11 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Evidence: `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` passed 201/201; `./gradlew :app:compileDebugKotlin` passed; device integration test passed on Motorola edge 50 pro (Android 16, arm64) with distinct deterministic 100-dimensional vectors; `tool/verify_embedder_model.py` verified size 6120274 + MD5 `5123e0bb50df2978272ca25bfc7194f1` and produced SHA-256 `89ad3c74175dd8caa398cc22b657296d94302d20c525c12b58b29420f7249749`; `git diff --check` clean.
 - Decisions: accepted size + MD5 as the runtime integrity gate because those are the authoritative GCS metadata already implemented; recorded SHA-256 as an independent artifact identity check in the ADR.
 - Next: T-071 is the highest-priority Ready task.
+
+# 2026-07-11 @codex — T-071
+
+- Did: added an unparsed-row "Share sanitized SMS" action that builds a privacy-masked fixture locally, shows the complete exact JSON for approval, and copies it only after explicit confirmation.
+- Files: lib/features/dev/sms_fixture_donation.dart, lib/features/dev/unparsed_sms_screen.dart, test/features/dev/sms_fixture_donation_test.dart, test/features/dev/unparsed_sms_screen_test.dart, docs/privacy.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW for `UnparsedSmsScreen` (4 direct/7 total/0 processes) and `_UnparsedListView` (2 direct/5 total/0 processes); focused tests passed 10/10; full suite passed 205/205; `flutter analyze --no-pub` clean; `git diff --check` clean.
+- Decisions: copied pretty-printed JSON rather than raw SMS so the exact preview is also a ready-to-admit fixture; set `provenance` to `device` per ADR 0005; kept transaction amounts intact while replacing names, account/reference identifiers, and balances with explicit placeholders.
+- Next: @claude review T-071; T-075 remains the next Ready implementation task.
