@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/T-078/T-079 from re-review)
+Last updated: 2026-07-12 by @claude (grooming + implementation: (1) renumbered the donation-sanitizer follow-ups to T-080/T-081/T-082, resolving an ID collision with completed T-077/T-078; (2) split the Phase 4 assistant into spec T-083 + build T-076 (@codex, gpt-5.6-sol medium, gated on T-064 + T-075); (3) IMPLEMENTED T-083 (docs/assistant-nlq.md) and T-080/T-081/T-082 (sanitizer hardening + tests) in-session at @human's direction — all four now In Review for @codex. Sandbox has no Dart/Flutter, so tests await the device toolchain/CI; regex logic pre-verified via an equivalent harness. (4) pulled T-051 + T-052 into Ready (@codex) to give a live Phase 3 execution runway once reviews clear. Prior 2026-07-11: T-071 review PASS.)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
@@ -13,6 +13,23 @@ Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/
      integrity record; SHA-256 recorded after one run of
      tool/verify_embedder_model.py — see ADR). T-071 groomed to Ready on @human
      decision (prioritized 2026-07-11; T-074 precondition already Done). -->
+<!-- 2026-07-12 @claude: the assistant spec (T-083) and the three donation-sanitizer
+     hardening tasks (T-080..T-082) were groomed here, then implemented in the same
+     session (@human-directed) and moved to In Review for @codex. Ready is clear; next
+     Ready pull comes when Phase 3 same-phase deps land or @human prioritizes. -->
+<!-- 2026-07-12 @claude (@human-directed): T-051 + T-052 pulled into Ready to give @codex
+     a live execution runway — both depend only on Done work (T-048/T-049/T-050). T-051
+     (merchant resolver) is the Phase 3 critical-path head; T-052 (classifier) is
+     parallel-safe (separate files) but T-051 leads by queue order. Owners @codex build /
+     @claude review; the Phase 3 exit (T-064) stays @claude. Note: these carry no per-task
+     Model line, so the dispatcher uses CLI defaults — set one if a specific tier is wanted. -->
+- [ ] T-051 (@codex) [P3] Merchant resolver v2 (embedding similarity)
+      AC: PLAN §7.3 — exact alias lookup (1.0) → brute-force cosine similarity vs stored merchant embeddings (<2k merchants): ≥0.92 auto-link + write `learned` alias; 0.75–0.92 link with `needs_review` mark; <0.75 create+embed new merchant. Slots ahead of the categorizer in the enrichment pipeline (§7.2); writes `merchant` block into the confidence trail (T-049); tests for each band + alias promotion.
+      Depends: T-050, T-049 (both Done)
+- [ ] T-052 (@codex) [P3] Local classifier + categorizer ladder step 2
+      AC: pure-Dart softmax/logistic classifier (no heavy deps per §2) over features = merchant embedding (or top-N merchant one-hot) + log-amount band + hour bucket + dow + channel; loads weights from `model_meta`; wired as ladder step 2 (PLAN §7.4) between rules(1.0) and seed(0.8), used only when top-prob ≥ per-category threshold; no-model → ladder falls through unchanged; inference + feature-extraction tests.
+      Note (2026-07-10): also cover fuzzy/free-text category resolution for ask-now answers — typo'd free text currently lands 'Other' silently (see T-044).
+      Depends: T-048, T-050 (both Done)
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -20,13 +37,6 @@ Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/
      chain, embedder (T-050) unblocks resolver/classifier. Owners provisional
      (@codex build / @claude review) per COLLABORATION.md; the exit review
      (T-064) is @claude. -->
-- [ ] T-051 (@codex) [P3] Merchant resolver v2 (embedding similarity)
-      AC: PLAN §7.3 — exact alias lookup (1.0) → brute-force cosine similarity vs stored merchant embeddings (<2k merchants): ≥0.92 auto-link + write `learned` alias; 0.75–0.92 link with `needs_review` mark; <0.75 create+embed new merchant. Slots ahead of the categorizer in the enrichment pipeline (§7.2); writes `merchant` block into the confidence trail (T-049); tests for each band + alias promotion.
-      Depends: T-050, T-049
-- [ ] T-052 (@codex) [P3] Local classifier + categorizer ladder step 2
-      AC: pure-Dart softmax/logistic classifier (no heavy deps per §2) over features = merchant embedding (or top-N merchant one-hot) + log-amount band + hour bucket + dow + channel; loads weights from `model_meta`; wired as ladder step 2 (PLAN §7.4) between rules(1.0) and seed(0.8), used only when top-prob ≥ per-category threshold; no-model → ladder falls through unchanged; inference + feature-extraction tests.
-      Note (2026-07-10): also cover fuzzy/free-text category resolution for ask-now answers — typo'd free text currently lands 'Other' silently (see T-044).
-      Depends: T-048, T-050
 - [ ] T-053 (@codex) [P3] Nightly classifier trainer
       AC: trains the T-052 classifier on `feedback` rows (retrain trigger ≥30 new feedback rows per §7.9); persists weights + `last_trained_at` + version to `model_meta`; pure-Dart, bounded runtime; deterministic-seed training test asserting improved fit on a fixture feedback set; no raw SMS in features.
       Depends: T-052
@@ -46,34 +56,40 @@ Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/
       AC: verifies PLAN §9 Phase 3 exit criteria against T-048..T-063 evidence — after 2 weeks of feedback the classifier auto-labels ≥80% of new transactions with ≤10% correction rate (proven on the T-062 metrics screen); real subscriptions/EMIs all appear in recurring with correct next dates; ≥1 genuine anomaly and ≥1 forecast insight have fired correctly; WORKLOG "PHASE P3 EXIT REVIEW"; blockers listed before Phase 4 grooming.
 
 ## Phase 4 — Assistant & LLM layer (groomed; gated on Phase 3 exit T-064 + T-075; ADR 0006)
-- [ ] T-076 (@codex, spec @claude first) [P4] In-app assistant: ask your money anything
+- [ ] T-076 (@codex) [P4] In-app assistant: ask your money anything
       AC: chat surface behind the LLM feature flag; NL question → LLM emits constrained intent JSON (metric, category/merchant filter, time range, aggregation) validated against a whitelist — model NEVER emits SQL; deterministic QueryEngine executes intents over repositories (transactions, recurring_series, baselines, insights); reply interpolates ONLY QueryEngine numbers (renderer test proves no model-originated figures); out-of-whitelist intents refuse gracefully with suggestions; no advice framing — forecasts relay PLAN §7.8 outputs only; session-scoped history; prompts never leave the device (ADR 0002/0006). MVP intents: period totals, category breakdown, merchant lookup, month-over-month comparison, upcoming recurring, active insights.
-      Spec: @claude writes docs/assistant-nlq.md (intent schema, whitelist, prompt design, grounding contract) before implementation — same pattern as the T-066 parser spec.
-      Model: gpt-5.6-terra high
-      Depends: T-075, T-064 (Phase 3 exit)
+      Spec: implement to docs/assistant-nlq.md (T-083, @claude) — the intent schema, whitelist, and grounding contract are defined there, not invented here; do NOT start the build until T-083 is Done.
+      Model: gpt-5.6-sol medium
+      Depends: T-083 (spec), T-075 (LLM runtime, In Review), T-064 (Phase 3 exit)
 
 ## Blocked
 - [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
       AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
       Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work
 ## Backlog (ungroomed)
-<!-- 2026-07-11 @claude: follow-ups from the T-071 re-review. The donation flow
-     PASSED on the strength of the human-in-the-loop approval of the exact,
-     untruncated preview; these harden the sanitizer itself so "masks personal
-     names" is a stronger standalone guarantee. Priorities provisional pending
-     @human grooming. -->
-- [ ] T-077 (@codex build / @claude review) [P2] Donation sanitizer: mask untitled and payee/recipient names
-      AC: extend `SmsFixtureDonation.sanitize` (lib/features/dev/sms_fixture_donation.dart) so personal names are masked to `<NAME>` even when not preceded by a title/greeting and when they appear as a transfer counterparty (e.g. "paid to Priya Sharma", "sent to John Doe", trailing "Dear Rahul" with no following anchor). Add unit tests covering: untitled leading name, "to <Name>" payee, name at end-of-string, and mixed titled+payee in one message. Verified gap (2026-07-11): "Rahul Kumar paid Rs 500 to Priya Sharma" and "Sent Rs 500 to John Doe. Ref 123456" currently pass through unmasked.
-      Origin: T-071 review finding #1 (High, privacy)
-- [ ] T-078 (@codex build / @claude review) [P2] Donation sanitizer: mask UPI VPA / email-like handles
-      AC: add a rule that masks the local-part of `@`-handles (UPI VPAs and emails) so identifiers like `swiggy@okhdfc` and `rahul.kumar@paytm` no longer leak; decide token (`<VPA>` or reuse `<ACCOUNT>`) and document it. Unit tests over VPA and email forms, including one embedded in a longer message. Verified gap (2026-07-11): both example handles currently pass through unmasked.
-      Origin: T-071 review finding #2 (High, privacy)
-- [ ] T-079 (@codex build / @claude review) [P3] Donation sanitizer: stop over-masking large comma-less amounts
-      AC: `_longDigits` (mask >=6 consecutive digits) currently destroys transaction amounts with no thousands separator or decimals — "Rs 250000 debited" -> "Rs <ACCOUNT> debited". Narrow the rule (or order it after amount detection) so a currency-adjacent amount is retained while account/reference runs are still masked. Regression test asserting the amount survives and account digits do not.
-      Origin: T-071 review finding #3 (Medium, correctness)
-      Note: docs/privacy.md wording already softened 2026-07-11 to match actual coverage.
+<!-- 2026-07-12 @claude: the three T-071 donation-sanitizer follow-ups were groomed into
+     Ready and renumbered T-080/T-081/T-082 — they had been mis-logged as T-077/T-078/T-079,
+     colliding with the already-completed T-077 (Save exports) and T-078 (Weekly review).
+     ID T-079 is retired and left unused rather than reassigned, per the never-reuse rule. -->
+<!-- (empty) -->
 
 ## In Review
+- [ ] T-083 (@claude build / @codex review) [P4] Spec: in-app assistant NLQ grounding contract (docs/assistant-nlq.md)
+      AC: docs/assistant-nlq.md specifies, before implementation (same pattern as the T-066 parser spec): the constrained intent JSON schema (metric, category/merchant filter, time range, aggregation); the exhaustive MVP intent whitelist (period_total, category_breakdown, merchant_lookup, month_over_month, upcoming_recurring, active_insights) and the model-never-emits-SQL rule; the QueryEngine→repository mapping (TransactionRepository / recurring_series / baselines / insights); the grounding contract (replies interpolate ONLY QueryEngine numbers, renderer test proving no model-originated figures); graceful out-of-whitelist refusal; the no-advice constraint (forecasts relay PLAN §7.8 only); and on-device/privacy handling (ADR 0002/0006). Unblocks T-076.
+      Evidence: docs/assistant-nlq.md written 2026-07-12. Spec-only (no code) — review is a read of the doc against ADR 0006 + PLAN Phase 4. Once PASS, T-076 (@codex) loses its T-083 dependency.
+      Depends: none (ADR 0006 approved)
+- [ ] T-080 (@claude build / @codex review) [P2] Donation sanitizer: mask untitled and payee/recipient names
+      AC: extend `SmsFixtureDonation.sanitize` so personal names mask to `<NAME>` even when untitled, when a transfer counterparty ("paid to Priya Sharma", "sent to John Doe"), and at end-of-string ("… Dear Rahul"). Unit tests: untitled leading name, "to <Name>" payee, name at end-of-string, mixed titled+payee.
+      Evidence: implemented in lib/features/dev/sms_fixture_donation.dart (Title-Case `_greetingName`/`_leadingName`/`_payeeName`; ALLCAPS/lowercase merchant tokens deliberately not matched; payee rule requires a >=2-word name so single-token merchants like "to Amazon" survive). 4 unit tests added to test/features/dev/sms_fixture_donation_test.dart; both pre-existing tests unchanged and still pass. Regex logic verified against all AC cases via an equivalent ECMAScript harness (Dart RegExp shares JS semantics) — 8/8 PASS incl. the two regression cases. NOT run through `flutter test`/`analyze` in-session: Linux sandbox has no Dart/Flutter (documented wrong-arch limitation); needs the device toolchain / CI to confirm. GitNexus unavailable in-session; manual blast-radius trace: `sanitize`←`fixture`←UnparsedSmsScreen donation path only (LOW, dev-only, no ingestion path).
+      Origin: T-071 review finding #1 (High, privacy). Renumbered from the mis-assigned T-077.
+- [ ] T-081 (@claude build / @codex review) [P2] Donation sanitizer: mask UPI VPA / email-like handles
+      AC: mask the local-part of `@`-handles (UPI VPAs and emails) so "swiggy@okhdfc" / "rahul.kumar@paytm" no longer leak; token documented. Unit tests over VPA + email forms incl. one embedded in a longer message.
+      Evidence: `_handle` regex masks the local-part to `<VPA>` and retains the non-personal PSP/domain (`rahul.kumar@paytm` → `<VPA>@paytm`; a phone-VPA local part is also masked). Token `<VPA>` documented in docs/privacy.md. Runs before `_longDigits` so a digit-only VPA local part keeps its handle form. Unit test added covering VPA + two email forms in one message. Same toolchain caveat as T-080 (verified via the ECMAScript harness, not `flutter test`).
+      Origin: T-071 review finding #2 (High, privacy). Renumbered from the mis-assigned T-078.
+- [ ] T-082 (@claude build / @codex review) [P3] Donation sanitizer: stop over-masking large comma-less amounts
+      AC: `_longDigits` must not destroy a currency-adjacent comma-less amount ("Rs 250000 debited"); account/reference runs still masked. Regression test asserting the amount survives and account digits do not.
+      Evidence: `_longDigits` gains a currency negative-lookbehind `(?<!(?:inr|rs\.?|₹)\s{0,4})` so a currency-adjacent >=6-digit amount is retained while non-currency runs still mask to `<ACCOUNT>`. Regression test added ("Rs 250000" retained; a 12-digit account and a 12-digit ref both masked). Same toolchain caveat as T-080. Note: docs/privacy.md coverage wording updated this session to match the now-stronger behavior.
+      Origin: T-071 review finding #3 (Medium, correctness). Renumbered from T-079.
 - [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
       AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API primary per PLAN §2 as amended by ADR 0008 (pinned artifact: Qwen2.5-1.5B-Instruct q8 ekv4096 `.task`, revision-pinned HF URL, SHA-256 `82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3`, size 1598556720, Apache-2.0, ungated; runtime `com.google.mediapipe:tasks-genai:0.10.24`), `llama.cpp` FFI recorded as fallback option (GGUF same model family); user-initiated model download (resumable via HTTP Range, SHA-256 integrity-checked against the ADR 0008 pin, app-private storage, size shown before download, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported/low-RAM device (~2.2 GB peak RSS required) → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
       Model: gpt-5.6-terra high
