@@ -74,9 +74,10 @@ validator is the authority — a violating field is a refusal, never a guess):
 - `category`/`merchant` are hints only. The validator resolves `category`
   against the user's real category list (exact, then case-insensitive match);
   an unresolvable category is refused with a suggestion, never silently widened.
-  `merchant` is passed to the QueryEngine as a normalized `LIKE` term over
-  stored merchant names — the model never influences the SQL, only supplies the
-  literal to bind.
+  `merchant` is passed to the QueryEngine as a normalized, bound `LIKE` term
+  over stored merchant names. The QueryEngine escapes `%`, `_`, and the escape
+  character before adding its own match pattern, so model text cannot broaden
+  the query — the model never influences the SQL, only supplies the literal.
 - All dates are validated as real calendar dates; ranges must be start ≤ end and
   not in the future beyond today (device clock). Out-of-bounds → refuse.
 
@@ -91,7 +92,7 @@ the list is normal feature work, each with its own tests (ADR 0006).
 | `category_breakdown` | "where did my money go last month" | time_range, aggregation=breakdown | GROUP BY category_id over range, ordered by total desc |
 | `merchant_lookup` | "how much at Swiggy this month" | filter.merchant, time_range | SUM + COUNT over transactions whose resolved merchant matches, in range |
 | `month_over_month` | "am I spending more than last month" | metric, time_range, compare_to | two period_total runs (range + compare_to), returns both totals + delta + pct |
-| `upcoming_recurring` | "what subscriptions are due soon" | time_range (defaults next 30 days) | recurring_series rows with next_due within range, ordered by next_due |
+| `upcoming_recurring` | "what subscriptions are due soon" | time_range (defaults next 30 days) | recurring_series rows with next_expected_date within range, ordered by next_expected_date |
 | `active_insights` | "anything unusual lately" | (none; time_range optional) | non-dismissed rows from the insights table for the current period |
 
 Any question the model cannot map onto one of these six → the model is
@@ -106,7 +107,7 @@ source of every number:
 - **transactions** → `TransactionRepository` (period totals, breakdowns,
   merchant lookups, month-over-month). Amounts are read as stored; the engine
   applies the metric (spend = debits, income = credits, net = signed sum).
-- **recurring_series** → recurring repository (upcoming_recurring: `next_due`
+- **recurring_series** → recurring repository (upcoming_recurring: `next_expected_date`
   within range). Relays the deterministic recurring detector's rows (PLAN §7.6);
   the engine does not re-forecast.
 - **baselines** / **insights** → insights repository (active_insights, and any
@@ -188,7 +189,8 @@ path.
 - **Validator:** table-driven over each whitelist intent (valid → typed Intent)
   and over malformed/unsupported/unknown-category/bad-date inputs (→ typed
   refusal). Assert the model can never smuggle SQL/table/column strings through
-  any field.
+  any field, and that merchant literals containing `%`, `_`, or the escape
+  character cannot broaden a lookup.
 - **QueryEngine:** per-intent unit tests over a seeded in-memory DB with known
   totals — assert exact numbers for period_total, breakdown ordering,
   merchant match, month-over-month delta/pct, upcoming_recurring window, and
