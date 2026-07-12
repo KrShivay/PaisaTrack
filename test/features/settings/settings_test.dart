@@ -11,6 +11,7 @@ import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/features/settings/app_data_reset_service.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/settings/settings_screen.dart';
+import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 
 class _FakePassphraseProvider implements DatabasePassphraseProvider {
   var cleared = false;
@@ -23,6 +24,29 @@ class _FakePassphraseProvider implements DatabasePassphraseProvider {
   @override
   Future<void> clearStoredPassphrase() async {
     cleared = true;
+  }
+}
+
+class _FakeLlmRuntime extends NoopLlmRuntime {
+  var downloaded = false;
+  var deleted = false;
+
+  @override
+  Future<bool> isDeviceSupported() async => true;
+
+  @override
+  Future<bool> isModelAvailable() async => downloaded && !deleted;
+
+  @override
+  Future<bool> downloadModel() async {
+    downloaded = true;
+    return true;
+  }
+
+  @override
+  Future<bool> deleteModel() async {
+    deleted = true;
+    return true;
   }
 }
 
@@ -53,12 +77,14 @@ void main() {
     // Create the temp dir synchronously and push the store's real disk reads
     // through tester.runAsync, which runs the real event loop.
     final directory = Directory.systemTemp.createTempSync('settings_ui_');
+    final llmRuntime = _FakeLlmRuntime();
     addTearDown(() => directory.deleteSync(recursive: true));
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           settingsDirectoryProvider.overrideWith((ref) async => directory),
+          llmRuntimeProvider.overrideWithValue(llmRuntime),
         ],
         child: const MaterialApp(home: SettingsScreen()),
       ),
@@ -104,6 +130,11 @@ void main() {
     expect(settings.themeChoice, AppThemeChoice.light);
     expect(settings.askDailyBudget, greaterThan(2));
     expect(find.text('Local LLM parsing'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Download'), 300);
+    await tester.tap(find.text('Download'));
+    await tester.pumpAndSettle();
+    expect(llmRuntime.downloaded, isTrue);
+    expect(find.byTooltip('Delete AI model'), findsOneWidget);
     expect(find.text('Delete everything'), findsOneWidget);
   });
 

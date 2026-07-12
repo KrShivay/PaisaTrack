@@ -218,3 +218,14 @@ the pin, asserts bit-exact repeat embeddings over fixed inputs, distinct
 vectors for distinct inputs, a stable dimension, and prints the dimension for
 back-filling ADR 0007 before T-051 stores embeddings in
 `merchants.embedding` (float32 little-endian BLOB).
+## Phase 4 — shared on-device LLM
+
+`LlmRuntime` is the single feature-flagged inference boundary shared by the
+fallback extractor, narrative generation, and assistant. Its MediaPipe Android
+implementation loads the ADR 0008 Qwen2.5 `.task` file from app-private storage.
+`complete()` and strict-schema `extractJson()` never have network capability;
+only the Settings-initiated resumable downloader opens HTTP, and it promotes a
+partial file only after the pinned size and SHA-256 both match. Missing models,
+disabled flags, and unsupported/low-RAM devices return typed no-op results so
+deterministic callers continue unchanged. `llama.cpp` over an ungated Qwen2.5
+GGUF remains the recorded fallback if MediaPipe proves unsuitable.

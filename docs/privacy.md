@@ -39,3 +39,11 @@ PaisaTrack is local-first:
   ADR 0008's Phase 4 LLM later). The download request carries no user data and
   inference code paths never open a network connection; the permission's scope
   is documented inline in the manifest and enforced by review.
+## On-device language model
+
+The optional Phase 4 language model is downloaded only after you tap Download
+in Settings, stored in app-private storage, and can be deleted there. Inference
+is fully offline: prompts and responses never leave the phone. Extraction
+prompts may contain the raw SMS text needed to parse a transaction, but that
+text is passed only to the on-device model. The model download request contains
+no SMS, transaction, account, or other user data.

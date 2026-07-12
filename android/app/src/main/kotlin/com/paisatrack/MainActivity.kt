@@ -15,6 +15,7 @@ import com.paisatrack.capture.CapturedSms
 import com.paisatrack.capture.CapturedSmsSink
 import com.paisatrack.capture.SmsInboxReader
 import com.paisatrack.intelligence.EmbedderBridge
+import com.paisatrack.intelligence.LlmBridge
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -32,6 +33,7 @@ class MainActivity : FlutterActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val embedderExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val llmExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var pendingDocumentRequest: PendingDocumentRequest? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -66,6 +68,36 @@ class MainActivity : FlutterActivity() {
                 }
             } catch (error: Exception) {
                 result.error("database_passphrase", error.message, null)
+            }
+        }
+
+        val llmBridge = LlmBridge(applicationContext)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/llm",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isModelAvailable" -> runOnExecutor(llmExecutor, result) {
+                    llmBridge.isModelAvailable()
+                }
+                "isDeviceSupported" -> runOnExecutor(llmExecutor, result) {
+                    llmBridge.isDeviceSupported()
+                }
+                "downloadModel" -> runOnExecutor(llmExecutor, result) {
+                    llmBridge.downloadModel()
+                }
+                "deleteModel" -> runOnExecutor(llmExecutor, result) {
+                    llmBridge.deleteModel()
+                }
+                "complete" -> {
+                    val prompt = call.argument<String>("prompt")
+                    if (prompt == null) {
+                        result.error("invalid_arguments", "Missing prompt.", null)
+                    } else {
+                        runOnExecutor(llmExecutor, result) { llmBridge.complete(prompt) }
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
 
@@ -171,7 +203,15 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun runOnEmbedderExecutor(result: MethodChannel.Result, block: () -> Any?) {
-        embedderExecutor.execute {
+        runOnExecutor(embedderExecutor, result, block)
+    }
+
+    private fun runOnExecutor(
+        executor: ExecutorService,
+        result: MethodChannel.Result,
+        block: () -> Any?,
+    ) {
+        executor.execute {
             val outcome = try {
                 Result.success(block())
             } catch (error: Exception) {
@@ -180,7 +220,12 @@ class MainActivity : FlutterActivity() {
             mainHandler.post {
                 outcome.fold(
                     onSuccess = { result.success(it) },
-                    onFailure = { result.error("embedder_failure", it.message, null) },
+                    onFailure = {
+                        val code = if (it is UnsupportedOperationException &&
+                            it.message == "unsupported_device"
+                        ) "unsupported_device" else "inference_failure"
+                        result.error(code, it.message, null)
+                    },
                 )
             }
         }
@@ -199,6 +244,7 @@ class MainActivity : FlutterActivity() {
         capturedSmsBridge.detach()
         backfillExecutor.shutdown()
         embedderExecutor.shutdown()
+        llmExecutor.shutdown()
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

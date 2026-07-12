@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/platform/system_document_gateway.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../../intelligence/llm/llm_runtime.dart';
 import '../backup/encrypted_backup_service.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
@@ -43,6 +44,11 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const _Section(
+              title: 'On-device AI model',
+              children: [_LlmModelTile()],
             ),
             const SizedBox(height: AppSpacing.xl),
             _Section(
@@ -281,6 +287,96 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LlmModelTile extends ConsumerStatefulWidget {
+  const _LlmModelTile();
+
+  @override
+  ConsumerState<_LlmModelTile> createState() => _LlmModelTileState();
+}
+
+class _LlmModelTileState extends ConsumerState<_LlmModelTile> {
+  bool? _available;
+  bool? _supported;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final runtime = ref.read(llmRuntimeProvider);
+    final results = await Future.wait([
+      runtime.isModelAvailable(),
+      runtime.isDeviceSupported(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _available = results[0];
+      _supported = results[1];
+    });
+  }
+
+  Future<void> _download() async {
+    setState(() => _busy = true);
+    final succeeded = await ref.read(llmRuntimeProvider).downloadModel();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _available = succeeded;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          succeeded ? 'AI model downloaded' : 'Model download paused or failed',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _delete() async {
+    setState(() => _busy = true);
+    final succeeded = await ref.read(llmRuntimeProvider).deleteModel();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _available = !succeeded;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = switch ((_supported, _available)) {
+      (false, _) => 'Unsupported on this device (requires about 2.2 GB RAM)',
+      (_, true) => 'Downloaded · app-private storage',
+      (true, false) => 'Not downloaded',
+      _ => 'Checking device…',
+    };
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Qwen2.5 1.5B · 1.6 GB'),
+      subtitle: Text('$status\nPrompts and inference stay on this device.'),
+      isThreeLine: true,
+      trailing: _busy
+          ? const SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : _available == true
+              ? IconButton(
+                  tooltip: 'Delete AI model',
+                  onPressed: _delete,
+                  icon: const Icon(Icons.delete_outline),
+                )
+              : FilledButton(
+                  onPressed: _supported == true ? _download : null,
+                  child: const Text('Download'),
+                ),
     );
   }
 }

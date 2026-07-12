@@ -13,11 +13,6 @@ Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/
      integrity record; SHA-256 recorded after one run of
      tool/verify_embedder_model.py — see ADR). T-071 groomed to Ready on @human
      decision (prioritized 2026-07-11; T-074 precondition already Done). -->
-- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
-      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API primary per PLAN §2 as amended by ADR 0008 (pinned artifact: Qwen2.5-1.5B-Instruct q8 ekv4096 `.task`, revision-pinned HF URL, SHA-256 `82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3`, size 1598556720, Apache-2.0, ungated; runtime `com.google.mediapipe:tasks-genai:0.10.24`), `llama.cpp` FFI recorded as fallback option (GGUF same model family); user-initiated model download (resumable via HTTP Range, SHA-256 integrity-checked against the ADR 0008 pin, app-private storage, size shown before download, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported/low-RAM device (~2.2 GB peak RSS required) → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
-      Model: gpt-5.6-terra high
-      Depends: T-074 (Done; queue order only — Phase-3-parallel safe: new module, no file overlap)
-      Pin: docs/decisions/0008-on-device-llm-model.md (unblocked 2026-07-11 — SHA-256 is authoritative from the HF LFS API, enforceable in code immediately).
 ## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
 <!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
      start until T-046 → Done (commit unblocked + canonical device test green).
@@ -79,6 +74,11 @@ Last updated: 2026-07-11 by @claude (T-071 review PASS; logged follow-ups T-077/
       Note: docs/privacy.md wording already softened 2026-07-11 to match actual coverage.
 
 ## In Review
+- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
+      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API primary per PLAN §2 as amended by ADR 0008 (pinned artifact: Qwen2.5-1.5B-Instruct q8 ekv4096 `.task`, revision-pinned HF URL, SHA-256 `82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3`, size 1598556720, Apache-2.0, ungated; runtime `com.google.mediapipe:tasks-genai:0.10.24`), `llama.cpp` FFI recorded as fallback option (GGUF same model family); user-initiated model download (resumable via HTTP Range, SHA-256 integrity-checked against the ADR 0008 pin, app-private storage, size shown before download, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported/low-RAM device (~2.2 GB peak RSS required) → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
+      Model: gpt-5.6-terra high
+      Depends: T-074 (Done; queue order only — Phase-3-parallel safe: new module, no file overlap)
+      Pin: docs/decisions/0008-on-device-llm-model.md (unblocked 2026-07-11 — SHA-256 is authoritative from the HF LFS API, enforceable in code immediately).
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-071 (@codex implemented 2026-07-11; review @claude: PASS) [P2] In-app sanitized SMS donation flow (unparsed screen) (2026-07-11)
