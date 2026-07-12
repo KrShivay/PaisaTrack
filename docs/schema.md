@@ -14,7 +14,9 @@ Implemented in schema version 3:
 - `raw_sms`: source SMS retention rows with processed state and purge deadline.
 - `merchants`: canonical merchant rows with optional category hints and
   embeddings.
-- `merchant_aliases`: seed, learned, and user aliases pointing at merchants.
+- `merchant_aliases`: seed, similarity-review, learned, and user aliases
+  pointing at merchants. Similarity aliases retain their score/review state
+  until user feedback promotes them.
 - `categories`: category taxonomy rows, including parent links and spending
   flags.
 - `rules`: user-taught hard mappings that can set category and description.
@@ -24,13 +26,15 @@ Implemented in schema version 3:
   by `merchant_id` and `next_expected_date` for the recurring scanner/screen.
 - `baselines`: keyed rolling mean, standard deviation, and sample count for
   anomaly detection.
-- `model_meta`: key-value state for classifier weights, versions, policy
-  thresholds, and the ADR 0005 template trust-ledger cache
+- `model_meta`: key-value state for classifier weights/version/last-trained
+  timestamp, per-category policy thresholds and processed-window counts, and
+  the ADR 0005 template trust-ledger cache
   (`template_trust_ledger_v1`).
 - `insights`: dismissable precomputed insight payloads, indexed by period.
 
-`merchants.embedding` remains a nullable BLOB in v3. It is intentionally
-unused until T-050 introduces the on-device embedder.
+`merchants.embedding` is a nullable little-endian float32 BLOB populated by the
+T-050 on-device embedder and consumed by the T-051 merchant resolver and T-052
+classifier features.
 
 Migration log:
 

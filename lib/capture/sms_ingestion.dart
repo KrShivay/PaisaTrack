@@ -16,8 +16,10 @@ import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
 import '../enrichment/merchant_resolver.dart';
 import '../features/settings/app_settings.dart';
+import '../intelligence/llm/llm_runtime.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
+import 'llm_extractor.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
@@ -45,6 +47,7 @@ final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
       registries: registries,
       trustLedger: TemplateTrustLedger(database),
     ),
+    llmExtractor: LlmExtractor(ref.watch(llmRuntimeProvider)),
   );
 });
 

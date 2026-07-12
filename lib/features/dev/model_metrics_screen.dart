@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
@@ -26,31 +28,58 @@ class ModelMetricsRepository {
   final AppDatabase _database;
   Future<ModelMetrics> load() async {
     final feedback = await (_database.select(_database.feedback)
+          ..where((f) => f.field.equals('category_id'))
           ..orderBy([(f) => OrderingTerm.desc(f.createdAt)])
           ..limit(100))
         .get();
-    final categoryFeedback =
-        feedback.where((f) => f.field == 'category_id').toList();
-    final corrected =
-        categoryFeedback.where((f) => f.oldValue != f.newValue).length;
     final transactions = await _database.select(_database.transactions).get();
-    final asked = transactions.where((t) => t.status == 'asked').length;
+    final transactionsById = {for (final row in transactions) row.id: row};
+    final classifierFeedback = feedback.where((item) {
+      final transaction = transactionsById[item.txnId];
+      return transaction != null &&
+          _categorySource(transaction) == 'classifier';
+    }).toList();
+    final corrected =
+        classifierFeedback.where((f) => f.oldValue != f.newValue).length;
+    final askedTxnIds =
+        transactions.where((t) => t.status == 'asked').map((t) => t.id).toSet();
+    askedTxnIds.addAll(
+      (await (_database.select(_database.feedback)
+                ..where((f) => f.context.equals('ask_now')))
+              .get())
+          .map((f) => f.txnId),
+    );
     final rates = <String, double>{};
-    for (final item in categoryFeedback) {
-      final category = item.newValue;
+    for (final item in feedback) {
+      final category = item.oldValue ?? item.newValue;
       if (category == null) continue;
-      final bucket =
-          categoryFeedback.where((f) => f.newValue == category).toList();
+      final bucket = feedback
+          .where((f) => (f.oldValue ?? f.newValue) == category)
+          .toList();
       rates[category] =
           bucket.where((f) => f.oldValue != f.newValue).length / bucket.length;
     }
     return ModelMetrics(
-      accuracy: categoryFeedback.isEmpty
+      accuracy: classifierFeedback.isEmpty
           ? 0
-          : 1 - corrected / categoryFeedback.length,
-      askRate: transactions.isEmpty ? 0 : asked / transactions.length,
+          : 1 - corrected / classifierFeedback.length,
+      askRate:
+          transactions.isEmpty ? 0 : askedTxnIds.length / transactions.length,
       correctionRates: rates,
     );
+  }
+
+  String? _categorySource(Transaction transaction) {
+    try {
+      final decoded =
+          jsonDecode(transaction.confidenceJson) as Map<String, Object?>;
+      final category = decoded['category'] as Map<String, Object?>?;
+      return category?['src'] as String?;
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    }
   }
 }
 

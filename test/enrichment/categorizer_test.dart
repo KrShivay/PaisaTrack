@@ -4,6 +4,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
+import 'package:paisatrack/enrichment/local_classifier.dart';
 import 'package:paisatrack/enrichment/seed_category_map.dart';
 
 NormalizedTransactionRecord _record({
@@ -80,8 +81,8 @@ void main() {
         setCategoryId: 'entertainment',
       );
 
-      final result =
-          await categorizer.categorize(_record(merchantRaw: 'Swiggy Instamart'));
+      final result = await categorizer
+          .categorize(_record(merchantRaw: 'Swiggy Instamart'));
       expect(result.categoryId, 'entertainment');
       expect(result.confidence, 1.0);
       expect(result.source, 'rule');
@@ -95,8 +96,8 @@ void main() {
         setCategoryId: 'transfers',
       );
 
-      final result = await categorizer
-          .categorize(_record(counterpartyVpa: 'friend@upi'));
+      final result =
+          await categorizer.categorize(_record(counterpartyVpa: 'friend@upi'));
       expect(result.categoryId, 'transfers');
       expect(result.source, 'rule');
     });
@@ -150,8 +151,8 @@ void main() {
 
     test('seed map falls back to the VPA when merchant text is absent',
         () async {
-      final result =
-          await categorizer.categorize(_record(counterpartyVpa: 'zomato@paytm'));
+      final result = await categorizer
+          .categorize(_record(counterpartyVpa: 'zomato@paytm'));
       expect(result.source, 'seed');
       expect(result.categoryId, 'food_dining');
     });
@@ -163,6 +164,44 @@ void main() {
       expect(result.confidence, Categorizer.fallbackConfidence);
       expect(result.source, 'fallback');
       expect(result.ruleId, isNull);
+    });
+
+    test('classifier uses the winning category adaptive threshold', () async {
+      const model = ClassifierModel(
+        categories: ['food_dining', 'shopping'],
+        weights: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        biases: [2, 0],
+      );
+      await database.into(database.modelMeta).insertOnConflictUpdate(
+            ModelMetaCompanion.insert(
+              key: classifierModelMetaKey,
+              value: model.toJson(),
+            ),
+          );
+      final strict = Categorizer(
+        rules: rules,
+        seedMap: seedMap,
+        classifier: LocalClassifier(database),
+        classifierThreshold: (_) async => 0.9,
+      );
+      final permissive = Categorizer(
+        rules: rules,
+        seedMap: seedMap,
+        classifier: LocalClassifier(database),
+        classifierThreshold: (_) async => 0.8,
+      );
+
+      expect(
+        (await strict.categorize(_record(merchantRaw: 'Swiggy'))).source,
+        'seed',
+      );
+      expect(
+        (await permissive.categorize(_record(merchantRaw: 'Swiggy'))).source,
+        'classifier',
+      );
     });
   });
 

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import '../../core/constants.dart';
+import '../assistant/assistant_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
 import '../dev/model_metrics_screen.dart';
@@ -46,6 +48,12 @@ class _HomeShellState extends State<HomeShell> {
     selectedIcon: Icons.autorenew,
     label: 'Recurring',
   );
+  static const _assistant = _Tab(
+    screen: AssistantScreen(),
+    icon: Icons.auto_awesome_outlined,
+    selectedIcon: Icons.auto_awesome,
+    label: 'Ask',
+  );
   static const _dev = _Tab(
     screen: UnparsedSmsScreen(),
     icon: Icons.bug_report_outlined,
@@ -70,6 +78,7 @@ class _HomeShellState extends State<HomeShell> {
     _transactions,
     _review,
     _recurring,
+    if (AppConstants.enableLocalLlm) _assistant,
     if (kDebugMode) _dev,
     if (kDebugMode) _metrics,
     _settings,

@@ -2,6 +2,7 @@ import '../core/result.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import 'generic_transaction_parser.dart';
+import 'llm_extractor.dart';
 import 'template_engine/template_matcher.dart';
 
 /// Coordinates SMS parsing strategies from highest precision to fallback.
@@ -14,11 +15,14 @@ class ParserCascade {
     required TemplateMatcher templateMatcher,
     GenericTransactionParser genericTransactionParser =
         const GenericTransactionParser(),
+    LlmExtractor? llmExtractor,
   })  : _templateMatcher = templateMatcher,
-        _genericTransactionParser = genericTransactionParser;
+        _genericTransactionParser = genericTransactionParser,
+        _llmExtractor = llmExtractor;
 
   final TemplateMatcher _templateMatcher;
   final GenericTransactionParser _genericTransactionParser;
+  final LlmExtractor? _llmExtractor;
 
   /// Attempts to convert one raw SMS into a normalized transaction record.
   ///
@@ -35,6 +39,11 @@ class ParserCascade {
     final genericResult = _genericTransactionParser.parse(sms);
     if (genericResult != null) {
       return Ok(genericResult);
+    }
+
+    final llmResult = await _llmExtractor?.extract(sms);
+    if (llmResult != null) {
+      return Ok(llmResult);
     }
 
     return const Err(ParseFailure.unparsed);

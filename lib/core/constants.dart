@@ -7,11 +7,11 @@ class AppConstants {
 
   /// Enables on-device LLM parsing once that implementation exists.
   /// All LLM inference is local-only; no cloud path exists (ADR 0002).
-  static const enableLocalLlm = false;
+  static const enableLocalLlm = true;
 
   /// Enables generated narrative insights (on-device model or deterministic
   /// engine only — ADR 0002) once privacy rules are implemented.
-  static const enableNarrativeInsights = false;
+  static const enableNarrativeInsights = true;
 
   /// Confidence at or above this value can be accepted without interrupting.
   static const silentConfidenceThreshold = 0.9;

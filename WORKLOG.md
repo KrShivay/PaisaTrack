@@ -1,3 +1,38 @@
+## 2026-07-12 @claude — T-084/T-085 post-toggle verification: PASS → Done
+
+- The prior entry left T-084/T-085 in `## In Review` pending one more analyze/full-suite run with `enableLocalLlm`/`enableNarrativeInsights` flipped `true` (blocked earlier by Codex quota exhaustion). Ran it: `flutter analyze --no-pub` clean, full `flutter test --no-pub --concurrency=1` 287/287 passing, `git diff --check` clean, with both flags already `true` in the working tree.
+- Manually reviewed the two implementations against their AC: `LlmExtractor` (lib/capture/llm_extractor.dart) rejects non-finite/non-positive amounts, out-of-range confidence, implausible timestamps (pre-2000 or >1 day past receipt), and unknown enum values before ever reaching the parser cascade, and caps `parseConfidence` at 0.75 so the probabilistic path can never silently auto-label. `NarrativeInsightGenerator` (lib/intelligence/narrative_insight_generator.dart) sends the model only the aggregate insight JSON, rejects any output containing a digit (so every displayed number still traces to a deterministic payload), and deletes the stale narrative row when the flag is off. Both fail closed when the LLM runtime doesn't answer. No defects found.
+- Board: moved T-084/T-085 from `## In Review` to `## Done` (`review @claude: PASS`); trimmed the Done list back to the last 20 by archiving T-057/T-055/T-049 to docs/tasks-archive.md.
+- Next: T-064 (Phase 3 exit) still needs real 2-week usage evidence; T-067 fixtures still blocked.
+
+## 2026-07-12 @claude — Independent review T-051/T-052/T-053/T-054/T-062/T-063: PASS
+
+- The working tree's TASKS.md/WORKLOG.md drafts had @codex self-review these six tasks straight to Done (`review @codex: PASS`), even though the last actual commit (c7c50ca) explicitly recorded them as awaiting @claude review. Per COLLABORATION.md, self-review does not satisfy that gate, so I ran the review myself rather than accept the draft's verdict at face value.
+- Verified independently: `flutter analyze --no-pub` clean; full `flutter test --no-pub --concurrency=1` 287/287 passing; `git diff --check` clean.
+- Manually inspected the diffs against each task's AC: `AdaptiveThresholdPolicy.recompute` (decision_policy.dart) now tracks per-category events instead of filtering on `status == auto`, fixing a real bug where a correction flips the transaction's status away from `auto`, silently dropping corrected transactions out of their own error-rate window. `MerchantResolver.resolve` (merchant_resolver.dart) now preserves the stored `similarity` confidence and `needsReview` flag on repeat alias lookups instead of collapsing back to 1.0. `Categorizer` (categorizer.dart) now consults the adaptive per-category threshold instead of a hard-coded 0.8. `ClassifierTrainer.train` (local_classifier.dart) gates retraining on ≥30 new feedback rows since `classifier_last_trained_at`. `ModelMetricsRepository.load` (model_metrics_screen.dart) now scopes accuracy to classifier-sourced outcomes and counts answered ask-now corrections in the ask rate. All match their task's AC; no defects found.
+- T-075 was excluded from this pass — it already went through a genuine independent review-and-fix cycle in git history (d1d68b6 → 40d3fe6 → dd0aa6a → 126b483), so its existing PASS stands.
+- Board: corrected T-051/T-052/T-053/T-054/T-062/T-063's Done-list attribution from `review @codex` to `review @claude` to reflect who actually reviewed them.
+- Next: T-064 (Phase 3 exit) reassigned to @claude (was @human) per direct instruction; still needs the same real-usage evidence (2 weeks of feedback, real recurring/anomaly/forecast hits) regardless of owner. Phase 4 release flags (`enableLocalLlm`/`enableNarrativeInsights`, flipped true in the uncommitted diff) still need the one more analyze/full-suite pass noted against T-084/T-085 before relying on them.
+
+## 2026-07-12 @codex — T-061 PASS → Done; T-064 assigned @human
+
+- Implemented daily WorkManager registration and callback with charging + device-idle constraints. The production pipeline runs expired raw-SMS purge → recurring scan → anomaly baselines → classifier retrain (the existing ≥30-feedback gate) → adaptive thresholds → forecast and deterministic insight precomputation.
+- Resumability: each completed stage persists the next stage in existing `model_meta`; retries resume from that checkpoint, same-day completed runs are idempotent, and a three-minute deadline returns retry status to WorkManager.
+- Why: reused `model_meta` instead of changing `AppDatabase`; GitNexus rated that shared class CRITICAL (88 direct dependents / 16 flows), while `main` was LOW (no callers or affected processes).
+- Evidence: `flutter analyze` clean; full Flutter suite 275/275; Android debug APK assembled successfully. WorkManager emitted only the upstream future-Kotlin-migration warning. GitNexus `detect_changes(all)` is HIGH because the dirty worktree includes earlier classifier/categorizer review changes (30 indexed symbols / 6 flows); T-061 itself is additive plus a LOW-risk startup edit.
+- Board: T-061 Done. T-064 is assigned to @human because its two-week classifier metrics and genuine recurring/anomaly/forecast evidence cannot be synthesized. T-076 remains gated on T-064; T-067 remains blocked on public fixture collection.
+- Next: @human completes T-064; then @codex implements T-076. Separately, unblock T-067 with provenance-recorded public fixtures.
+
+## 2026-07-12 @codex — Review T-051/T-052/T-053/T-054/T-062/T-063/T-075: PASS → Done
+
+- Reviewed every AC against source and tests; fixed five blockers before recording PASS: similarity-review aliases escalating to trust on repeat lookup, hard-coded classifier acceptance, missing 30-new-feedback retrain gate, corrected auto-labels disappearing/reapplying in threshold windows, and metrics attributing non-classifier outcomes while losing answered asks.
+- Docs: updated TASKS.md, docs/tasks-archive.md, docs/architecture.md, docs/schema.md, and PROJECT_STATUS_REPORT.md. The board now points to T-061 as the next engineering task; T-064 remains a real-usage evidence gate; T-075 is no longer a T-076 blocker.
+- GitNexus: refreshed stale index (3,780 nodes / 7,765 edges / 206 flows). Pre-edit impacts: MerchantResolver.resolve HIGH (2 direct, 10 total, 3 process groups); Categorizer.categorize LOW (1 direct, 9 total); ClassifierTrainer.train LOW (1); AdaptiveThresholdPolicy.recompute LOW (0); ModelMetricsRepository.load LOW (0).
+- Evidence: focused intelligence review tests 63/63; focused classifier regression 17/17; focused T-075 Flutter tests 10/10; full Flutter suite 272/272; `flutter analyze --no-pub` clean; Android `:app:testDebugUnitTest --tests com.paisatrack.intelligence.LlmBridgeTest` BUILD SUCCESSFUL; `git diff --check` clean. Final GitNexus `detect_changes(scope: all)` is HIGH (30 changed symbols, 6 affected classifier/categorizer flows), expected for the reviewed ingest ladder; focused ingest/backfill coverage and the full suite are green. Pre-existing test-only Drift multiple-database warning remains green.
+- Decision: persisted per-category processed outcome counts so nightly threshold recomputation consumes each fresh block of 50 once. This is the minimal state needed to make PLAN §7.5's "per clean 50" behavior idempotent.
+- Open: fuzzy free-text category-name resolution remains separate; T-064 cannot pass until two weeks of real feedback and real anomaly/forecast evidence exist.
+- Next: implement T-061, then collect T-064 evidence.
+
 ## 2026-07-12 @codex — T-075 crash-resume fixes → In Review
 
 - Did: fixed the review blockers: verify/promote a full `.part` model before opening an EOF HTTP Range request; retain and close the native MediaPipe inference engine during Flutter-engine cleanup; and enforce JSON-schema `enum` values with one retry then typed failure. Added native and Dart regressions and documented the download/lifecycle invariants.
@@ -1176,3 +1211,33 @@ Carry-forward into Phase 3 (non-blocking): DecisionPolicy v2 adaptive per-catego
 - Decisions: no separate `trainer.dart`/`policy.dart` files exist — T-053's trainer and T-054's adaptive policy were already implemented inside local_classifier.dart/decision_policy.dart respectively, so tests target those; T-063 required no new production code since the category-feedback row already serves as the classifier training example, so only the alias-write test was added.
 - Open questions: T-052's fuzzy/free-text ask-now category resolution note (2026-07-10, referencing T-044) remains unaddressed.
 - Next: @claude review T-051/T-052/T-053/T-054/T-062/T-063; T-061 (nightly orchestrator) is the next unimplemented Phase 3 item once T-053 review passes.
+## 2026-07-12 @codex — T-076 implementation → In Review
+
+- Direction: proceeded without waiting for T-064. Phase 3's real-usage exit evidence still needs closure and is not marked Done.
+- Implemented the six-intent on-device assistant contract: strict JSON whitelist/date/category validation, deterministic transaction/recurring/insight queries, fixed answer templates whose API cannot accept model prose, graceful refusals, session-only history, and a feature-flagged chat tab.
+- Why: the model is restricted to classification; deterministic code owns all figures. Merchant input is compared as a literal Dart substring after rows are loaded, so `%`, `_`, and `\\` have no wildcard semantics and cannot broaden a query.
+- Evidence: `flutter analyze --no-pub` clean; focused assistant tests 7/7; full Flutter suite 282/282; `git diff --check` clean. GitNexus pre-edit `impact(HomeShell, upstream)` LOW (1 direct / 3 total, no flows). Final `detect_changes(all)` HIGH comes from the existing dirty Phase 3 classifier changes (35 indexed symbols / 6 classifier flows), not the additive assistant files.
+- Next: independent review T-076. T-064 still needs real-usage closure. No T-084+ development items are currently groomed on the board.
+## 2026-07-12 @codex — Phase 4 usable feature release candidate: T-076 PASS; T-084/T-085 verification pending
+
+- Ownership: @human confirmed every current uncommitted change was produced by
+  Codex in prior/current sessions; docs now record the tree as Codex-authored
+  continuation work.
+- Groomed and completed T-084: unmatched SMS now falls through deterministic
+  parsers to the optional local LLM, with strict schema/domain validation,
+  implausible-date rejection, fail-closed runtime behavior, and confidence
+  capped at 0.75 so probabilistic extraction cannot silently auto-label.
+- Groomed and completed T-085: nightly narrative generation receives aggregate
+  insight JSON only, stores a qualitative monthly summary, and rejects digits
+  so displayed numbers remain traceable to deterministic payloads.
+- Release configuration enables the Phase 4 UI/runtime paths; model download
+  remains explicit and absent/unsupported runtimes fail closed.
+- Closed T-076 after the existing assistant passed combined verification.
+- GitNexus impact: ParserCascade MEDIUM (9 direct, 13 total, 2 test flows,
+  capture only); changed methods and InsightsEngine/NightlyPipeline wiring LOW.
+- Verification before enabling the final two release flags: focused suite 23/23;
+  Flutter analyze clean; full suite 287/287. The post-toggle rerun was rejected
+  when the Codex execution quota was exhausted; do not mark T-084/T-085 Done
+  until that analyze/full-suite rerun passes.
+- Follow-up: @human still owns T-064 and physical-device airplane-mode Phase 4
+  QA; T-067 remains blocked on real public fixtures.

@@ -2,6 +2,72 @@
 
 Older `## Done` entries moved verbatim from TASKS.md per COLLABORATION.md ("keep last 20, archive rest"). Newest first. Archived 2026-07-11 by @claude (T-040..T-035).
 
+## Archived 2026-07-12 by @claude (T-057/T-055/T-049) — board trimmed to last 20 after T-084/T-085 closed
+
+- [x] T-057 (@codex, review @claude: PASS) [P3] Anomaly detector (nightly baselines) (2026-07-11)
+- [x] T-055 (@codex, review @claude: PASS) [P3] Recurring detector (nightly batch) (2026-07-11)
+- [x] T-049 (@codex, review @claude: PASS) [P3] Confidence trail per transaction (2026-07-11)
+
+## Reviewed 2026-07-12 by @codex — T-061
+
+- [x] T-061 [P3] Nightly WorkManager orchestrator — PASS. One constrained
+  periodic task composes the PLAN §7.9 stages in order, uses persisted per-stage
+  checkpoints for retry/resume and same-day idempotence, and applies a
+  three-minute deadline. The production seeded-DB test runs the real stage
+  composition; interruption and idempotence tests cover checkpoint behavior.
+  Flutter analyze is clean, the full suite passes 275/275, and an Android debug
+  APK assembles with the plugin registered.
+
+## Reviewed 2026-07-12 by @codex — T-051/T-052/T-053/T-054/T-062/T-063/T-075
+
+- [x] T-075 [P4] On-device LLM runtime foundation — PASS after the prior
+  blockers were fixed. Exact-size partials are verified/promoted before an HTTP
+  Range request, the cached MediaPipe inference handle closes with the Flutter
+  engine, and strict JSON schema validation enforces enum whitelists with one
+  retry. Focused Flutter LLM/Settings tests 10/10 and native `LlmBridgeTest`
+  BUILD SUCCESSFUL; architecture/privacy docs cover download, storage,
+  lifecycle, and offline inference.
+- [x] T-063 [P3] Atomic correction learning loop — PASS. One Drift transaction
+  writes the teaching rule, category feedback/training example, learned alias
+  when resolver-linked, and confirmed status. Tests cover rollback, no-op alias
+  cases, and repeat-correction upsert.
+- [x] T-062 [P3] Model metrics dev screen — PASS after review correction.
+  Classifier accuracy now attributes only `confidence_json.category.src =
+  classifier`, the last-100 window filters category feedback before limiting,
+  answered ask-now rows remain in ask-rate attribution, and per-category
+  correction rates use the predicted/old category. The screen remains
+  debug-only.
+- [x] T-054 [P3] Adaptive decision thresholds — PASS after review correction.
+  Corrected auto-labels remain visible after their transaction becomes
+  confirmed, existing category thresholds are preserved, and a persisted
+  processed-window count prevents the same 50 outcomes from being applied on
+  every nightly run. Raise/lower/cap/floor, idempotence, and preservation tests
+  pass.
+- [x] T-053 [P3] Nightly classifier trainer — PASS after adding the required
+  default gate of 30 new category-feedback rows since `last_trained_at`.
+  Focused tests prove the gate, persisted version/weights/timestamp,
+  deterministic same-seed output, non-category filtering, and improved fit on
+  the fixture samples. Raw SMS is not queried.
+- [x] T-052 [P3] Local classifier ladder step — PASS after replacing the
+  hard-coded acceptance threshold with the winning category's persisted
+  adaptive threshold. Rules remain first, classifier second, seed third;
+  missing/malformed models fall through. Feature, inference, schema, and
+  per-category-threshold branch tests pass. The separate fuzzy free-text
+  ask-now category-name note remains open.
+- [x] T-051 [P3] Merchant resolver v2 — PASS after preventing a stored
+  0.75–0.92 similarity alias from becoming confidence 1.0 on its second lookup.
+  Review-band aliases retain their score and `needsReview` until correction
+  promotes them; exact/auto-link/review/new-merchant bands, VPA fallback,
+  normalization, and cosine edge cases pass. GitNexus blast radius was HIGH:
+  2 direct callers, 10 upstream symbols, and 3 ingest/backfill/test process
+  groups; focused and full regression suites passed.
+
+Review verification: GitNexus index refreshed to 3,780 nodes / 7,765 edges /
+206 flows; focused intelligence review tests 63/63; focused classifier 17/17;
+focused T-075 Flutter tests 10/10; full Flutter suite 272/272; Flutter analyze
+clean; native LLM bridge BUILD SUCCESSFUL; `git diff --check` clean. The only
+runtime warning was the pre-existing test-only Drift multiple-database warning.
+
 ## Archived 2026-07-12 by @claude — full review detail condensed off the TASKS.md board
 
 The board now carries one-line verdicts for these; their complete AC/Review/Evidence prose is preserved verbatim below (newest first). Also cross-referenced in WORKLOG.md.

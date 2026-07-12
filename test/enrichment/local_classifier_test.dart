@@ -118,8 +118,7 @@ void main() {
       expect(values.sublist(0, 3), [0, 0, 0]);
     });
 
-    test('trailing four features are log-amount, hour, dow, channel bands',
-        () {
+    test('trailing four features are log-amount, hour, dow, channel bands', () {
       final ts = DateTime.utc(2026, 7, 7, 12); // Tuesday
       final record = _record(
         amount: 99,
@@ -133,8 +132,7 @@ void main() {
         log(100) / 16,
         local.hour / 23,
         local.weekday / 7,
-        TransactionChannel.card.index /
-            (TransactionChannel.values.length - 1),
+        TransactionChannel.card.index / (TransactionChannel.values.length - 1),
       ]);
     });
   });
@@ -185,8 +183,7 @@ void main() {
       await database.close();
     });
 
-    test('no stored model -> null (ladder falls through unchanged)',
-        () async {
+    test('no stored model -> null (ladder falls through unchanged)', () async {
       final classifier = LocalClassifier(database);
       expect(await classifier.predict(_record()), isNull);
     });
@@ -273,14 +270,24 @@ void main() {
     });
 
     test('fewer than two distinct categories -> false', () async {
-      await _insertTxn(database, id: 'txn_1', amount: 100, categoryId: 'food_dining');
+      await _insertTxn(
+        database,
+        id: 'txn_1',
+        amount: 100,
+        categoryId: 'food_dining',
+      );
       await _insertFeedback(
         database,
         id: 'fb_1',
         txnId: 'txn_1',
         newValue: 'food_dining',
       );
-      await _insertTxn(database, id: 'txn_2', amount: 120, categoryId: 'food_dining');
+      await _insertTxn(
+        database,
+        id: 'txn_2',
+        amount: 120,
+        categoryId: 'food_dining',
+      );
       await _insertFeedback(
         database,
         id: 'fb_2',
@@ -296,14 +303,24 @@ void main() {
 
     test('trains and persists weights + last_trained_at from feedback rows',
         () async {
-      await _insertTxn(database, id: 'txn_1', amount: 150, categoryId: 'food_dining');
+      await _insertTxn(
+        database,
+        id: 'txn_1',
+        amount: 150,
+        categoryId: 'food_dining',
+      );
       await _insertFeedback(
         database,
         id: 'fb_1',
         txnId: 'txn_1',
         newValue: 'food_dining',
       );
-      await _insertTxn(database, id: 'txn_2', amount: 4000, categoryId: 'shopping');
+      await _insertTxn(
+        database,
+        id: 'txn_2',
+        amount: 4000,
+        categoryId: 'shopping',
+      );
       await _insertFeedback(
         database,
         id: 'fb_2',
@@ -311,8 +328,13 @@ void main() {
         newValue: 'shopping',
       );
 
-      final trained =
-          await ClassifierTrainer(database).train(seed: 7, epochs: 5);
+      final trainer = ClassifierTrainer(database);
+      expect(await trainer.train(seed: 7, epochs: 5), isFalse);
+      final trained = await trainer.train(
+        seed: 7,
+        epochs: 200,
+        minimumNewFeedback: 2,
+      );
 
       expect(trained, isTrue);
       final meta = await (database.select(database.modelMeta)
@@ -323,6 +345,16 @@ void main() {
       expect(model!.categories, ['food_dining', 'shopping']);
       expect(model.weights, hasLength(2));
       expect(model.biases, hasLength(2));
+      expect(
+        (await LocalClassifier(database).predict(_record(amount: 150)))
+            ?.categoryId,
+        'food_dining',
+      );
+      expect(
+        (await LocalClassifier(database).predict(_record(amount: 4000)))
+            ?.categoryId,
+        'shopping',
+      );
 
       final trainedAt = await (database.select(database.modelMeta)
             ..where((m) => m.key.equals('classifier_last_trained_at')))
@@ -331,14 +363,24 @@ void main() {
     });
 
     test('ignores feedback rows whose field is not category_id', () async {
-      await _insertTxn(database, id: 'txn_1', amount: 150, categoryId: 'food_dining');
+      await _insertTxn(
+        database,
+        id: 'txn_1',
+        amount: 150,
+        categoryId: 'food_dining',
+      );
       await _insertFeedback(
         database,
         id: 'fb_1',
         txnId: 'txn_1',
         newValue: 'food_dining',
       );
-      await _insertTxn(database, id: 'txn_2', amount: 4000, categoryId: 'shopping');
+      await _insertTxn(
+        database,
+        id: 'txn_2',
+        amount: 4000,
+        categoryId: 'shopping',
+      );
       await database.into(database.feedback).insert(
             FeedbackCompanion.insert(
               id: 'fb_status',
@@ -359,21 +401,36 @@ void main() {
 
     test('same seed on the same feedback set trains deterministically',
         () async {
-      await _insertTxn(database, id: 'txn_1', amount: 150, categoryId: 'food_dining');
+      await _insertTxn(
+        database,
+        id: 'txn_1',
+        amount: 150,
+        categoryId: 'food_dining',
+      );
       await _insertFeedback(
         database,
         id: 'fb_1',
         txnId: 'txn_1',
         newValue: 'food_dining',
       );
-      await _insertTxn(database, id: 'txn_2', amount: 4000, categoryId: 'shopping');
+      await _insertTxn(
+        database,
+        id: 'txn_2',
+        amount: 4000,
+        categoryId: 'shopping',
+      );
       await _insertFeedback(
         database,
         id: 'fb_2',
         txnId: 'txn_2',
         newValue: 'shopping',
       );
-      await _insertTxn(database, id: 'txn_3', amount: 90, categoryId: 'food_dining');
+      await _insertTxn(
+        database,
+        id: 'txn_3',
+        amount: 90,
+        categoryId: 'food_dining',
+      );
       await _insertFeedback(
         database,
         id: 'fb_3',
@@ -382,12 +439,23 @@ void main() {
       );
 
       final trainer = ClassifierTrainer(database);
-      await trainer.train(seed: 42, epochs: 10);
+      await trainer.train(
+        seed: 42,
+        epochs: 10,
+        minimumNewFeedback: 3,
+      );
       final first = await (database.select(database.modelMeta)
             ..where((m) => m.key.equals(classifierModelMetaKey)))
           .getSingle();
 
-      await trainer.train(seed: 42, epochs: 10);
+      await (database.delete(database.modelMeta)
+            ..where((m) => m.key.equals('classifier_last_trained_at')))
+          .go();
+      await trainer.train(
+        seed: 42,
+        epochs: 10,
+        minimumNewFeedback: 3,
+      );
       final second = await (database.select(database.modelMeta)
             ..where((m) => m.key.equals(classifierModelMetaKey)))
           .getSingle();

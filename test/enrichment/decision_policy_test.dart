@@ -30,6 +30,9 @@ Future<void> _seedAutoTransactions(
           ),
         );
     if (i < correctedCount) {
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals(id)))
+          .write(const TransactionsCompanion(status: Value('confirmed')));
       await database.into(database.feedback).insert(
             FeedbackCompanion.insert(
               id: 'fb_${id}_correction',
@@ -187,8 +190,7 @@ void main() {
       );
     });
 
-    test('thresholdFor returns the default on malformed stored JSON',
-        () async {
+    test('thresholdFor returns the default on malformed stored JSON', () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
               key: 'category_silent_thresholds_v1',
@@ -285,6 +287,43 @@ void main() {
       final result = await AdaptiveThresholdPolicy(database).recompute();
 
       expect(result['travel'], 0.0);
+    });
+
+    test('does not reapply the same trailing window twice', () async {
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 50,
+      );
+      final policy = AdaptiveThresholdPolicy(database);
+
+      expect(await policy.recompute(), isNotEmpty);
+      expect(await policy.recompute(), isEmpty);
+      expect(
+        await policy.thresholdFor('food_dining'),
+        closeTo(AppConstants.silentConfidenceThreshold - 0.01, 1e-9),
+      );
+    });
+
+    test('preserves thresholds for categories without a new window', () async {
+      await database.into(database.modelMeta).insertOnConflictUpdate(
+            ModelMetaCompanion.insert(
+              key: 'category_silent_thresholds_v1',
+              value: '{"shopping":0.94}',
+            ),
+          );
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 50,
+      );
+
+      await AdaptiveThresholdPolicy(database).recompute();
+
+      expect(
+        await AdaptiveThresholdPolicy(database).thresholdFor('shopping'),
+        0.94,
+      );
     });
   });
 }

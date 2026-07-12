@@ -196,6 +196,11 @@ class _Presentation {
 _Presentation _presentation(Insight insight) {
   final payload = _payload(insight.payloadJson);
   return switch (insight.kind) {
+    'narrative' => _Presentation(
+        title: 'Monthly summary',
+        body: _text(payload, 'body'),
+        icon: Icons.auto_awesome_outlined,
+      ),
     'forecast' => _Presentation(
         title: 'Month-end forecast',
         body:

@@ -107,8 +107,7 @@ void main() {
       expect(result.needsReview, isFalse);
     });
 
-    test('embedder unavailable -> unembedded fallback, no DB writes',
-        () async {
+    test('embedder unavailable -> unembedded fallback, no DB writes', () async {
       final resolver = MerchantResolver(
         database,
         _FakeEmbedder({'SWIGGYINSTAMART': null}),
@@ -127,7 +126,9 @@ void main() {
       await seedMerchant('merchant_swiggy', 'Swiggy', _vec([1, 0]));
       final resolver = MerchantResolver(
         database,
-        _FakeEmbedder({'SWIGGYINSTAMART': _vec([1, 0])}),
+        _FakeEmbedder({
+          'SWIGGYINSTAMART': _vec([1, 0]),
+        }),
       );
 
       final result =
@@ -151,7 +152,9 @@ void main() {
       // cosine([1,0], [0.8,0.6]) == 0.8
       final resolver = MerchantResolver(
         database,
-        _FakeEmbedder({'SWIGGYX': _vec([0.8, 0.6])}),
+        _FakeEmbedder({
+          'SWIGGYX': _vec([0.8, 0.6]),
+        }),
       );
 
       final result = await resolver.resolve(_record(merchantRaw: 'SwiggyX'));
@@ -166,6 +169,11 @@ void main() {
             ..where((row) => row.alias.equals('SWIGGYX')))
           .getSingle();
       expect(alias.source, 'similarity');
+
+      final repeated = await resolver.resolve(_record(merchantRaw: 'SwiggyX'));
+      expect(repeated.confidence, closeTo(0.8, 1e-6));
+      expect(repeated.source, 'similarity');
+      expect(repeated.needsReview, isTrue);
     });
 
     test('cosine < 0.75 creates and embeds a new merchant', () async {
@@ -173,7 +181,9 @@ void main() {
       // cosine([1,0], [0,1]) == 0
       final resolver = MerchantResolver(
         database,
-        _FakeEmbedder({'NEWVENDOR': _vec([0, 1])}),
+        _FakeEmbedder({
+          'NEWVENDOR': _vec([0, 1]),
+        }),
       );
 
       final result = await resolver.resolve(_record(merchantRaw: 'NewVendor'));

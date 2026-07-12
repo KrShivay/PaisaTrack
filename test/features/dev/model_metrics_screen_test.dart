@@ -10,6 +10,7 @@ Future<void> _insertTxn(
   AppDatabase database, {
   required String id,
   required String status,
+  String categorySource = 'classifier',
 }) {
   final now = DateTime.utc(2026, 7, 8);
   return database.into(database.transactions).insert(
@@ -20,7 +21,7 @@ Future<void> _insertTxn(
           direction: 'debit',
           channel: 'upi',
           parseSource: 'template',
-          confidenceJson: '{}',
+          confidenceJson: '{"category":{"src":"$categorySource"}}',
           status: status,
           createdAt: now,
           updatedAt: now,
@@ -35,6 +36,7 @@ Future<void> _insertFeedback(
   required String field,
   String? oldValue,
   String? newValue,
+  String context = 'weekly_review',
 }) {
   return database.into(database.feedback).insert(
         FeedbackCompanion.insert(
@@ -43,7 +45,7 @@ Future<void> _insertFeedback(
           field: field,
           oldValue: Value(oldValue),
           newValue: Value(newValue),
-          context: 'weekly_review',
+          context: context,
           createdAt: DateTime.utc(2026, 7, 8),
         ),
       );
@@ -68,7 +70,8 @@ void main() {
       expect(metrics.correctionRates, isEmpty);
     });
 
-    test('computes accuracy from category corrections and ask rate from '
+    test(
+        'computes accuracy from category corrections and ask rate from '
         'transaction status', () async {
       await _insertTxn(database, id: 'txn_1', status: 'confirmed');
       await _insertTxn(database, id: 'txn_2', status: 'asked');
@@ -91,13 +94,55 @@ void main() {
         field: 'category_id',
         oldValue: 'food_dining',
         newValue: 'food_dining',
+        context: 'ask_now',
       );
 
       final metrics = await ModelMetricsRepository(database).load();
 
       expect(metrics.accuracy, closeTo(0.5, 1e-9));
       expect(metrics.askRate, closeTo(1 / 3, 1e-9));
-      expect(metrics.correctionRates['food_dining'], closeTo(0.5, 1e-9));
+      expect(metrics.correctionRates['other'], 1);
+      expect(metrics.correctionRates['food_dining'], 0);
+    });
+
+    test('classifier accuracy excludes seed-map outcomes', () async {
+      await _insertTxn(
+        database,
+        id: 'txn_seed',
+        status: 'confirmed',
+        categorySource: 'seed',
+      );
+      await _insertFeedback(
+        database,
+        id: 'fb_seed',
+        txnId: 'txn_seed',
+        field: 'category_id',
+        oldValue: 'other',
+        newValue: 'food_dining',
+      );
+
+      final metrics = await ModelMetricsRepository(database).load();
+
+      expect(metrics.accuracy, 0);
+      expect(metrics.correctionRates['other'], 1);
+    });
+
+    test('ask rate retains answered ask-now transactions', () async {
+      await _insertTxn(database, id: 'txn_answered', status: 'confirmed');
+      await _insertTxn(database, id: 'txn_auto', status: 'auto');
+      await _insertFeedback(
+        database,
+        id: 'fb_answered',
+        txnId: 'txn_answered',
+        field: 'category_id',
+        oldValue: 'other',
+        newValue: 'food_dining',
+        context: 'ask_now',
+      );
+
+      final metrics = await ModelMetricsRepository(database).load();
+
+      expect(metrics.askRate, 0.5);
     });
 
     test('ignores feedback rows that are not category_id corrections',

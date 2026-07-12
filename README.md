@@ -8,6 +8,11 @@ must include tests and documentation; see [docs/development.md](docs/development
 
 ## Current Status
 
+Phase 4 now includes a grounded in-app assistant, validated on-device LLM
+fallback for unmatched transaction SMS, and aggregate-only monthly narratives.
+These model-backed paths are enabled for the Phase 4 release; model download is
+still explicit, and deterministic parsing/insights work when it is absent.
+
 **Phase 0 (Foundation): complete.** The Flutter/Android scaffold, encrypted
 Drift schema, Keystore-backed database passphrase, category seeds, fixture
 harness, and CI guardrails are in place. Android `minSdk` is pinned to API 26.
@@ -66,3 +71,23 @@ cd android && ./gradlew :app:testDebugUnitTest
 
 No raw SMS data should be committed. Use sanitized fixtures under
 `test/fixtures/sms/<bank>/`.
+
+## build_install.sh
+
+Run release:
+
+```sh
+./build_install.sh release
+```
+
+Specify a device when multiple devices are connected:
+
+```sh
+./build_install.sh debug ZD222KTYNC
+```
+
+For a clean rebuild, add this before flutter pub get:
+
+```sh
+flutter clean
+```

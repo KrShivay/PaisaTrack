@@ -1,5 +1,16 @@
 # Architecture
 
+## On-device assistant (Phase 4, T-076 in review)
+
+`AssistantController` sends only the user's question and the closed intent
+schema to `LlmRuntime.extractJson`. `IntentValidator` converts accepted JSON to
+typed intents; `AssistantQueryEngine` reads local transaction, recurring, and
+insight rows; `AnswerRenderer` receives only the typed intent and deterministic
+result. It has no parameter for raw model output, making model-originated
+figures structurally unavailable at render time. Conversation history remains
+in the controller/widget session and is never persisted. The tab is omitted
+unless `AppConstants.enableLocalLlm` is enabled.
+
 PaisaTrack is organized as a local-first pipeline:
 
 1. Native Android SMS capture filters and forwards candidate messages.
@@ -47,24 +58,33 @@ after permission is granted and the encrypted database is ready.
    within a 10-minute window; suppressed rows stay stored for audit.
 5. Raw SMS rows are purged after the retention window; transactions persist.
 
-## Enrichment (Phase 2, shipped)
+## Enrichment and learning (Phase 3, shipped)
 
 `Categorizer` (`lib/enrichment/`) runs the PLAN §7.4 ladder at ingest time,
-steps 1 + 3 for now: user-taught rules (`RuleRepository`, match types
+uses user-taught rules (`RuleRepository`, match types
 `merchant` substring / `counterparty` exact-VPA, confidence 1.0, hit counts
-maintained) → bundled seed keyword map (`assets/seed/category_seed.json`,
+maintained) → the pure-Dart softmax classifier when its winning probability
+meets that category's adaptive threshold → bundled seed keyword map (`assets/seed/category_seed.json`,
 longest-key-first substring match, 0.8) → `other` at 0.3. Both live capture
 and backfill construct `SmsIngestor` with the categorizer
 (`categorizerProvider`), and the outcome is recorded in the transaction's
 `confidence_json` under `category` (`c`, `src`, optional `rule_id`). The same
-atomic transaction records provisional merchant evidence (`v`, `c`, `src`)
-from the parser until the Phase 3 merchant resolver replaces that block.
+atomic transaction records merchant evidence (`v`, `c`, `src`) from
+`MerchantResolver`: normalized alias lookup first, then brute-force embedding
+similarity. Scores >=0.92 become learned aliases; scores from 0.75 to 0.92 stay
+review-marked on repeated lookup until a correction promotes the alias; lower
+scores create a new embedded merchant.
 `TransactionConfidenceTrail` reads parser/merchant/category blocks without
 breaking legacy parser-only rows and exposes them through transaction detail.
-The
-classifier (step 2) and on-device LLM (step 4) slot in during later phases.
+`ClassifierTrainer` learns only from normalized transaction columns plus
+category feedback—never raw SMS—and retrains after at least 30 new category
+feedback rows. Weights, version, and last-trained time live in `model_meta`.
 
-`DecisionPolicy` implements static PLAN §7.5 thresholds from `AppConstants`.
+`DecisionPolicy` implements PLAN §7.5 with per-category thresholds from
+`AdaptiveThresholdPolicy` and the static constant as a backward-compatible default.
+Each fresh block of 50 auto-label outcomes raises the threshold by 0.03 when
+corrections exceed 15%, otherwise lowers it by 0.01; processed-window counts
+prevent a nightly run from applying the same evidence twice.
 `SmsIngestor` computes transaction status before insertion from parser
 confidence, category confidence, same merchant/VPA history, unseen P2P
 counterparty state, and the count of transactions already marked `asked` today.
@@ -79,7 +99,8 @@ transactions, and both funnel through one write path.
 `TransactionRepository.correctWithRule` is the single correction boundary: inside
 one `_database.transaction` it inserts a teaching rule (via `RuleRepository`),
 stages `feedback` rows for the changed `category_id` (and `description` when a
-free-text note is supplied), and updates the transaction to `status='confirmed'`
+free-text note is supplied), promotes a resolver-linked merchant spelling to a
+learned alias, and updates the transaction to `status='confirmed'`
 — all commit or roll back together (PLAN §1 principle 3). A `context` string tags
 where the correction came from (`ask_now`, `batch_review`). `confirm()` is the
 lighter sibling: it sets `status='confirmed'` without changing the category, for

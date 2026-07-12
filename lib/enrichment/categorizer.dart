@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/repositories/rule_repository.dart';
+import 'decision_policy.dart';
 import 'local_classifier.dart';
 import 'seed_category_map.dart';
 
@@ -40,9 +41,11 @@ class Categorizer {
     required RuleRepository rules,
     required SeedCategoryMap seedMap,
     LocalClassifier? classifier,
+    Future<double> Function(String categoryId)? classifierThreshold,
   })  : _rules = rules,
         _seedMap = seedMap,
-        _classifier = classifier;
+        _classifier = classifier,
+        _classifierThreshold = classifierThreshold;
 
   static const seedConfidence = 0.8;
   static const fallbackConfidence = 0.3;
@@ -51,6 +54,7 @@ class Categorizer {
   final RuleRepository _rules;
   final SeedCategoryMap _seedMap;
   final LocalClassifier? _classifier;
+  final Future<double> Function(String categoryId)? _classifierThreshold;
 
   /// Runs the ladder for one parsed record. Rules always win.
   Future<CategorizationResult> categorize(
@@ -74,7 +78,10 @@ class Categorizer {
       record,
       merchantEmbedding: merchantEmbedding,
     );
-    if (prediction != null && prediction.confidence >= .8) {
+    final classifierThreshold = prediction == null
+        ? null
+        : await _classifierThreshold?.call(prediction.categoryId) ?? .8;
+    if (prediction != null && prediction.confidence >= classifierThreshold!) {
       return CategorizationResult(
         categoryId: prediction.categoryId,
         confidence: prediction.confidence,
@@ -115,5 +122,6 @@ final categorizerProvider = FutureProvider<Categorizer>((ref) async {
     rules: ref.watch(ruleRepositoryProvider(database)),
     seedMap: seedMap,
     classifier: LocalClassifier(database),
+    classifierThreshold: AdaptiveThresholdPolicy(database).thresholdFor,
   );
 });

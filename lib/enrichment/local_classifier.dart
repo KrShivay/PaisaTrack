@@ -137,7 +137,15 @@ class ClassifierTrainer {
   ClassifierTrainer(this._database);
   final AppDatabase _database;
 
-  Future<bool> train({int seed = 7, int epochs = 40}) async {
+  Future<bool> train({
+    int seed = 7,
+    int epochs = 40,
+    int minimumNewFeedback = 30,
+  }) async {
+    final lastTrained = await (_database.select(_database.modelMeta)
+          ..where((row) => row.key.equals('classifier_last_trained_at')))
+        .getSingleOrNull();
+    final lastTrainedAt = DateTime.tryParse(lastTrained?.value ?? '');
     final rows = await (_database.select(_database.feedback).join([
       innerJoin(
         _database.transactions,
@@ -148,9 +156,15 @@ class ClassifierTrainer {
         _database.merchants.id.equalsExp(_database.transactions.merchantId),
       ),
     ])
-          ..where(_database.feedback.field.equals('category_id')))
+          ..where(
+            _database.feedback.field.equals('category_id') &
+                (lastTrainedAt == null
+                    ? const Constant(true)
+                    : _database.feedback.createdAt
+                        .isBiggerThanValue(lastTrainedAt)),
+          ))
         .get();
-    if (rows.isEmpty) return false;
+    if (rows.length < minimumNewFeedback) return false;
     final samples = <({String label, List<double> values})>[];
     for (final row in rows) {
       final label = row.readTable(_database.feedback).newValue;

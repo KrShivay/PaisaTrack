@@ -1,100 +1,72 @@
 # PaisaTrack — Project Status Report
 
-Reviewed 2026-07-09 by @claude, against PLAN.md, TASKS.md, README.md, docs/,
-and WORKLOG.md.
+Reviewed 2026-07-12 by @codex against PLAN.md, TASKS.md, the implementation,
+tests, and feature documentation.
 
-## 1. Where the project stands
+## 1. Current phase
 
-PaisaTrack is in **Phase 2 (Usable Tracker)**.
+PaisaTrack is in **Phase 3 (Intelligence)**. Phase 2 passed its exit review.
+The Phase 3 feature set is implemented. Its remaining gate is the evidence-based
+Phase 3 exit review (T-064), assigned to @human because it requires real usage.
 
-Phase 0 is complete: scaffold, encrypted Drift database, Keystore-backed
-SQLCipher passphrase, category seed loading, fixture harness, CI guardrails, and
-Android API 26 minimum are in place.
+The shipped intelligence path now includes:
 
-Phase 1 is complete and passed exit review on 2026-07-07. The app captures SMS
-through native Android filtering, performs live ingestion and one-time backfill,
-parses real bank/wallet templates, suppresses paired duplicate notifications,
-and shows captured transactions in the dashboard/list/dev views. The original
-Phase 1 reconciliation matched **388/411 statement rows (94.4%)** with zero
-amount/direction contradictions.
+- on-device merchant embeddings and similarity-based merchant resolution;
+- a pure-Dart local classifier trained from correction feedback;
+- adaptive per-category decision thresholds;
+- recurring, anomaly, forecast, and deterministic insight engines plus screens;
+- a hidden model-metrics screen and atomic correction learning loop.
 
-Phase 2 build work is complete; only the exit review remains. Landed work:
+The usable Phase 4 feature slice is also complete in parallel:
+feature-flagged MediaPipe inference, integrity-checked resumable model download,
+app-private storage/delete controls, typed fallback behavior, and strict JSON
+schema validation; a grounded in-app money assistant; validated unmatched-SMS
+extraction; and aggregate-only monthly narratives that reject model-authored
+numbers.
 
-- T-035/T-036: duplicate/counterparty ADR and schema v2 implementation.
-- T-037: manual transaction entry, verified and Done.
-- T-038: transaction detail/edit writes feedback rows, verified and Done.
-- T-039: seed-map categorization and rules engine, verified and Done.
-- T-040: Decision policy v1 wired into ingest/status writes, reviewed and Done.
-- T-041: category manager.
-- T-042: settings v1 and local data reset.
-- T-043: encrypted export/import.
-- T-044: ask-now notifications — top-3 category action buttons + free-text
-  remote input, app-killed-safe response persistence, one-write
-  rule/feedback/status correction, ask budget from Settings, income-side-only
-  credit categories. Done (tests human-verified).
-- T-045: weekly review tab over `needs_review` with swipe-confirm /
-  tap-correct, one-write corrections, empty state. Done.
-- T-047: IndusInd NEFT/ACH-credit templates, fixture/SMS-dump coverage reported
-  at **407/411 statement rows (99.03%)**; final device export folds into T-046.
+## 2. Next work
 
-## 2. Current build goal
+1. T-064: @human runs the Phase 3 exit review after two weeks of real feedback and
+   verify classifier auto-label/correction metrics, recurring dates, and genuine
+   anomaly/forecast evidence.
+2. Device QA the Phase 4 feature flags: model download/delete, offline
+   unmatched-SMS extraction, assistant refusals, and monthly narrative output.
+3. T-067 remains blocked on public Kotak/Central Bank fixture gathering.
 
-Phase 2 is built. The remaining step to close the phase:
+## 3. Architecture and privacy
 
-1. Run T-046 Phase 2 exit review against the PLAN §9 criteria (daily-usable,
-   ≤2 asks/day, correction→rule→auto-label demo, export/wipe/import round-trip)
-   using T-035..T-045 evidence, then move to Phase 3 grooming.
+PaisaTrack remains local-first. Android filters and captures SMS; Dart parses
+and enriches normalized records; encrypted Drift/SQLCipher stores local state;
+and Riverpod exposes repositories and screens. Merchant embeddings, classifier
+training, adaptive thresholds, insights, and LLM inference stay on-device.
 
-## 3. Architecture summary
+Raw SMS is not a classifier feature and is never sent to a service. The optional
+LLM model is downloaded only by explicit Settings action; prompts and responses
+remain on-device, and the model can be deleted from Settings.
 
-The app is local-first:
+## 4. Review status
 
-- Android native code filters and captures candidate SMS messages.
-- Dart capture code parses messages through JSON template registries.
-- `SmsIngestor` writes raw SMS and normalized transaction rows in encrypted
-  SQLite, suppressing linked duplicates instead of deleting them.
-- Enrichment applies user rules and a bundled seed category map, then a static
-  decision policy sets each row's status (`auto` / `asked` / `needs_review`).
-- Ask-now notifications and the weekly review tab turn `asked` / `needs_review`
-  rows into confirmed transactions; both correct through one write path
-  (`correctWithRule`: rule + feedback + status in a single DB transaction).
-- Riverpod providers own database lifetime, settings, screens, and test
-  overrides.
-- Settings owns theme choice, ask budget, reset, and encrypted backup/import.
+T-051, T-052, T-053, T-054, T-062, T-063, T-075, and T-076 passed review on
+2026-07-12 after fixing the review-band alias trust escalation, per-category
+classifier gating, the 30-new-feedback trainer gate, corrected-label threshold
+accounting/idempotence, and classifier/answered-ask metrics attribution.
 
-The normalized transaction record remains the contract between capture,
-enrichment, repositories, and UI.
+The live source of truth remains [TASKS.md](TASKS.md); detailed verdicts and
+verification evidence are in [docs/tasks-archive.md](docs/tasks-archive.md) and
+[WORKLOG.md](WORKLOG.md).
 
-## 4. Quality and privacy notes
+## 5. Known gaps
 
-- The privacy rule is stronger than "cloud off by default": there is no cloud
-  inference path. ADR 0002 requires free, on-device-only intelligence.
-- Raw SMS bodies are capture inputs only. They must not be committed, logged in
-  release builds, or written to plaintext exports.
-- Database encryption uses SQLCipher with passphrase material wrapped by Android
-  Keystore.
-- Backup/import uses passphrase-encrypted JSON (`Argon2id` + `AES-256-GCM`) and
-  keeps plaintext domain JSON in memory only.
-- Schema v2 separates user deletion (`is_deleted`) from duplicate suppression
-  (`duplicate_of_txn_id`) and stores `counterparty_vpa` separately from merchant
-  text.
-
-## 5. Known risks and gaps
-
-- T-044/T-045 tests are **human-verified**, not re-run in this sandbox (the
-  repo-local Flutter SDK is wrong-arch for the Linux sandbox). A canonical
-  full-suite `flutter test` re-run is folded into the T-046 exit evidence.
-- GitNexus reported the index stale (behind HEAD) during this review; use the
-  task board and worklog as fresher status until the index is refreshed.
-- Ask-now app-killed delivery relies on SharedPreferences persistence — the
-  end-to-end killed-state path is covered by unit tests and a manual QA note,
-  not an instrumented device test.
-- T-047's 99.03% coverage is from fixture/SMS-dump simulation; the final device
-  export confirmation is still outstanding, to be captured in T-046.
+- T-052's previously noted fuzzy free-text category-name resolution remains
+  separate from the classifier work; typoed ask-now answers can still fall back
+  to Other.
+- T-064 requires real usage evidence and cannot be closed by synthetic tests.
+- T-067 requires externally sourced, provenance-recorded fixtures and must not
+  be fabricated.
 
 ## 6. Bottom line
 
-The project is no longer a foundation scaffold. It is a working local-first SMS
-finance tracker with its full Phase 2 build complete: capture, enrichment,
-decision policy, and both correction surfaces (ask-now + weekly review) are
-landed. The one remaining step before Phase 3 is the T-046 Phase 2 exit review.
+Phase 3 implementation is feature-complete. @human's real-usage T-064 review
+still needs closure; the usable Phase 4 feature slice is implemented under the
+explicit gate exception. T-084/T-085 need one post-release-flag verification
+rerun, followed by physical-device/offline QA.

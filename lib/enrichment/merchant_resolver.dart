@@ -55,12 +55,14 @@ class MerchantResolver {
             ..where((row) => row.id.equals(aliasRow.merchantId)))
           .getSingleOrNull();
       if (merchant != null) {
+        final needsReview = aliasRow.source == 'similarity';
         return MerchantResolution(
           merchantId: merchant.id,
           canonicalName: merchant.canonicalName,
           embedding: _decode(merchant.embedding),
-          confidence: 1,
+          confidence: needsReview ? aliasRow.confidence : 1,
           source: aliasRow.source,
+          needsReview: needsReview,
         );
       }
     }
