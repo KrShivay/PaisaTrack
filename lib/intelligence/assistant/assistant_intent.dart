@@ -65,6 +65,23 @@ final class InvalidIntent extends IntentValidationResult {
   final AssistantRefusal refusal;
 }
 
+/// Shape shared by `time_range` and `compare_to`. Fields are kind-dependent
+/// (only one of month/n_days/start+end applies per `kind`), so this is left
+/// permissive here — [IntentValidator._range] enforces the per-kind contract.
+const _timeRangeSchema = <String, Object?>{
+  'type': 'object',
+  'properties': {
+    'kind': {
+      'type': 'string',
+      'enum': ['month', 'last_n_days', 'range', 'all_time'],
+    },
+    'month': {'type': 'string'},
+    'n_days': {'type': 'integer'},
+    'start': {'type': 'string'},
+    'end': {'type': 'string'},
+  },
+};
+
 const assistantIntentSchema = <String, Object?>{
   'type': 'object',
   'required': ['intent'],
@@ -98,12 +115,12 @@ const assistantIntentSchema = <String, Object?>{
         },
       },
     },
-    'time_range': {'type': 'object'},
+    'time_range': _timeRangeSchema,
     'aggregation': {
       'type': 'string',
       'enum': ['sum', 'count', 'average', 'breakdown'],
     },
-    'compare_to': {'type': 'object'},
+    'compare_to': _timeRangeSchema,
   },
 };
 

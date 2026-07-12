@@ -3,6 +3,7 @@ package com.paisatrack.intelligence
 import android.app.ActivityManager
 import android.content.Context
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -107,7 +108,25 @@ class LlmBridge(private val context: Context) {
                 .build(),
         )
         return object : LlmInferenceHandle {
-            override fun generateResponse(prompt: String): String = delegate.generateResponse(prompt)
+            // Greedy decoding (topK=1, temperature=0) so intent classification is
+            // deterministic and follows the prompt's examples. Default sampling
+            // (topK~40, temp~0.8) made the same question return different intents
+            // on each ask. Params live on the session, not LlmInferenceOptions,
+            // in tasks-genai 0.10.24, so each one-shot call runs in its own
+            // session and closes it to avoid conversation-state carryover.
+            override fun generateResponse(prompt: String): String {
+                val sessionOptions =
+                    LlmInferenceSession.LlmInferenceSessionOptions.builder()
+                        .setTopK(1)
+                        .setTemperature(0.0f)
+                        .setRandomSeed(1)
+                        .build()
+                return LlmInferenceSession.createFromOptions(delegate, sessionOptions)
+                    .use { session ->
+                        session.addQueryChunk(prompt)
+                        session.generateResponse()
+                    }
+            }
 
             override fun close() {
                 delegate.close()

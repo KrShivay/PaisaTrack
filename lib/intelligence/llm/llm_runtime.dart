@@ -129,8 +129,10 @@ class PlatformLlmRuntime implements LlmRuntime {
     String response,
     Map<String, Object?> schema,
   ) {
+    final candidate = _extractJsonObject(response);
+    if (candidate == null) return null;
     try {
-      final decoded = jsonDecode(response.trim());
+      final decoded = jsonDecode(candidate);
       if (decoded is! Map<String, Object?> ||
           !_matchesSchema(decoded, schema)) {
         return null;
@@ -139,6 +141,39 @@ class PlatformLlmRuntime implements LlmRuntime {
     } on FormatException {
       return null;
     }
+  }
+
+  /// Small on-device models rarely emit pure JSON: they wrap it in markdown
+  /// code fences or add prose before/after. Pull out the first balanced
+  /// `{...}` block so a well-formed object isn't rejected for its wrapper.
+  String? _extractJsonObject(String response) {
+    final start = response.indexOf('{');
+    if (start == -1) return null;
+    var depth = 0;
+    var inString = false;
+    var escaped = false;
+    for (var i = start; i < response.length; i++) {
+      final char = response[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char == r'\') {
+          escaped = true;
+        } else if (char == '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (char == '"') {
+        inString = true;
+      } else if (char == '{') {
+        depth++;
+      } else if (char == '}') {
+        depth--;
+        if (depth == 0) return response.substring(start, i + 1);
+      }
+    }
+    return null;
   }
 
   bool _matchesSchema(Object? value, Map<String, Object?> schema) {
@@ -151,6 +186,10 @@ class PlatformLlmRuntime implements LlmRuntime {
     if (type == 'object') {
       if (value is! Map<String, Object?>) return false;
       final properties = schema['properties'];
+      // A schema that omits `properties` is deliberately open-shaped (e.g.
+      // assistantIntentSchema's time_range/compare_to, whose internal shape
+      // is checked later by IntentValidator) — accept any object for it.
+      if (properties == null) return true;
       if (properties is! Map) return false;
       final required =
           (schema['required'] as List?)?.whereType<String>().toSet() ?? {};

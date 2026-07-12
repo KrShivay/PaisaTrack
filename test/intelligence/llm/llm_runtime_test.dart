@@ -158,6 +158,54 @@ void main() {
     );
   });
 
+  test('extractJson pulls the object out of markdown fences and prose',
+      () async {
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls++;
+      return 'Sure, here you go:\n```json\n{"amount":42,"kind":"debit"}\n```\nLet me know if you need anything else.';
+    });
+    final result = await runtime.extractJson('extract', {
+      'type': 'object',
+      'properties': {
+        'amount': {'type': 'number'},
+        'kind': {'type': 'string'},
+      },
+      'required': ['amount', 'kind'],
+      'additionalProperties': false,
+    });
+
+    expect(calls, 1);
+    expect(
+      (result as LlmSuccess<Map<String, Object?>>).value,
+      {'amount': 42, 'kind': 'debit'},
+    );
+  });
+
+  test('extractJson accepts an object-typed field left open (no properties)',
+      () async {
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls++;
+      return '{"intent":"period_total","time_range":{"kind":"month","month":"2026-07"}}';
+    });
+    final result = await runtime.extractJson('classify', {
+      'type': 'object',
+      'required': ['intent'],
+      'additionalProperties': false,
+      'properties': {
+        'intent': {'type': 'string'},
+        'time_range': {'type': 'object'},
+      },
+    });
+
+    expect(calls, 1);
+    expect(
+      (result as LlmSuccess<Map<String, Object?>>).value['time_range'],
+      {'kind': 'month', 'month': '2026-07'},
+    );
+  });
+
   test('fake no-op runtime lets callers degrade without throwing', () async {
     const fake = NoopLlmRuntime();
     expect(await fake.complete('raw SMS'), isA<LlmUnavailable<String>>());
