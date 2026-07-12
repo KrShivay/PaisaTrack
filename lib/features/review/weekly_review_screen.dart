@@ -11,6 +11,7 @@ import '../../core/widgets/app_state_views.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../settings/settings_screen.dart';
 import '../transactions/transactions_providers.dart';
 import '../transactions/transaction_detail_screen.dart'
     show showParseCorrectionSheet;
@@ -30,7 +31,20 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     final queue = ref.watch(reviewQueueProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Review')),
+      appBar: AppBar(
+        title: const Text('Review'),
+        actions: [
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SettingsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
+      ),
       body: switch (queue) {
         AsyncData(:final value) when value.isEmpty => const _EmptyReviewState(),
         AsyncData(:final value) => _ReviewList(

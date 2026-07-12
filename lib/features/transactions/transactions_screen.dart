@@ -12,6 +12,7 @@ import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../settings/settings_screen.dart';
 import 'manual_entry_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'transactions_providers.dart';
@@ -180,6 +181,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         'Transactions')
                     : 'Transactions',
               ),
+              actions: [
+                IconButton(
+                  tooltip: 'Settings',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SettingsScreen(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+              ],
             ),
       body: Column(
         children: [
@@ -419,7 +431,8 @@ class _EntranceAnimation extends StatelessWidget {
       curve: Curves.easeOutCubic,
       builder: (context, t, child) => Opacity(
         opacity: t.clamp(0.0, 1.0),
-        child: Transform.translate(offset: Offset(0, 8 * (1 - t)), child: child),
+        child:
+            Transform.translate(offset: Offset(0, 8 * (1 - t)), child: child),
       ),
       child: child,
     );

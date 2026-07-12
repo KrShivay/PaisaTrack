@@ -72,6 +72,13 @@ void main() {
   });
 
   testWidgets('settings screen changes theme and ask budget', (tester) async {
+    tester.view.physicalSize = const Size(900, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     // testWidgets runs under FakeAsync: real file IO futures never complete
     // there (this test originally hung the whole suite on its first await).
     // Create the temp dir synchronously and push the store's real disk reads
@@ -129,12 +136,17 @@ void main() {
 
     expect(settings.themeChoice, AppThemeChoice.light);
     expect(settings.askDailyBudget, greaterThan(2));
-    expect(find.text('Local LLM parsing'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Download'), 300);
     await tester.tap(find.text('Download'));
     await tester.pumpAndSettle();
     expect(llmRuntime.downloaded, isTrue);
     expect(find.byTooltip('Delete AI model'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Developer options'), 300);
+    expect(find.text('Developer options'), findsOneWidget);
+    await tester.tap(find.text('Developer options'));
+    await tester.pumpAndSettle();
+    expect(find.text('Local LLM parsing'), findsOneWidget);
+    expect(find.text('Model metrics'), findsOneWidget);
     expect(find.text('Delete everything'), findsOneWidget);
   });
 

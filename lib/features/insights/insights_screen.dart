@@ -10,6 +10,9 @@ import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../assistant/assistant_screen.dart';
+import '../recurring/recurring_screen.dart';
+import '../settings/settings_screen.dart';
 
 /// Non-dismissed insights for the current UTC reporting month.
 final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
@@ -40,13 +43,44 @@ class InsightsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final insights = ref.watch(activeInsightsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Insights')),
+      appBar: AppBar(
+        title: const Text('Insights'),
+        actions: [
+          IconButton(
+            tooltip: 'Recurring',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const RecurringScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.autorenew_outlined),
+          ),
+          IconButton(
+            tooltip: 'Ask PaisaTrack',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AssistantScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.auto_awesome_outlined),
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SettingsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
+      ),
       body: switch (insights) {
         AsyncData(:final value) when value.isEmpty => const EmptyStateView(
             illustration: AppIllustrations.investmentGrowth,
-            title: 'No insights yet',
+            title: 'No unusual changes detected',
             message:
-                'Your monthly report will appear as recurring patterns and spending changes are detected.',
+                'Your spending is currently consistent with the available history. More detailed insights will appear as PaisaTrack learns your patterns.',
           ),
         AsyncData(:final value) => _InsightsList(
             insights: value,

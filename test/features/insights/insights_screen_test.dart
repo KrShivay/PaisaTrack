@@ -34,8 +34,8 @@ void main() {
 
   testWidgets('shows designed empty state', (tester) async {
     await pumpRows(tester, const []);
-    expect(find.text('No insights yet'), findsOneWidget);
-    expect(find.textContaining('monthly report'), findsOneWidget);
+    expect(find.text('No unusual changes detected'), findsOneWidget);
+    expect(find.textContaining('currently consistent'), findsOneWidget);
   });
 
   testWidgets('renders report, suggestions, and anomaly explanations',

@@ -25,9 +25,13 @@ void main() {
         child: const PaisaTrackApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
+    expect(find.text('Transactions'), findsOneWidget);
+    expect(find.text('Review'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
   });
 
   testWidgets('boots with an in-memory app database override', (tester) async {
@@ -46,12 +50,13 @@ void main() {
         child: const PaisaTrackApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
 
     final container = ProviderScope.containerOf(
-      tester.element(find.text('Dashboard')),
+      tester.element(find.text('Home').first),
       listen: false,
     );
     expect(await container.read(appDatabaseProvider.future), same(database));

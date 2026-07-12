@@ -1,19 +1,15 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
-import '../../core/constants.dart';
-import '../assistant/assistant_screen.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../dev/unparsed_sms_screen.dart';
-import '../dev/model_metrics_screen.dart';
-import '../recurring/recurring_screen.dart';
+import '../insights/insights_screen.dart';
 import '../review/weekly_review_screen.dart';
-import '../settings/settings_screen.dart';
 import '../transactions/transactions_screen.dart';
 
-/// Post-onboarding app shell: bottom navigation across the dashboard,
-/// transactions, review, and settings. The developer unparsed-SMS diagnostics
-/// tab is only present in debug builds (it is not a user-facing surface).
+/// Post-onboarding app shell with stable primary destinations.
+///
+/// Secondary capabilities live inside those destinations or Settings. The tab
+/// list deliberately does not depend on feature flags, so navigation does not
+/// jump as optional local-model features are enabled.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -24,11 +20,11 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _dashboard = _Tab(
+  static const _home = _Tab(
     screen: DashboardScreen(),
-    icon: Icons.dashboard_outlined,
-    selectedIcon: Icons.dashboard,
-    label: 'Dashboard',
+    icon: Icons.home_outlined,
+    selectedIcon: Icons.home,
+    label: 'Home',
   );
   static const _transactions = _Tab(
     screen: TransactionsScreen(),
@@ -42,65 +38,67 @@ class _HomeShellState extends State<HomeShell> {
     selectedIcon: Icons.fact_check,
     label: 'Review',
   );
-  static const _recurring = _Tab(
-    screen: RecurringScreen(),
-    icon: Icons.autorenew_outlined,
-    selectedIcon: Icons.autorenew,
-    label: 'Recurring',
-  );
-  static const _assistant = _Tab(
-    screen: AssistantScreen(),
-    icon: Icons.auto_awesome_outlined,
-    selectedIcon: Icons.auto_awesome,
-    label: 'Ask',
-  );
-  static const _dev = _Tab(
-    screen: UnparsedSmsScreen(),
-    icon: Icons.bug_report_outlined,
-    selectedIcon: Icons.bug_report,
-    label: 'Dev',
-  );
-  static const _metrics = _Tab(
-    screen: ModelMetricsScreen(),
-    icon: Icons.query_stats_outlined,
-    selectedIcon: Icons.query_stats,
-    label: 'Metrics',
-  );
-  static const _settings = _Tab(
-    screen: SettingsScreen(),
-    icon: Icons.settings_outlined,
-    selectedIcon: Icons.settings,
-    label: 'Settings',
+  static const _insights = _Tab(
+    screen: InsightsScreen(),
+    icon: Icons.insights_outlined,
+    selectedIcon: Icons.insights,
+    label: 'Insights',
   );
 
   static final List<_Tab> _tabs = [
-    _dashboard,
+    _home,
     _transactions,
     _review,
-    _recurring,
-    if (AppConstants.enableLocalLlm) _assistant,
-    if (kDebugMode) _dev,
-    if (kDebugMode) _metrics,
-    _settings,
+    _insights,
   ];
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final useRail = width >= 720;
+    final destinations = [
+      for (final tab in _tabs)
+        NavigationDestination(
+          icon: Icon(tab.icon),
+          selectedIcon: Icon(tab.selectedIcon),
+          label: tab.label,
+        ),
+    ];
+    final body = IndexedStack(
+      index: _index,
+      children: [for (final tab in _tabs) tab.screen],
+    );
+
     return Scaffold(
-      body: _tabs[_index].screen,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (index) => setState(() => _index = index),
-        // Outlined icons inactive, filled when selected (design-system.md §6).
-        destinations: [
-          for (final tab in _tabs)
-            NavigationDestination(
-              icon: Icon(tab.icon),
-              selectedIcon: Icon(tab.selectedIcon),
-              label: tab.label,
+      body: useRail
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _index,
+                  onDestinationSelected: (index) =>
+                      setState(() => _index = index),
+                  labelType: NavigationRailLabelType.all,
+                  destinations: [
+                    for (final tab in _tabs)
+                      NavigationRailDestination(
+                        icon: Icon(tab.icon),
+                        selectedIcon: Icon(tab.selectedIcon),
+                        label: Text(tab.label),
+                      ),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: body),
+              ],
+            )
+          : body,
+      bottomNavigationBar: useRail
+          ? null
+          : NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (index) => setState(() => _index = index),
+              destinations: destinations,
             ),
-        ],
-      ),
     );
   }
 }

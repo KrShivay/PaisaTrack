@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
-import '../insights/insights_screen.dart';
+import '../assistant/assistant_screen.dart';
+import '../settings/settings_screen.dart';
 import '../transactions/transactions_screen.dart';
 import 'dashboard_providers.dart';
 import 'dashboard_widgets.dart';
@@ -52,16 +53,25 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('This month'),
+        title: const Text('Home'),
         actions: [
           IconButton(
-            tooltip: 'Insights',
+            tooltip: 'Ask PaisaTrack',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => const InsightsScreen(),
+                builder: (_) => const AssistantScreen(),
               ),
             ),
-            icon: const Icon(Icons.lightbulb_outline),
+            icon: const Icon(Icons.auto_awesome_outlined),
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SettingsScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.settings_outlined),
           ),
         ],
       ),

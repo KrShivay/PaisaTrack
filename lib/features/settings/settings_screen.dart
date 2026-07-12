@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +8,8 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
 import '../../intelligence/llm/llm_runtime.dart';
 import '../backup/encrypted_backup_service.dart';
+import '../dev/model_metrics_screen.dart';
+import '../dev/unparsed_sms_screen.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
 import 'category_manager_screen.dart';
@@ -47,7 +50,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             const _Section(
-              title: 'On-device AI model',
+              title: 'Intelligence',
               children: [_LlmModelTile()],
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -74,22 +77,8 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            const _Section(
-              title: 'Feature flags',
-              children: [
-                _FlagTile(
-                  title: 'Local LLM parsing',
-                  enabled: AppConstants.enableLocalLlm,
-                ),
-                _FlagTile(
-                  title: 'Narrative insights',
-                  enabled: AppConstants.enableNarrativeInsights,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
             _Section(
-              title: 'Data',
+              title: 'Categories and learning',
               children: [
                 OutlinedButton.icon(
                   onPressed: () {
@@ -102,7 +91,12 @@ class SettingsScreen extends ConsumerWidget {
                   icon: const Icon(Icons.category),
                   label: const Text('Manage categories'),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            _Section(
+              title: 'Data',
+              children: [
                 OutlinedButton.icon(
                   onPressed: () => _exportBackup(context, ref),
                   icon: const Icon(Icons.lock),
@@ -125,6 +119,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.xl),
+            const _DeveloperOptionsSection(),
           ],
         ),
         error: (error, stackTrace) => Center(
@@ -287,6 +283,56 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DeveloperOptionsSection extends StatelessWidget {
+  const _DeveloperOptionsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: EdgeInsets.zero,
+      title: Text(
+        'Developer options',
+        style: Theme.of(context).textTheme.labelMedium,
+      ),
+      children: [
+        const _FlagTile(
+          title: 'Local LLM parsing',
+          enabled: AppConstants.enableLocalLlm,
+        ),
+        const _FlagTile(
+          title: 'Narrative insights',
+          enabled: AppConstants.enableNarrativeInsights,
+        ),
+        if (kDebugMode) ...[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text('Unparsed SMS diagnostics'),
+            subtitle: const Text('Template misses and parser guardrails'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const UnparsedSmsScreen(),
+              ),
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.query_stats_outlined),
+            title: const Text('Model metrics'),
+            subtitle: const Text('Classifier and review feedback diagnostics'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ModelMetricsScreen(),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
