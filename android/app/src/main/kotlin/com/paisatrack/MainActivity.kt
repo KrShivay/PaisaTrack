@@ -34,6 +34,7 @@ class MainActivity : FlutterActivity() {
     private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val embedderExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val llmExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var llmBridge: LlmBridge? = null
     private var pendingDocumentRequest: PendingDocumentRequest? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -71,30 +72,32 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        val llmBridge = LlmBridge(applicationContext)
+        llmBridge?.close()
+        val bridge = LlmBridge(applicationContext)
+        llmBridge = bridge
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "com.paisatrack/llm",
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "isModelAvailable" -> runOnExecutor(llmExecutor, result) {
-                    llmBridge.isModelAvailable()
+                    bridge.isModelAvailable()
                 }
                 "isDeviceSupported" -> runOnExecutor(llmExecutor, result) {
-                    llmBridge.isDeviceSupported()
+                    bridge.isDeviceSupported()
                 }
                 "downloadModel" -> runOnExecutor(llmExecutor, result) {
-                    llmBridge.downloadModel()
+                    bridge.downloadModel()
                 }
                 "deleteModel" -> runOnExecutor(llmExecutor, result) {
-                    llmBridge.deleteModel()
+                    bridge.deleteModel()
                 }
                 "complete" -> {
                     val prompt = call.argument<String>("prompt")
                     if (prompt == null) {
                         result.error("invalid_arguments", "Missing prompt.", null)
                     } else {
-                        runOnExecutor(llmExecutor, result) { llmBridge.complete(prompt) }
+                        runOnExecutor(llmExecutor, result) { bridge.complete(prompt) }
                     }
                 }
                 else -> result.notImplemented()
@@ -244,6 +247,8 @@ class MainActivity : FlutterActivity() {
         capturedSmsBridge.detach()
         backfillExecutor.shutdown()
         embedderExecutor.shutdown()
+        llmBridge?.close()
+        llmBridge = null
         llmExecutor.shutdown()
         super.cleanUpFlutterEngine(flutterEngine)
     }

@@ -23,7 +23,7 @@ class LlmBridge(private val context: Context) {
         private const val MIN_TOTAL_MEMORY_BYTES = 3_000_000_000L
     }
 
-    private var inference: LlmInference? = null
+    private val inferenceCache = LlmInferenceCache()
 
     private fun modelsDir() = File(context.filesDir, "models")
     private fun modelFile() = File(modelsDir(), MODEL_FILE_NAME)
@@ -46,6 +46,7 @@ class LlmBridge(private val context: Context) {
         modelsDir().mkdirs()
         val partial = partialFile()
         if (partial.length() > PINNED_MODEL_SIZE) partial.delete()
+        if (promoteCompletePartial(partial)) return true
         var connection: HttpURLConnection? = null
         return try {
             val offset = if (partial.isFile) partial.length() else 0L
@@ -61,16 +62,7 @@ class LlmBridge(private val context: Context) {
             connection.inputStream.use { input ->
                 FileOutputStream(partial, append).use { output -> input.copyTo(output) }
             }
-            if (partial.length() != PINNED_MODEL_SIZE) return false
-            if (sha256Hex(partial) != PINNED_MODEL_SHA256) {
-                partial.delete()
-                return false
-            }
-            closeInference()
-            val target = modelFile()
-            target.delete()
-            if (!partial.renameTo(target)) partial.copyTo(target, overwrite = true)
-            isModelAvailable()
+            promoteCompletePartial(partial)
         } catch (_: Exception) {
             false // Keep a valid-size partial download for the next Range request.
         } finally {
@@ -79,7 +71,7 @@ class LlmBridge(private val context: Context) {
     }
 
     fun deleteModel(): Boolean {
-        closeInference()
+        close()
         val modelDeleted = !modelFile().exists() || modelFile().delete()
         val partialDeleted = !partialFile().exists() || partialFile().delete()
         return modelDeleted && partialDeleted
@@ -88,23 +80,95 @@ class LlmBridge(private val context: Context) {
     fun complete(prompt: String): String? {
         if (!isModelAvailable()) return null
         if (!isDeviceSupported()) throw UnsupportedOperationException("unsupported_device")
-        val engine = inference ?: LlmInference.createFromOptions(
+        val engine = inferenceCache.getOrCreate { createInference() }
+        return engine.generateResponse(prompt)
+    }
+
+    /** Releases the cached native engine before the Flutter engine is disposed. */
+    fun close() {
+        inferenceCache.close()
+    }
+
+    private fun promoteCompletePartial(partial: File): Boolean =
+        LlmModelInstaller.promoteVerifiedPartial(
+            partial = partial,
+            target = modelFile(),
+            expectedSize = PINNED_MODEL_SIZE,
+            expectedSha256 = PINNED_MODEL_SHA256,
+            beforePromote = ::close,
+        )
+
+    private fun createInference(): LlmInferenceHandle {
+        val delegate = LlmInference.createFromOptions(
             context,
             LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile().absolutePath)
                 .setMaxTokens(1024)
                 .build(),
-        ).also { inference = it }
-        return engine.generateResponse(prompt)
+        )
+        return object : LlmInferenceHandle {
+            override fun generateResponse(prompt: String): String = delegate.generateResponse(prompt)
+
+            override fun close() {
+                delegate.close()
+            }
+        }
+    }
+}
+
+/** Keeps the heavyweight MediaPipe engine alive for reuse and releases it exactly once. */
+internal class LlmInferenceCache {
+    private var handle: LlmInferenceHandle? = null
+
+    fun getOrCreate(factory: () -> LlmInferenceHandle): LlmInferenceHandle {
+        return handle ?: factory().also { handle = it }
     }
 
-    private fun closeInference() {
+    fun close() {
         try {
-            inference?.close()
+            handle?.close()
         } catch (_: Exception) {
-            // Best effort; stale native state must not block model deletion.
+            // Best effort; stale native state must not block teardown or model deletion.
         }
-        inference = null
+        handle = null
+    }
+}
+
+internal interface LlmInferenceHandle {
+    fun generateResponse(prompt: String): String
+    fun close()
+}
+
+/** Verifies a complete partial file before promoting it without reopening the network. */
+internal object LlmModelInstaller {
+    fun promoteVerifiedPartial(
+        partial: File,
+        target: File,
+        expectedSize: Long,
+        expectedSha256: String,
+        beforePromote: () -> Unit,
+    ): Boolean {
+        if (!partial.isFile || partial.length() != expectedSize) return false
+        if (sha256Hex(partial) != expectedSha256) {
+            partial.delete()
+            return false
+        }
+        beforePromote()
+        if (target.exists() && !target.delete()) return false
+        if (partial.renameTo(target)) return target.isFile && target.length() == expectedSize
+        return try {
+            partial.copyTo(target, overwrite = true)
+            if (target.length() != expectedSize || sha256Hex(target) != expectedSha256) {
+                target.delete()
+                false
+            } else {
+                partial.delete()
+                true
+            }
+        } catch (_: Exception) {
+            target.delete()
+            false
+        }
     }
 
     private fun sha256Hex(file: File): String {

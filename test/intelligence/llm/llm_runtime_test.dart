@@ -74,9 +74,13 @@ void main() {
   });
 
   test('extractJson rejects extra fields after its single retry', () async {
+    var calls = 0;
     messenger.setMockMethodCallHandler(
       channel,
-      (call) async => '{"amount":42,"extra":true}',
+      (call) async {
+        calls++;
+        return '{"amount":42,"extra":true}';
+      },
     );
     final result = await runtime.extractJson('extract', {
       'type': 'object',
@@ -86,6 +90,64 @@ void main() {
       'required': ['amount'],
       'additionalProperties': false,
     });
+    expect(
+      result,
+      isA<LlmUnavailable<Map<String, Object?>>>().having(
+        (value) => value.reason,
+        'reason',
+        LlmUnavailableReason.failure,
+      ),
+    );
+    expect(calls, 2);
+  });
+
+  test('extractJson retries enum values outside the closed whitelist',
+      () async {
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls++;
+      return calls == 1 ? '{"kind":"transfer"}' : '{"kind":"debit"}';
+    });
+
+    final result = await runtime.extractJson('extract', {
+      'type': 'object',
+      'properties': {
+        'kind': {
+          'type': 'string',
+          'enum': ['debit', 'credit'],
+        },
+      },
+      'required': ['kind'],
+      'additionalProperties': false,
+    });
+
+    expect(calls, 2);
+    expect(
+      (result as LlmSuccess<Map<String, Object?>>).value,
+      {'kind': 'debit'},
+    );
+  });
+
+  test('extractJson rejects enum values after its single retry', () async {
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls++;
+      return '{"kind":"transfer"}';
+    });
+
+    final result = await runtime.extractJson('extract', {
+      'type': 'object',
+      'properties': {
+        'kind': {
+          'type': 'string',
+          'enum': ['debit', 'credit'],
+        },
+      },
+      'required': ['kind'],
+      'additionalProperties': false,
+    });
+
+    expect(calls, 2);
     expect(
       result,
       isA<LlmUnavailable<Map<String, Object?>>>().having(

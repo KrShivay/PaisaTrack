@@ -1,3 +1,12 @@
+## 2026-07-12 @codex — T-075 crash-resume fixes → In Review
+
+- Did: fixed the review blockers: verify/promote a full `.part` model before opening an EOF HTTP Range request; retain and close the native MediaPipe inference engine during Flutter-engine cleanup; and enforce JSON-schema `enum` values with one retry then typed failure. Added native and Dart regressions and documented the download/lifecycle invariants.
+- Files: android/app/src/main/kotlin/com/paisatrack/intelligence/LlmBridge.kt, android/app/src/main/kotlin/com/paisatrack/MainActivity.kt, android/app/src/test/kotlin/com/paisatrack/intelligence/LlmBridgeTest.kt, lib/intelligence/llm/llm_runtime.dart, test/intelligence/llm/llm_runtime_test.dart, docs/architecture.md, TASKS.md, WORKLOG.md.
+- Evidence: GitNexus pre-edit impact LOW — PlatformLlmRuntime 4 direct/6 total/one test process, LlmBridge 1 direct, MainActivity 0; `flutter analyze --no-pub` clean; focused Flutter 10/10; full `flutter test --no-pub --concurrency=1` 218/218; focused `:app:testDebugUnitTest --tests com.paisatrack.intelligence.LlmBridgeTest` BUILD SUCCESSFUL; `git diff --check` clean. Final GitNexus detect_changes is HIGH because it includes a concurrent task-archive compaction plus broad MainActivity fan-out; the implementation paths are expected download/complete/delete/platform-channel flows.
+- Decisions: verified an exact-size partial before networking so a valid interrupted 1.6 GB download never requests past EOF; isolated MediaPipe ownership behind a closeable cache to make lifecycle release testable; implemented the caller-required JSON-schema subset (including enum) rather than a general schema engine.
+- Open questions: none.
+- Next: @claude review T-075; do not start another task.
+
 ## 2026-07-12 @claude — Review T-075: CHANGES → back to In Progress
 
 - Did: session dispatched by the agent-handoff hook (`## In Review` non-empty). Re-verified the board: T-083/T-080/T-081/T-082 had already been reviewed and moved to Done by @codex (commit 2b23841) concurrently with this session starting, so the only remaining `## In Review` item was T-075.
@@ -19,6 +28,15 @@
 - Reviewed commit `baca232` against all four ACs. T-083 covers the constrained intent schema, exhaustive six-intent whitelist, deterministic repository mapping, QueryResult-only grounding, refusal/no-advice rules, local-only handling, and implementation tests; tightened it to require escaped merchant `LIKE` literals and corrected `next_due` to the real `next_expected_date` field. T-080/T-081/T-082 cover all requested privacy/correctness cases with non-vacuous tests.
 - GitNexus `detect_changes(compare, d1d68b6)`: MEDIUM, 17 changed symbols / 4 affected dev donation/test processes. `impact(SmsFixtureDonation, upstream, includeTests)`: MEDIUM, 5 direct / 8 total, 2 processes; no ingestion or financial-data write path.
 - Verification: `flutter analyze --no-pub` clean; focused `sms_fixture_donation_test.dart` + `unparsed_sms_screen_test.dart` 16/16; full Flutter suite green via definitive partitions after the monolithic runner exceeded the tool output window; `git diff d1d68b6..baca232 --check` clean. Pre-existing Drift multiple-database warning remains test-only and green.
+
+## 2026-07-12 @claude — Docs context-optimization (@human-directed, no app code)
+
+- Did: cut the per-session context cost of the board without losing information. TASKS.md is read in full every session (COLLABORATION §6) and had grown to ~54.9 KB, almost entirely verbose "Review: PASS —…" prose under 28 completed tasks. Condensed the `## Done` section to one-line verdicts (kept the 20 newest per the §2 rule) and moved every completed task's full AC/Review/Evidence prose verbatim into docs/tasks-archive.md (cold storage, not read per session). Also pruned three stale grooming HTML-comments from the `## Ready` section (all about now-Done tasks T-050/T-071/T-080–T-082), keeping the still-relevant T-051/T-052 note.
+- Result: TASKS.md 54,882 → 14,614 bytes (~73% smaller) with zero loss — all 9 section headers and (@agent) tags intact (handoff-automation format preserved per §7), every active task (In Progress/Ready/Phase 3/Phase 4/Blocked/In Review) untouched, 20 Done one-liners on the board, docs/tasks-archive.md now holds 67 full entries (28 newly moved + 39 pre-existing). Full review detail also remains in WORKLOG + commit history.
+- Files: TASKS.md (Done condensed, Ready comments pruned), docs/tasks-archive.md (full prose prepended under a dated Archived note).
+- Decisions: transformation done programmatically (python) for an exact, transcription-error-free move; WORKLOG.md left untouched (append-only §5, and agents read only its last 3 entries, so its size is not a per-session cost); CLAUDE.md/AGENTS.md left as-is (identical but each an agent's entry point, already compact, GitNexus-managed); COLLABORATION.md left as-is (dense load-bearing protocol — trimming risks the "efficiency stays the same" requirement).
+- Open/flagged for @human: PROJECT_STATUS_REPORT.md (a stale 2026-07-09 snapshot) and UI_ENHANCEMENT_PLAN.md are only referenced from WORKLOG history, not any per-session read path — no context cost, but the status report is superseded by the live board; say the word to archive/delete or add a stale-pointer.
+- Next: none required; board is leaner and functionally identical for the agents.
 
 ## 2026-07-12 @claude — T-083 spec + T-080/T-081/T-082 sanitizer hardening (@human-directed)
 

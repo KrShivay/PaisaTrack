@@ -142,6 +142,11 @@ class PlatformLlmRuntime implements LlmRuntime {
   }
 
   bool _matchesSchema(Object? value, Map<String, Object?> schema) {
+    final enumValues = schema['enum'];
+    if (enumValues != null &&
+        (enumValues is! List || !enumValues.contains(value))) {
+      return false;
+    }
     final type = schema['type'];
     if (type == 'object') {
       if (value is! Map<String, Object?>) return false;

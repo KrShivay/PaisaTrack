@@ -229,3 +229,8 @@ partial file only after the pinned size and SHA-256 both match. Missing models,
 disabled flags, and unsupported/low-RAM devices return typed no-op results so
 deterministic callers continue unchanged. `llama.cpp` over an ungated Qwen2.5
 GGUF remains the recorded fallback if MediaPipe proves unsuitable.
+
+A complete partial is verified and promoted before any further HTTP Range
+request, so an interrupted download cannot get stuck requesting past EOF. The
+native inference handle is cached only while the Flutter engine is alive and is
+closed during engine cleanup or before model replacement/deletion.
