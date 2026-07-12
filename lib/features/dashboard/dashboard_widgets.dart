@@ -5,6 +5,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../../core/widgets/transaction_components.dart';
+import '../../data/repositories/transaction_repository.dart';
 import 'dashboard_providers.dart';
 
 /// Section heading shared across dashboard cards. Quiet, uppercase-free label
@@ -229,6 +231,274 @@ class StatTile extends StatelessWidget {
   }
 }
 
+class HeroFinancialCard extends StatelessWidget {
+  const HeroFinancialCard({
+    super.key,
+    required this.net,
+    required this.spent,
+    required this.received,
+    required this.monthComparison,
+    this.onTap,
+  });
+
+  final double net;
+  final double spent;
+  final double received;
+  final MonthOverMonthSpend monthComparison;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final paisa = PaisaColors.of(context);
+    final netIsPositive = net >= 0;
+    final comparison = monthComparison.pctChange;
+    final comparisonText = comparison == null
+        ? 'Not enough history for last-month comparison'
+        : '${(comparison.abs() * 100).round()}% '
+            '${comparison <= 0 ? 'lower' : 'higher'} than last month';
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Net cash flow',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '${netIsPositive ? '+' : '−'}${formatInr(net.abs())}',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: netIsPositive ? paisa.credit : paisa.debit,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Wrap(
+                spacing: AppSpacing.lg,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  _InlineAmount(
+                    label: 'Spent',
+                    amount: spent,
+                    color: paisa.debit,
+                  ),
+                  _InlineAmount(
+                    label: 'Received',
+                    amount: received,
+                    color: paisa.credit,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                comparisonText,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineAmount extends StatelessWidget {
+  const _InlineAmount({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+
+  final String label;
+  final double amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return RichText(
+      text: TextSpan(
+        style: theme.textTheme.bodyMedium,
+        children: [
+          TextSpan(
+            text: '$label ',
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          ),
+          TextSpan(
+            text: formatInr(amount),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontFeatures: AppTheme.tabularFigures,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CompactMetricRow extends StatelessWidget {
+  const CompactMetricRow({
+    super.key,
+    required this.dailyAverage,
+    required this.monthComparison,
+    required this.projectedSpend,
+  });
+
+  final double dailyAverage;
+  final MonthOverMonthSpend monthComparison;
+  final double projectedSpend;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = monthComparison.pctChange;
+    final changeValue = pct == null
+        ? '—'
+        : '${pct > 0 ? '+' : '−'}${(pct.abs() * 100).round()}%';
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: StatTile(
+              label: 'Daily average',
+              value: formatInr(dailyAverage),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: StatTile(
+              label: 'vs last month',
+              value: changeValue,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: StatTile(
+              label: 'Projected',
+              value: formatInr(projectedSpend),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ReviewAttentionCard extends StatelessWidget {
+  const ReviewAttentionCard({
+    super.key,
+    required this.attention,
+    required this.onTap,
+  });
+
+  final ReviewAttention attention;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final warning = PaisaColors.of(context).warning;
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.priority_high_rounded, color: warning),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${attention.count} transactions need review',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '${formatInr(attention.amount)} may be incorrectly categorised',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Highest impact: ${attention.highestImpactLabel}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class RecentTransactionsCard extends StatelessWidget {
+  const RecentTransactionsCard({
+    super.key,
+    required this.transactions,
+    required this.onTransactionTap,
+  });
+
+  final List<TransactionListItem> transactions;
+  final ValueChanged<String> onTransactionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (transactions.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionLabel('Recent transactions'),
+            for (final txn in transactions)
+              TransactionTile(
+                merchantName: txn.displayName,
+                amount: txn.amount,
+                direction: txn.direction,
+                categoryLabel: txn.categoryName ?? 'Uncategorized',
+                timeLabel: formatTxnTime(txn.ts),
+                categoryId: txn.categoryId,
+                categoryIcon: txn.categoryIcon,
+                categoryIsSpending: txn.categoryIsSpending,
+                onTap: () => onTransactionTap(txn.id),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Ranked horizontal bars of this month's top spending categories.
 class CategoryBreakdownCard extends StatelessWidget {
   const CategoryBreakdownCard({
@@ -413,7 +683,9 @@ class _MerchantRow extends StatelessWidget {
                 style: theme.textTheme.bodyMedium,
               ),
               Text(
-                merchant.count == 1 ? '1 payment' : '${merchant.count} payments',
+                merchant.count == 1
+                    ? '1 payment'
+                    : '${merchant.count} payments',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -452,8 +724,18 @@ class TrendSparkline extends StatelessWidget {
   final List<MonthPoint> points;
 
   static const _monthLabels = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   String _trendSemanticLabel() {
@@ -530,7 +812,8 @@ class _SparklinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (points.length < 2) return;
 
-    final maxSpend = points.fold<double>(0, (m, p) => p.spend > m ? p.spend : m);
+    final maxSpend =
+        points.fold<double>(0, (m, p) => p.spend > m ? p.spend : m);
     final range = maxSpend <= 0 ? 1.0 : maxSpend;
     final dx = size.width / (points.length - 1);
 

@@ -14,6 +14,7 @@ TransactionListItem _item({
   String? categoryId,
   String? categoryName,
   String? categoryIcon,
+  bool categoryIsSpending = true,
 }) {
   return TransactionListItem(
     id: id,
@@ -24,6 +25,7 @@ TransactionListItem _item({
     categoryName: categoryName,
     categoryId: categoryId,
     categoryIcon: categoryIcon,
+    categoryIsSpending: categoryIsSpending,
   );
 }
 
@@ -52,24 +54,103 @@ void main() {
 
   test('monthNet is credit minus debit for the current month', () async {
     final c = await ready([
-      _item(id: 'a', ts: thisMonth, amount: 300, direction: TransactionDirection.debit),
-      _item(id: 'b', ts: thisMonth, amount: 1000, direction: TransactionDirection.credit),
-      _item(id: 'old', ts: lastMonth, amount: 9999, direction: TransactionDirection.debit),
+      _item(
+        id: 'a',
+        ts: thisMonth,
+        amount: 300,
+        direction: TransactionDirection.debit,
+      ),
+      _item(
+        id: 'b',
+        ts: thisMonth,
+        amount: 1000,
+        direction: TransactionDirection.credit,
+      ),
+      _item(
+        id: 'old',
+        ts: lastMonth,
+        amount: 9999,
+        direction: TransactionDirection.debit,
+      ),
     ]);
     expect(c.read(monthNetProvider), 700);
   });
 
+  test('spending aggregates exclude transfer debits', () async {
+    final c = await ready([
+      _item(
+        id: 'spend',
+        ts: thisMonth,
+        amount: 300,
+        direction: TransactionDirection.debit,
+        categoryId: 'food',
+        categoryName: 'Food',
+      ),
+      _item(
+        id: 'transfer',
+        ts: thisMonth,
+        amount: 5000,
+        direction: TransactionDirection.debit,
+        categoryId: 'transfers',
+        categoryName: 'Transfers',
+        categoryIsSpending: false,
+      ),
+      _item(
+        id: 'credit',
+        ts: thisMonth,
+        amount: 1000,
+        direction: TransactionDirection.credit,
+      ),
+    ]);
+
+    expect(c.read(monthDirectionTotalsProvider).debitTotal, 300);
+    expect(c.read(monthNetProvider), 700);
+    expect(c.read(categoryBreakdownProvider).single.name, 'Food');
+    expect(c.read(topMerchantsProvider).single.name, 'spend');
+  });
+
   test('dailyAverageSpend divides debit by day of month', () async {
     final c = await ready([
-      _item(id: 'a', ts: thisMonth, amount: 300, direction: TransactionDirection.debit),
+      _item(
+        id: 'a',
+        ts: thisMonth,
+        amount: 300,
+        direction: TransactionDirection.debit,
+      ),
     ]);
     expect(c.read(dailyAverageSpendProvider), 300 / now.day);
   });
 
+  test('projectedMonthEndSpend scales current spend by days elapsed', () async {
+    final c = await ready([
+      _item(
+        id: 'a',
+        ts: thisMonth,
+        amount: 300,
+        direction: TransactionDirection.debit,
+      ),
+    ]);
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    expect(
+      c.read(projectedMonthEndSpendProvider),
+      300 / now.day * daysInMonth,
+    );
+  });
+
   test('monthOverMonthSpend computes signed percent change', () async {
     final c = await ready([
-      _item(id: 'now', ts: thisMonth, amount: 150, direction: TransactionDirection.debit),
-      _item(id: 'prev', ts: lastMonth, amount: 100, direction: TransactionDirection.debit),
+      _item(
+        id: 'now',
+        ts: thisMonth,
+        amount: 150,
+        direction: TransactionDirection.debit,
+      ),
+      _item(
+        id: 'prev',
+        ts: lastMonth,
+        amount: 100,
+        direction: TransactionDirection.debit,
+      ),
     ]);
     final mom = c.read(monthOverMonthSpendProvider);
     expect(mom.current, 150);
@@ -79,17 +160,50 @@ void main() {
 
   test('monthOverMonthSpend pctChange is null with no prior spend', () async {
     final c = await ready([
-      _item(id: 'now', ts: thisMonth, amount: 150, direction: TransactionDirection.debit),
+      _item(
+        id: 'now',
+        ts: thisMonth,
+        amount: 150,
+        direction: TransactionDirection.debit,
+      ),
     ]);
     expect(c.read(monthOverMonthSpendProvider).pctChange, isNull);
   });
 
   test('categoryBreakdown groups, sorts, and computes share', () async {
     final c = await ready([
-      _item(id: 'f1', ts: thisMonth, amount: 400, direction: TransactionDirection.debit, categoryId: 'food_dining', categoryName: 'Food'),
-      _item(id: 'f2', ts: thisMonth, amount: 100, direction: TransactionDirection.debit, categoryId: 'food_dining', categoryName: 'Food'),
-      _item(id: 's1', ts: thisMonth, amount: 500, direction: TransactionDirection.debit, categoryId: 'shopping', categoryName: 'Shopping'),
-      _item(id: 'c1', ts: thisMonth, amount: 999, direction: TransactionDirection.credit, categoryId: 'income', categoryName: 'Income'),
+      _item(
+        id: 'f1',
+        ts: thisMonth,
+        amount: 400,
+        direction: TransactionDirection.debit,
+        categoryId: 'food_dining',
+        categoryName: 'Food',
+      ),
+      _item(
+        id: 'f2',
+        ts: thisMonth,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        categoryId: 'food_dining',
+        categoryName: 'Food',
+      ),
+      _item(
+        id: 's1',
+        ts: thisMonth,
+        amount: 500,
+        direction: TransactionDirection.debit,
+        categoryId: 'shopping',
+        categoryName: 'Shopping',
+      ),
+      _item(
+        id: 'c1',
+        ts: thisMonth,
+        amount: 999,
+        direction: TransactionDirection.credit,
+        categoryId: 'income',
+        categoryName: 'Income',
+      ),
     ]);
     final slices = c.read(categoryBreakdownProvider);
     expect(slices.length, 2);
@@ -122,9 +236,27 @@ void main() {
 
   test('topMerchants ranks by spend and counts payments', () async {
     final c = await ready([
-      _item(id: 'm1', ts: thisMonth, amount: 100, direction: TransactionDirection.debit, displayName: 'Swiggy'),
-      _item(id: 'm2', ts: thisMonth, amount: 200, direction: TransactionDirection.debit, displayName: 'Swiggy'),
-      _item(id: 'm3', ts: thisMonth, amount: 250, direction: TransactionDirection.debit, displayName: 'Amazon'),
+      _item(
+        id: 'm1',
+        ts: thisMonth,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Swiggy',
+      ),
+      _item(
+        id: 'm2',
+        ts: thisMonth,
+        amount: 200,
+        direction: TransactionDirection.debit,
+        displayName: 'Swiggy',
+      ),
+      _item(
+        id: 'm3',
+        ts: thisMonth,
+        amount: 250,
+        direction: TransactionDirection.debit,
+        displayName: 'Amazon',
+      ),
     ]);
     final merchants = c.read(topMerchantsProvider);
     expect(merchants.first.name, 'Swiggy');
@@ -133,9 +265,15 @@ void main() {
     expect(merchants[1].name, 'Amazon');
   });
 
-  test('sixMonthTrend returns six buckets oldest-first including current', () async {
+  test('sixMonthTrend returns six buckets oldest-first including current',
+      () async {
     final c = await ready([
-      _item(id: 'a', ts: thisMonth, amount: 500, direction: TransactionDirection.debit),
+      _item(
+        id: 'a',
+        ts: thisMonth,
+        amount: 500,
+        direction: TransactionDirection.debit,
+      ),
     ]);
     final trend = c.read(sixMonthTrendProvider);
     expect(trend.length, 6);

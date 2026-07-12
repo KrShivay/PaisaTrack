@@ -5,7 +5,6 @@ import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
-import 'package:paisatrack/features/insights/insights_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
 void main() {
@@ -36,7 +35,7 @@ void main() {
       ProviderScope(
         overrides: [
           transactionListProvider.overrideWith((ref) => Stream.value(items)),
-          activeInsightsProvider.overrideWith((ref) => Stream.value(const [])),
+          reviewQueueProvider.overrideWith((ref) => Stream.value(const [])),
         ],
         child: const MaterialApp(home: DashboardScreen()),
       ),
@@ -45,8 +44,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('renders spent and received summary cards for this month',
-      (tester) async {
+  testWidgets('renders hero financial summary for this month', (tester) async {
     final now = DateTime.now();
     final thisMonth = DateTime(now.year, now.month, 5, 12);
     final lastMonth = DateTime(now.year, now.month - 1, 15, 12);
@@ -78,14 +76,14 @@ void main() {
       ),
     ]);
 
-    expect(find.text('Spent'), findsOneWidget);
-    expect(find.text('Received'), findsOneWidget);
-    // Spent total appears in the summary card (and possibly the breakdown).
-    expect(find.text('₹200.00'), findsWidgets);
-    expect(find.text('₹1,00,000.00'), findsOneWidget);
+    expect(find.byType(HeroFinancialCard), findsOneWidget);
+    expect(find.text('Net cash flow'), findsOneWidget);
+    expect(find.text('+₹99,800.00'), findsOneWidget);
+    expect(find.textContaining('Spent', findRichText: true), findsOneWidget);
+    expect(find.textContaining('Received', findRichText: true), findsOneWidget);
   });
 
-  testWidgets('shows a net-flow chip and stat tiles', (tester) async {
+  testWidgets('shows compact supporting metrics', (tester) async {
     final now = DateTime.now();
     final thisMonth = DateTime(now.year, now.month, 5, 12);
 
@@ -104,26 +102,25 @@ void main() {
       ),
     ]);
 
-    expect(find.byType(NetFlowChip), findsOneWidget);
-    expect(find.text('Net this month'), findsOneWidget);
+    expect(find.byType(CompactMetricRow), findsOneWidget);
     expect(find.text('Daily average'), findsOneWidget);
     expect(find.text('vs last month'), findsOneWidget);
+    expect(find.text('Projected'), findsOneWidget);
   });
 
   testWidgets('shows empty state when no transactions this month',
       (tester) async {
     await pumpDashboard(tester, const []);
-    expect(find.text('No transactions yet this month.'), findsOneWidget);
+    expect(find.text('No transactions this month'), findsOneWidget);
   });
 
-  testWidgets('opens insights from the app bar', (tester) async {
+  testWidgets('opens Ask PaisaTrack from the app bar', (tester) async {
     await pumpDashboard(tester, const []);
 
-    await tester.tap(find.byTooltip('Insights'));
+    await tester.tap(find.byTooltip('Ask PaisaTrack'));
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(AppBar, 'Insights'), findsOneWidget);
-    expect(find.text('No insights yet'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Ask PaisaTrack'), findsOneWidget);
   });
 
   testWidgets('lays out on a narrow screen with large amounts and long names',
@@ -169,7 +166,7 @@ void main() {
     // No overflow assertion is implicit: a RenderFlex overflow throws during
     // pump and fails the test. Confirm the screen actually rendered content.
     expect(find.byType(DashboardScreen), findsOneWidget);
-    expect(find.byType(NetFlowChip), findsOneWidget);
+    expect(find.byType(HeroFinancialCard), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
