@@ -1,7 +1,18 @@
 # Task Board
-Last updated: 2026-07-12 by @codex (reviews PASS: T-083 and T-080/T-081/T-082 moved to Done; T-083 tightened to require escaped merchant LIKE literals and the real `next_expected_date` field; analyze clean, focused 16/16, full suite green.)
+Last updated: 2026-07-12 by @claude (review: T-075 → CHANGES, moved back to In Progress — no WORKLOG entry for the build session and no Evidence line on the task, so the AC cannot be verified as proven by tests per COLLABORATION §4; code itself read clean, see task note.)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
+- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
+      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API primary per PLAN §2 as amended by ADR 0008 (pinned artifact: Qwen2.5-1.5B-Instruct q8 ekv4096 `.task`, revision-pinned HF URL, SHA-256 `82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3`, size 1598556720, Apache-2.0, ungated; runtime `com.google.mediapipe:tasks-genai:0.10.24`), `llama.cpp` FFI recorded as fallback option (GGUF same model family); user-initiated model download (resumable via HTTP Range, SHA-256 integrity-checked against the ADR 0008 pin, app-private storage, size shown before download, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported/low-RAM device (~2.2 GB peak RSS required) → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
+      Model: gpt-5.6-terra high
+      Depends: T-074 (Done; queue order only — Phase-3-parallel safe: new module, no file overlap)
+      Pin: docs/decisions/0008-on-device-llm-model.md (unblocked 2026-07-11 — SHA-256 is authoritative from the HF LFS API, enforceable in code immediately).
+      Review: CHANGES —
+        1. No WORKLOG.md entry documents the implementation session for commit d1d68b6 (Did/Files/Evidence/Decisions/Next) — required by COLLABORATION §3 Definition of Done and §6.
+        2. No `Evidence:` line on this task — §4 checklist requires AC be "proven by tests (run/read... don't trust summary)"; with no evidence line and no WORKLOG entry there is nothing to read. This dispatched review session has no shell-command approval (same documented limitation as prior @claude review sessions), so I could not run the toolchain myself to substitute.
+        3. (non-blocking, informational) Independent code read found no functional defects: `LlmBridge` constants match ADR 0008 exactly (URL/size/SHA-256); `AppConstants.enableLocalLlm` defaults false; `isDeviceSupported()` gates on `MIN_TOTAL_MEMORY_BYTES`/`isLowRamDevice`; `downloadModel()` promotes the partial file only after both size and SHA-256 match; `extractJson()` validates strict schema with one retry; `MainActivity`'s new `com.paisatrack/llm` channel and shared executor refactor are additive and don't change `PlatformEmbedder`'s behavior (it catches `PlatformException` without branching on `error.code`, so the renamed error code is harmless). `llm_runtime_test.dart` and `settings_test.dart` read as non-vacuous.
+        Requested: run `flutter analyze --no-pub` and `flutter test --no-pub test/intelligence/llm/llm_runtime_test.dart test/features/settings/settings_test.dart` (plus the full suite) on the device toolchain, append the missing WORKLOG entry with that evidence, and add an `Evidence:` line to this task before requesting re-review.
+
 ## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
 <!-- Phase 2.5b trust loop (T-072..T-074) is fully Done as of 2026-07-11 — Phase 3
      gate cleared. Groomed forward 2026-07-11 @claude: only Phase 3 tasks whose
@@ -60,7 +71,7 @@ Last updated: 2026-07-12 by @codex (reviews PASS: T-083 and T-080/T-081/T-082 mo
       AC: chat surface behind the LLM feature flag; NL question → LLM emits constrained intent JSON (metric, category/merchant filter, time range, aggregation) validated against a whitelist — model NEVER emits SQL; deterministic QueryEngine executes intents over repositories (transactions, recurring_series, baselines, insights); reply interpolates ONLY QueryEngine numbers (renderer test proves no model-originated figures); out-of-whitelist intents refuse gracefully with suggestions; no advice framing — forecasts relay PLAN §7.8 outputs only; session-scoped history; prompts never leave the device (ADR 0002/0006). MVP intents: period totals, category breakdown, merchant lookup, month-over-month comparison, upcoming recurring, active insights.
       Spec: implement to docs/assistant-nlq.md (T-083, @claude) — the intent schema, whitelist, and grounding contract are defined there, not invented here; do NOT start the build until T-083 is Done.
       Model: gpt-5.6-sol medium
-      Depends: T-083 (spec), T-075 (LLM runtime, In Review), T-064 (Phase 3 exit)
+      Depends: T-083 (spec, Done), T-075 (LLM runtime, In Progress — Review: CHANGES), T-064 (Phase 3 exit)
 
 ## Blocked
 - [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
@@ -74,11 +85,6 @@ Last updated: 2026-07-12 by @codex (reviews PASS: T-083 and T-080/T-081/T-082 mo
 <!-- (empty) -->
 
 ## In Review
-- [ ] T-075 (@codex) [P4] On-device LLM runtime foundation
-      AC: shared `LlmRuntime` behind a feature flag (default off, `AppConstants`): MediaPipe LLM Inference API primary per PLAN §2 as amended by ADR 0008 (pinned artifact: Qwen2.5-1.5B-Instruct q8 ekv4096 `.task`, revision-pinned HF URL, SHA-256 `82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3`, size 1598556720, Apache-2.0, ungated; runtime `com.google.mediapipe:tasks-genai:0.10.24`), `llama.cpp` FFI recorded as fallback option (GGUF same model family); user-initiated model download (resumable via HTTP Range, SHA-256 integrity-checked against the ADR 0008 pin, app-private storage, size shown before download, delete control in Settings, never bundled in APK); API surface `complete()` + `extractJson(schema)` with strict-JSON validation/retry; absent model or unsupported/low-RAM device (~2.2 GB peak RSS required) → typed no-op result and callers degrade (tested with a fake runtime); inference path provably network-free (network only in the download abstraction, tested); docs: architecture.md Phase 4 section + privacy.md note (on-device prompts may see raw SMS per PLAN §8). Serves the Phase 4 extractor, narratives, and T-076.
-      Model: gpt-5.6-terra high
-      Depends: T-074 (Done; queue order only — Phase-3-parallel safe: new module, no file overlap)
-      Pin: docs/decisions/0008-on-device-llm-model.md (unblocked 2026-07-11 — SHA-256 is authoritative from the HF LFS API, enforceable in code immediately).
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 - [x] T-083 (@claude build / @codex review: PASS) [P4] Spec: in-app assistant NLQ grounding contract (2026-07-12)
