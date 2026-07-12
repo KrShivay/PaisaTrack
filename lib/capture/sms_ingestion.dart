@@ -14,6 +14,7 @@ import '../data/models/raw_sms.dart';
 import '../data/repositories/rule_repository.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
+import '../enrichment/merchant_resolver.dart';
 import '../features/settings/app_settings.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
@@ -66,6 +67,7 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
     database: database,
     parser: parser,
     categorizer: categorizer,
+    merchantResolver: ref.watch(merchantResolverProvider(database)),
     // Deliberately ref.read (lazy, at decision time) — NOT ref.watch.
     // Watching the settings controller here rebuilt this provider on every
     // settings emission (including its initial loading→data transition),
@@ -104,6 +106,7 @@ class SmsIngestor {
     required AppDatabase database,
     required ParserCascade parser,
     Categorizer? categorizer,
+    MerchantResolver? merchantResolver,
     int askDailyBudget = AppConstants.askNowDailyBudget,
     int Function()? askDailyBudgetResolver,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
@@ -112,6 +115,7 @@ class SmsIngestor {
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
+        _merchantResolver = merchantResolver,
         _askDailyBudget = askDailyBudgetResolver ?? (() => askDailyBudget),
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
@@ -123,6 +127,7 @@ class SmsIngestor {
   /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
   /// without one; production wiring always supplies it.
   final Categorizer? _categorizer;
+  final MerchantResolver? _merchantResolver;
 
   /// Resolves the daily ask budget at decision time, so a Settings change
   /// applies to the next ingest without rebuilding the capture pipeline
@@ -151,21 +156,28 @@ class SmsIngestor {
       switch (parseResult) {
         case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
           final duplicateOfTxnId = await _findDuplicateOfExisting(value);
-          final categorization = await _categorizer?.categorize(value);
+          final merchant = await _merchantResolver?.resolve(value);
+          final categorization = await _categorizer?.categorize(
+            value,
+            merchantEmbedding: merchant?.embedding,
+          );
           // Suppressed echoes never surface to the user, so they must not
           // enter the ask flow or consume ask budget — keep them 'auto'.
           final status = duplicateOfTxnId != null
               ? DecisionStatus.auto
-              : await _decideStatus(
-                  value,
-                  categorization: categorization,
-                );
+              : merchant?.needsReview == true
+                  ? DecisionStatus.needsReview
+                  : await _decideStatus(
+                      value,
+                      categorization: categorization,
+                    );
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
                   record: value,
                   duplicateOfTxnId: duplicateOfTxnId,
                   categorization: categorization,
+                  merchant: merchant,
                   status: status,
                 ),
               );
@@ -217,6 +229,8 @@ class SmsIngestor {
   }) async {
     final askedToday = await _countAskedToday();
     final askBudgetLeft = _askDailyBudget() - askedToday;
+    final threshold = await AdaptiveThresholdPolicy(_database)
+        .thresholdFor(categorization?.categoryId);
     return _decisionPolicy.decide(
       DecisionPolicyInput(
         merchantConfidence: record.parseConfidence,
@@ -226,6 +240,7 @@ class SmsIngestor {
         askBudgetLeft: askBudgetLeft > 0 ? askBudgetLeft : 0,
         counterpartyVpa: record.counterpartyVpa,
         counterpartySeen: await _hasSeenCounterparty(record.counterpartyVpa),
+        silentThreshold: threshold,
       ),
     );
   }
@@ -333,6 +348,7 @@ class SmsIngestor {
     required String? duplicateOfTxnId,
     required DecisionStatus status,
     CategorizationResult? categorization,
+    MerchantResolution? merchant,
   }) {
     final timestamp = _now().toUtc();
     return TransactionsCompanion.insert(
@@ -343,6 +359,7 @@ class SmsIngestor {
       channel: record.channel.wireName,
       accountHint: Value(record.accountHint),
       merchantRaw: Value(record.merchantRaw),
+      merchantId: Value(merchant?.merchantId),
       counterpartyVpa: Value(record.counterpartyVpa),
       balanceAfter: Value(record.balanceAfter),
       refId: Value(record.refId),
@@ -358,9 +375,11 @@ class SmsIngestor {
             'provenance': record.templateProvenance,
         },
         'merchant': {
-          'v': record.merchantRaw ?? record.counterpartyVpa,
-          'c': record.parseConfidence,
-          'src': record.parseSource.wireName,
+          'v': merchant?.canonicalName ??
+              record.merchantRaw ??
+              record.counterpartyVpa,
+          'c': merchant?.confidence ?? record.parseConfidence,
+          'src': merchant?.source ?? record.parseSource.wireName,
         },
         if (categorization != null)
           'category': {

@@ -8,6 +8,7 @@ import '../models/normalized_transaction_record.dart';
 import '../models/transaction_confidence_trail.dart';
 import 'rule_repository.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
+import '../../enrichment/merchant_resolver.dart';
 
 /// User input for a manually entered transaction (T-037).
 ///
@@ -504,6 +505,22 @@ class TransactionRepository {
           updatedAt: Value(now),
         ),
       );
+      // The correction's category feedback is the classifier training example.
+      // When a resolver already linked this transaction, teach its normalized
+      // raw spelling as a learned alias in the same transaction as the rule.
+      final rawAlias = row.merchantRaw;
+      if (row.merchantId != null &&
+          rawAlias != null &&
+          rawAlias.trim().isNotEmpty) {
+        await _database.into(_database.merchantAliases).insertOnConflictUpdate(
+              MerchantAliasesCompanion.insert(
+                alias: MerchantResolver.normalizeAlias(rawAlias),
+                merchantId: row.merchantId!,
+                source: 'learned',
+                confidence: 1,
+              ),
+            );
+      }
       for (final feedbackRow in feedbackRows) {
         await _database.into(_database.feedback).insert(feedbackRow);
       }

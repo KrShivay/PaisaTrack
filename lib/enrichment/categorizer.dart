@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/repositories/rule_repository.dart';
+import 'local_classifier.dart';
 import 'seed_category_map.dart';
 
 /// Outcome of one categorizer ladder run (PLAN §7.4).
@@ -36,8 +39,10 @@ class Categorizer {
   const Categorizer({
     required RuleRepository rules,
     required SeedCategoryMap seedMap,
+    LocalClassifier? classifier,
   })  : _rules = rules,
-        _seedMap = seedMap;
+        _seedMap = seedMap,
+        _classifier = classifier;
 
   static const seedConfidence = 0.8;
   static const fallbackConfidence = 0.3;
@@ -45,11 +50,13 @@ class Categorizer {
 
   final RuleRepository _rules;
   final SeedCategoryMap _seedMap;
+  final LocalClassifier? _classifier;
 
   /// Runs the ladder for one parsed record. Rules always win.
   Future<CategorizationResult> categorize(
-    NormalizedTransactionRecord record,
-  ) async {
+    NormalizedTransactionRecord record, {
+    Float32List? merchantEmbedding,
+  }) async {
     final rule = await _rules.findMatch(
       merchantRaw: record.merchantRaw,
       counterpartyVpa: record.counterpartyVpa,
@@ -60,6 +67,18 @@ class Categorizer {
         confidence: 1.0,
         source: 'rule',
         ruleId: rule.id,
+      );
+    }
+
+    final prediction = await _classifier?.predict(
+      record,
+      merchantEmbedding: merchantEmbedding,
+    );
+    if (prediction != null && prediction.confidence >= .8) {
+      return CategorizationResult(
+        categoryId: prediction.categoryId,
+        confidence: prediction.confidence,
+        source: 'classifier',
       );
     }
 
@@ -95,5 +114,6 @@ final categorizerProvider = FutureProvider<Categorizer>((ref) async {
   return Categorizer(
     rules: ref.watch(ruleRepositoryProvider(database)),
     seedMap: seedMap,
+    classifier: LocalClassifier(database),
   );
 });

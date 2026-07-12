@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../dashboard/dashboard_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
+import '../dev/model_metrics_screen.dart';
 import '../recurring/recurring_screen.dart';
 import '../review/weekly_review_screen.dart';
 import '../settings/settings_screen.dart';
@@ -51,6 +52,12 @@ class _HomeShellState extends State<HomeShell> {
     selectedIcon: Icons.bug_report,
     label: 'Dev',
   );
+  static const _metrics = _Tab(
+    screen: ModelMetricsScreen(),
+    icon: Icons.query_stats_outlined,
+    selectedIcon: Icons.query_stats,
+    label: 'Metrics',
+  );
   static const _settings = _Tab(
     screen: SettingsScreen(),
     icon: Icons.settings_outlined,
@@ -64,6 +71,7 @@ class _HomeShellState extends State<HomeShell> {
     _review,
     _recurring,
     if (kDebugMode) _dev,
+    if (kDebugMode) _metrics,
     _settings,
   ];
 

@@ -120,10 +120,13 @@ void main() {
     final confidence =
         jsonDecode(transactions.single.confidenceJson) as Map<String, Object?>;
     expect(confidence['parser'], {'c': 0.97, 'src': 'template'});
+    // T-051: the merchant block now comes from MerchantResolver, not the raw
+    // parser record. There's no platform embedder channel in this widget
+    // test host, so resolution falls back to 'unembedded' at confidence 0.
     expect(confidence['merchant'], {
       'v': 'AMZN*MKTPLC',
-      'c': 0.97,
-      'src': 'template',
+      'c': 0.0,
+      'src': 'unembedded',
     });
     expect(confidence['category'], {'c': 0.8, 'src': 'seed'});
   });
