@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../core/theme/category_visuals.dart';
-import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
+import '../../core/widgets/category_picker_sheet.dart';
+import '../../core/widgets/transaction_components.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
@@ -88,8 +87,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     if (!mounted) return;
     final chosen = await showModalBottomSheet<Category>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => _CategoryPickerSheet(categories: categories),
+      builder: (context) => CategoryPickerSheet(
+        categories: categories,
+        title: 'Move to category',
+      ),
     );
     if (chosen == null || !mounted) return;
 
@@ -288,8 +291,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           return _GroupHeader(label: row.header!);
         }
         final item = row.item!;
-        final tile = _TransactionTile(
-          item: item,
+        final tile = TransactionTile(
+          merchantName: item.displayName,
+          amount: item.amount,
+          direction: item.direction,
+          categoryLabel: item.categoryName ?? 'Uncategorized',
+          timeLabel: formatTxnTime(item.ts),
+          categoryId: item.categoryId,
+          categoryIcon: item.categoryIcon,
+          categoryIsSpending: item.categoryIsSpending,
           selected: _selected.contains(item.id),
           onTap: () => _selectionMode
               ? _toggleSelected(item.id)
@@ -435,161 +445,6 @@ class _EntranceAnimation extends StatelessWidget {
             Transform.translate(offset: Offset(0, 8 * (1 - t)), child: child),
       ),
       child: child,
-    );
-  }
-}
-
-/// Bottom sheet listing categories to apply to the selected transactions.
-class _CategoryPickerSheet extends StatelessWidget {
-  const _CategoryPickerSheet({required this.categories});
-
-  final List<Category> categories;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-            child: Text(
-              'Move to category',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final color = CategoryVisuals.color(category.id);
-                return ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      CategoryVisuals.icon(category.icon),
-                      size: 20,
-                      color: color,
-                    ),
-                  ),
-                  title: Text(category.name),
-                  onTap: () => Navigator.of(context).pop(category),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TransactionTile extends StatelessWidget {
-  const _TransactionTile({
-    required this.item,
-    required this.selected,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  final TransactionListItem item;
-  final bool selected;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final paisa = PaisaColors.of(context);
-    final isCredit = item.direction == TransactionDirection.credit;
-    final sign = isCredit ? '+' : '-';
-    final categoryColor = CategoryVisuals.color(item.categoryId);
-    final categoryLabel = item.categoryName ?? 'Uncategorized';
-
-    // Credit -> credit hue; spending debit -> debit hue; non-spending debit
-    // (transfers, cash withdrawals) -> neutral onSurface (design-system §5).
-    final Color amountColor;
-    if (isCredit) {
-      amountColor = paisa.credit;
-    } else if (!item.categoryIsSpending) {
-      amountColor = theme.colorScheme.onSurface;
-    } else {
-      amountColor = paisa.debit;
-    }
-
-    final leading = selected
-        ? Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.check,
-              size: 20,
-              color: theme.colorScheme.onPrimary,
-            ),
-          )
-        : Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              CategoryVisuals.icon(item.categoryIcon),
-              size: 20,
-              color: categoryColor,
-            ),
-          );
-
-    return ListTile(
-      selected: selected,
-      selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
-      onTap: onTap,
-      onLongPress: onLongPress,
-      leading: Semantics(
-        label: selected ? 'Selected, $categoryLabel' : categoryLabel,
-        child: leading,
-      ),
-      title: Text(
-        item.displayName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '$categoryLabel · ${formatTxnTime(item.ts)}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-      trailing: Text(
-        '$sign${formatInr(item.amount)}',
-        style: theme.textTheme.titleMedium?.copyWith(
-          color: amountColor,
-          fontWeight: FontWeight.w600,
-          fontFeatures: AppTheme.tabularFigures,
-        ),
-      ),
     );
   }
 }

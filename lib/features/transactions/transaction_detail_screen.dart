@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
-import '../../data/db/database.dart' show Transaction;
+import '../../core/widgets/category_picker_sheet.dart';
+import '../../core/widgets/transaction_components.dart';
+import '../../data/db/database.dart' show Category, Transaction;
 import '../../data/db/database_provider.dart';
+import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'transactions_providers.dart';
 
@@ -146,6 +147,29 @@ class _TransactionDetailScreenState
     }
   }
 
+  Future<void> _chooseCategory(List<Category> categories) async {
+    final chosen = await showModalBottomSheet<Category>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => CategoryPickerSheet(
+        categories: categories,
+        currentCategoryId: _categoryId,
+        suggestedCategoryIds: [
+          if (_categoryId != null) _categoryId!,
+          'transfers',
+          'other',
+        ],
+        explanations: {
+          if (_categoryId != null) _categoryId!: 'Current category',
+          'transfers': 'Use for self-transfers or excluded movement',
+        },
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    setState(() => _categoryId = chosen.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final detail = ref.watch(transactionDetailProvider(widget.txnId));
@@ -170,10 +194,11 @@ class _TransactionDetailScreenState
   Widget _buildDetail(BuildContext context, TransactionDetail detail) {
     _seedEdits(detail);
     final theme = Theme.of(context);
-    final paisa = PaisaColors.of(context);
     final localizations = MaterialLocalizations.of(context);
     final txn = detail.txn;
     final isCredit = txn.direction == 'credit';
+    final direction =
+        isCredit ? TransactionDirection.credit : TransactionDirection.debit;
     final ts =
         DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true).toLocal();
     final categories = ref.watch(categoryListProvider);
@@ -181,12 +206,11 @@ class _TransactionDetailScreenState
     return ListView(
       padding: AppSpacing.screen,
       children: [
-        Text(
-          '${isCredit ? '+' : '-'}${formatInr(txn.amount)}',
+        TransactionAmount(
+          amount: txn.amount,
+          direction: direction,
           style: theme.textTheme.headlineMedium?.copyWith(
-            color: isCredit ? paisa.credit : paisa.debit,
             fontWeight: FontWeight.w600,
-            fontFeatures: AppTheme.tabularFigures,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -202,22 +226,9 @@ class _TransactionDetailScreenState
         // id is always among the dropdown's items (a stale/unknown id would
         // otherwise trip the dropdown's value assertion).
         switch (categories) {
-          AsyncData(:final value) => DropdownButtonFormField<String?>(
-              initialValue:
-                  value.any((c) => c.id == _categoryId) ? _categoryId : null,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Uncategorized'),
-                ),
-                for (final category in value)
-                  DropdownMenuItem<String?>(
-                    value: category.id,
-                    child: Text(category.name),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _categoryId = value),
+          AsyncData(:final value) => _CategoryField(
+              categoryName: _selectedCategoryName(value),
+              onTap: () => _chooseCategory(value),
             ),
           _ => const TextField(
               enabled: false,
@@ -303,6 +314,42 @@ class _TransactionDetailScreenState
           ),
         ),
       ],
+    );
+  }
+
+  String _selectedCategoryName(List<Category> categories) {
+    for (final category in categories) {
+      if (category.id == _categoryId) return category.name;
+    }
+    return 'Uncategorized';
+  }
+}
+
+class _CategoryField extends StatelessWidget {
+  const _CategoryField({
+    required this.categoryName,
+    required this.onTap,
+  });
+
+  final String categoryName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Category, $categoryName',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: onTap,
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Category',
+            suffixIcon: Icon(Icons.expand_more),
+          ),
+          child: Text(categoryName),
+        ),
+      ),
     );
   }
 }

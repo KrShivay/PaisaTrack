@@ -150,7 +150,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Bookstore'), findsOneWidget);
-    expect(find.text('Shopping'), findsOneWidget);
+    expect(find.textContaining('Shopping'), findsOneWidget);
     expect(find.text('-₹1,299.00'), findsOneWidget);
   });
 

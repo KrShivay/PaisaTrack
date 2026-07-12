@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../core/theme/category_visuals.dart';
-import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
+import '../../core/widgets/transaction_components.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -266,56 +264,31 @@ class _ReviewTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final paisa = PaisaColors.of(context);
-    final isCredit = item.direction == TransactionDirection.credit;
-    final amountColor = isCredit ? paisa.credit : paisa.debit;
-    final categoryColor = CategoryVisuals.color(item.categoryId);
-
-    return ListTile(
-      onTap: () => _showCorrectionSheet(context, ref, item),
-      leading: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Checkbox(
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.sm),
+          child: Checkbox(
             key: ValueKey('select_${item.id}'),
             value: selected,
             onChanged: (value) => onSelected(value ?? false),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              CategoryVisuals.icon(item.categoryIcon),
-              size: 20,
-              color: categoryColor,
-            ),
+        ),
+        Expanded(
+          child: TransactionTile(
+            merchantName: item.displayName,
+            amount: item.amount,
+            direction: item.direction,
+            categoryLabel: item.categoryName ?? 'Uncategorized',
+            timeLabel: formatTxnTime(item.ts),
+            categoryId: item.categoryId,
+            categoryIcon: item.categoryIcon,
+            statusLabel: item.status == 'needs_review' ? 'Needs review' : null,
+            selected: selected,
+            onTap: () => _showCorrectionSheet(context, ref, item),
           ),
-        ],
-      ),
-      title: Text(
-        item.displayName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        item.categoryName ?? 'Uncategorized',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
         ),
-      ),
-      trailing: Text(
-        '${isCredit ? '+' : '-'}${formatInr(item.amount)}',
-        style: theme.textTheme.titleMedium?.copyWith(
-          color: amountColor,
-          fontWeight: FontWeight.w600,
-          fontFeatures: AppTheme.tabularFigures,
-        ),
-      ),
+      ],
     );
   }
 }
