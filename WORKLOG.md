@@ -8,6 +8,12 @@
 - Open questions: none.
 - Next: @codex adds the T-075 evidence/WORKLOG entry and resubmits; once T-075 is Done, T-076 still needs T-064 (Phase 3 exit) before it can be groomed into Ready.
 
+## 2026-07-12 @codex — Independent review T-075: REQUEST CHANGES
+
+- Reviewed implementation commit `d1d68b6` against T-075 and ADR 0008. The earlier evidence-only review is insufficient: code review found three functional blockers. A full-size `.part` file requests an EOF range and can remain permanently stuck instead of being verified/promoted; the configure-local `LlmBridge`/MediaPipe engine is not closed from `cleanUpFlutterEngine`; and Dart's claimed strict schema validator ignores `enum`, allowing out-of-whitelist values.
+- GitNexus: `impact(PlatformLlmRuntime, upstream, includeTests)` LOW/lower-bound, 4 direct / 6 total / one test process; `impact(MainActivity, upstream)` LOW/exact, zero upstream; `context(LlmBridge)` confirms MainActivity is its only importer.
+- Verification: `flutter analyze --no-pub` clean; focused LLM + Settings tests 8/8; Android `:app:compileDebugKotlin` BUILD SUCCESSFUL. Existing Gradle/Kotlin deprecation warnings and the known Drift test warning are unrelated. Task remains In Progress pending fixes and regression tests.
+
 ## 2026-07-12 @codex — Review T-083 + T-080/T-081/T-082: PASS → Done
 
 - Reviewed commit `baca232` against all four ACs. T-083 covers the constrained intent schema, exhaustive six-intent whitelist, deterministic repository mapping, QueryResult-only grounding, refusal/no-advice rules, local-only handling, and implementation tests; tightened it to require escaped merchant `LIKE` literals and corrected `next_due` to the real `next_expected_date` field. T-080/T-081/T-082 cover all requested privacy/correctness cases with non-vacuous tests.
