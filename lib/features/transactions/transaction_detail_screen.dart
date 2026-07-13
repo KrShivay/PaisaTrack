@@ -35,6 +35,8 @@ class _TransactionDetailScreenState
   final _descriptionController = TextEditingController();
   bool _editsSeeded = false;
   String? _categoryId;
+  String? _initialCategoryId;
+  String _initialDescription = '';
   bool _saving = false;
   bool _savingParseVerdict = false;
 
@@ -50,7 +52,18 @@ class _TransactionDetailScreenState
     if (_editsSeeded) return;
     _editsSeeded = true;
     _categoryId = detail.txn.categoryId;
-    _descriptionController.text = detail.txn.description ?? '';
+    _initialCategoryId = detail.txn.categoryId;
+    _initialDescription = detail.txn.description ?? '';
+    _descriptionController.text = _initialDescription;
+    _descriptionController.addListener(_handleEdit);
+  }
+
+  bool get _isDirty =>
+      _categoryId != _initialCategoryId ||
+      _descriptionController.text.trim() != _initialDescription.trim();
+
+  void _handleEdit() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _save() async {
@@ -65,7 +78,13 @@ class _TransactionDetailScreenState
         description: Value(description.isEmpty ? null : description),
       );
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          if (written > 0) {
+            _initialCategoryId = _categoryId;
+            _initialDescription = description;
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(written > 0 ? 'Saved' : 'No changes to save'),
@@ -175,7 +194,16 @@ class _TransactionDetailScreenState
     final detail = ref.watch(transactionDetailProvider(widget.txnId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transaction')),
+      appBar: AppBar(
+        title: const Text('Transaction'),
+        actions: [
+          if (_editsSeeded && _isDirty)
+            TextButton(
+              onPressed: _saving ? null : _save,
+              child: Text(_saving ? 'Saving…' : 'Save'),
+            ),
+        ],
+      ),
       body: switch (detail) {
         AsyncData(:final value?) => _buildDetail(context, value),
         AsyncData() => const EmptyStateView(
@@ -202,10 +230,25 @@ class _TransactionDetailScreenState
     final ts =
         DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true).toLocal();
     final categories = ref.watch(categoryListProvider);
+    final merchantName =
+        detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
+    final categoryName = switch (categories) {
+      AsyncData(:final value) => _selectedCategoryName(value),
+      _ => 'Uncategorized',
+    };
 
     return ListView(
       padding: AppSpacing.screen,
       children: [
+        Text(
+          merchantName,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         TransactionAmount(
           amount: txn.amount,
           direction: direction,
@@ -217,6 +260,16 @@ class _TransactionDetailScreenState
         Text(
           '${localizations.formatMediumDate(ts)} · '
           '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(ts))}',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          [categoryName, txn.channel.toUpperCase(), txn.accountHint]
+              .whereType<String>()
+              .where((value) => value.isNotEmpty)
+              .join(' · '),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -241,11 +294,6 @@ class _TransactionDetailScreenState
           decoration: const InputDecoration(labelText: 'Description'),
           textCapitalization: TextCapitalization.sentences,
         ),
-        const SizedBox(height: AppSpacing.lg),
-        FilledButton(
-          onPressed: _saving ? null : _save,
-          child: const Text('Save changes'),
-        ),
         if (detail.isLowTrustParse) ...[
           const SizedBox(height: AppSpacing.lg),
           _ParseConfirmationCard(
@@ -255,62 +303,72 @@ class _TransactionDetailScreenState
           ),
         ],
         const SizedBox(height: AppSpacing.xl),
-        _FieldRow(label: 'Direction', value: txn.direction),
-        _FieldRow(label: 'Channel', value: txn.channel),
-        _FieldRow(
-          label: 'Merchant',
-          value: detail.merchantName ?? txn.merchantRaw,
+        _DetailSection(
+          title: 'Why this category?',
+          initiallyExpanded: true,
+          child: Text(
+            _categoryExplanation(detail),
+            style: theme.textTheme.bodyMedium,
+          ),
         ),
-        _FieldRow(label: 'Counterparty VPA', value: txn.counterpartyVpa),
-        _FieldRow(label: 'Account', value: txn.accountHint),
-        _FieldRow(
-          label: 'Balance after',
-          value: txn.balanceAfter == null ? null : formatInr(txn.balanceAfter!),
+        _DetailSection(
+          title: 'Transaction details',
+          child: Column(
+            children: [
+              _FieldRow(label: 'Direction', value: txn.direction),
+              _FieldRow(label: 'Channel', value: txn.channel),
+              _FieldRow(label: 'Account', value: txn.accountHint),
+              _FieldRow(
+                label: 'Balance after',
+                value: txn.balanceAfter == null
+                    ? null
+                    : formatInr(txn.balanceAfter!),
+              ),
+              _FieldRow(label: 'Reference', value: txn.refId),
+              _FieldRow(
+                label: 'Counterparty VPA',
+                value: txn.counterpartyVpa,
+              ),
+              _FieldRow(label: 'SMS source', value: txn.parseSource),
+            ],
+          ),
         ),
-        _FieldRow(label: 'Reference', value: txn.refId),
-        _FieldRow(label: 'Status', value: txn.status),
-        const SizedBox(height: AppSpacing.xl),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Confidence trail', style: theme.textTheme.titleSmall),
-                const SizedBox(height: AppSpacing.sm),
-                _FieldRow(label: 'Parse source', value: txn.parseSource),
-                _FieldRow(
-                  label: 'Parse confidence',
-                  value: detail.parseConfidence?.toStringAsFixed(2),
-                ),
-                _FieldRow(
-                  label: 'Merchant value',
-                  value: detail.confidenceTrail.merchant?.value?.toString(),
-                ),
-                _FieldRow(
-                  label: 'Merchant source',
-                  value: detail.confidenceTrail.merchant?.source,
-                ),
-                _FieldRow(
-                  label: 'Merchant confidence',
-                  value: detail.confidenceTrail.merchant?.confidence
-                      ?.toStringAsFixed(2),
-                ),
-                _FieldRow(
-                  label: 'Category source',
-                  value: detail.confidenceTrail.category?.source,
-                ),
-                _FieldRow(
-                  label: 'Category confidence',
-                  value: detail.confidenceTrail.category?.confidence
-                      ?.toStringAsFixed(2),
-                ),
-                _FieldRow(
-                  label: 'Category rule',
-                  value: detail.confidenceTrail.category?.ruleId,
-                ),
-              ],
-            ),
+        _DetailSection(
+          title: 'Developer details',
+          child: Column(
+            children: [
+              _FieldRow(label: 'Parse source', value: txn.parseSource),
+              _FieldRow(
+                label: 'Parse confidence',
+                value: detail.parseConfidence?.toStringAsFixed(2),
+              ),
+              _FieldRow(
+                label: 'Merchant value',
+                value: detail.confidenceTrail.merchant?.value?.toString(),
+              ),
+              _FieldRow(
+                label: 'Merchant source',
+                value: detail.confidenceTrail.merchant?.source,
+              ),
+              _FieldRow(
+                label: 'Merchant confidence',
+                value: detail.confidenceTrail.merchant?.confidence
+                    ?.toStringAsFixed(2),
+              ),
+              _FieldRow(
+                label: 'Category source',
+                value: detail.confidenceTrail.category?.source,
+              ),
+              _FieldRow(
+                label: 'Category confidence',
+                value: detail.confidenceTrail.category?.confidence
+                    ?.toStringAsFixed(2),
+              ),
+              _FieldRow(
+                label: 'Category rule',
+                value: detail.confidenceTrail.category?.ruleId,
+              ),
+            ],
           ),
         ),
       ],
@@ -322,6 +380,45 @@ class _TransactionDetailScreenState
       if (category.id == _categoryId) return category.name;
     }
     return 'Uncategorized';
+  }
+
+  String _categoryExplanation(TransactionDetail detail) {
+    final source = detail.confidenceTrail.category?.source?.toLowerCase();
+    if (source?.contains('rule') ?? false) {
+      return 'Suggested from your rule for this merchant.';
+    }
+    if (source?.contains('feedback') ?? false) {
+      return 'Previously used for similar transactions.';
+    }
+    if (source?.contains('seed') ?? false) {
+      return 'Suggested from PaisaTrack’s category mapping.';
+    }
+    return detail.txn.categoryId == null
+        ? 'Choose a category to help organise this transaction.'
+        : 'This category needs your confirmation when it looks incorrect.';
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
+    required this.title,
+    required this.child,
+    this.initiallyExpanded = false,
+  });
+
+  final String title;
+  final Widget child;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.md),
+      initiallyExpanded: initiallyExpanded,
+      title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      children: [Align(alignment: Alignment.centerLeft, child: child)],
+    );
   }
 }
 

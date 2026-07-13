@@ -330,7 +330,7 @@ void main() {
       }
     }
 
-    testWidgets('renders the frozen-contract fields and confidence trail',
+    testWidgets('progressively discloses transaction and developer details',
         (tester) async {
       await pumpDetail(tester);
 
@@ -338,25 +338,35 @@ void main() {
       expect(find.text('AMZN*MKTPLC'), findsOneWidget);
       // The category dropdown sits near the top, above the field rows.
       expect(find.text('Food & Dining'), findsOneWidget);
-      expect(find.text('amazon@ybl'), findsOneWidget);
-      expect(find.text('xx4521'), findsOneWidget);
-      expect(find.text('₹12,384.50'), findsOneWidget);
-      expect(find.text('615223847712'), findsOneWidget);
+      expect(find.text('Save'), findsNothing);
+      expect(find.text('amazon@ybl'), findsNothing);
+      expect(find.text('615223847712'), findsNothing);
       expect(find.text('Parsed correctly?'), findsNothing);
 
       // The remaining fields sit below the 600x800 test viewport and the
       // ListView builds lazily, so scroll each into view before asserting.
       Future<void> revealAndExpect(String text) async {
         await tester.scrollUntilVisible(
-          find.text(text),
+          find.text(text).first,
           80,
           scrollable: find.byType(Scrollable).first,
         );
-        expect(find.text(text), findsOneWidget);
+        expect(find.text(text), findsWidgets);
       }
 
-      await revealAndExpect('auto');
-      await revealAndExpect('Confidence trail');
+      await revealAndExpect('Transaction details');
+      await tester.tap(find.text('Transaction details'));
+      await tester.pumpAndSettle();
+      await revealAndExpect('amazon@ybl');
+      await revealAndExpect('₹12,384.50');
+      await revealAndExpect('615223847712');
+      await tester.ensureVisible(find.text('Transaction details'));
+      await tester.tap(find.text('Transaction details'));
+      await tester.pumpAndSettle();
+      await revealAndExpect('Developer details');
+      expect(find.text('0.97'), findsNothing);
+      await tester.tap(find.text('Developer details'));
+      await tester.pumpAndSettle();
       await revealAndExpect('template');
       await revealAndExpect('0.97');
 
@@ -377,9 +387,10 @@ void main() {
         'Books order',
       );
 
-      await tester.ensureVisible(find.text('Save changes'));
-      await tester.tap(find.text('Save changes'));
+      expect(find.text('Save'), findsOneWidget);
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
+      expect(find.text('Save'), findsNothing);
 
       final txn = await (database.select(database.transactions)
             ..where((t) => t.id.equals('txn_1')))
