@@ -7,6 +7,7 @@ import '../../core/theme/category_visuals.dart';
 import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/transaction_components.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/db/database.dart';
 import 'dashboard_providers.dart';
 
 /// Section heading shared across dashboard cards. Quiet, uppercase-free label
@@ -30,6 +31,79 @@ class SectionLabel extends StatelessWidget {
     );
   }
 }
+
+class UpcomingRecurringCard extends StatelessWidget {
+  const UpcomingRecurringCard({
+    super.key,
+    required this.series,
+    required this.onViewAll,
+  });
+
+  final List<RecurringSery> series;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Upcoming', style: theme.textTheme.titleMedium),
+                ),
+                TextButton(onPressed: onViewAll, child: const Text('View all')),
+              ],
+            ),
+            for (final item in series)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: SizedBox(
+                  width: 48,
+                  child: Text(
+                    '${item.nextExpectedDate.toLocal().day} '
+                    '${_shortMonth(item.nextExpectedDate.toLocal().month)}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ),
+                title: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Text(
+                  formatInr(item.expectedAmount),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontFeatures: AppTheme.tabularFigures,
+                  ),
+                ),
+                onTap: onViewAll,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _shortMonth(int month) => const [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][month - 1];
 
 /// A labelled money amount card. [compact] tightens padding and type for the
 /// two-up summary row; the full form keeps the leading icon disc.

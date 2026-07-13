@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/db/database.dart';
+import '../recurring/recurring_screen.dart';
 import '../transactions/transactions_providers.dart';
 
 class MonthDirectionTotals {
@@ -306,4 +308,13 @@ final recentTransactionsProvider = Provider<List<TransactionListItem>>((ref) {
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   return transactions.take(6).toList(growable: false);
+});
+
+final upcomingRecurringProvider = Provider<List<RecurringSery>>((ref) {
+  final series = ref.watch(recurringSeriesProvider).valueOrNull ?? const [];
+  final upcoming = series
+      .where((item) => item.status != 'inactive')
+      .toList(growable: false)
+    ..sort((a, b) => a.nextExpectedDate.compareTo(b.nextExpectedDate));
+  return upcoming.take(3).toList(growable: false);
 });

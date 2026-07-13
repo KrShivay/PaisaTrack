@@ -5,6 +5,7 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../assistant/assistant_screen.dart';
 import '../review/weekly_review_screen.dart';
+import '../recurring/recurring_screen.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transaction_detail_screen.dart';
 import '../transactions/transactions_screen.dart';
@@ -42,6 +43,7 @@ class DashboardScreen extends ConsumerWidget {
     final trend = ref.watch(sixMonthTrendProvider);
     final reviewAttention = ref.watch(reviewAttentionProvider);
     final recent = ref.watch(recentTransactionsProvider);
+    final upcoming = ref.watch(upcomingRecurringProvider);
 
     final now = DateTime.now();
     final hasActivity = totals.debitTotal > 0 || totals.creditTotal > 0;
@@ -163,6 +165,17 @@ class DashboardScreen extends ConsumerWidget {
               onTransactionTap: (id) => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => TransactionDetailScreen(txnId: id),
+                ),
+              ),
+            ),
+          ],
+          if (upcoming.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            UpcomingRecurringCard(
+              series: upcoming,
+              onViewAll: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const RecurringScreen(),
                 ),
               ),
             ),

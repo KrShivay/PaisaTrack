@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
+import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
+import 'package:paisatrack/features/recurring/recurring_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
 void main() {
@@ -29,13 +31,16 @@ void main() {
 
   Future<void> pumpDashboard(
     WidgetTester tester,
-    List<TransactionListItem> items,
-  ) async {
+    List<TransactionListItem> items, {
+    List<RecurringSery> recurring = const [],
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           transactionListProvider.overrideWith((ref) => Stream.value(items)),
           reviewQueueProvider.overrideWith((ref) => Stream.value(const [])),
+          recurringSeriesProvider
+              .overrideWith((ref) => Stream.value(recurring)),
         ],
         child: const MaterialApp(home: DashboardScreen()),
       ),
@@ -43,6 +48,37 @@ void main() {
     await tester.pump();
     await tester.pump();
   }
+
+  testWidgets('shows the next recurring items with a full-list action',
+      (tester) async {
+    final now = DateTime.now();
+    await pumpDashboard(
+      tester,
+      const [],
+      recurring: [
+        RecurringSery(
+          id: 'emi',
+          merchantId: 'home_loan',
+          label: 'Home loan EMI',
+          expectedAmount: 24500,
+          tolerancePct: 0.05,
+          period: 'monthly',
+          periodDays: 30,
+          nextExpectedDate: DateTime(now.year, now.month, now.day + 2),
+          lastAmount: 24500,
+          amountTrend: 'flat',
+          occurrences: 4,
+          status: 'active',
+          kind: 'emi',
+        ),
+      ],
+    );
+
+    await tester.scrollUntilVisible(find.text('Home loan EMI'), 120);
+    expect(find.text('Upcoming'), findsOneWidget);
+    expect(find.text('₹24,500.00'), findsOneWidget);
+    expect(find.text('View all'), findsOneWidget);
+  });
 
   testWidgets('renders hero financial summary for this month', (tester) async {
     final now = DateTime.now();
