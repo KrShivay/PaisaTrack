@@ -1,18 +1,16 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/app_state_views.dart';
+import '../../core/widgets/category_picker_sheet.dart';
 import '../../core/widgets/transaction_components.dart';
+import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
-import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transactions_providers.dart';
-import '../transactions/transaction_detail_screen.dart'
-    show showParseCorrectionSheet;
 
 class WeeklyReviewScreen extends ConsumerStatefulWidget {
   const WeeklyReviewScreen({super.key});
@@ -23,6 +21,7 @@ class WeeklyReviewScreen extends ConsumerStatefulWidget {
 
 class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   final Set<String> _selectedIds = {};
+  _ReviewMode _mode = _ReviewMode.quick;
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +44,14 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       ),
       body: switch (queue) {
         AsyncData(:final value) when value.isEmpty => const _EmptyReviewState(),
-        AsyncData(:final value) => _ReviewList(
+        AsyncData(:final value) => _ReviewCentre(
             items: value,
+            mode: _mode,
             selectedIds: _visibleSelection(value),
+            onModeChanged: (mode) => setState(() {
+              _mode = mode;
+              if (mode != _ReviewMode.bulk) _selectedIds.clear();
+            }),
             onToggle: _toggle,
             onSelectAll: () => _selectAll(value),
             onConfirmSelected: () => _confirm(
@@ -57,6 +61,10 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
             onConfirmGroup: (ids) => _confirm(
               ids,
               successLabel: 'group transactions confirmed',
+            ),
+            onConfirmOne: (id) => _confirm(
+              [id],
+              successLabel: 'transaction confirmed',
             ),
           ),
         AsyncError() => const ErrorStateView(
@@ -116,6 +124,192 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   }
 }
 
+enum _ReviewMode { quick, list, bulk }
+
+class _ReviewCentre extends StatelessWidget {
+  const _ReviewCentre({
+    required this.items,
+    required this.mode,
+    required this.selectedIds,
+    required this.onModeChanged,
+    required this.onToggle,
+    required this.onSelectAll,
+    required this.onConfirmSelected,
+    required this.onConfirmGroup,
+    required this.onConfirmOne,
+  });
+
+  final List<TransactionReviewItem> items;
+  final _ReviewMode mode;
+  final Set<String> selectedIds;
+  final ValueChanged<_ReviewMode> onModeChanged;
+  final void Function(String id, bool selected) onToggle;
+  final VoidCallback onSelectAll;
+  final VoidCallback onConfirmSelected;
+  final void Function(Set<String> ids) onConfirmGroup;
+  final ValueChanged<String> onConfirmOne;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = items.fold<double>(0, (sum, item) => sum + item.amount);
+    final merchants = items
+        .map((item) => item.counterpartyKey ?? item.displayName)
+        .toSet()
+        .length;
+    return Column(
+      children: [
+        Padding(
+          padding: AppSpacing.screen.copyWith(bottom: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${items.length} transactions need review',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '${formatInr(total)} total · From $merchants merchants',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SegmentedButton<_ReviewMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: _ReviewMode.quick,
+                    label: Text('Quick'),
+                    icon: Icon(Icons.bolt_outlined),
+                  ),
+                  ButtonSegment(
+                    value: _ReviewMode.list,
+                    label: Text('List'),
+                    icon: Icon(Icons.view_list_outlined),
+                  ),
+                  ButtonSegment(
+                    value: _ReviewMode.bulk,
+                    label: Text('Select'),
+                    icon: Icon(Icons.checklist_outlined),
+                  ),
+                ],
+                selected: {mode},
+                onSelectionChanged: (value) => onModeChanged(value.single),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: switch (mode) {
+            _ReviewMode.quick => _QuickReview(
+                item: items.first,
+                remainingCount: items.length - 1,
+                onConfirm: () => onConfirmOne(items.first.id),
+              ),
+            _ReviewMode.list => _ReviewList(
+                items: items,
+                selectedIds: const {},
+                onToggle: onToggle,
+                onSelectAll: onSelectAll,
+                onConfirmSelected: onConfirmSelected,
+                onConfirmGroup: onConfirmGroup,
+                bulkMode: false,
+              ),
+            _ReviewMode.bulk => _ReviewList(
+                items: items,
+                selectedIds: selectedIds,
+                onToggle: onToggle,
+                onSelectAll: onSelectAll,
+                onConfirmSelected: onConfirmSelected,
+                onConfirmGroup: onConfirmGroup,
+                bulkMode: true,
+              ),
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickReview extends ConsumerWidget {
+  const _QuickReview({
+    required this.item,
+    required this.remainingCount,
+    required this.onConfirm,
+  });
+
+  final TransactionReviewItem item;
+  final int remainingCount;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: AppSpacing.screen,
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TransactionAmount(
+                  amount: item.amount,
+                  direction: item.direction,
+                  style: theme.textTheme.headlineMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(item.displayName, style: theme.textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.lg),
+                Text('Suggested category', style: theme.textTheme.labelLarge),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  item.categoryName ?? 'Choose a category',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _reviewReason(item),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton(
+                  onPressed: onConfirm,
+                  child: const Text('Confirm'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: () => _showCorrectionSheet(context, ref, item),
+                  child: const Text('Change category'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  '${formatTxnTime(item.ts)}${remainingCount > 0 ? ' · $remainingCount remaining' : ''}',
+                  style: theme.textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _reviewReason(TransactionReviewItem item) {
+  if (item.isLowTrustParse) {
+    return 'Some transaction details need confirmation.';
+  }
+  if (item.categoryId == null) {
+    return 'New merchant · Choose where this belongs.';
+  }
+  return 'Previously used for similar transactions.';
+}
+
 class _ReviewList extends ConsumerWidget {
   const _ReviewList({
     required this.items,
@@ -124,6 +318,7 @@ class _ReviewList extends ConsumerWidget {
     required this.onSelectAll,
     required this.onConfirmSelected,
     required this.onConfirmGroup,
+    required this.bulkMode,
   });
 
   final List<TransactionReviewItem> items;
@@ -132,6 +327,7 @@ class _ReviewList extends ConsumerWidget {
   final VoidCallback onSelectAll;
   final VoidCallback onConfirmSelected;
   final void Function(Set<String> ids) onConfirmGroup;
+  final bool bulkMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -147,33 +343,35 @@ class _ReviewList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Row(
-            children: [
-              Checkbox(
-                value: allSelected
-                    ? true
-                    : someSelected
-                        ? null
-                        : false,
-                tristate: true,
-                onChanged: (_) => onSelectAll(),
-              ),
-              const Expanded(child: Text('Select all visible')),
-              FilledButton.icon(
-                onPressed: someSelected ? onConfirmSelected : null,
-                icon: const Icon(Icons.done_all),
-                label: Text('Confirm selected (${selectedIds.length})'),
-              ),
-            ],
+        if (bulkMode)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: allSelected
+                      ? true
+                      : someSelected
+                          ? null
+                          : false,
+                  tristate: true,
+                  onChanged: (_) => onSelectAll(),
+                ),
+                const Expanded(child: Text('Select all visible')),
+                FilledButton.icon(
+                  onPressed: someSelected ? onConfirmSelected : null,
+                  icon: const Icon(Icons.done_all),
+                  label: Text('Confirm selected (${selectedIds.length})'),
+                ),
+              ],
+            ),
           ),
-        ),
         for (final entry in groups.entries) ...[
           _ReviewGroupHeader(
             groupKey: entry.key,
             label: entry.value.first.displayName,
             count: entry.value.length,
+            total: entry.value.fold(0, (sum, item) => sum + item.amount),
             onConfirm: () =>
                 onConfirmGroup(entry.value.map((item) => item.id).toSet()),
           ),
@@ -181,13 +379,16 @@ class _ReviewList extends ConsumerWidget {
             Dismissible(
               key: ValueKey(item.id),
               direction: DismissDirection.endToStart,
-              background: const ColoredBox(
-                color: Color(0xFF166534),
+              background: ColoredBox(
+                color: Theme.of(context).colorScheme.primaryContainer,
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Padding(
-                    padding: EdgeInsets.only(right: AppSpacing.lg),
-                    child: Icon(Icons.check, color: Colors.white),
+                    padding: const EdgeInsets.only(right: AppSpacing.lg),
+                    child: Icon(
+                      Icons.check,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
                   ),
                 ),
               ),
@@ -199,6 +400,7 @@ class _ReviewList extends ConsumerWidget {
                 item: item,
                 selected: selectedIds.contains(item.id),
                 onSelected: (selected) => onToggle(item.id, selected),
+                bulkMode: bulkMode,
               ),
             ),
             const Divider(height: 1),
@@ -214,12 +416,14 @@ class _ReviewGroupHeader extends StatelessWidget {
     required this.groupKey,
     required this.label,
     required this.count,
+    required this.total,
     required this.onConfirm,
   });
 
   final String groupKey;
   final String label;
   final int count;
+  final double total;
   final VoidCallback onConfirm;
 
   @override
@@ -235,14 +439,14 @@ class _ReviewGroupHeader extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                '$label · $count',
+                '$count similar transaction${count == 1 ? '' : 's'} from $label\n${formatInr(total)} combined',
                 style: Theme.of(context).textTheme.labelLarge,
               ),
             ),
             TextButton(
               key: ValueKey('confirm_group_$groupKey'),
               onPressed: onConfirm,
-              child: const Text('Confirm group'),
+              child: Text(count == 1 ? 'Confirm' : 'Apply to all $count'),
             ),
           ],
         ),
@@ -256,24 +460,27 @@ class _ReviewTile extends ConsumerWidget {
     required this.item,
     required this.selected,
     required this.onSelected,
+    required this.bulkMode,
   });
 
   final TransactionReviewItem item;
   final bool selected;
   final ValueChanged<bool> onSelected;
+  final bool bulkMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.sm),
-          child: Checkbox(
-            key: ValueKey('select_${item.id}'),
-            value: selected,
-            onChanged: (value) => onSelected(value ?? false),
+        if (bulkMode)
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpacing.sm),
+            child: Checkbox(
+              key: ValueKey('select_${item.id}'),
+              value: selected,
+              onChanged: (value) => onSelected(value ?? false),
+            ),
           ),
-        ),
         Expanded(
           child: TransactionTile(
             merchantName: item.displayName,
@@ -335,111 +542,40 @@ Future<void> _showCorrectionSheet(
   final screenContext = context;
   final categories = await ref.read(categoryListProvider.future);
   if (!context.mounted || categories.isEmpty) return;
-  var selectedId = item.categoryId ?? categories.first.id;
 
-  final categoryId = await showModalBottomSheet<String>(
+  final category = await showModalBottomSheet<Category>(
     context: context,
+    isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return Padding(
-            padding: AppSpacing.screen,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Correct category',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                if (item.isLowTrustParse) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Parsed correctly?',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    children: [
-                      FilledButton.tonal(
-                        onPressed: () async {
-                          await _repository(ref).confirmParse(txnId: item.id);
-                          if (screenContext.mounted) {
-                            ScaffoldMessenger.of(screenContext).showSnackBar(
-                              const SnackBar(content: Text('Parse confirmed')),
-                            );
-                          }
-                        },
-                        child: const Text('Confirm parse'),
-                      ),
-                      OutlinedButton(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          final correction = await showParseCorrectionSheet(
-                            screenContext,
-                            amount: item.amount,
-                            direction: item.direction.wireName,
-                            merchantRaw: item.merchantRaw ?? item.displayName,
-                          );
-                          if (correction == null) return;
-                          await _repository(ref).updateWithFeedback(
-                            txnId: item.id,
-                            amount: Value(correction.amount),
-                            direction: Value(correction.direction),
-                            merchantRaw: Value(correction.merchantRaw),
-                            context: 'parse_confirm',
-                            recordParseCorrections: true,
-                          );
-                          if (screenContext.mounted) {
-                            ScaffoldMessenger.of(screenContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Parse correction saved'),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text('Fix parse'),
-                      ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedId,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: [
-                    for (final category in categories)
-                      DropdownMenuItem(
-                        value: category.id,
-                        child: Text(category.name),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => selectedId = value);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pop(selectedId),
-                  icon: const Icon(Icons.check),
-                  label: const Text('Save'),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
+    builder: (context) => CategoryPickerSheet(
+      categories: categories,
+      currentCategoryId: item.categoryId,
+      suggestedCategoryIds: [
+        if (item.categoryId != null) item.categoryId!,
+        'transfers',
+        'other',
+      ],
+      explanations: {
+        if (item.categoryId != null)
+          item.categoryId!: 'Previously used for similar transactions',
+        'transfers': 'Use for self-transfers or excluded movement',
+      },
+    ),
   );
 
-  if (categoryId == null) return;
+  if (category == null) return;
   await _repository(ref).correctWithRule(
     txnId: item.id,
-    categoryId: categoryId,
+    categoryId: category.id,
     context: 'batch_review',
   );
+  if (screenContext.mounted) {
+    ScaffoldMessenger.of(screenContext).showSnackBar(
+      const SnackBar(
+        content: Text('Category updated. PaisaTrack will remember this.'),
+      ),
+    );
+  }
 }
 
 TransactionRepository _repository(WidgetRef ref) {

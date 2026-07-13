@@ -124,7 +124,7 @@ void main() {
     expect(find.byIcon(Icons.task_alt), findsOneWidget);
   });
 
-  testWidgets('renders queued transactions for review', (tester) async {
+  testWidgets('opens in guided quick review mode', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -150,12 +150,14 @@ void main() {
     await tester.pump();
 
     expect(find.text('Bookstore'), findsOneWidget);
-    expect(find.textContaining('Shopping'), findsOneWidget);
+    expect(find.text('Suggested category'), findsOneWidget);
+    expect(find.text('Shopping'), findsOneWidget);
     expect(find.text('-₹1,299.00'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNothing);
   });
 
   testWidgets(
-      'low-trust review rows offer a parse verdict before category correction',
+      'low-trust review rows explain that transaction details need confirmation',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -194,12 +196,11 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('Bookstore'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Parsed correctly?'), findsOneWidget);
-    expect(find.text('Confirm parse'), findsOneWidget);
-    expect(find.text('Fix parse'), findsOneWidget);
+    expect(
+      find.text('Some transaction details need confirmation.'),
+      findsOneWidget,
+    );
+    expect(find.text('Change category'), findsOneWidget);
   });
 
   testWidgets('bulk confirm updates selected statuses only', (tester) async {
@@ -222,6 +223,8 @@ void main() {
     ];
     final database = await pumpActionableScreen(tester, items);
 
+    await tester.tap(find.text('Select'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(Checkbox).first);
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('select_txn_bulk_3')));
@@ -264,7 +267,12 @@ void main() {
     ];
     final database = await pumpActionableScreen(tester, items);
 
-    expect(find.text('Alice · 2'), findsOneWidget);
+    await tester.tap(find.text('List'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('2 similar transactions from Alice'),
+      findsOneWidget,
+    );
     await tester.tap(
       find.byKey(const ValueKey('confirm_group_vpa:alice@upi')),
     );
