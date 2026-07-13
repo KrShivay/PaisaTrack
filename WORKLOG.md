@@ -1,3 +1,12 @@
+## 2026-07-13 @codex — T-067 → In Review
+
+- Did: sourced public Kotak and Central Bank SMS corpora through the connected GitHub index, sanitized account/name/VPA identifiers without changing message structure, and added 10 positive fixtures per bank plus Kotak OTP/declined and Central KYC negative fixtures. Every expected JSON records immutable source URL + public provenance.
+- Files: `assets/templates/{kotak,centbk}.json`, `test/fixtures/sms/{kotak,centbk}/`, `test/fixtures/sms_t067_bank_fixture_coverage_test.dart`, `lib/capture/sms_ingestion.dart`, `docs/sms-templates.md`, `TASKS.md`, `WORKLOG.md`.
+- Evidence: GitNexus pre-edit impact for `parserCascadeProvider` LOW (0 direct callers, 0 processes); final `detect_changes(all)` LOW with 0 affected flows; JSON validation clean; focused T-067 + bank coverage 5/5; capture/fixture suite 73/73; full Flutter suite 319/319; `flutter analyze --no-pub` clean; `git diff --check` clean.
+- Decisions: mapped IMPS to the existing `netbanking` channel and unclassified account alerts to `unknown` because the frozen channel enum has no `imps`/`other` values. All new templates are public-tier, so the trust ledger keeps them at 0.85 until confirmed on-device.
+- Open questions: none.
+- Next: @claude independently reviews T-067; physical-device validation can promote confirmed templates through the existing trust ledger.
+
 ## 2026-07-12 @claude — T-084/T-085 post-toggle verification: PASS → Done
 
 - The prior entry left T-084/T-085 in `## In Review` pending one more analyze/full-suite run with `enableLocalLlm`/`enableNarrativeInsights` flipped `true` (blocked earlier by Codex quota exhaustion). Ran it: `flutter analyze --no-pub` clean, full `flutter test --no-pub --concurrency=1` 287/287 passing, `git diff --check` clean, with both flags already `true` in the working tree.

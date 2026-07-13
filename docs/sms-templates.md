@@ -12,6 +12,36 @@ from confirmation evidence. Omit the field for device (gold-tier) fixtures;
 that is the backward-compatible default and retains the 0.97 template
 confidence. Never label an invented or unsourced fixture as either tier.
 
+## Kotak Mahindra Bank (`assets/templates/kotak.json`)
+
+Sender patterns cover DLT `KOTAKB`/`KOTAKD` IDs and Kotak's RCS display
+name. The public fixtures are sourced from the PennyWiseAI Kotak parser corpus
+and a public SMS classification dataset; every fixture records its immutable
+source URL.
+
+- `kotak_upi_sent_bank_ac_v1` / `kotak_upi_received_bank_ac_v1` — Kotak
+  account UPI sends and receipts with VPA, date, and UPI reference.
+- `kotak_upi_sent_short_v1` — newer short/RCS UPI alerts with a named payee.
+- `kotak_imps_received_v1` — IMPS receipt linked to a masked mobile.
+- `kotak_account_debit_v1` — account debit with available balance.
+- `kotak_card_spent_v1` — credit-card spend with merchant and available limit.
+- OTP and insufficient-limit notices are pinned as negative fixtures.
+
+All templates have public provenance and therefore remain capped at 0.85 until
+device confirmations promote them through the trust ledger.
+
+## Central Bank of India (`assets/templates/centbk.json`)
+
+Sender pattern: `^[A-Z]{2}-?CENTBK(?:-[A-Z])?$`. Fixtures come from two public
+SMS datasets and retain a source URL in each expected JSON file.
+
+- `centbk_dbt_credit_v1` — dated DBT/DBTL credit notice.
+- `centbk_account_credit_v1` / `centbk_account_debit_v1` — compact CBoI
+  account alert with transaction amount, total balance, and clear balance.
+- KYC completion is a same-sender negative fixture.
+
+All Central Bank templates carry public provenance and the 0.85 confidence cap.
+
 ## IndusInd Bank (`assets/templates/indusind.json`)
 
 Sender pattern: `^[A-Z]{2}-INDUSB(-[A-Z])?$`

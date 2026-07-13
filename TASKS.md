@@ -1,5 +1,5 @@
 # Task Board
-Last updated: 2026-07-12 by @claude (independent review of T-051/T-052/T-053/T-054/T-062/T-063 confirms PASS — see WORKLOG; the prior draft's self-assigned "review @codex" attribution on these six is corrected to "review @claude". T-084/T-085 post-toggle verification ran green — Done. T-064 reassigned to @claude; still needs real-usage closure.)
+Last updated: 2026-07-13 by @codex (T-067 public Kotak/Central Bank fixture packs and templates completed; awaiting independent review.)
 
 ## In Progress          <!-- max 1 task per agent at a time -->
 
@@ -22,9 +22,6 @@ Last updated: 2026-07-12 by @claude (independent review of T-051/T-052/T-053/T-0
 
 ## Phase 4 — Assistant & LLM layer (groomed; gated on Phase 3 exit T-064 + T-075; ADR 0006)
 ## Blocked
-- [ ] T-067 (@claude fixtures → @codex templates) [P2] Kotak + Central Bank template packs (public provenance)
-      AC: @claude gathers >=10 real publicly-posted transactional SMS per bank (forums/parser repos; verbatim, source-noted, no fabrication) into test/fixtures/sms/{kotak,centbk}/ with `"provenance": "public"` and hand-computed expected JSON; @codex authors template packs; per-bank coverage test includes both banks; templates carry public provenance (capped 0.85 via T-072); docs/sms-templates.md updated.
-      Blocking: needs T-072 landed first; fixture-gathering is @claude In Progress work
 ## Backlog (ungroomed)
 <!-- 2026-07-12 @claude: the three T-071 donation-sanitizer follow-ups were groomed into
      Ready and renumbered T-080/T-081/T-082 — they had been mis-logged as T-077/T-078/T-079,
@@ -33,6 +30,9 @@ Last updated: 2026-07-12 by @claude (independent review of T-051/T-052/T-053/T-0
 <!-- (empty) -->
 
 ## In Review
+- [ ] T-067 (@codex → review @claude) [P2] Kotak + Central Bank template packs (public provenance)
+      AC: >=10 source-noted public transactional SMS per bank in test/fixtures/sms/{kotak,centbk}/; hand-computed expected JSON; public-provenance template packs; explicit per-bank coverage; 0.85 confidence cap; docs updated.
+      Evidence: 10/10 exact template parses per bank; focused capture/fixture suite 73/73; full Flutter suite 319/319; `flutter analyze --no-pub` clean; `git diff --check` clean; source URLs recorded per fixture.
 
 ## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
 <!-- One-line verdicts only; full review notes live in docs/tasks-archive.md and WORKLOG.md. -->

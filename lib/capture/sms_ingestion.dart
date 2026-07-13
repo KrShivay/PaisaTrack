@@ -33,7 +33,9 @@ final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
   final registries = await Future.wait(
     const [
       'assets/templates/axisbk.json',
+      'assets/templates/centbk.json',
       'assets/templates/indusind.json',
+      'assets/templates/kotak.json',
       'assets/templates/paytmb.json',
       'assets/templates/sbi.json',
     ].map((path) async {

@@ -1,0 +1,53 @@
+{
+  "sender_patterns": ["^[A-Z]{2}-KOTAK[BD](?:-[A-Z])?$", "^Kotak(?: Mahindra Bank|811)?$"],
+  "templates": [
+    {
+      "id": "kotak_upi_sent_bank_ac_v1",
+      "regex": "Sent Rs\\.\\s?(?<amount>[\\d,]+\\.?\\d*) from Kotak Bank AC X(?<account>\\d{4}) to (?<vpa>\\S+) on (?<date>\\d{2}-\\d{2}-\\d{2})\\.UPI Ref (?<ref>\\d+)\\.",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd-MM-yy",
+      "provenance": "public"
+    },
+    {
+      "id": "kotak_upi_received_bank_ac_v1",
+      "regex": "Received Rs\\.\\s?(?<amount>[\\d,]+\\.?\\d*) in your Kotak Bank AC X(?<account>\\d{4}) from (?<vpa>\\S+) on (?<date>\\d{2}-\\d{2}-\\d{2})\\.UPI Ref:?\\s?(?<ref>\\d+)\\.",
+      "direction": "credit",
+      "channel": "upi",
+      "date_format": "dd-MM-yy",
+      "provenance": "public"
+    },
+    {
+      "id": "kotak_upi_sent_short_v1",
+      "regex": "Sent Rs\\.\\s?(?<amount>[\\d,]+\\.?\\d*) from X+(?<account>\\d{4}) to (?<merchant>.+?) on (?<date>\\d{2}/\\d{2}/\\d{4})\\. UPI ref no\\. (?<ref>\\d+)\\.",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd/MM/yyyy",
+      "provenance": "public"
+    },
+    {
+      "id": "kotak_imps_received_v1",
+      "regex": "Received Rs\\.\\s*(?<amount>[\\d,]+\\.?\\d*) on (?<date>\\d{2}-\\d{2}-\\d{2}) in your Kotak Bank A/C x(?<account>\\d{4}) by an A/C linked to mobile (?<merchant>x\\d+)\\. IMPS Ref no (?<ref>\\d+)\\.",
+      "direction": "credit",
+      "channel": "netbanking",
+      "date_format": "dd-MM-yy",
+      "provenance": "public"
+    },
+    {
+      "id": "kotak_account_debit_v1",
+      "regex": "Rs\\.\\s?(?<amount>[\\d,]+\\.?\\d*) debited from your Kotak Bank AC X(?<account>\\d{4}) on (?<date>\\d{2}-\\d{2}-\\d{2})\\. Avl Bal Rs\\.?(?<balance>[\\d,]+\\.?\\d*)",
+      "direction": "debit",
+      "channel": "unknown",
+      "date_format": "dd-MM-yy",
+      "provenance": "public"
+    },
+    {
+      "id": "kotak_card_spent_v1",
+      "regex": "INR (?<amount>[\\d,]+\\.?\\d*) spent on Kotak Credit Card x(?<account>\\d{4}) on \\d{2}-[A-Za-z]{3}-\\d{4} at UPI-[^-\\s]+-(?<merchant>.+?)\\. Avl limit INR (?<balance>[\\d,]+\\.?\\d*)",
+      "direction": "debit",
+      "channel": "card",
+      "date_format": null,
+      "provenance": "public"
+    }
+  ]
+}

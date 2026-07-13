@@ -1,0 +1,29 @@
+{
+  "sender_patterns": ["^[A-Z]{2}-?CENTBK(?:-[A-Z])?$"],
+  "templates": [
+    {
+      "id": "centbk_dbt_credit_v1",
+      "regex": "Dear Customer, your Account Number X+(?<account>\\d{4}) has been credited by Rs\\s+(?<amount>[\\d,]+\\.?\\d*) being DBT/DBTL funds transfer on (?<date>\\d{2}/\\d{2}/\\d{4}) - CENTRAL BANK OF INDIA",
+      "direction": "credit",
+      "channel": "unknown",
+      "date_format": "dd/MM/yyyy",
+      "provenance": "public"
+    },
+    {
+      "id": "centbk_account_credit_v1",
+      "regex": "A/c \\d?X+(?<account>\\d{4}) credited by Rs\\.\\s*(?<amount>[\\d,]+\\.?\\d*) Total Bal: Rs\\.\\s*(?<balance>[\\d,]+\\.?\\d*) CR Clr Bal:",
+      "direction": "credit",
+      "channel": "unknown",
+      "date_format": null,
+      "provenance": "public"
+    },
+    {
+      "id": "centbk_account_debit_v1",
+      "regex": "A/c \\d?X+(?<account>\\d{4}) debited by Rs\\.\\s*(?<amount>[\\d,]+\\.?\\d*) Total Bal: Rs\\.\\s*(?<balance>[\\d,]+\\.?\\d*) CR Clr Bal:",
+      "direction": "debit",
+      "channel": "unknown",
+      "date_format": null,
+      "provenance": "public"
+    }
+  ]
+}
