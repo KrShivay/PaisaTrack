@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
 import '../models/transaction_confidence_trail.dart';
+import 'category_correction.dart';
 import 'rule_repository.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
 import '../../enrichment/merchant_resolver.dart';
@@ -447,85 +448,124 @@ class TransactionRepository {
     required String context,
     DateTime Function() clock = DateTime.now,
     String Function(String field)? feedbackIdFactory,
+  }) async {
+    final result = await correctCategory(
+      txnId: txnId,
+      categoryId: categoryId,
+      description:
+          description == null ? const Value.absent() : Value(description),
+      context: context,
+      scope: CorrectionScope.futureMatching,
+      clock: clock,
+      feedbackIdFactory: feedbackIdFactory,
+    );
+    return result.feedbackCount;
+  }
+
+  /// Applies an explicit category correction scope without silently changing
+  /// history. Rule creation and every selected transaction update share one
+  /// database boundary.
+  Future<CategoryCorrectionResult> correctCategory({
+    required String txnId,
+    required String categoryId,
+    required CorrectionScope scope,
+    required String context,
+    Iterable<String> matchingTxnIds = const [],
+    Value<String?> description = const Value.absent(),
+    DateTime Function() clock = DateTime.now,
+    String Function(String field)? feedbackIdFactory,
   }) {
     return _database.transaction(() async {
       final row = await (_database.select(_database.transactions)
             ..where((t) => t.id.equals(txnId)))
           .getSingle();
       final now = clock().toUtc();
-      final confidence = _parseConfidenceOf(row);
       final ruleInput = _ruleInputFor(row);
+      final willCreateRule = scope.createsRule && ruleInput != null;
 
-      if (ruleInput != null) {
+      if (willCreateRule) {
         await RuleRepository(_database).insert(
           matchType: ruleInput.matchType,
           matchValue: ruleInput.matchValue,
           setCategoryId: categoryId,
-          setDescription: description,
+          setDescription: description.present ? description.value : null,
           createdFromTxnId: txnId,
           clock: () => now,
         );
       }
 
-      String feedbackId(String field) =>
-          feedbackIdFactory?.call(field) ??
-          'fb_${txnId}_${field}_${now.microsecondsSinceEpoch}';
+      final targets = await _correctionTargets(
+        current: row,
+        scope: scope,
+        ruleInput: ruleInput,
+        matchingTxnIds: matchingTxnIds,
+      );
       final feedbackRows = <FeedbackCompanion>[];
 
       void stageFeedback({
+        required Transaction target,
         required String field,
         required String? oldValue,
         required String? newValue,
       }) {
         if (oldValue == newValue) return;
+        final customId =
+            target.id == txnId ? feedbackIdFactory?.call(field) : null;
         feedbackRows.add(
           FeedbackCompanion.insert(
-            id: feedbackId(field),
-            txnId: txnId,
+            id: customId ??
+                'fb_${target.id}_${field}_${now.microsecondsSinceEpoch}',
+            txnId: target.id,
             field: field,
             oldValue: Value(oldValue),
             newValue: Value(newValue),
             context: context,
-            modelConfidenceAtTime: Value(confidence),
+            modelConfidenceAtTime: Value(_parseConfidenceOf(target)),
             createdAt: now,
           ),
         );
       }
 
-      stageFeedback(
-        field: 'category_id',
-        oldValue: row.categoryId,
-        newValue: categoryId,
-      );
-      if (description != null) {
+      for (final target in targets) {
         stageFeedback(
-          field: 'description',
-          oldValue: row.description,
-          newValue: description,
+          target: target,
+          field: 'category_id',
+          oldValue: target.categoryId,
+          newValue: categoryId,
+        );
+        if (target.id == txnId && description.present) {
+          stageFeedback(
+            target: target,
+            field: 'description',
+            oldValue: target.description,
+            newValue: description.value,
+          );
+        }
+        stageFeedback(
+          target: target,
+          field: 'status',
+          oldValue: target.status,
+          newValue: 'confirmed',
+        );
+        await (_database.update(_database.transactions)
+              ..where((t) => t.id.equals(target.id)))
+            .write(
+          TransactionsCompanion(
+            categoryId: Value(categoryId),
+            description: target.id == txnId && description.present
+                ? Value(description.value)
+                : const Value.absent(),
+            status: const Value('confirmed'),
+            updatedAt: Value(now),
+          ),
         );
       }
-      stageFeedback(
-        field: 'status',
-        oldValue: row.status,
-        newValue: 'confirmed',
-      );
-
-      await (_database.update(_database.transactions)
-            ..where((t) => t.id.equals(txnId)))
-          .write(
-        TransactionsCompanion(
-          categoryId: Value(categoryId),
-          description:
-              description == null ? const Value.absent() : Value(description),
-          status: const Value('confirmed'),
-          updatedAt: Value(now),
-        ),
-      );
       // The correction's category feedback is the classifier training example.
       // When a resolver already linked this transaction, teach its normalized
       // raw spelling as a learned alias in the same transaction as the rule.
       final rawAlias = row.merchantRaw;
-      if (row.merchantId != null &&
+      if (willCreateRule &&
+          row.merchantId != null &&
           rawAlias != null &&
           rawAlias.trim().isNotEmpty) {
         await _database.into(_database.merchantAliases).insertOnConflictUpdate(
@@ -540,8 +580,43 @@ class TransactionRepository {
       for (final feedbackRow in feedbackRows) {
         await _database.into(_database.feedback).insert(feedbackRow);
       }
-      return feedbackRows.length;
+      return CategoryCorrectionResult(
+        feedbackCount: feedbackRows.length,
+        affectedTransactionCount: targets.length,
+        ruleCreated: willCreateRule,
+      );
     });
+  }
+
+  Future<List<Transaction>> _correctionTargets({
+    required Transaction current,
+    required CorrectionScope scope,
+    required _RuleInput? ruleInput,
+    required Iterable<String> matchingTxnIds,
+  }) async {
+    if (scope == CorrectionScope.matchingGroup) {
+      final ids = {...matchingTxnIds, current.id};
+      return (_database.select(_database.transactions)
+            ..where(
+              (row) =>
+                  row.id.isIn(ids) &
+                  row.isDeleted.equals(false) &
+                  row.duplicateOfTxnId.isNull(),
+            ))
+          .get();
+    }
+    if (scope == CorrectionScope.existingAndFuture && ruleInput != null) {
+      final visible = await (_database.select(_database.transactions)
+            ..where(
+              (row) =>
+                  row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
+            ))
+          .get();
+      return visible
+          .where((transaction) => _matchesRuleInput(transaction, ruleInput))
+          .toList(growable: false);
+    }
+    return [current];
   }
 
   /// Extracts the parse confidence from `confidence_json` (the `parser.c`
@@ -719,6 +794,15 @@ _RuleInput? _ruleInputFor(Transaction txn) {
     return _RuleInput(matchType: 'merchant', matchValue: merchant);
   }
   return null;
+}
+
+bool _matchesRuleInput(Transaction transaction, _RuleInput input) {
+  final expected = input.matchValue.trim().toLowerCase();
+  if (input.matchType == 'counterparty') {
+    return transaction.counterpartyVpa?.trim().toLowerCase() == expected;
+  }
+  return transaction.merchantRaw?.trim().toLowerCase().contains(expected) ==
+      true;
 }
 
 TransactionDirection _directionFromWireName(String wireName) {

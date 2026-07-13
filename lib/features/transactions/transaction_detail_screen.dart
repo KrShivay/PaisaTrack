@@ -6,10 +6,12 @@ import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../core/widgets/category_picker_sheet.dart';
+import '../../core/widgets/correction_scope_sheet.dart';
 import '../../core/widgets/transaction_components.dart';
 import '../../data/db/database.dart' show Category, Transaction;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
+import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'transactions_providers.dart';
 
@@ -17,8 +19,8 @@ import 'transactions_providers.dart';
 ///
 /// Shows every frozen §6.2 field plus status, with a confidence-trail
 /// placeholder (full enrichment trail lands in Phase 3). Category and
-/// description are editable; saving writes one `feedback` row per changed
-/// field (context `'detail_edit'`) atomically with the update, via
+/// description are editable; category changes use an explicit correction
+/// scope while description-only edits use
 /// [TransactionRepository.updateWithFeedback].
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   const TransactionDetailScreen({super.key, required this.txnId});
@@ -36,6 +38,7 @@ class _TransactionDetailScreenState
   bool _editsSeeded = false;
   String? _categoryId;
   String? _initialCategoryId;
+  CorrectionScope _categoryScope = CorrectionScope.thisTransaction;
   String _initialDescription = '';
   bool _saving = false;
   bool _savingParseVerdict = false;
@@ -72,11 +75,24 @@ class _TransactionDetailScreenState
       final database = await ref.read(appDatabaseProvider.future);
       final repository = ref.read(transactionRepositoryProvider(database));
       final description = _descriptionController.text.trim();
-      final written = await repository.updateWithFeedback(
-        txnId: widget.txnId,
-        categoryId: Value(_categoryId),
-        description: Value(description.isEmpty ? null : description),
-      );
+      final categoryChanged = _categoryId != _initialCategoryId;
+      final descriptionChanged = description != _initialDescription.trim();
+      CategoryCorrectionResult? correction;
+      final written = categoryChanged
+          ? (correction = await repository.correctCategory(
+              txnId: widget.txnId,
+              categoryId: _categoryId!,
+              scope: _categoryScope,
+              context: 'detail_edit',
+              description: descriptionChanged
+                  ? Value(description.isEmpty ? null : description)
+                  : const Value.absent(),
+            ))
+              .feedbackCount
+          : await repository.updateWithFeedback(
+              txnId: widget.txnId,
+              description: Value(description.isEmpty ? null : description),
+            );
       if (mounted) {
         setState(() {
           _saving = false;
@@ -87,7 +103,16 @@ class _TransactionDetailScreenState
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(written > 0 ? 'Saved' : 'No changes to save'),
+            content: Text(
+              correction?.ruleCreated == true
+                  ? 'Saved. PaisaTrack will remember this.'
+                  : correction != null &&
+                          correction.affectedTransactionCount > 1
+                      ? '${correction.affectedTransactionCount} transactions updated'
+                      : written > 0
+                          ? 'Saved'
+                          : 'No changes to save',
+            ),
           ),
         );
       }
@@ -166,7 +191,10 @@ class _TransactionDetailScreenState
     }
   }
 
-  Future<void> _chooseCategory(List<Category> categories) async {
+  Future<void> _chooseCategory(
+    List<Category> categories,
+    Transaction transaction,
+  ) async {
     final chosen = await showModalBottomSheet<Category>(
       context: context,
       isScrollControlled: true,
@@ -186,7 +214,27 @@ class _TransactionDetailScreenState
       ),
     );
     if (chosen == null || !mounted) return;
-    setState(() => _categoryId = chosen.id);
+    if (chosen.id == _categoryId) return;
+    final hasReusableMatch =
+        transaction.counterpartyVpa?.trim().isNotEmpty == true ||
+            transaction.merchantRaw?.trim().isNotEmpty == true;
+    final scope = await showCorrectionScopeSheet(
+      context: context,
+      categoryName: chosen.name,
+      availableScopes: {
+        CorrectionScope.thisTransaction,
+        if (hasReusableMatch) ...{
+          CorrectionScope.futureMatching,
+          CorrectionScope.existingAndFuture,
+        },
+      },
+      initialScope: defaultCorrectionScope(CorrectionContext.oneOffEdit),
+    );
+    if (scope == null || !mounted) return;
+    setState(() {
+      _categoryId = chosen.id;
+      _categoryScope = scope;
+    });
   }
 
   @override
@@ -281,7 +329,7 @@ class _TransactionDetailScreenState
         switch (categories) {
           AsyncData(:final value) => _CategoryField(
               categoryName: _selectedCategoryName(value),
-              onTap: () => _chooseCategory(value),
+              onTap: () => _chooseCategory(value, txn),
             ),
           _ => const TextField(
               enabled: false,

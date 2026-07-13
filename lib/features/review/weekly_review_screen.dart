@@ -5,9 +5,11 @@ import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../core/widgets/category_picker_sheet.dart';
+import '../../core/widgets/correction_scope_sheet.dart';
 import '../../core/widgets/transaction_components.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
+import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transactions_providers.dart';
@@ -204,6 +206,11 @@ class _ReviewCentre extends StatelessWidget {
             _ReviewMode.quick => _QuickReview(
                 item: items.first,
                 remainingCount: items.length - 1,
+                matchingGroupIds: {
+                  for (final item in items)
+                    if (item.counterpartyKey == items.first.counterpartyKey)
+                      item.id,
+                },
                 onConfirm: () => onConfirmOne(items.first.id),
               ),
             _ReviewMode.list => _ReviewList(
@@ -235,11 +242,13 @@ class _QuickReview extends ConsumerWidget {
   const _QuickReview({
     required this.item,
     required this.remainingCount,
+    required this.matchingGroupIds,
     required this.onConfirm,
   });
 
   final TransactionReviewItem item;
   final int remainingCount;
+  final Set<String> matchingGroupIds;
   final VoidCallback onConfirm;
 
   @override
@@ -282,7 +291,12 @@ class _QuickReview extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 OutlinedButton(
-                  onPressed: () => _showCorrectionSheet(context, ref, item),
+                  onPressed: () => _showCorrectionSheet(
+                    context,
+                    ref,
+                    item,
+                    matchingGroupIds: matchingGroupIds,
+                  ),
                   child: const Text('Change category'),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -398,6 +412,7 @@ class _ReviewList extends ConsumerWidget {
               },
               child: _ReviewTile(
                 item: item,
+                matchingGroupIds: entry.value.map((item) => item.id).toSet(),
                 selected: selectedIds.contains(item.id),
                 onSelected: (selected) => onToggle(item.id, selected),
                 bulkMode: bulkMode,
@@ -458,12 +473,14 @@ class _ReviewGroupHeader extends StatelessWidget {
 class _ReviewTile extends ConsumerWidget {
   const _ReviewTile({
     required this.item,
+    required this.matchingGroupIds,
     required this.selected,
     required this.onSelected,
     required this.bulkMode,
   });
 
   final TransactionReviewItem item;
+  final Set<String> matchingGroupIds;
   final bool selected;
   final ValueChanged<bool> onSelected;
   final bool bulkMode;
@@ -492,7 +509,12 @@ class _ReviewTile extends ConsumerWidget {
             categoryIcon: item.categoryIcon,
             statusLabel: item.status == 'needs_review' ? 'Needs review' : null,
             selected: selected,
-            onTap: () => _showCorrectionSheet(context, ref, item),
+            onTap: () => _showCorrectionSheet(
+              context,
+              ref,
+              item,
+              matchingGroupIds: matchingGroupIds,
+            ),
           ),
         ),
       ],
@@ -537,8 +559,9 @@ class _EmptyReviewState extends StatelessWidget {
 Future<void> _showCorrectionSheet(
   BuildContext context,
   WidgetRef ref,
-  TransactionReviewItem item,
-) async {
+  TransactionReviewItem item, {
+  Set<String> matchingGroupIds = const {},
+}) async {
   final screenContext = context;
   final categories = await ref.read(categoryListProvider.future);
   if (!context.mounted || categories.isEmpty) return;
@@ -563,16 +586,48 @@ Future<void> _showCorrectionSheet(
     ),
   );
 
-  if (category == null) return;
-  await _repository(ref).correctWithRule(
+  if (category == null || !context.mounted) return;
+  final reusableMatch =
+      item.counterpartyKey != null && !item.counterpartyKey!.startsWith('txn:');
+  final groupScopeAvailable = matchingGroupIds.length > 1;
+  final scope = await showCorrectionScopeSheet(
+    context: context,
+    categoryName: category.name,
+    availableScopes: {
+      CorrectionScope.thisTransaction,
+      if (groupScopeAvailable) CorrectionScope.matchingGroup,
+      if (reusableMatch) ...{
+        CorrectionScope.futureMatching,
+        CorrectionScope.existingAndFuture,
+      },
+    },
+    initialScope: defaultCorrectionScope(
+      groupScopeAvailable
+          ? CorrectionContext.groupReview
+          : reusableMatch
+              ? CorrectionContext.newMerchant
+              : CorrectionContext.oneOffEdit,
+    ),
+    matchingCount: matchingGroupIds.length,
+  );
+  if (scope == null) return;
+  final result = await _repository(ref).correctCategory(
     txnId: item.id,
     categoryId: category.id,
+    scope: scope,
     context: 'batch_review',
+    matchingTxnIds: matchingGroupIds,
   );
   if (screenContext.mounted) {
     ScaffoldMessenger.of(screenContext).showSnackBar(
-      const SnackBar(
-        content: Text('Category updated. PaisaTrack will remember this.'),
+      SnackBar(
+        content: Text(
+          result.ruleCreated
+              ? 'Category updated. PaisaTrack will remember this.'
+              : result.affectedTransactionCount > 1
+                  ? '${result.affectedTransactionCount} transactions updated.'
+                  : 'Category updated.',
+        ),
       ),
     );
   }

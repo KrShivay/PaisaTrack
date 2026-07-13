@@ -15,6 +15,7 @@ void main() {
     AppDatabase database, {
     required String id,
     String? categoryId,
+    String? counterpartyKey,
   }) {
     final now = DateTime.utc(2026, 7, 11, 10);
     return database.into(database.transactions).insert(
@@ -25,6 +26,16 @@ void main() {
             direction: 'debit',
             channel: 'upi',
             categoryId: Value(categoryId),
+            merchantRaw: Value(
+              counterpartyKey?.startsWith('raw:') == true
+                  ? counterpartyKey!.substring(4)
+                  : null,
+            ),
+            counterpartyVpa: Value(
+              counterpartyKey?.startsWith('vpa:') == true
+                  ? counterpartyKey!.substring(4)
+                  : null,
+            ),
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'needs_review',
@@ -56,15 +67,27 @@ void main() {
 
   Future<AppDatabase> pumpActionableScreen(
     WidgetTester tester,
-    List<TransactionReviewItem> items,
-  ) async {
+    List<TransactionReviewItem> items, {
+    bool autoClose = true,
+  }) async {
     final database = AppDatabase(NativeDatabase.memory());
-    addTearDown(database.close);
+    if (autoClose) addTearDown(database.close);
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'shopping',
+            name: 'Shopping',
+            icon: 'shopping_bag',
+            isSpending: true,
+            sortOrder: 1,
+            isUserCreated: false,
+          ),
+        );
     for (final item in items) {
       await insertReviewTxn(
         database,
         id: item.id,
         categoryId: item.categoryId,
+        counterpartyKey: item.counterpartyKey,
       );
     }
     await tester.pumpWidget(
@@ -244,6 +267,53 @@ void main() {
       'needs_review',
     );
     expect(rows.every((row) => row.categoryId == null), isTrue);
+  });
+
+  testWidgets('category correction requires explicit scope selection',
+      (tester) async {
+    final item = reviewItem(
+      id: 'txn_scope',
+      displayName: 'Bookstore',
+      counterpartyKey: 'raw:bookstore',
+    );
+    final database = await pumpActionableScreen(
+      tester,
+      [item],
+      autoClose: false,
+    );
+
+    await tester.tap(find.text('Change category'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Shopping').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Apply Shopping to:'), findsOneWidget);
+    expect(find.text('This transaction only'), findsOneWidget);
+    expect(
+      find.text('Future transactions from this merchant'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Existing and future matching transactions'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('This transaction only'));
+    await tester.ensureVisible(find.text('Apply category'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply category'));
+    await waitForStatus(tester, database, 'txn_scope', 'confirmed');
+    await tester.pump();
+
+    final rules = await tester.runAsync(
+      () => database.select(database.rules).get(),
+    );
+    expect(rules, isEmpty);
+    expect(find.text('Category updated.'), findsOneWidget);
+    expect(find.textContaining('will remember'), findsNothing);
+    await tester.runAsync(database.close);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
   });
 
   testWidgets('group confirm updates every row for one counterparty',

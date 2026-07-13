@@ -382,6 +382,11 @@ void main() {
       await tester.tap(find.text('Shopping').last);
       await tester.pumpAndSettle();
 
+      expect(find.text('Apply Shopping to:'), findsOneWidget);
+      expect(find.text('This transaction only'), findsOneWidget);
+      await tester.tap(find.text('Apply category'));
+      await tester.pumpAndSettle();
+
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Description'),
         'Books order',
@@ -397,9 +402,10 @@ void main() {
           .getSingle();
       expect(txn.categoryId, 'shopping');
       expect(txn.description, 'Books order');
+      expect(await database.select(database.rules).get(), isEmpty);
 
       final feedbackRows = await database.select(database.feedback).get();
-      expect(feedbackRows, hasLength(2));
+      expect(feedbackRows, hasLength(3));
       expect(
         feedbackRows.map((row) => row.context).toSet(),
         {'detail_edit'},
