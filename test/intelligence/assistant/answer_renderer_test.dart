@@ -37,7 +37,7 @@ void main() {
     );
     expect(
       const AnswerRenderer().render(intent, const BreakdownQueryResult([])),
-      'No transactions found for July.',
+      'Period: July\nNo matching transactions were found.\nFilters: Spending',
     );
   });
 }

@@ -2,6 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent.dart';
 
 void main() {
+  test('month ranges follow local calendar boundaries', () {
+    final result = IntentValidator(
+      categories: const {},
+      clock: () => DateTime(2026, 7, 1, 0, 30),
+    ).validate({
+      'intent': 'period_total',
+      'metric': 'spend',
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+
+    final range = (result as ValidIntent).intent.range!;
+    expect(range.start, DateTime(2026, 7).toUtc());
+    expect(range.end, DateTime(2026, 8).toUtc());
+    expect(range.label, '2026-07');
+  });
+
   final now = DateTime.utc(2026, 7, 12);
   IntentValidator validator() => IntentValidator(
         categories: const {'food': 'Food', 'travel': 'Travel'},

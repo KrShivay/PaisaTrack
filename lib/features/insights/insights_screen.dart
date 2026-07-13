@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../assistant/assistant_screen.dart';
+import '../dashboard/dashboard_providers.dart';
 import '../recurring/recurring_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -75,22 +77,13 @@ class InsightsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: switch (insights) {
-        AsyncData(:final value) when value.isEmpty => const EmptyStateView(
-            illustration: AppIllustrations.investmentGrowth,
-            title: 'No unusual changes detected',
-            message:
-                'Your spending is currently consistent with the available history. More detailed insights will appear as PaisaTrack learns your patterns.',
-          ),
-        AsyncData(:final value) => _InsightsList(
-            insights: value,
-            onDismiss: (id) => _dismiss(context, ref, id),
-          ),
-        AsyncError() => const ErrorStateView(
-            message: 'Could not load your insights.',
-          ),
-        _ => const ListLoadingSkeleton(rows: 4),
-      },
+      body: _InsightsOverview(
+        insights: insights,
+        onDismiss: (id) => _dismiss(context, ref, id),
+        onOpenRecurring: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const RecurringScreen()),
+        ),
+      ),
     );
   }
 
@@ -116,38 +109,189 @@ class InsightsScreen extends ConsumerWidget {
   }
 }
 
-class _InsightsList extends StatelessWidget {
-  const _InsightsList({required this.insights, required this.onDismiss});
+class _InsightsOverview extends ConsumerWidget {
+  const _InsightsOverview({
+    required this.insights,
+    required this.onDismiss,
+    required this.onOpenRecurring,
+  });
 
-  final List<Insight> insights;
+  final AsyncValue<List<Insight>> insights;
   final ValueChanged<String> onDismiss;
+  final VoidCallback onOpenRecurring;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final totals = ref.watch(monthDirectionTotalsProvider);
+    final comparison = ref.watch(monthOverMonthSpendProvider);
+    final categories = ref.watch(categoryBreakdownProvider);
+    final merchants = ref.watch(topMerchantsProvider);
+    final hasTransactions = totals.debitTotal > 0 || totals.creditTotal > 0;
+    final generated = insights.valueOrNull ?? const <Insight>[];
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final month = MaterialLocalizations.of(context).formatMonthYear(now);
+
+    return ListView(
+      padding: AppSpacing.screen,
+      children: [
+        Text('$month overview', style: theme.textTheme.headlineSmall),
+        const SizedBox(height: AppSpacing.md),
+        if (hasTransactions) ...[
+          _BaselineSummary(
+            spent: totals.debitTotal,
+            received: totals.creditTotal,
+            comparison: comparison,
+          ),
+          if (categories.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text('Spending by category', style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            for (final category in categories.take(5))
+              _BaselineRow(
+                label: category.name,
+                value: formatInr(category.total),
+                supporting:
+                    '${(category.share * 100).toStringAsFixed(0)}% of spending',
+              ),
+          ],
+          if (merchants.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text('Top merchants', style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            for (final merchant in merchants.take(3))
+              _BaselineRow(
+                label: merchant.name,
+                value: formatInr(merchant.total),
+                supporting:
+                    '${merchant.count} transaction${merchant.count == 1 ? '' : 's'}',
+              ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.autorenew_outlined),
+            title: const Text('Recurring activity'),
+            subtitle: const Text('Subscriptions, bills, EMIs and income'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: onOpenRecurring,
+          ),
+        ] else if (generated.isEmpty)
+          const EmptyStateView(
+            illustration: AppIllustrations.spendAnalysis,
+            title: 'Insights start with your transactions',
+            message:
+                'Monthly summaries and comparisons will appear after financial messages or manual transactions are added.',
+          ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Changes to know about', style: theme.textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        if (insights.isLoading)
+          const SizedBox(height: 180, child: ListLoadingSkeleton(rows: 2))
+        else if (insights.hasError)
+          const ErrorStateView(
+            message:
+                'Some generated insights could not load. Your saved transactions remain safe.',
+          )
+        else if (generated.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('No unusual changes detected'),
+                SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Your spending is currently consistent with the available history. More detailed insights will appear as PaisaTrack learns your patterns.',
+                ),
+              ],
+            ),
+          )
+        else
+          for (final insight in generated) ...[
+            _InsightCard(
+              insight: insight,
+              onDismiss: () => onDismiss(insight.id),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+      ],
+    );
+  }
+}
+
+class _BaselineSummary extends StatelessWidget {
+  const _BaselineSummary({
+    required this.spent,
+    required this.received,
+    required this.comparison,
+  });
+
+  final double spent;
+  final double received;
+  final MonthOverMonthSpend comparison;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final month = MaterialLocalizations.of(context).formatMonthYear(now);
-    return ListView.separated(
-      padding: AppSpacing.screen,
-      itemCount: insights.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text(
-              '$month report',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    final theme = Theme.of(context);
+    final change = comparison.pctChange;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Monthly spending', style: theme.textTheme.labelLarge),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            formatInr(spent),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontFeatures: AppTheme.tabularFigures,
             ),
-          );
-        }
-        final insight = insights[index - 1];
-        return _InsightCard(
-          insight: insight,
-          onDismiss: () => onDismiss(insight.id),
-        );
-      },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text('Received ${formatInr(received)}'),
+          if (change != null)
+            Text(
+              '${change.abs() * 100 < 0.5 ? 'About the same as' : '${(change.abs() * 100).toStringAsFixed(0)}% ${change < 0 ? 'lower' : 'higher'} than'} last month',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BaselineRow extends StatelessWidget {
+  const _BaselineRow({
+    required this.label,
+    required this.value,
+    required this.supporting,
+  });
+
+  final String label;
+  final String value;
+  final String supporting;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(label),
+      subtitle: Text(supporting),
+      trailing: Text(
+        value,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontFeatures: AppTheme.tabularFigures,
+            ),
+      ),
     );
   }
 }

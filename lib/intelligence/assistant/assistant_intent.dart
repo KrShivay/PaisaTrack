@@ -243,7 +243,7 @@ class IntentValidator {
 
   AssistantTimeRange? _range(Object? value, {bool upcoming = false}) {
     if (value == null && upcoming) {
-      final start = _day(clock().toUtc());
+      final start = _localDayUtc(clock());
       return AssistantTimeRange(
         start,
         start.add(const Duration(days: 30)),
@@ -252,7 +252,7 @@ class IntentValidator {
     }
     final map = _stringMap(value);
     if (map == null) return null;
-    final now = _day(clock().toUtc());
+    final now = _localDayUtc(clock());
     final kind = map['kind'];
     DateTime? start;
     DateTime? end;
@@ -263,8 +263,8 @@ class IntentValidator {
       final year = int.tryParse(parts[0]);
       final month = int.tryParse(parts[1]);
       if (year == null || month == null || month < 1 || month > 12) return null;
-      start = DateTime.utc(year, month);
-      end = DateTime.utc(year, month + 1);
+      start = DateTime(year, month).toUtc();
+      end = DateTime(year, month + 1).toUtc();
       label = '${parts[0]}-${parts[1]}';
     } else if (kind == 'last_n_days') {
       final days = map['n_days'];
@@ -273,9 +273,8 @@ class IntentValidator {
       start = end.subtract(Duration(days: days));
       label = 'the last $days days';
     } else if (kind == 'range') {
-      start = DateTime.tryParse(map['start'] as String? ?? '')?.toUtc();
-      final inclusiveEnd =
-          DateTime.tryParse(map['end'] as String? ?? '')?.toUtc();
+      start = _parseLocalDate(map['start'] as String?);
+      final inclusiveEnd = _parseLocalDate(map['end'] as String?);
       if (inclusiveEnd != null) end = inclusiveEnd.add(const Duration(days: 1));
       label = '${map['start']} to ${map['end']}';
     } else if (kind == 'all_time') {
@@ -288,8 +287,23 @@ class IntentValidator {
     return AssistantTimeRange(start, end, label: label!);
   }
 
-  static DateTime _day(DateTime value) =>
-      DateTime.utc(value.year, value.month, value.day);
+  static DateTime _localDayUtc(DateTime value) =>
+      DateTime(value.year, value.month, value.day).toUtc();
+
+  static DateTime? _parseLocalDate(String? value) {
+    final parts = (value ?? '').split('-');
+    if (parts.length != 3) return null;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) return null;
+    final local = DateTime(year, month, day);
+    if (local.year != year || local.month != month || local.day != day) {
+      return null;
+    }
+    return local.toUtc();
+  }
+
   static Map<String, Object?>? _stringMap(Object? value) =>
       value is Map ? Map<String, Object?>.from(value) : null;
 }

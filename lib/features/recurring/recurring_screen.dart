@@ -37,26 +37,40 @@ class RecurringScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Recurring')),
       body: switch (series) {
-        AsyncData(:final value) when value.isEmpty => const EmptyStateView(
+        AsyncData(:final value) when value.isEmpty => EmptyStateView(
             illustration: AppIllustrations.bill,
-            title: 'No recurring activity yet',
+            title: 'No recurring activity detected yet',
             message:
-                'Subscriptions, bills, EMIs, and regular income will appear after three matching transactions.',
+                'PaisaTrack identifies subscriptions, EMIs, bills and regular income after three matching transactions are available.',
+            actionLabel: 'Review transactions',
+            onAction: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TransactionsScreen(),
+              ),
+            ),
           ),
         AsyncData(:final value) => ListView.separated(
             padding: AppSpacing.screen,
-            itemCount: value.length,
+            itemCount: value.length + 1,
             separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) => _RecurringCard(
-              series: value[index],
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => TransactionsScreen(
-                    initialMerchant: value[index].label,
+            itemBuilder: (context, index) => index == 0
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(
+                      'Upcoming',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  )
+                : _RecurringCard(
+                    series: value[index - 1],
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => TransactionsScreen(
+                          initialMerchant: value[index - 1].label,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
           ),
         AsyncError() => const ErrorStateView(
             message: 'Could not load recurring activity.',

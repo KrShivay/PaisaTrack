@@ -72,7 +72,7 @@ class AssistantController {
     DateTime today,
     Iterable<String> categoryNames,
   ) {
-    final iso = today.toUtc().toIso8601String().substring(0, 10);
+    final iso = _localDate(today);
     final month = iso.substring(0, 7);
     final categoryList = categoryNames.join(', ');
     return '''
@@ -121,4 +121,9 @@ Examples (question -> exact answer), all relative to today $iso:
 Question: $question
 ''';
   }
+
+  static String _localDate(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
 }

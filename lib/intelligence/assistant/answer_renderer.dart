@@ -8,13 +8,11 @@ class AnswerRenderer {
   String render(AssistantIntent intent, AssistantQueryResult result) =>
       switch (result) {
         TotalQueryResult(:final value, :final count, :final label) => count == 0
-            ? 'No transactions found for $label.'
-            : '${_metric(intent.metric)} for $label: ${_value(intent.aggregation, value)} across $count transactions.',
+            ? 'Period: $label\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
+            : 'Period: $label\nResult: ${_metric(intent.metric)} ${_value(intent.aggregation, value)} across $count transactions.\nFilters: ${_filters(intent)}',
         BreakdownQueryResult(:final items) => items.isEmpty
-            ? 'No transactions found for ${intent.range!.label}.'
-            : items
-                .map((item) => '${item.label}: ${formatInr(item.total)}')
-                .join('\n'),
+            ? 'Period: ${intent.range!.label}\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
+            : 'Period: ${intent.range!.label}\nResult:\n${items.map((item) => '${item.label}: ${formatInr(item.total)}').join('\n')}\nFilters: ${_filters(intent)}',
         ComparisonQueryResult(
           :final current,
           :final previous,
@@ -44,6 +42,16 @@ class AnswerRenderer {
       aggregation == AssistantAggregation.count
           ? value.round().toString()
           : formatInr(value);
+  static String _filters(AssistantIntent intent) {
+    final filters = <String>[
+      _metric(intent.metric),
+      if (intent.categoryName != null) intent.categoryName!,
+      if (intent.merchant != null) intent.merchant!,
+      if (intent.direction != null) intent.direction!,
+    ];
+    return filters.join(' · ');
+  }
+
   static String _date(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}-${value.month.toString().padLeft(2, '0')}-${value.year}';
 }

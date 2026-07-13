@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_tokens.dart';
 import '../../data/db/database_provider.dart';
 import '../../intelligence/assistant/assistant_controller.dart';
 import '../../intelligence/llm/llm_runtime.dart';
+import '../transactions/transactions_screen.dart';
 
 final assistantControllerProvider =
     FutureProvider<AssistantController>((ref) async {
@@ -64,6 +66,11 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     }
   }
 
+  void _askSuggestion(String question) {
+    _input.text = question;
+    _send();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,17 +79,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
         children: [
           Expanded(
             child: _messages.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text(
-                        'Ask about spending totals, categories, merchants, recurring payments, comparisons, or active insights.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
+                ? _AssistantWelcome(onQuestion: _askSuggestion)
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: AppSpacing.screen,
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[index];
@@ -95,8 +94,29 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                               ? Theme.of(context).colorScheme.primaryContainer
                               : null,
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(message.text),
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(message.text),
+                                if (!message.fromUser) ...[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  TextButton.icon(
+                                    onPressed: () => Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            const TransactionsScreen(),
+                                      ),
+                                    ),
+                                    icon:
+                                        const Icon(Icons.receipt_long_outlined),
+                                    label: const Text(
+                                      'View supporting transactions',
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -106,7 +126,12 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -115,12 +140,11 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                       enabled: !_sending,
                       onSubmitted: (_) => _send(),
                       decoration: const InputDecoration(
-                        hintText: 'Ask about your money',
-                        border: OutlineInputBorder(),
+                        hintText: 'Ask about your money…',
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   IconButton(
                     onPressed: _sending ? null : _send,
                     icon: _sending
@@ -137,6 +161,84 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AssistantWelcome extends StatelessWidget {
+  const _AssistantWelcome({required this.onQuestion});
+
+  final ValueChanged<String> onQuestion;
+
+  static const questions = [
+    'How much did I spend on food this month?',
+    'What subscriptions renew this week?',
+    'Why is spending higher than last month?',
+    'Show payments above ₹5,000.',
+    'How much did I pay in bank fees?',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: AppSpacing.screen,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.lock_outline,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  'Your questions and financial data stay on this device.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Text('Try asking', style: theme.textTheme.titleLarge),
+        const SizedBox(height: AppSpacing.sm),
+        for (final question in questions)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              onTap: () => onQuestion(question),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(question)),
+                    const SizedBox(width: AppSpacing.sm),
+                    const Icon(Icons.arrow_forward, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

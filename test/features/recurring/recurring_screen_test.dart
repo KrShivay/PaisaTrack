@@ -55,7 +55,7 @@ void main() {
   testWidgets('shows designed empty state', (tester) async {
     await pumpScreen(tester, const []);
 
-    expect(find.text('No recurring activity yet'), findsOneWidget);
+    expect(find.text('No recurring activity detected yet'), findsOneWidget);
     expect(
       find.textContaining('after three matching transactions'),
       findsOneWidget,
@@ -74,6 +74,7 @@ void main() {
     ]);
 
     expect(find.text('Netflix'), findsOneWidget);
+    expect(find.text('Upcoming'), findsOneWidget);
     expect(find.text('Electricity bill'), findsOneWidget);
     expect(find.byKey(const ValueKey('price_creep_badge')), findsOneWidget);
     expect(find.byKey(const ValueKey('missed_badge')), findsOneWidget);
