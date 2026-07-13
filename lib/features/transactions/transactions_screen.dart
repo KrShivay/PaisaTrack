@@ -6,6 +6,7 @@ import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../core/widgets/category_picker_sheet.dart';
+import '../../core/widgets/transaction_filter_sheet.dart';
 import '../../core/widgets/transaction_components.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
@@ -14,10 +15,8 @@ import '../../data/repositories/transaction_repository.dart';
 import '../settings/settings_screen.dart';
 import 'manual_entry_screen.dart';
 import 'transaction_detail_screen.dart';
+import 'transaction_filter_context_providers.dart';
 import 'transactions_providers.dart';
-
-/// Direction filter for the transactions list.
-enum _DirectionFilter { all, spent, received }
 
 /// Lists parsed transactions, newest first, with search, a direction filter,
 /// date-group headers, and pull-to-refresh.
@@ -51,7 +50,8 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-  _DirectionFilter _direction = _DirectionFilter.all;
+  TransactionDirectionFilter _direction = TransactionDirectionFilter.all;
+  TransactionFilters _filters = const TransactionFilters();
   final Set<String> _selected = {};
   bool _applyingBulk = false;
 
@@ -124,8 +124,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
   }
 
-  List<TransactionListItem> _applyFilters(List<TransactionListItem> items) {
-    final q = _query.trim().toLowerCase();
+  List<TransactionListItem> _applyFilters(
+    List<TransactionListItem> items,
+    Set<String> recurringMerchantIds,
+    Set<String> anomalyTransactionIds,
+  ) {
     return items.where((item) {
       if (widget.initialCategoryId != null &&
           item.categoryId != widget.initialCategoryId) {
@@ -136,18 +139,29 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         return false;
       }
       switch (_direction) {
-        case _DirectionFilter.spent:
+        case TransactionDirectionFilter.spent:
           if (item.direction != TransactionDirection.debit) return false;
-        case _DirectionFilter.received:
+        case TransactionDirectionFilter.received:
           if (item.direction != TransactionDirection.credit) return false;
-        case _DirectionFilter.all:
+        case TransactionDirectionFilter.all:
           break;
       }
-      if (q.isEmpty) return true;
-      final name = item.displayName.toLowerCase();
-      final category = (item.categoryName ?? '').toLowerCase();
-      return name.contains(q) || category.contains(q);
+      return _filters.matches(
+            item,
+            recurringMerchantIds: recurringMerchantIds,
+            anomalyTransactionIds: anomalyTransactionIds,
+          ) &&
+          _filters.matchesSearch(item, _query);
     }).toList(growable: false);
+  }
+
+  Future<void> _openFilters(List<TransactionListItem> transactions) async {
+    final selected = await showTransactionFilterSheet(
+      context: context,
+      initialFilters: _filters,
+      transactions: transactions,
+    );
+    if (selected != null && mounted) setState(() => _filters = selected);
   }
 
   Future<void> _refresh() async {
@@ -158,6 +172,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final transactions = ref.watch(transactionListProvider);
+    final recurringMerchantIds =
+        ref.watch(recurringMerchantIdsProvider).valueOrNull ?? const <String>{};
+    final anomalyTransactionIds =
+        ref.watch(anomalyTransactionIdsProvider).valueOrNull ??
+            const <String>{};
 
     return Scaffold(
       appBar: _selectionMode
@@ -186,6 +205,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ),
               actions: [
                 IconButton(
+                  tooltip: _filters.isEmpty
+                      ? 'Filter transactions'
+                      : 'Filter transactions, ${_filters.activeCount} active',
+                  onPressed: transactions.valueOrNull == null
+                      ? null
+                      : () => _openFilters(transactions.valueOrNull!),
+                  icon: Badge(
+                    isLabelVisible: !_filters.isEmpty,
+                    label: Text('${_filters.activeCount}'),
+                    child: const Icon(Icons.tune),
+                  ),
+                ),
+                IconButton(
                   tooltip: 'Settings',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -203,12 +235,21 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             direction: _direction,
             onQueryChanged: (value) => setState(() => _query = value),
             onDirectionChanged: (value) => setState(() => _direction = value),
+            filters: _filters,
+            onRemoveFilter: (field) => setState(
+              () => _filters = _filters.clear(field),
+            ),
           ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refresh,
               child: switch (transactions) {
-                AsyncData(:final value) => _buildList(context, value),
+                AsyncData(:final value) => _buildList(
+                    context,
+                    value,
+                    recurringMerchantIds,
+                    anomalyTransactionIds,
+                  ),
                 AsyncError() => ErrorStateView(
                     message: 'Could not load transactions.',
                     onRetry: _refresh,
@@ -233,12 +274,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Widget _buildList(BuildContext context, List<TransactionListItem> all) {
-    final filtered = _applyFilters(all);
+  Widget _buildList(
+    BuildContext context,
+    List<TransactionListItem> all,
+    Set<String> recurringMerchantIds,
+    Set<String> anomalyTransactionIds,
+  ) {
+    final filtered = _applyFilters(
+      all,
+      recurringMerchantIds,
+      anomalyTransactionIds,
+    );
 
     if (filtered.isEmpty) {
       final searching = _query.trim().isNotEmpty ||
-          _direction != _DirectionFilter.all ||
+          _direction != TransactionDirectionFilter.all ||
+          !_filters.isEmpty ||
           widget._isFiltered;
       // Empty state must stay scrollable so pull-to-refresh still works.
       return ListView(
@@ -332,12 +383,16 @@ class _FilterBar extends StatelessWidget {
     required this.direction,
     required this.onQueryChanged,
     required this.onDirectionChanged,
+    required this.filters,
+    required this.onRemoveFilter,
   });
 
   final TextEditingController controller;
-  final _DirectionFilter direction;
+  final TransactionDirectionFilter direction;
   final ValueChanged<String> onQueryChanged;
-  final ValueChanged<_DirectionFilter> onDirectionChanged;
+  final ValueChanged<TransactionDirectionFilter> onDirectionChanged;
+  final TransactionFilters filters;
+  final ValueChanged<TransactionFilterField> onRemoveFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +411,7 @@ class _FilterBar extends StatelessWidget {
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Search merchant or category',
+              hintText: 'Search transactions',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: controller.text.isEmpty
                   ? null
@@ -376,15 +431,18 @@ class _FilterBar extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Align(
             alignment: Alignment.centerLeft,
-            child: SegmentedButton<_DirectionFilter>(
+            child: SegmentedButton<TransactionDirectionFilter>(
               segments: const [
-                ButtonSegment(value: _DirectionFilter.all, label: Text('All')),
                 ButtonSegment(
-                  value: _DirectionFilter.spent,
+                  value: TransactionDirectionFilter.all,
+                  label: Text('All'),
+                ),
+                ButtonSegment(
+                  value: TransactionDirectionFilter.spent,
                   label: Text('Spent'),
                 ),
                 ButtonSegment(
-                  value: _DirectionFilter.received,
+                  value: TransactionDirectionFilter.received,
                   label: Text('Received'),
                 ),
               ],
@@ -394,7 +452,118 @@ class _FilterBar extends StatelessWidget {
               showSelectedIcon: false,
             ),
           ),
+          if (!filters.isEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _ActiveFilterChips(
+              filters: filters,
+              onRemove: onRemoveFilter,
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _ActiveFilterChips extends StatelessWidget {
+  const _ActiveFilterChips({required this.filters, required this.onRemove});
+
+  final TransactionFilters filters;
+  final ValueChanged<TransactionFilterField> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = MaterialLocalizations.of(context);
+    final entries = <(TransactionFilterField, String)>[];
+    final range = filters.dateRange;
+    if (range != null) {
+      entries.add(
+        (
+          TransactionFilterField.dateRange,
+          '${localizations.formatShortDate(range.start)} – '
+              '${localizations.formatShortDate(range.end)}',
+        ),
+      );
+    }
+    if (filters.categoryId != null) {
+      entries.add(
+        (
+          TransactionFilterField.category,
+          filters.categoryName ?? 'Category',
+        ),
+      );
+    }
+    if (filters.merchant != null) {
+      entries.add((TransactionFilterField.merchant, filters.merchant!));
+    }
+    if (filters.account != null) {
+      entries.add((TransactionFilterField.account, filters.account!));
+    }
+    if (filters.channel != null) {
+      entries.add((TransactionFilterField.channel, filters.channel!));
+    }
+    if (filters.minimumAmount != null || filters.maximumAmount != null) {
+      final minimum = filters.minimumAmount;
+      final maximum = filters.maximumAmount;
+      final label = minimum != null && maximum != null
+          ? '₹${minimum.toStringAsFixed(0)}–₹${maximum.toStringAsFixed(0)}'
+          : minimum != null
+              ? 'At least ₹${minimum.toStringAsFixed(0)}'
+              : 'Up to ₹${maximum!.toStringAsFixed(0)}';
+      entries.add((TransactionFilterField.amount, label));
+    }
+    if (filters.review != TransactionReviewFilter.all) {
+      entries.add(
+        (
+          TransactionFilterField.review,
+          filters.review == TransactionReviewFilter.needsReview
+              ? 'Needs review'
+              : 'Reviewed',
+        ),
+      );
+    }
+    if (filters.recurring != TransactionRecurringFilter.all) {
+      entries.add(
+        (
+          TransactionFilterField.recurring,
+          filters.recurring == TransactionRecurringFilter.recurring
+              ? 'Recurring'
+              : 'Not recurring',
+        ),
+      );
+    }
+    if (filters.source != TransactionSourceFilter.all) {
+      entries.add(
+        (
+          TransactionFilterField.source,
+          filters.source == TransactionSourceFilter.manual ? 'Manual' : 'SMS',
+        ),
+      );
+    }
+    if (filters.anomaly != TransactionAnomalyFilter.all) {
+      entries.add(
+        (
+          TransactionFilterField.anomaly,
+          filters.anomaly == TransactionAnomalyFilter.flagged
+              ? 'Unusual'
+              : 'Not unusual',
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.xs),
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          return InputChip(
+            label: Text(entry.$2),
+            onDeleted: () => onRemove(entry.$1),
+          );
+        },
       ),
     );
   }

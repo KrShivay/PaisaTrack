@@ -19,6 +19,14 @@ void main() {
     String? categoryName,
     String? categoryId,
     String? categoryIcon,
+    String? merchantId,
+    String? merchantRaw,
+    String? accountHint,
+    String channel = 'unknown',
+    String? note,
+    String? reference,
+    String status = 'confirmed',
+    String parseSource = 'unknown',
   }) {
     return TransactionListItem(
       id: id,
@@ -29,6 +37,14 @@ void main() {
       categoryName: categoryName,
       categoryId: categoryId,
       categoryIcon: categoryIcon,
+      merchantId: merchantId,
+      merchantRaw: merchantRaw,
+      accountHint: accountHint,
+      channel: channel,
+      note: note,
+      reference: reference,
+      status: status,
+      parseSource: parseSource,
     );
   }
 
@@ -121,6 +137,143 @@ void main() {
 
     expect(find.text('Amazon'), findsOneWidget);
     expect(find.text('Salary Inc'), findsNothing);
+  });
+
+  testWidgets('search covers account, channel, note, reference and status',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      item(
+        id: 'a',
+        ts: now,
+        amount: 610,
+        direction: TransactionDirection.debit,
+        displayName: 'Zomato',
+        accountHint: 'xx6265',
+        channel: 'upi',
+        note: 'Team lunch',
+        reference: 'UTR123456',
+        status: 'needs_review',
+      ),
+      item(
+        id: 'b',
+        ts: now,
+        amount: 200,
+        direction: TransactionDirection.debit,
+        displayName: 'Amazon',
+      ),
+    ]);
+
+    expect(
+      find.widgetWithText(TextField, 'Search transactions'),
+      findsOneWidget,
+    );
+    for (final query in [
+      'xx6265',
+      'upi',
+      'team lunch',
+      'utr123456',
+      'needs review',
+    ]) {
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pump();
+      expect(find.text('Zomato'), findsOneWidget);
+      expect(find.text('Amazon'), findsNothing);
+    }
+  });
+
+  testWidgets('filter sheet applies amount filter and exposes removable chip',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      item(
+        id: 'small',
+        ts: now,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Corner shop',
+        categoryId: 'groceries',
+        categoryName: 'Groceries',
+        accountHint: 'xx6265',
+        channel: 'upi',
+      ),
+      item(
+        id: 'large',
+        ts: now,
+        amount: 500,
+        direction: TransactionDirection.debit,
+        displayName: 'Supermarket',
+        categoryId: 'groceries',
+        categoryName: 'Groceries',
+        accountHint: 'xx6265',
+        channel: 'card',
+      ),
+    ]);
+
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filter transactions'), findsOneWidget);
+    expect(find.text('Date range'), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
+    expect(find.text('Merchant'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
+    expect(find.text('Channel'), findsOneWidget);
+    expect(find.text('Review status'), findsOneWidget);
+    expect(find.text('Recurring state'), findsOneWidget);
+    expect(find.text('Source'), findsOneWidget);
+    expect(find.text('Anomaly status'), findsOneWidget);
+
+    final minimumField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText == 'Minimum amount',
+    );
+    await tester.enterText(minimumField, '200');
+    await tester.ensureVisible(find.text('Apply filters'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply filters'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Corner shop'), findsNothing);
+    expect(find.text('Supermarket'), findsOneWidget);
+    final chipFinder = find.widgetWithText(InputChip, 'At least ₹200');
+    expect(chipFinder, findsOneWidget);
+
+    tester.widget<InputChip>(chipFinder).onDeleted!();
+    await tester.pump();
+    expect(find.text('Corner shop'), findsOneWidget);
+  });
+
+  testWidgets('search remains active after returning from transaction detail',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      item(
+        id: 'amazon',
+        ts: now,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Amazon',
+      ),
+      item(
+        id: 'salary',
+        ts: now,
+        amount: 1000,
+        direction: TransactionDirection.credit,
+        displayName: 'Salary Inc',
+      ),
+    ]);
+
+    await tester.enterText(find.byType(TextField), 'amazon');
+    await tester.tap(find.text('Amazon'));
+    await tester.pump();
+    Navigator.of(tester.element(find.byType(TransactionsScreen))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Amazon'), findsOneWidget);
+    expect(find.text('Salary Inc'), findsNothing);
+    expect(find.text('amazon'), findsOneWidget);
   });
 
   testWidgets('long-press enters multi-select and toggles selection',

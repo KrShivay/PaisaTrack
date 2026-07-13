@@ -47,6 +47,14 @@ class TransactionListItem {
     required this.categoryId,
     required this.categoryIcon,
     this.categoryIsSpending = true,
+    this.merchantId,
+    this.merchantRaw,
+    this.accountHint,
+    this.channel = 'unknown',
+    this.note,
+    this.reference,
+    this.status = 'confirmed',
+    this.parseSource = 'unknown',
   });
 
   final String id;
@@ -57,6 +65,14 @@ class TransactionListItem {
   final String? categoryName;
   final String? categoryId;
   final String? categoryIcon;
+  final String? merchantId;
+  final String? merchantRaw;
+  final String? accountHint;
+  final String channel;
+  final String? note;
+  final String? reference;
+  final String status;
+  final String parseSource;
 
   /// Whether the category counts toward spending. Transfers and cash
   /// withdrawals are excluded (PLAN §5) and render in a neutral color rather
@@ -638,6 +654,14 @@ class TransactionRepository {
       categoryName: category?.name,
       categoryId: category?.id,
       categoryIcon: category?.icon,
+      merchantId: txn.merchantId,
+      merchantRaw: txn.merchantRaw,
+      accountHint: txn.accountHint,
+      channel: txn.channel,
+      note: txn.description,
+      reference: txn.refId,
+      status: txn.status,
+      parseSource: txn.parseSource,
       // Unknown/uncategorized defaults to spending; only an explicit
       // non-spending category (transfers, cash withdrawal) flips this.
       categoryIsSpending: category?.isSpending ?? true,

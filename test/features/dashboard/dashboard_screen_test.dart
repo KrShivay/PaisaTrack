@@ -230,7 +230,7 @@ void main() {
     // The pushed screen is the transactions list, titled with the category and
     // carrying the search field that only that screen has.
     expect(find.widgetWithText(AppBar, 'Food'), findsOneWidget);
-    expect(find.text('Search merchant or category'), findsOneWidget);
+    expect(find.text('Search transactions'), findsOneWidget);
     expect(find.widgetWithText(ListTile, 'Swiggy'), findsOneWidget);
   });
 }
