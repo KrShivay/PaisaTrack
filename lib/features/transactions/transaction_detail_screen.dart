@@ -14,6 +14,7 @@ import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'transactions_providers.dart';
+import 'transaction_source_actions.dart';
 
 /// Read-and-correct view of a single transaction (T-038).
 ///
@@ -42,6 +43,7 @@ class _TransactionDetailScreenState
   String _initialDescription = '';
   bool _saving = false;
   bool _savingParseVerdict = false;
+  bool _confirmingCategory = false;
 
   @override
   void dispose() {
@@ -149,6 +151,27 @@ class _TransactionDetailScreenState
     }
   }
 
+  Future<void> _confirmCategory() async {
+    setState(() => _confirmingCategory = true);
+    try {
+      final database = await ref.read(appDatabaseProvider.future);
+      await ref
+          .read(transactionRepositoryProvider(database))
+          .confirm(txnId: widget.txnId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category confirmed')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not confirm category')),
+      );
+    } finally {
+      if (mounted) setState(() => _confirmingCategory = false);
+    }
+  }
+
   Future<void> _fixParse(Transaction txn) async {
     final correction = await showParseCorrectionSheet(
       context,
@@ -242,16 +265,7 @@ class _TransactionDetailScreenState
     final detail = ref.watch(transactionDetailProvider(widget.txnId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transaction'),
-        actions: [
-          if (_editsSeeded && _isDirty)
-            TextButton(
-              onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : 'Save'),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Transaction details')),
       body: switch (detail) {
         AsyncData(:final value?) => _buildDetail(context, value),
         AsyncData() => const EmptyStateView(
@@ -322,6 +336,11 @@ class _TransactionDetailScreenState
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
+        TransactionSourceActions(
+          txnId: widget.txnId,
+          fallbackVpa: txn.counterpartyVpa,
+        ),
         const SizedBox(height: AppSpacing.xl),
         // Rendered only once categories have loaded, so the current category
         // id is always among the dropdown's items (a stale/unknown id would
@@ -336,12 +355,63 @@ class _TransactionDetailScreenState
               decoration: InputDecoration(labelText: 'Category'),
             ),
         },
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          _categoryExplanation(detail),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
         TextFormField(
           controller: _descriptionController,
-          decoration: const InputDecoration(labelText: 'Description'),
+          decoration: const InputDecoration(
+            labelText: 'Note or details (optional)',
+            hintText: 'What was this payment for?',
+          ),
           textCapitalization: TextCapitalization.sentences,
         ),
+        if (txn.status == 'needs_review') ...[
+          const SizedBox(height: AppSpacing.lg),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Verify category',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text(
+                    'Confirm the suggested category, or choose a different one above.',
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  FilledButton.icon(
+                    onPressed: _isDirty || _confirmingCategory
+                        ? null
+                        : _confirmCategory,
+                    icon: const Icon(Icons.check),
+                    label: Text(
+                      _confirmingCategory
+                          ? 'Confirming…'
+                          : 'Category is correct',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (_isDirty) ...[
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: const Icon(Icons.save_outlined),
+            label: Text(_saving ? 'Saving changes…' : 'Save changes'),
+          ),
+        ],
         if (detail.isLowTrustParse) ...[
           const SizedBox(height: AppSpacing.lg),
           _ParseConfirmationCard(
@@ -351,14 +421,6 @@ class _TransactionDetailScreenState
           ),
         ],
         const SizedBox(height: AppSpacing.xl),
-        _DetailSection(
-          title: 'Why this category?',
-          initiallyExpanded: true,
-          child: Text(
-            _categoryExplanation(detail),
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
         _DetailSection(
           title: 'Transaction details',
           child: Column(
@@ -373,16 +435,12 @@ class _TransactionDetailScreenState
                     : formatInr(txn.balanceAfter!),
               ),
               _FieldRow(label: 'Reference', value: txn.refId),
-              _FieldRow(
-                label: 'Counterparty VPA',
-                value: txn.counterpartyVpa,
-              ),
-              _FieldRow(label: 'SMS source', value: txn.parseSource),
+              _FieldRow(label: 'Counterparty VPA', value: txn.counterpartyVpa),
             ],
           ),
         ),
         _DetailSection(
-          title: 'Developer details',
+          title: 'Technical details',
           child: Column(
             children: [
               _FieldRow(label: 'Parse source', value: txn.parseSource),
@@ -451,19 +509,16 @@ class _DetailSection extends StatelessWidget {
   const _DetailSection({
     required this.title,
     required this.child,
-    this.initiallyExpanded = false,
   });
 
   final String title;
   final Widget child;
-  final bool initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
       childrenPadding: const EdgeInsets.only(bottom: AppSpacing.md),
-      initiallyExpanded: initiallyExpanded,
       title: Text(title, style: Theme.of(context).textTheme.titleMedium),
       children: [Align(alignment: Alignment.centerLeft, child: child)],
     );

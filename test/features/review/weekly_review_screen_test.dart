@@ -163,6 +163,7 @@ void main() {
                 categoryId: 'shopping',
                 categoryIcon: 'shopping_bag',
                 status: 'needs_review',
+                counterpartyKey: 'vpa:bookstore@upi',
               ),
             ]),
           ),
@@ -176,6 +177,9 @@ void main() {
     expect(find.text('Suggested category'), findsOneWidget);
     expect(find.text('Shopping'), findsOneWidget);
     expect(find.text('-₹1,299.00'), findsOneWidget);
+    expect(find.text('Copy VPA'), findsOneWidget);
+    expect(find.text('Category is correct'), findsOneWidget);
+    expect(find.text('Review transaction details'), findsOneWidget);
     expect(find.byType(Checkbox), findsNothing);
   });
 
@@ -246,13 +250,14 @@ void main() {
     ];
     final database = await pumpActionableScreen(tester, items);
 
-    await tester.tap(find.text('Select'));
+    await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(Checkbox).first);
+    final firstCheckbox = tester.widget<Checkbox>(
+      find.byKey(const ValueKey('select_txn_bulk_1')),
+    );
+    firstCheckbox.onChanged!(true);
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('select_txn_bulk_3')));
-    await tester.pump();
-    await tester.tap(find.text('Confirm selected (2)'));
+    await tester.tap(find.text('Confirm (1)'));
     await waitForStatus(tester, database, 'txn_bulk_1', 'confirmed');
 
     final rows = (await tester.runAsync(
@@ -260,7 +265,11 @@ void main() {
     ))!;
     expect(
       rows.where((row) => row.status == 'confirmed').map((row) => row.id),
-      containsAll(['txn_bulk_1', 'txn_bulk_2']),
+      contains('txn_bulk_1'),
+    );
+    expect(
+      rows.singleWhere((row) => row.id == 'txn_bulk_2').status,
+      'needs_review',
     );
     expect(
       rows.singleWhere((row) => row.id == 'txn_bulk_3').status,
@@ -337,7 +346,7 @@ void main() {
     ];
     final database = await pumpActionableScreen(tester, items);
 
-    await tester.tap(find.text('List'));
+    await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
     expect(
       find.textContaining('2 similar transactions from Alice'),

@@ -12,6 +12,8 @@ import '../../data/db/database_provider.dart';
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../settings/settings_screen.dart';
+import '../transactions/transaction_detail_screen.dart';
+import '../transactions/transaction_source_actions.dart';
 import '../transactions/transactions_providers.dart';
 
 class WeeklyReviewScreen extends ConsumerStatefulWidget {
@@ -52,7 +54,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
             selectedIds: _visibleSelection(value),
             onModeChanged: (mode) => setState(() {
               _mode = mode;
-              if (mode != _ReviewMode.bulk) _selectedIds.clear();
+              if (mode != _ReviewMode.list) _selectedIds.clear();
             }),
             onToggle: _toggle,
             onSelectAll: () => _selectAll(value),
@@ -126,7 +128,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   }
 }
 
-enum _ReviewMode { quick, list, bulk }
+enum _ReviewMode { quick, list }
 
 class _ReviewCentre extends StatelessWidget {
   const _ReviewCentre({
@@ -181,18 +183,13 @@ class _ReviewCentre extends StatelessWidget {
                 segments: const [
                   ButtonSegment(
                     value: _ReviewMode.quick,
-                    label: Text('Quick'),
+                    label: Text('One by one'),
                     icon: Icon(Icons.bolt_outlined),
                   ),
                   ButtonSegment(
                     value: _ReviewMode.list,
-                    label: Text('List'),
+                    label: Text('All'),
                     icon: Icon(Icons.view_list_outlined),
-                  ),
-                  ButtonSegment(
-                    value: _ReviewMode.bulk,
-                    label: Text('Select'),
-                    icon: Icon(Icons.checklist_outlined),
                   ),
                 ],
                 selected: {mode},
@@ -220,16 +217,6 @@ class _ReviewCentre extends StatelessWidget {
                 onSelectAll: onSelectAll,
                 onConfirmSelected: onConfirmSelected,
                 onConfirmGroup: onConfirmGroup,
-                bulkMode: false,
-              ),
-            _ReviewMode.bulk => _ReviewList(
-                items: items,
-                selectedIds: selectedIds,
-                onToggle: onToggle,
-                onSelectAll: onSelectAll,
-                onConfirmSelected: onConfirmSelected,
-                onConfirmGroup: onConfirmGroup,
-                bulkMode: true,
               ),
           },
         ),
@@ -284,10 +271,15 @@ class _QuickReview extends ConsumerWidget {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.md),
+                TransactionSourceActions(
+                  txnId: item.id,
+                  fallbackVpa: _vpaFromReviewItem(item),
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton(
                   onPressed: onConfirm,
-                  child: const Text('Confirm'),
+                  child: const Text('Category is correct'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 OutlinedButton(
@@ -298,6 +290,15 @@ class _QuickReview extends ConsumerWidget {
                     matchingGroupIds: matchingGroupIds,
                   ),
                   child: const Text('Change category'),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TransactionDetailScreen(txnId: item.id),
+                    ),
+                  ),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Review transaction details'),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
@@ -324,6 +325,11 @@ String _reviewReason(TransactionReviewItem item) {
   return 'Previously used for similar transactions.';
 }
 
+String? _vpaFromReviewItem(TransactionReviewItem item) {
+  final key = item.counterpartyKey;
+  return key?.startsWith('vpa:') == true ? key!.substring(4) : null;
+}
+
 class _ReviewList extends ConsumerWidget {
   const _ReviewList({
     required this.items,
@@ -332,7 +338,6 @@ class _ReviewList extends ConsumerWidget {
     required this.onSelectAll,
     required this.onConfirmSelected,
     required this.onConfirmGroup,
-    required this.bulkMode,
   });
 
   final List<TransactionReviewItem> items;
@@ -341,7 +346,6 @@ class _ReviewList extends ConsumerWidget {
   final VoidCallback onSelectAll;
   final VoidCallback onConfirmSelected;
   final void Function(Set<String> ids) onConfirmGroup;
-  final bool bulkMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -357,29 +361,29 @@ class _ReviewList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
-        if (bulkMode)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            child: Row(
-              children: [
-                Checkbox(
-                  value: allSelected
-                      ? true
-                      : someSelected
-                          ? null
-                          : false,
-                  tristate: true,
-                  onChanged: (_) => onSelectAll(),
-                ),
-                const Expanded(child: Text('Select all visible')),
-                FilledButton.icon(
-                  onPressed: someSelected ? onConfirmSelected : null,
-                  icon: const Icon(Icons.done_all),
-                  label: Text('Confirm selected (${selectedIds.length})'),
-                ),
-              ],
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Row(
+            children: [
+              Checkbox(
+                key: const ValueKey('select_all_review'),
+                value: allSelected
+                    ? true
+                    : someSelected
+                        ? null
+                        : false,
+                tristate: true,
+                onChanged: (_) => onSelectAll(),
+              ),
+              const Expanded(child: Text('Select all')),
+              FilledButton.icon(
+                onPressed: someSelected ? onConfirmSelected : null,
+                icon: const Icon(Icons.done_all),
+                label: Text('Confirm (${selectedIds.length})'),
+              ),
+            ],
           ),
+        ),
         for (final entry in groups.entries) ...[
           _ReviewGroupHeader(
             groupKey: entry.key,
@@ -390,33 +394,11 @@ class _ReviewList extends ConsumerWidget {
                 onConfirmGroup(entry.value.map((item) => item.id).toSet()),
           ),
           for (final item in entry.value) ...[
-            Dismissible(
-              key: ValueKey(item.id),
-              direction: DismissDirection.endToStart,
-              background: ColoredBox(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.lg),
-                    child: Icon(
-                      Icons.check,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-              ),
-              confirmDismiss: (_) async {
-                await _repository(ref).confirm(txnId: item.id);
-                return true;
-              },
-              child: _ReviewTile(
-                item: item,
-                matchingGroupIds: entry.value.map((item) => item.id).toSet(),
-                selected: selectedIds.contains(item.id),
-                onSelected: (selected) => onToggle(item.id, selected),
-                bulkMode: bulkMode,
-              ),
+            _ReviewTile(
+              item: item,
+              matchingGroupIds: entry.value.map((item) => item.id).toSet(),
+              selected: selectedIds.contains(item.id),
+              onSelected: (selected) => onToggle(item.id, selected),
             ),
             const Divider(height: 1),
           ],
@@ -461,7 +443,8 @@ class _ReviewGroupHeader extends StatelessWidget {
             TextButton(
               key: ValueKey('confirm_group_$groupKey'),
               onPressed: onConfirm,
-              child: Text(count == 1 ? 'Confirm' : 'Apply to all $count'),
+              child:
+                  Text(count == 1 ? 'Confirm category' : 'Confirm all $count'),
             ),
           ],
         ),
@@ -476,45 +459,65 @@ class _ReviewTile extends ConsumerWidget {
     required this.matchingGroupIds,
     required this.selected,
     required this.onSelected,
-    required this.bulkMode,
   });
 
   final TransactionReviewItem item;
   final Set<String> matchingGroupIds;
   final bool selected;
   final ValueChanged<bool> onSelected;
-  final bool bulkMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
-        if (bulkMode)
-          Padding(
-            padding: const EdgeInsets.only(left: AppSpacing.sm),
-            child: Checkbox(
-              key: ValueKey('select_${item.id}'),
-              value: selected,
-              onChanged: (value) => onSelected(value ?? false),
-            ),
+        Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.sm),
+          child: Checkbox(
+            key: ValueKey('select_${item.id}'),
+            value: selected,
+            onChanged: (value) => onSelected(value ?? false),
           ),
+        ),
         Expanded(
-          child: TransactionTile(
-            merchantName: item.displayName,
-            amount: item.amount,
-            direction: item.direction,
-            categoryLabel: item.categoryName ?? 'Uncategorized',
-            timeLabel: formatTxnTime(item.ts),
-            categoryId: item.categoryId,
-            categoryIcon: item.categoryIcon,
-            statusLabel: item.status == 'needs_review' ? 'Needs review' : null,
-            selected: selected,
-            onTap: () => _showCorrectionSheet(
-              context,
-              ref,
-              item,
-              matchingGroupIds: matchingGroupIds,
-            ),
+          child: Column(
+            children: [
+              TransactionTile(
+                merchantName: item.displayName,
+                amount: item.amount,
+                direction: item.direction,
+                categoryLabel: item.categoryName ?? 'Uncategorized',
+                timeLabel: formatTxnTime(item.ts),
+                categoryId: item.categoryId,
+                categoryIcon: item.categoryIcon,
+                statusLabel: 'Category needs review',
+                selected: selected,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TransactionDetailScreen(txnId: item.id),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.md,
+                  right: AppSpacing.sm,
+                  bottom: AppSpacing.xs,
+                ),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _showCorrectionSheet(
+                      context,
+                      ref,
+                      item,
+                      matchingGroupIds: matchingGroupIds,
+                    ),
+                    icon: const Icon(Icons.category_outlined, size: 18),
+                    label: const Text('Change category'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

@@ -44,6 +44,15 @@ void main() {
           ),
         );
     final ts = DateTime.utc(2026, 7, 6, 9);
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_1',
+            sender: 'VM-HDFCBK',
+            body: 'Rs.449 debited via UPI to amazon@ybl. Ref 615223847712.',
+            receivedAt: ts,
+            purgeAfter: ts.add(const Duration(days: 30)),
+          ),
+        );
     await database.into(database.transactions).insertOnConflictUpdate(
           TransactionsCompanion.insert(
             id: 'txn_1',
@@ -56,6 +65,7 @@ void main() {
             accountHint: const Value('xx4521'),
             balanceAfter: const Value(12384.50),
             refId: const Value('615223847712'),
+            smsId: const Value('sms_1'),
             categoryId: const Value('food_dining'),
             parseSource: 'template',
             confidenceJson: '{"parser":{"c":0.97,"src":"template"}}',
@@ -338,10 +348,22 @@ void main() {
       expect(find.text('AMZN*MKTPLC'), findsOneWidget);
       // The category dropdown sits near the top, above the field rows.
       expect(find.text('Food & Dining'), findsOneWidget);
-      expect(find.text('Save'), findsNothing);
+      expect(find.text('Save changes'), findsNothing);
+      expect(find.text('Copy VPA'), findsOneWidget);
+      expect(find.text('View source SMS'), findsOneWidget);
       expect(find.text('amazon@ybl'), findsNothing);
       expect(find.text('615223847712'), findsNothing);
       expect(find.text('Parsed correctly?'), findsNothing);
+
+      await tester.tap(find.text('View source SMS'));
+      await tester.pumpAndSettle();
+      expect(find.text('Source SMS'), findsOneWidget);
+      expect(
+        find.text('Rs.449 debited via UPI to amazon@ybl. Ref 615223847712.'),
+        findsOneWidget,
+      );
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
 
       // The remaining fields sit below the 600x800 test viewport and the
       // ListView builds lazily, so scroll each into view before asserting.
@@ -355,17 +377,30 @@ void main() {
       }
 
       await revealAndExpect('Transaction details');
-      await tester.tap(find.text('Transaction details'));
+      await tester.tap(
+        find.widgetWithText(ExpansionTile, 'Transaction details'),
+      );
       await tester.pumpAndSettle();
       await revealAndExpect('amazon@ybl');
       await revealAndExpect('₹12,384.50');
       await revealAndExpect('615223847712');
-      await tester.ensureVisible(find.text('Transaction details'));
-      await tester.tap(find.text('Transaction details'));
+      await tester.scrollUntilVisible(
+        find.widgetWithText(ExpansionTile, 'Transaction details'),
+        -80,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(
+        find.byType(Scrollable).first,
+        const Offset(0, -100),
+      );
       await tester.pumpAndSettle();
-      await revealAndExpect('Developer details');
+      await tester.tap(
+        find.widgetWithText(ExpansionTile, 'Transaction details'),
+      );
+      await tester.pumpAndSettle();
+      await revealAndExpect('Technical details');
       expect(find.text('0.97'), findsNothing);
-      await tester.tap(find.text('Developer details'));
+      await tester.tap(find.text('Technical details'));
       await tester.pumpAndSettle();
       await revealAndExpect('template');
       await revealAndExpect('0.97');
@@ -388,14 +423,14 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Description'),
+        find.widgetWithText(TextFormField, 'Note or details (optional)'),
         'Books order',
       );
 
-      expect(find.text('Save'), findsOneWidget);
-      await tester.tap(find.text('Save'));
+      expect(find.text('Save changes'), findsOneWidget);
+      await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();
-      expect(find.text('Save'), findsNothing);
+      expect(find.text('Save changes'), findsNothing);
 
       final txn = await (database.select(database.transactions)
             ..where((t) => t.id.equals('txn_1')))
@@ -410,6 +445,26 @@ void main() {
         feedbackRows.map((row) => row.context).toSet(),
         {'detail_edit'},
       );
+
+      await unmount(tester);
+    });
+
+    testWidgets('confirms a suggested category from transaction detail',
+        (tester) async {
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('txn_1')))
+          .write(const TransactionsCompanion(status: Value('needs_review')));
+      await pumpDetail(tester);
+
+      expect(find.text('Verify category'), findsOneWidget);
+      await tester.tap(find.text('Category is correct'));
+      await tester.pumpAndSettle();
+
+      final row = await (database.select(database.transactions)
+            ..where((transaction) => transaction.id.equals('txn_1')))
+          .getSingle();
+      expect(row.status, 'confirmed');
+      expect(find.text('Category confirmed'), findsOneWidget);
 
       await unmount(tester);
     });

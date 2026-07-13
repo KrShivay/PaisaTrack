@@ -4,6 +4,7 @@ import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/repositories/transaction_source_repository.dart';
 
 /// Live-updating list of non-deleted transactions, newest first.
 ///
@@ -33,6 +34,19 @@ final transactionDetailProvider =
     loading: () => const Stream<TransactionDetail?>.empty(),
     error: (error, stackTrace) =>
         Stream<TransactionDetail?>.error(error, stackTrace),
+  );
+});
+
+/// Copy/view provenance actions load independently from the main transaction
+/// model so raw SMS retention does not complicate every list and review row.
+final transactionSourceProvider =
+    StreamProvider.family<TransactionSourceInfo?, String>((ref, txnId) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  return databaseAsync.when(
+    data: (database) => TransactionSourceRepository(database).watch(txnId),
+    loading: () => const Stream<TransactionSourceInfo?>.empty(),
+    error: (error, stackTrace) =>
+        Stream<TransactionSourceInfo?>.error(error, stackTrace),
   );
 });
 

@@ -351,6 +351,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           categoryId: item.categoryId,
           categoryIcon: item.categoryIcon,
           categoryIsSpending: item.categoryIsSpending,
+          statusLabel: switch (item.status) {
+            'needs_review' => 'Category needs review',
+            'asked' => 'Waiting for review',
+            _ => null,
+          },
           selected: _selected.contains(item.id),
           onTap: () => _selectionMode
               ? _toggleSelected(item.id)
