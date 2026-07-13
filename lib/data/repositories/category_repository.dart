@@ -20,6 +20,7 @@ class CategoryRepository {
   Future<String> addUserCategory({
     required String name,
     String icon = 'category',
+    bool isSpending = true,
     DateTime Function() clock = DateTime.now,
   }) async {
     final trimmed = name.trim();
@@ -35,7 +36,7 @@ class CategoryRepository {
             id: id,
             name: trimmed,
             icon: icon,
-            isSpending: true,
+            isSpending: isSpending,
             sortOrder: maxSort + 1,
             isUserCreated: true,
           ),
@@ -47,6 +48,7 @@ class CategoryRepository {
     required String categoryId,
     required String name,
     String? icon,
+    bool? isSpending,
   }) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) throw ArgumentError.value(name, 'name');
@@ -56,6 +58,8 @@ class CategoryRepository {
       CategoriesCompanion(
         name: Value(trimmed),
         icon: icon == null ? const Value.absent() : Value(icon),
+        isSpending:
+            isSpending == null ? const Value.absent() : Value(isSpending),
       ),
     );
   }

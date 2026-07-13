@@ -53,14 +53,14 @@ class SettingsScreen extends ConsumerWidget {
               title: 'Intelligence',
               children: [_LlmModelTile()],
             ),
-            const SizedBox(height: AppSpacing.xl),
             _Section(
-              title: 'Ask budget',
+              title: 'Ask PaisaTrack',
               children: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('${value.askDailyBudget} asks per day'),
-                  subtitle: const Text('Default budget is 2 asks per day'),
+                  leading: const Icon(Icons.question_answer_outlined),
+                  title: const Text('Ask PaisaTrack daily limit'),
+                  subtitle: Text('${value.askDailyBudget} questions per day'),
                 ),
                 Slider(
                   value: value.askDailyBudget.toDouble(),
@@ -80,16 +80,63 @@ class SettingsScreen extends ConsumerWidget {
             _Section(
               title: 'Categories and learning',
               children: [
-                OutlinedButton.icon(
-                  onPressed: () {
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.category_outlined),
+                  title: const Text('Categories'),
+                  subtitle: const Text(
+                    'Names, icons, merchant learning and matching rules',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (context) => const CategoryManagerScreen(),
                       ),
                     );
                   },
-                  icon: const Icon(Icons.category),
-                  label: const Text('Manage categories'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const _Section(
+              title: 'Accounts and transactions',
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.account_balance_outlined),
+                  title: Text('Accounts'),
+                  subtitle: Text(
+                    'Account labels are available in transaction filters',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const _Section(
+              title: 'Notifications',
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.notifications_outlined),
+                  title: Text('Review reminders'),
+                  subtitle: Text(
+                    'Shown only when transactions need your attention',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const _Section(
+              title: 'Privacy and security',
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('Local processing'),
+                  subtitle: Text(
+                    'Financial messages, learning and questions stay on device',
+                  ),
                 ),
               ],
             ),
@@ -97,30 +144,44 @@ class SettingsScreen extends ConsumerWidget {
             _Section(
               title: 'Data',
               children: [
-                OutlinedButton.icon(
-                  onPressed: () => _exportBackup(context, ref),
-                  icon: const Icon(Icons.lock),
-                  label: const Text('Export encrypted backup'),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.upload_file_outlined),
+                  title: const Text('Export encrypted backup'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _exportBackup(context, ref),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                OutlinedButton.icon(
-                  onPressed: () => _importBackup(context, ref),
-                  icon: const Icon(Icons.lock_open),
-                  label: const Text('Import encrypted backup'),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                FilledButton.icon(
-                  onPressed: () => _confirmDeleteEverything(context, ref),
-                  icon: const Icon(Icons.delete_forever),
-                  label: const Text('Delete everything'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: PaisaColors.of(context).debit,
-                  ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('Import encrypted backup'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _importBackup(context, ref),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            const _DeveloperOptionsSection(),
+            _Section(
+              title: 'Delete app data',
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.delete_forever_outlined,
+                    color: PaisaColors.of(context).debit,
+                  ),
+                  title: const Text('Delete everything'),
+                  subtitle: const Text(
+                    'Permanently removes transactions, settings and learning',
+                  ),
+                  onTap: () => _confirmDeleteEverything(context, ref),
+                ),
+              ],
+            ),
+            if (kDebugMode) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const _DeveloperOptionsSection(),
+            ],
           ],
         ),
         error: (error, stackTrace) => Center(
