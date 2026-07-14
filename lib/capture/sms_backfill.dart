@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,18 +8,47 @@ import '../core/constants.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/raw_sms.dart';
 import '../enrichment/categorizer.dart';
+import '../enrichment/decision_policy.dart';
+import '../features/settings/app_settings.dart';
 import 'captured_sms_source.dart';
+import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
+import 'sms_import_state.dart';
 import 'sms_ingestion.dart';
 
-/// Reads historical transactional SMS from the device inbox for backfill.
-///
-/// The interface lets providers and tests supply inbox messages without a real
-/// platform channel or device.
+class SmsInboxCursor {
+  const SmsInboxCursor({
+    required this.beforeEpochMillis,
+    required this.beforeId,
+  });
+
+  final int beforeEpochMillis;
+  final int beforeId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SmsInboxCursor &&
+      other.beforeEpochMillis == beforeEpochMillis &&
+      other.beforeId == beforeId;
+
+  @override
+  int get hashCode => Object.hash(beforeEpochMillis, beforeId);
+}
+
+class SmsInboxPage {
+  const SmsInboxPage({required this.messages, this.nextCursor});
+
+  final List<RawSms> messages;
+  final SmsInboxCursor? nextCursor;
+}
+
+/// Reads filter-approved SMS in bounded pages until the inbox is exhausted.
 abstract interface class SmsInboxReader {
-  /// Returns filter-approved inbox messages received at or after [since].
-  Future<List<RawSms>> readSince(DateTime since);
+  Future<SmsInboxPage> readPage({
+    SmsInboxCursor? before,
+    required int limit,
+  });
 }
 
 /// Method-channel implementation backed by the Android host.
@@ -34,18 +64,43 @@ class PlatformSmsInboxReader implements SmsInboxReader {
   final MethodChannel _channel;
 
   @override
-  Future<List<RawSms>> readSince(DateTime since) async {
-    final payloads = await _channel.invokeMethod<List<Object?>>(
-      'readInbox',
+  Future<SmsInboxPage> readPage({
+    SmsInboxCursor? before,
+    required int limit,
+  }) async {
+    final response = await _channel.invokeMethod<Object?>(
+      'readInboxPage',
       <String, Object?>{
-        'sinceEpochMillis': since.millisecondsSinceEpoch,
+        if (before != null) ...{
+          'beforeEpochMillis': before.beforeEpochMillis,
+          'beforeId': before.beforeId,
+        },
+        'limit': limit,
       },
     );
-    if (payloads == null) {
-      return const <RawSms>[];
+    if (response is! Map<Object?, Object?>) {
+      throw const FormatException('Invalid SMS inbox page payload');
+    }
+    final payloads = response['messages'];
+    if (payloads is! List<Object?>) {
+      throw const FormatException('Invalid SMS inbox messages payload');
+    }
+    final hasMore = response['hasMore'] == true;
+    final nextEpoch = response['nextBeforeEpochMillis'];
+    final nextId = response['nextBeforeId'];
+    if (hasMore && (nextEpoch is! int || nextId is! int)) {
+      throw const FormatException('Invalid SMS inbox cursor payload');
     }
 
-    return payloads.map(decodeRawSmsPayload).toList(growable: false);
+    return SmsInboxPage(
+      messages: payloads.map(decodeRawSmsPayload).toList(growable: false),
+      nextCursor: hasMore
+          ? SmsInboxCursor(
+              beforeEpochMillis: nextEpoch as int,
+              beforeId: nextId as int,
+            )
+          : null,
+    );
   }
 }
 
@@ -54,45 +109,22 @@ final smsInboxReaderProvider = Provider<SmsInboxReader>((ref) {
   return const PlatformSmsInboxReader();
 });
 
-/// Persisted record of whether the one-time backfill has already run.
-///
-/// Backed natively so it survives reinstalls-in-place and cold starts; the
-/// interface lets tests drive the run-once gate without a device.
-abstract interface class BackfillMarker {
-  /// True once the historical backfill has completed at least once.
-  Future<bool> isComplete();
+class SmsImportProgress {
+  const SmsImportProgress({required this.processed, required this.failed});
 
-  /// Records that the historical backfill has completed.
-  Future<void> markComplete();
+  final int processed;
+  final int failed;
 }
 
-/// Method-channel implementation backed by Android shared preferences.
-class PlatformBackfillMarker implements BackfillMarker {
-  const PlatformBackfillMarker({
-    MethodChannel channel = _defaultChannel,
-  }) : _channel = channel;
+class SmsImportResult extends SmsImportProgress {
+  const SmsImportResult({
+    required super.processed,
+    required super.failed,
+    this.skipped = false,
+  });
 
-  static const MethodChannel _defaultChannel = MethodChannel(
-    'com.paisatrack/sms_backfill',
-  );
-
-  final MethodChannel _channel;
-
-  @override
-  Future<bool> isComplete() async {
-    return await _channel.invokeMethod<bool>('isBackfillComplete') ?? false;
-  }
-
-  @override
-  Future<void> markComplete() async {
-    await _channel.invokeMethod<void>('markBackfillComplete');
-  }
+  final bool skipped;
 }
-
-/// Injectable backfill marker for production and fake-marker tests.
-final backfillMarkerProvider = Provider<BackfillMarker>((ref) {
-  return const PlatformBackfillMarker();
-});
 
 /// Backfills historical inbox SMS through the ingest pipeline in chunks.
 ///
@@ -103,77 +135,162 @@ class SmsBackfiller {
   SmsBackfiller({
     required SmsIngestor ingestor,
     required SmsInboxReader reader,
-    int months = AppConstants.smsBackfillMonths,
-    int chunkSize = AppConstants.smsBackfillChunkSize,
+    int pageSize = AppConstants.smsHistoryImportPageSize,
   })  : _ingestor = ingestor,
         _reader = reader,
-        _months = months,
-        _chunkSize = chunkSize;
+        _pageSize = pageSize;
 
   final SmsIngestor _ingestor;
   final SmsInboxReader _reader;
-  final int _months;
-  final int _chunkSize;
+  final int _pageSize;
 
-  /// Reads the last [_months] of inbox history relative to [now] and ingests it
-  /// in chunks, yielding between chunks so the UI thread is never blocked.
-  ///
-  /// Returns the number of messages processed. Per-message failures are
-  /// absorbed (no raw content is logged) so one bad row cannot abort the run.
-  Future<int> run({required DateTime now}) async {
-    final since = DateTime(now.year, now.month - _months, now.day);
-    final messages = await _reader.readSince(since);
-
+  /// Scans the complete inbox, newest first, in bounded pages.
+  Future<SmsImportResult> run({
+    SmsInboxCursor? initialCursor,
+    FutureOr<void> Function(SmsInboxCursor cursor)? onPageCompleted,
+    void Function(SmsImportProgress progress)? onProgress,
+  }) async {
     var processed = 0;
-    for (var start = 0; start < messages.length; start += _chunkSize) {
-      final end = (start + _chunkSize < messages.length)
-          ? start + _chunkSize
-          : messages.length;
-      for (final sms in messages.sublist(start, end)) {
+    var failed = 0;
+    var cursor = initialCursor;
+    do {
+      final page = await _reader.readPage(before: cursor, limit: _pageSize);
+      for (final sms in page.messages) {
         try {
           await _ingestor.ingest(sms);
         } catch (_) {
-          // Intentionally swallowed: no raw SMS content is logged on this path.
+          failed++;
         }
         processed++;
       }
-      // Hand control back to the event loop between chunks.
+      onProgress?.call(SmsImportProgress(processed: processed, failed: failed));
+      if (page.nextCursor != null && page.nextCursor == cursor) {
+        throw StateError('SMS inbox pagination did not advance');
+      }
+      if (page.nextCursor != null) {
+        await onPageCompleted?.call(page.nextCursor!);
+      }
+      cursor = page.nextCursor;
       await Future<void>.delayed(Duration.zero);
-    }
-    return processed;
+    } while (cursor != null);
+    return SmsImportResult(processed: processed, failed: failed);
   }
 }
 
-/// Runs the historical backfill exactly once, on the first permission grant
-/// while the database is ready.
-///
-/// A persisted [BackfillMarker] guards the run so later cold starts never
-/// re-scan the inbox — re-scanning would duplicate messages already captured
-/// live under a different id. Cross-source semantic duplicates (a bank SMS
-/// and its wallet echo) are suppressed by `SmsIngestor`'s `DuplicateSuppressor`
-/// (T-025), which runs for every message ingested here too.
-final smsBackfillProvider = FutureProvider<int>((ref) async {
-  final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
-  final database = ref.watch(appDatabaseProvider).valueOrNull;
-  if (permission != SmsPermissionStatus.granted || database == null) {
-    return 0;
+abstract interface class SmsHistoryImportRunner {
+  Future<SmsImportResult> run({
+    bool force = false,
+    void Function(SmsImportProgress progress)? onProgress,
+  });
+}
+
+class SmsHistoryImporter implements SmsHistoryImportRunner {
+  SmsHistoryImporter({
+    required SmsBackfiller backfiller,
+    required BackfillMarker marker,
+  })  : _backfiller = backfiller,
+        _marker = marker;
+
+  final SmsBackfiller _backfiller;
+  final BackfillMarker _marker;
+  Future<SmsImportResult>? _active;
+
+  @override
+  Future<SmsImportResult> run({
+    bool force = false,
+    void Function(SmsImportProgress progress)? onProgress,
+  }) {
+    return _active ??= _run(force: force, onProgress: onProgress).whenComplete(
+      () => _active = null,
+    );
   }
 
-  final marker = ref.read(backfillMarkerProvider);
-  if (await marker.isComplete()) {
-    return 0;
+  Future<SmsImportResult> _run({
+    required bool force,
+    void Function(SmsImportProgress progress)? onProgress,
+  }) async {
+    if (!force && await _marker.completedVersion() >= smsHistoryImportVersion) {
+      return const SmsImportResult(processed: 0, failed: 0, skipped: true);
+    }
+    final checkpoint = force ? null : await _marker.checkpoint();
+    final result = await _backfiller.run(
+      initialCursor: checkpoint == null
+          ? null
+          : SmsInboxCursor(
+              beforeEpochMillis: checkpoint.beforeEpochMillis,
+              beforeId: checkpoint.beforeId,
+            ),
+      onPageCompleted: force
+          ? null
+          : (cursor) => _marker.saveCheckpoint(
+                SmsImportCheckpoint(
+                  beforeEpochMillis: cursor.beforeEpochMillis,
+                  beforeId: cursor.beforeId,
+                ),
+              ),
+      onProgress: onProgress,
+    );
+    // Reaching the end proves the inbox scan completed. Individual messages
+    // are isolated so a single malformed/unsupported row cannot force a full
+    // re-scan on every launch; manual re-import remains available to retry.
+    // Page/query failures still throw before this marker is written.
+    await _marker.markCompleted(smsHistoryImportVersion);
+    return result;
   }
+}
 
-  final parser = await ref.watch(parserCascadeProvider.future);
+final smsHistoryImportRunnerProvider =
+    FutureProvider<SmsHistoryImportRunner>((ref) async {
+  final database = await ref.watch(appDatabaseProvider.future);
+  final knownTransactionIds =
+      (await database.select(database.transactions).get())
+          .map((row) => row.id)
+          .toSet();
+  // Bulk import must stay deterministic and bounded. Running a language model
+  // once per historical template miss makes a large inbox take hours and pins
+  // the CPU. Template + generic parsing cover the bulk path; unresolved rows
+  // remain available for later parser improvements until raw-SMS retention.
+  final parser = ParserCascade(
+    templateMatcher: await ref.watch(templateMatcherProvider.future),
+  );
   final categorizer = await ref.watch(categorizerProvider.future);
-  final reader = ref.read(smsInboxReaderProvider);
   final ingestor = SmsIngestor(
     database: database,
     parser: parser,
     categorizer: categorizer,
+    fixedStatus: DecisionStatus.needsReview,
+    knownTransactionIds: knownTransactionIds,
+    // Avoid one embedding-model invocation per new historical merchant. Raw
+    // merchant text and deterministic categorization are still imported.
+    askDailyBudgetResolver: () =>
+        ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
+        AppConstants.askNowDailyBudget,
   );
-  final backfiller = SmsBackfiller(ingestor: ingestor, reader: reader);
-  final processed = await backfiller.run(now: DateTime.now());
-  await marker.markComplete();
-  return processed;
+  return SmsHistoryImporter(
+    backfiller: SmsBackfiller(
+      ingestor: ingestor,
+      reader: ref.watch(smsInboxReaderProvider),
+    ),
+    marker: ref.watch(backfillMarkerProvider),
+  );
+});
+
+/// Runs the newest full-history import version once permission and DB are ready.
+final smsBackfillProvider = FutureProvider<int>((ref) async {
+  final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
+  if (permission != SmsPermissionStatus.granted) return 0;
+  try {
+    final runner = await ref.watch(smsHistoryImportRunnerProvider.future);
+    return (await runner.run(force: false)).processed;
+  } catch (error, stackTrace) {
+    // Keep diagnostics content-free: platform/query errors are actionable,
+    // while SMS sender/body data must never enter logs.
+    developer.log(
+      'Automatic SMS history import failed',
+      name: 'paisatrack.sms_import',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    rethrow;
+  }
 });

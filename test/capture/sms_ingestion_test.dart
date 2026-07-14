@@ -459,6 +459,43 @@ void main() {
     expect(transactions.single.id, 'txn_sms_dupe');
   });
 
+  test('re-import preserves edited and soft-deleted transaction state',
+      () async {
+    final original = _sampleRecord(amount: 449, merchantRaw: 'ORIGINAL');
+    final ingestor = _ingestorFor(database, original);
+    final sms = _message('sms_user_edited');
+    await ingestor.ingest(sms);
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_user_edited')))
+        .write(
+      const TransactionsCompanion(
+        amount: Value(777),
+        merchantRaw: Value('USER EDIT'),
+        status: Value('confirmed'),
+        isDeleted: Value(true),
+        smsId: Value(null),
+      ),
+    );
+    await (database.delete(database.rawSms)
+          ..where((row) => row.id.equals('sms_user_edited')))
+        .go();
+
+    final changedParser = _ingestorFor(
+      database,
+      _sampleRecord(amount: 999, merchantRaw: 'NEW PARSER VALUE'),
+    );
+    await changedParser.ingest(sms);
+
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_user_edited')))
+        .getSingle();
+    expect(transaction.amount, 777);
+    expect(transaction.merchantRaw, 'USER EDIT');
+    expect(transaction.status, 'confirmed');
+    expect(transaction.isDeleted, isTrue);
+    expect(await database.select(database.rawSms).get(), isEmpty);
+  });
+
   test(
       'suppresses a wallet SMS echo of an already-ingested bank debit '
       '(T-025)', () async {

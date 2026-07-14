@@ -61,9 +61,24 @@ class NightlyPipeline {
       database: database,
       actions: {
         NightlyStage.purgeExpiredRawSms: (now) async {
-          await (database.delete(database.rawSms)
-                ..where((row) => row.purgeAfter.isSmallerOrEqualValue(now)))
-              .go();
+          await database.transaction(() async {
+            final expiredIds = database.selectOnly(database.rawSms)
+              ..addColumns([database.rawSms.id])
+              ..where(
+                database.rawSms.purgeAfter.isSmallerOrEqualValue(now),
+              );
+            // Transactions are permanent; raw bodies are not. Detach the
+            // nullable provenance link before deleting expired raw rows so
+            // full-history imports do not defeat the privacy retention rule.
+            await (database.update(database.transactions)
+                  ..where((row) => row.smsId.isInQuery(expiredIds)))
+                .write(
+              const TransactionsCompanion(smsId: Value(null)),
+            );
+            await (database.delete(database.rawSms)
+                  ..where((row) => row.purgeAfter.isSmallerOrEqualValue(now)))
+                .go();
+          });
         },
         NightlyStage.recurringScan: (now) async {
           await RecurringDetector(database).run(today: now);

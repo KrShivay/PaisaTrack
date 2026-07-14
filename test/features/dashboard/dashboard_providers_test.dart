@@ -29,10 +29,14 @@ TransactionListItem _item({
   );
 }
 
-ProviderContainer _containerWith(List<TransactionListItem> items) {
+ProviderContainer _containerWith(
+  List<TransactionListItem> items, {
+  DashboardPeriod? period,
+}) {
   final container = ProviderContainer(
     overrides: [
       transactionListProvider.overrideWith((ref) => Stream.value(items)),
+      if (period != null) dashboardPeriodProvider.overrideWith((ref) => period),
     ],
   );
   // Prime the stream so downstream Providers see the value synchronously.
@@ -45,8 +49,11 @@ void main() {
   final thisMonth = DateTime(now.year, now.month, 5, 12);
   final lastMonth = DateTime(now.year, now.month - 1, 15, 12);
 
-  Future<ProviderContainer> ready(List<TransactionListItem> items) async {
-    final container = _containerWith(items);
+  Future<ProviderContainer> ready(
+    List<TransactionListItem> items, {
+    DashboardPeriod? period,
+  }) async {
+    final container = _containerWith(items, period: period);
     // Resolve the StreamProvider before reading derived providers.
     await container.read(transactionListProvider.future);
     return container;
@@ -280,5 +287,79 @@ void main() {
     expect(trend.last.month.month, now.month);
     expect(trend.last.spend, 500);
     expect(trend.first.spend, 0);
+  });
+
+  test('custom range drives totals, categories, and recent transactions',
+      () async {
+    final period = DashboardPeriod.range(
+      DateTime(2026, 6, 10),
+      DateTime(2026, 6, 12),
+    );
+    final c = await ready(
+      [
+        _item(
+          id: 'before',
+          ts: DateTime(2026, 6, 9, 23, 59),
+          amount: 900,
+          direction: TransactionDirection.debit,
+          categoryName: 'Travel',
+        ),
+        _item(
+          id: 'inside',
+          ts: DateTime(2026, 6, 11, 12),
+          amount: 120,
+          direction: TransactionDirection.debit,
+          categoryId: 'food',
+          categoryName: 'Food',
+        ),
+        _item(
+          id: 'end',
+          ts: DateTime(2026, 6, 12, 23, 59),
+          amount: 500,
+          direction: TransactionDirection.credit,
+        ),
+      ],
+      period: period,
+    );
+
+    expect(c.read(monthDirectionTotalsProvider).debitTotal, 120);
+    expect(c.read(monthDirectionTotalsProvider).creditTotal, 500);
+    expect(c.read(categoryBreakdownProvider).single.name, 'Food');
+    expect(c.read(recentTransactionsProvider).map((item) => item.id), [
+      'inside',
+      'end',
+    ]);
+    expect(c.read(projectedMonthEndSpendProvider), isNull);
+  });
+
+  test('custom range compares against the immediately preceding equal period',
+      () async {
+    final period = DashboardPeriod.range(
+      DateTime(2026, 7, 8),
+      DateTime(2026, 7, 14),
+    );
+    final c = await ready(
+      [
+        _item(
+          id: 'current',
+          ts: DateTime(2026, 7, 10),
+          amount: 300,
+          direction: TransactionDirection.debit,
+        ),
+        _item(
+          id: 'previous',
+          ts: DateTime(2026, 7, 3),
+          amount: 200,
+          direction: TransactionDirection.debit,
+        ),
+      ],
+      period: period,
+    );
+
+    final comparison = c.read(monthOverMonthSpendProvider);
+    expect(comparison.current, 300);
+    expect(comparison.previous, 200);
+    expect(comparison.pctChange, 0.5);
+    expect(period.comparisonLabel, 'vs previous period');
   });
 }

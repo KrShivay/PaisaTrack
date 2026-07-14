@@ -24,6 +24,9 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
@@ -33,7 +36,12 @@ class MainActivity : FlutterActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backfillExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val embedderExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-    private val llmExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val llmExecutor: ScheduledExecutorService =
+        Executors.newSingleThreadScheduledExecutor()
+    @Volatile
+    private var llmIdleClose: ScheduledFuture<*>? = null
+    @Volatile
+    private var activityResumed = false
     private var llmBridge: LlmBridge? = null
     private var pendingDocumentRequest: PendingDocumentRequest? = null
 
@@ -97,7 +105,23 @@ class MainActivity : FlutterActivity() {
                     if (prompt == null) {
                         result.error("invalid_arguments", "Missing prompt.", null)
                     } else {
-                        runOnExecutor(llmExecutor, result) { bridge.complete(prompt) }
+                        runOnExecutor(llmExecutor, result) {
+                            llmIdleClose?.cancel(false)
+                            llmIdleClose = null
+                            try {
+                                bridge.complete(prompt)
+                            } finally {
+                                if (activityResumed) {
+                                    llmIdleClose = llmExecutor.schedule(
+                                        { bridge.close() },
+                                        LlmIdleCloseDelaySeconds,
+                                        TimeUnit.SECONDS,
+                                    )
+                                } else {
+                                    bridge.close()
+                                }
+                            }
+                        }
                     }
                 }
                 else -> result.notImplemented()
@@ -128,10 +152,30 @@ class MainActivity : FlutterActivity() {
             "com.paisatrack/sms_backfill",
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "readInbox" -> readInbox(inboxReader, call, result)
-                "isBackfillComplete" -> result.success(backfillState.isComplete())
-                "markBackfillComplete" -> {
-                    backfillState.markComplete()
+                "readInboxPage" -> readInboxPage(inboxReader, call, result)
+                "completedBackfillVersion" -> result.success(backfillState.completedVersion())
+                "backfillCheckpoint" -> result.success(backfillState.checkpoint())
+                "saveBackfillCheckpoint" -> {
+                    val beforeEpochMillis = call.argument<Number>("beforeEpochMillis")?.toLong()
+                    val beforeId = call.argument<Number>("beforeId")?.toLong()
+                    if (beforeEpochMillis == null || beforeId == null) {
+                        result.error("invalid_arguments", "Both checkpoint fields are required.", null)
+                        return@setMethodCallHandler
+                    }
+                    backfillState.saveCheckpoint(beforeEpochMillis, beforeId)
+                    result.success(null)
+                }
+                "markBackfillVersion" -> {
+                    val version = call.argument<Number>("version")?.toInt()
+                    if (version == null || version <= 0) {
+                        result.error("invalid_arguments", "A positive import version is required.", null)
+                        return@setMethodCallHandler
+                    }
+                    backfillState.markCompleted(version)
+                    result.success(null)
+                }
+                "resetBackfillVersion" -> {
+                    backfillState.reset()
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -234,6 +278,25 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        activityResumed = true
+    }
+
+    override fun onPause() {
+        activityResumed = false
+        // Release cached native weights after any in-flight inference. Keeping
+        // them while the app is backgrounded wastes roughly 1 GB on this device.
+        runCatching {
+            llmExecutor.execute {
+                llmIdleClose?.cancel(false)
+                llmIdleClose = null
+                llmBridge?.close()
+            }
+        }
+        super.onPause()
+    }
+
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         pendingDocumentRequest?.result?.error(
             "engine_detached",
@@ -247,6 +310,8 @@ class MainActivity : FlutterActivity() {
         capturedSmsBridge.detach()
         backfillExecutor.shutdown()
         embedderExecutor.shutdown()
+        llmIdleClose?.cancel(false)
+        llmIdleClose = null
         llmBridge?.close()
         llmBridge = null
         llmExecutor.shutdown()
@@ -346,7 +411,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun readInbox(
+    private fun readInboxPage(
         inboxReader: SmsInboxReader,
         call: MethodCall,
         result: MethodChannel.Result,
@@ -360,11 +425,17 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        val sinceEpochMillis = (call.argument<Number>("sinceEpochMillis"))?.toLong() ?: 0L
+        val beforeEpochMillis = call.argument<Number>("beforeEpochMillis")?.toLong()
+        val beforeId = call.argument<Number>("beforeId")?.toLong()
+        if ((beforeEpochMillis == null) != (beforeId == null)) {
+            result.error("invalid_arguments", "Both inbox cursor fields are required.", null)
+            return
+        }
+        val limit = (call.argument<Number>("limit")?.toInt() ?: 200).coerceIn(1, 500)
         // Query the content provider off the main thread; the inbox can be large.
         backfillExecutor.execute {
             val response = try {
-                Result.success(inboxReader.readSince(sinceEpochMillis))
+                Result.success(inboxReader.readPage(beforeEpochMillis, beforeId, limit))
             } catch (error: Exception) {
                 Result.failure(error)
             }
@@ -492,6 +563,7 @@ class MainActivity : FlutterActivity() {
         const val STATUS_GRANTED = "granted"
         const val STATUS_DENIED = "denied"
         const val STATUS_PERMANENTLY_DENIED = "permanentlyDenied"
+        const val LlmIdleCloseDelaySeconds = 60L
     }
 }
 
@@ -568,22 +640,56 @@ private class CapturedSmsEventChannelBridge : EventChannel.StreamHandler, Captur
 }
 
 /**
- * Persists whether the one-time historical inbox backfill (T-023) has run, so
- * it fires only on the genuine first permission grant and never re-scans on
- * later launches (which would duplicate live-captured messages).
+ * Persists the newest completed history-import version. The legacy boolean is
+ * interpreted as version 1 so upgrades automatically run the uncapped v2 scan.
  */
 private class BackfillStateStore(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences(PrefsName, Context.MODE_PRIVATE)
 
-    fun isComplete(): Boolean = prefs.getBoolean(CompleteKey, false)
+    fun completedVersion(): Int {
+        if (prefs.contains(VersionKey)) return prefs.getInt(VersionKey, 0)
+        return if (prefs.getBoolean(LegacyCompleteKey, false)) 1 else 0
+    }
 
-    fun markComplete() {
-        prefs.edit().putBoolean(CompleteKey, true).apply()
+    fun checkpoint(): Map<String, Long>? {
+        if (!prefs.contains(CheckpointEpochKey) || !prefs.contains(CheckpointIdKey)) return null
+        return mapOf(
+            "beforeEpochMillis" to prefs.getLong(CheckpointEpochKey, 0L),
+            "beforeId" to prefs.getLong(CheckpointIdKey, 0L),
+        )
+    }
+
+    fun saveCheckpoint(beforeEpochMillis: Long, beforeId: Long) {
+        prefs.edit()
+            .putLong(CheckpointEpochKey, beforeEpochMillis)
+            .putLong(CheckpointIdKey, beforeId)
+            .apply()
+    }
+
+    fun markCompleted(version: Int) {
+        prefs.edit()
+            .putInt(VersionKey, version)
+            .remove(LegacyCompleteKey)
+            .remove(CheckpointEpochKey)
+            .remove(CheckpointIdKey)
+            .apply()
+    }
+
+    fun reset() {
+        prefs.edit()
+            .remove(VersionKey)
+            .remove(LegacyCompleteKey)
+            .remove(CheckpointEpochKey)
+            .remove(CheckpointIdKey)
+            .apply()
     }
 
     private companion object {
         const val PrefsName = "sms_backfill_state"
-        const val CompleteKey = "backfill_complete"
+        const val VersionKey = "completed_import_version"
+        const val LegacyCompleteKey = "backfill_complete"
+        const val CheckpointEpochKey = "checkpoint_before_epoch_millis"
+        const val CheckpointIdKey = "checkpoint_before_id"
     }
 }

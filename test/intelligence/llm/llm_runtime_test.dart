@@ -50,11 +50,11 @@ void main() {
     expect(calls.single.arguments, {'prompt': 'private SMS'});
   });
 
-  test('extractJson validates strict schema and retries once', () async {
+  test('extractJson validates strict schema in one attempt', () async {
     var calls = 0;
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls++;
-      return calls == 1 ? 'not json' : '{"amount":42,"kind":"debit"}';
+      return '{"amount":42,"kind":"debit"}';
     });
     final result = await runtime.extractJson('extract', {
       'type': 'object',
@@ -66,14 +66,14 @@ void main() {
       'additionalProperties': false,
     });
 
-    expect(calls, 2);
+    expect(calls, 1);
     expect(
       (result as LlmSuccess<Map<String, Object?>>).value,
       {'amount': 42, 'kind': 'debit'},
     );
   });
 
-  test('extractJson rejects extra fields after its single retry', () async {
+  test('extractJson rejects extra fields without retrying', () async {
     var calls = 0;
     messenger.setMockMethodCallHandler(
       channel,
@@ -98,37 +98,10 @@ void main() {
         LlmUnavailableReason.failure,
       ),
     );
-    expect(calls, 2);
+    expect(calls, 1);
   });
 
-  test('extractJson retries enum values outside the closed whitelist',
-      () async {
-    var calls = 0;
-    messenger.setMockMethodCallHandler(channel, (call) async {
-      calls++;
-      return calls == 1 ? '{"kind":"transfer"}' : '{"kind":"debit"}';
-    });
-
-    final result = await runtime.extractJson('extract', {
-      'type': 'object',
-      'properties': {
-        'kind': {
-          'type': 'string',
-          'enum': ['debit', 'credit'],
-        },
-      },
-      'required': ['kind'],
-      'additionalProperties': false,
-    });
-
-    expect(calls, 2);
-    expect(
-      (result as LlmSuccess<Map<String, Object?>>).value,
-      {'kind': 'debit'},
-    );
-  });
-
-  test('extractJson rejects enum values after its single retry', () async {
+  test('extractJson rejects enum values without retrying', () async {
     var calls = 0;
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls++;
@@ -147,7 +120,7 @@ void main() {
       'additionalProperties': false,
     });
 
-    expect(calls, 2);
+    expect(calls, 1);
     expect(
       result,
       isA<LlmUnavailable<Map<String, Object?>>>().having(
@@ -182,6 +155,34 @@ void main() {
     );
   });
 
+  test('extractJson skips an echoed schema and accepts the later values object',
+      () async {
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls++;
+      return '{"type":"object","properties":{"status":{"type":"string"}}}'
+          '\n{"status":"ok"}';
+    });
+
+    final result = await runtime.extractJson('extract', {
+      'type': 'object',
+      'properties': {
+        'status': {
+          'type': 'string',
+          'enum': ['ok'],
+        },
+      },
+      'required': ['status'],
+      'additionalProperties': false,
+    });
+
+    expect(calls, 1);
+    expect(
+      (result as LlmSuccess<Map<String, Object?>>).value,
+      {'status': 'ok'},
+    );
+  });
+
   test('extractJson accepts an object-typed field left open (no properties)',
       () async {
     var calls = 0;
@@ -204,6 +205,64 @@ void main() {
       (result as LlmSuccess<Map<String, Object?>>).value['time_range'],
       {'kind': 'month', 'month': '2026-07'},
     );
+  });
+
+  test('extractJson inserts a schema placeholder inside a chat template',
+      () async {
+    String? request;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      request = (call.arguments as Map<Object?, Object?>)['prompt'] as String;
+      return '{"status":"ok"}';
+    });
+
+    final result = await runtime.extractJson(
+      'system\n$llmJsonSchemaPlaceholder\nassistant',
+      {
+        'type': 'object',
+        'properties': {
+          'status': {
+            'type': 'string',
+            'enum': ['ok'],
+          },
+        },
+        'required': ['status'],
+        'additionalProperties': false,
+      },
+    );
+
+    expect(result, isA<LlmSuccess<Map<String, Object?>>>());
+    expect(request, isNot(contains(llmJsonSchemaPlaceholder)));
+    expect(request, contains('"status"'));
+    expect(request, endsWith('assistant'));
+  });
+
+  test('extractJson can validate strictly without prefilling the schema',
+      () async {
+    String? request;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      request = (call.arguments as Map<Object?, Object?>)['prompt'] as String;
+      return '{"status":"ok"}';
+    });
+
+    final result = await runtime.extractJson(
+      'field contract\n$llmJsonValidationOnlyPlaceholder\nassistant',
+      {
+        'type': 'object',
+        'properties': {
+          'status': {
+            'type': 'string',
+            'enum': ['ok'],
+          },
+        },
+        'required': ['status'],
+        'additionalProperties': false,
+      },
+    );
+
+    expect(result, isA<LlmSuccess<Map<String, Object?>>>());
+    expect(request, contains('field contract above'));
+    expect(request, isNot(contains('"properties"')));
+    expect(request, isNot(contains(llmJsonValidationOnlyPlaceholder)));
   });
 
   test('fake no-op runtime lets callers degrade without throwing', () async {

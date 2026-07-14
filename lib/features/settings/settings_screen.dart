@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/permissions/sms_permission.dart';
+import '../../capture/permissions/sms_permission_provider.dart';
+import '../../capture/sms_backfill.dart';
 import '../../core/constants.dart';
 import '../../core/platform/system_document_gateway.dart';
 import '../../core/theme/app_tokens.dart';
@@ -158,6 +161,7 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _importBackup(context, ref),
                 ),
+                const _SmsHistoryImportTile(),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -348,6 +352,118 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+class _SmsHistoryImportTile extends ConsumerStatefulWidget {
+  const _SmsHistoryImportTile();
+
+  @override
+  ConsumerState<_SmsHistoryImportTile> createState() =>
+      _SmsHistoryImportTileState();
+}
+
+class _SmsHistoryImportTileState extends ConsumerState<_SmsHistoryImportTile> {
+  SmsImportProgress? _progress;
+  bool _busy = false;
+
+  Future<void> _importHistory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Re-import all SMS history?'),
+        content: const Text(
+          'PaisaTrack will scan all financial SMS in your inbox. This can '
+          'take time for a large inbox. Existing edits, confirmations, '
+          'deletions, and manual transactions will be kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Re-import'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    var permission = ref.read(smsPermissionControllerProvider).valueOrNull ??
+        SmsPermissionStatus.unknown;
+    if (!permission.isGranted) {
+      await ref.read(smsPermissionControllerProvider.notifier).request();
+      permission = ref.read(smsPermissionControllerProvider).valueOrNull ??
+          SmsPermissionStatus.unknown;
+    }
+    if (!mounted) return;
+    if (!permission.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SMS permission is required to import history.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _progress = const SmsImportProgress(processed: 0, failed: 0);
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final runner = await ref.read(smsHistoryImportRunnerProvider.future);
+      final result = await runner.run(
+        force: true,
+        onProgress: (progress) {
+          if (mounted) setState(() => _progress = progress);
+        },
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result.failed == 0
+                ? 'SMS history import complete: '
+                    '${result.processed} messages processed.'
+                : 'SMS history import finished: ${result.processed} processed, '
+                    '${result.failed} failed. You can re-import to retry.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('SMS history import failed: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = _progress;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.sms_outlined),
+      title: const Text('Re-import all SMS history'),
+      subtitle: Text(
+        _busy && progress != null
+            ? '${progress.processed} processed'
+                '${progress.failed == 0 ? '' : ' · ${progress.failed} failed'}'
+            : 'Scan the full inbox again without overwriting your edits',
+      ),
+      trailing: _busy
+          ? const SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: _busy ? null : _importHistory,
+    );
+  }
+}
+
 class _DeveloperOptionsSection extends StatelessWidget {
   const _DeveloperOptionsSection();
 
@@ -459,14 +575,14 @@ class _LlmModelTileState extends ConsumerState<_LlmModelTile> {
   @override
   Widget build(BuildContext context) {
     final status = switch ((_supported, _available)) {
-      (false, _) => 'Unsupported on this device (requires about 2.2 GB RAM)',
+      (false, _) => 'Unsupported on this device (requires at least 3 GB RAM)',
       (_, true) => 'Downloaded · app-private storage',
       (true, false) => 'Not downloaded',
       _ => 'Checking device…',
     };
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: const Text('Qwen2.5 1.5B · 1.6 GB'),
+      title: const Text('Qwen2.5 0.5B · 547 MB'),
       subtitle: Text('$status\nPrompts and inference stay on this device.'),
       isThreeLine: true,
       trailing: _busy

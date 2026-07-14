@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
 import 'package:paisatrack/features/recurring/recurring_screen.dart';
@@ -140,14 +141,53 @@ void main() {
 
     expect(find.byType(CompactMetricRow), findsOneWidget);
     expect(find.text('Daily average'), findsOneWidget);
-    expect(find.text('vs last month'), findsOneWidget);
+    expect(find.text('vs previous month'), findsOneWidget);
     expect(find.text('Projected'), findsOneWidget);
   });
 
   testWidgets('shows empty state when no transactions this month',
       (tester) async {
     await pumpDashboard(tester, const []);
-    expect(find.text('No transactions this month'), findsOneWidget);
+    expect(
+      find.text(
+        'No transactions in ${DashboardPeriod.month(DateTime.now()).label}',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('selecting previous month refreshes the dashboard period',
+      (tester) async {
+    final now = DateTime.now();
+    final current = DateTime(now.year, now.month, 5, 12);
+    final previous = DateTime(now.year, now.month - 1, 15, 12);
+    await pumpDashboard(tester, [
+      item(
+        id: 'current',
+        ts: current,
+        amount: 100,
+        direction: TransactionDirection.debit,
+      ),
+      item(
+        id: 'previous',
+        ts: previous,
+        amount: 750,
+        direction: TransactionDirection.credit,
+      ),
+    ]);
+
+    await tester.tap(find.text(DashboardPeriod.month(now).label));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Previous month'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(DashboardPeriod.month(previous).label),
+      findsOneWidget,
+    );
+    expect(find.text('+₹750.00'), findsWidgets);
+    expect(find.text('vs previous month'), findsOneWidget);
+    expect(find.text('Projected'), findsNothing);
   });
 
   testWidgets('opens Ask PaisaTrack from the app bar', (tester) async {

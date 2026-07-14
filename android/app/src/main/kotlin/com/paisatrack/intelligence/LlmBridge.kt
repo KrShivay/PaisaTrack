@@ -14,14 +14,17 @@ import java.security.MessageDigest
 class LlmBridge(private val context: Context) {
     companion object {
         const val PINNED_MODEL_URL =
-            "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/" +
-                "19edb84c69a0212f29a6ef17ba0d6f278b6a1614/" +
-                "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task"
-        const val PINNED_MODEL_SIZE = 1_598_556_720L
+            "https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct/resolve/" +
+                "6c237a59eedeb06a821b21f0a59b03d346ac8bc3/" +
+                "Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task"
+        const val PINNED_MODEL_SIZE = 546_660_344L
         const val PINNED_MODEL_SHA256 =
-            "82968d0a6c3872cf016fdbcfc591571605f4c7fd2b0f64d2533df502cc6596b3"
-        const val MODEL_FILE_NAME = "qwen2_5_1_5b_q8_ekv4096.task"
+            "e608953f169aeb1bd7b9155fec2559825e08453fc209b84eda3a781ed0452fd2"
+        const val MODEL_FILE_NAME = "qwen2_5_0_5b_q8_ekv1280.task"
         private const val MIN_TOTAL_MEMORY_BYTES = 3_000_000_000L
+        // Covers the compact assistant/SMS prompts plus structured output while
+        // halving the fixed KV-cache allocation from the previous 1024.
+        internal const val MAX_TOTAL_TOKENS = 512
     }
 
     private val inferenceCache = LlmInferenceCache()
@@ -82,7 +85,15 @@ class LlmBridge(private val context: Context) {
         if (!isModelAvailable()) return null
         if (!isDeviceSupported()) throw UnsupportedOperationException("unsupported_device")
         val engine = inferenceCache.getOrCreate { createInference() }
-        return engine.generateResponse(prompt)
+        return try {
+            engine.generateResponse(prompt)
+        } catch (error: Exception) {
+            // A failed native session can poison the cached task runner. Drop
+            // it so the next request starts from a clean engine instead of
+            // failing repeatedly until the activity is restarted.
+            inferenceCache.close()
+            throw error
+        }
     }
 
     /** Releases the cached native engine before the Flutter engine is disposed. */
@@ -104,7 +115,9 @@ class LlmBridge(private val context: Context) {
             context,
             LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile().absolutePath)
-                .setMaxTokens(1024)
+                .setMaxTokens(MAX_TOTAL_TOKENS)
+                .setMaxTopK(1)
+                .setPreferredBackend(LlmInference.Backend.CPU)
                 .build(),
         )
         return object : LlmInferenceHandle {

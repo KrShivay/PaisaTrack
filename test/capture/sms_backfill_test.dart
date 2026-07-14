@@ -1,19 +1,14 @@
 import 'package:drift/native.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
-import 'package:paisatrack/capture/permissions/sms_permission.dart';
-import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/capture/sms_backfill.dart';
+import 'package:paisatrack/capture/sms_import_state.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/core/result.dart';
 import 'package:paisatrack/data/db/database.dart';
-import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
-
-import '../support/fake_sms_permission_gate.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -22,8 +17,6 @@ void main() {
 
   setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
-    // The categorizer stamps category_id and foreign keys are enforced, so
-    // backfill tests need the bundled category rows just like production.
     await database.seedDefaultCategories();
   });
 
@@ -31,147 +24,195 @@ void main() {
     await database.close();
   });
 
-  RawSms message(String id) => RawSms(
+  RawSms message(String id, {int year = 2026}) => RawSms(
         id: id,
         sender: 'VK-HDFCBK',
         body: 'Spent Rs 449',
-        receivedAt: DateTime.utc(2026, 5, 2, 9, 15),
+        receivedAt: DateTime.utc(year, 5, 2, 9, 15),
       );
 
-  SmsBackfiller backfiller({
-    required List<RawSms> inbox,
-    int chunkSize = 25,
+  SmsBackfiller backfiller(
+    SmsInboxReader reader, {
+    Set<String> throwIds = const {},
   }) {
-    final ingestor = SmsIngestor(
-      database: database,
-      parser: FakeParserCascade.ok(_sampleRecord),
-    );
     return SmsBackfiller(
-      ingestor: ingestor,
-      reader: FakeInboxReader(inbox),
-      chunkSize: chunkSize,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord, throwIds: throwIds),
+      ),
+      reader: reader,
+      pageSize: 2,
     );
   }
 
-  test('backfills inbox history into raw_sms and transactions', () async {
-    final processed = await backfiller(
-      inbox: [message('sms_a'), message('sms_b')],
-    ).run(now: DateTime(2026, 7, 5));
+  test('imports every page including transactions older than three months',
+      () async {
+    const cursor = SmsInboxCursor(beforeEpochMillis: 1000, beforeId: 10);
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: [message('sms_current')],
+        nextCursor: cursor,
+      ),
+      SmsInboxPage(messages: [message('sms_2022', year: 2022)]),
+    ]);
 
-    expect(processed, 2);
-    final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows.map((row) => row.id), containsAll(['sms_a', 'sms_b']));
+    final result = await backfiller(reader).run();
+
+    expect(result.processed, 2);
+    expect(result.failed, 0);
+    expect(reader.requestedCursors, [null, cursor]);
     final transactions = await database.select(database.transactions).get();
     expect(
       transactions.map((row) => row.id),
-      containsAll(['txn_sms_a', 'txn_sms_b']),
+      containsAll(['txn_sms_current', 'txn_sms_2022']),
     );
   });
 
-  test('re-running backfill inserts no duplicate rows (idempotent)', () async {
+  test('continues after a page containing no filter-approved messages',
+      () async {
+    const cursor = SmsInboxCursor(beforeEpochMillis: 900, beforeId: 9);
+    final reader = FakeInboxReader([
+      const SmsInboxPage(messages: [], nextCursor: cursor),
+      SmsInboxPage(messages: [message('sms_old', year: 2020)]),
+    ]);
+
+    final result = await backfiller(reader).run();
+
+    expect(result.processed, 1);
+    expect(reader.requestedCursors, [null, cursor]);
+  });
+
+  test('rejects a non-advancing inbox cursor', () async {
+    const cursor = SmsInboxCursor(beforeEpochMillis: 900, beforeId: 9);
+    final reader = FakeInboxReader(const [
+      SmsInboxPage(messages: [], nextCursor: cursor),
+      SmsInboxPage(messages: [], nextCursor: cursor),
+    ]);
+
+    await expectLater(
+      backfiller(reader).run(),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('re-import is idempotent', () async {
     final inbox = [message('sms_a'), message('sms_b')];
 
-    await backfiller(inbox: inbox).run(now: DateTime(2026, 7, 5));
-    await backfiller(inbox: inbox).run(now: DateTime(2026, 7, 5));
+    await backfiller(FakeInboxReader.single(inbox)).run();
+    await backfiller(FakeInboxReader.single(inbox)).run();
 
-    final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows, hasLength(2));
-    final transactions = await database.select(database.transactions).get();
-    expect(transactions, hasLength(2));
+    expect(await database.select(database.rawSms).get(), hasLength(2));
+    expect(await database.select(database.transactions).get(), hasLength(2));
   });
 
-  test('dedups against a message already present in raw_sms', () async {
-    // Simulate a message captured live before the backfill runs.
-    await database.into(database.rawSms).insert(
-          RawSmsCompanion.insert(
-            id: 'sms_a',
-            sender: 'VK-HDFCBK',
-            body: 'Spent Rs 449',
-            receivedAt: DateTime.utc(2026, 5, 2, 9, 15),
-            purgeAfter: DateTime.utc(2026, 6, 1),
-          ),
-        );
-
-    await backfiller(inbox: [message('sms_a')]).run(now: DateTime(2026, 7, 5));
-
-    final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows, hasLength(1));
-    expect(rawRows.single.id, 'sms_a');
-  });
-
-  test('processes across chunk boundaries', () async {
-    final inbox = List.generate(7, (i) => message('sms_$i'));
-
-    final processed = await backfiller(
-      inbox: inbox,
-      chunkSize: 3,
-    ).run(now: DateTime(2026, 7, 5));
-
-    expect(processed, 7);
-    final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows, hasLength(7));
-  });
-
-  test('provider runs backfill once and marks it complete', () async {
-    final marker = FakeBackfillMarker();
-    final container = _backfillContainer(
-      database: database,
-      inbox: [message('sms_a')],
+  test('version 1 marker automatically catches up to full-history version',
+      () async {
+    final marker = FakeBackfillMarker(version: 1);
+    final importer = SmsHistoryImporter(
+      backfiller: backfiller(
+        FakeInboxReader.single([message('sms_pre_2023', year: 2022)]),
+      ),
       marker: marker,
     );
-    addTearDown(container.dispose);
-    await container.read(smsPermissionControllerProvider.future);
-    await container.read(appDatabaseProvider.future);
 
-    final processed = await container.read(smsBackfillProvider.future);
+    final result = await importer.run();
 
-    expect(processed, 1);
-    expect(marker.complete, isTrue);
-    final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows, hasLength(1));
+    expect(result.skipped, isFalse);
+    expect(result.processed, 1);
+    expect(marker.version, smsHistoryImportVersion);
+    expect(marker.markCount, 1);
   });
 
-  test('provider skips backfill when the marker is already complete', () async {
-    final marker = FakeBackfillMarker()..complete = true;
-    final reader = FakeInboxReader([message('sms_a')]);
-    final container = _backfillContainer(
-      database: database,
-      reader: reader,
+  test('current import version skips automatic scan', () async {
+    final marker = FakeBackfillMarker(version: smsHistoryImportVersion);
+    final reader = FakeInboxReader.single([message('sms_a')]);
+    final importer = SmsHistoryImporter(
+      backfiller: backfiller(reader),
       marker: marker,
     );
-    addTearDown(container.dispose);
-    await container.read(smsPermissionControllerProvider.future);
-    await container.read(appDatabaseProvider.future);
 
-    final processed = await container.read(smsBackfillProvider.future);
+    final result = await importer.run();
 
-    expect(processed, 0);
+    expect(result.skipped, isTrue);
     expect(reader.readCount, 0);
-    final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows, isEmpty);
   });
-}
 
-ProviderContainer _backfillContainer({
-  required AppDatabase database,
-  required FakeBackfillMarker marker,
-  List<RawSms> inbox = const [],
-  FakeInboxReader? reader,
-}) {
-  return ProviderContainer(
-    overrides: [
-      smsPermissionGateProvider.overrideWithValue(
-        FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+  test('forced re-import bypasses current version marker', () async {
+    final marker = FakeBackfillMarker(version: smsHistoryImportVersion);
+    final reader = FakeInboxReader.single([message('sms_a')]);
+    final importer = SmsHistoryImporter(
+      backfiller: backfiller(reader),
+      marker: marker,
+    );
+
+    final result = await importer.run(force: true);
+
+    expect(result.processed, 1);
+    expect(reader.readCount, 1);
+    expect(marker.markCount, 1);
+  });
+
+  test('automatic import resumes from the last completed page', () async {
+    const checkpoint = SmsImportCheckpoint(
+      beforeEpochMillis: 800,
+      beforeId: 8,
+    );
+    final marker = FakeBackfillMarker(version: 1, checkpoint: checkpoint);
+    final reader = FakeInboxReader.single([message('sms_old', year: 2021)]);
+    final importer = SmsHistoryImporter(
+      backfiller: backfiller(reader),
+      marker: marker,
+    );
+
+    final result = await importer.run();
+
+    expect(result.processed, 1);
+    expect(
+      reader.requestedCursors,
+      const [SmsInboxCursor(beforeEpochMillis: 800, beforeId: 8)],
+    );
+    expect(marker.checkpointValue, isNull);
+  });
+
+  test('automatic import saves its cursor after every completed page',
+      () async {
+    const next = SmsInboxCursor(beforeEpochMillis: 700, beforeId: 7);
+    final marker = FakeBackfillMarker(version: 1);
+    final reader = FakeInboxReader([
+      const SmsInboxPage(messages: [], nextCursor: next),
+      SmsInboxPage(messages: [message('sms_old', year: 2020)]),
+    ]);
+    final importer = SmsHistoryImporter(
+      backfiller: backfiller(reader),
+      marker: marker,
+    );
+
+    await importer.run();
+
+    expect(marker.savedCheckpoints, hasLength(1));
+    expect(marker.savedCheckpoints.single.beforeEpochMillis, 700);
+    expect(marker.savedCheckpoints.single.beforeId, 7);
+    expect(marker.checkpointValue, isNull);
+  });
+
+  test('partial row failure completes scan and remains manually retryable',
+      () async {
+    final marker = FakeBackfillMarker(version: 1);
+    final importer = SmsHistoryImporter(
+      backfiller: backfiller(
+        FakeInboxReader.single([message('sms_ok'), message('sms_bad')]),
+        throwIds: {'sms_bad'},
       ),
-      appDatabaseProvider.overrideWith((ref) async => database),
-      smsInboxReaderProvider
-          .overrideWithValue(reader ?? FakeInboxReader(inbox)),
-      parserCascadeProvider.overrideWith(
-        (ref) async => FakeParserCascade.ok(_sampleRecord),
-      ),
-      backfillMarkerProvider.overrideWithValue(marker),
-    ],
-  );
+      marker: marker,
+    );
+
+    final result = await importer.run();
+
+    expect(result.processed, 2);
+    expect(result.failed, 1);
+    expect(marker.version, smsHistoryImportVersion);
+    expect(marker.markCount, 1);
+  });
 }
 
 final _sampleRecord = NormalizedTransactionRecord(
@@ -189,40 +230,77 @@ final _sampleRecord = NormalizedTransactionRecord(
 );
 
 class FakeInboxReader implements SmsInboxReader {
-  FakeInboxReader(this._messages);
+  FakeInboxReader(this._pages);
 
-  final List<RawSms> _messages;
+  factory FakeInboxReader.single(List<RawSms> messages) {
+    return FakeInboxReader([SmsInboxPage(messages: messages)]);
+  }
+
+  final List<SmsInboxPage> _pages;
+  final List<SmsInboxCursor?> requestedCursors = [];
   int readCount = 0;
 
   @override
-  Future<List<RawSms>> readSince(DateTime since) async {
-    readCount++;
-    return _messages;
+  Future<SmsInboxPage> readPage({
+    SmsInboxCursor? before,
+    required int limit,
+  }) async {
+    requestedCursors.add(before);
+    return _pages[readCount++];
   }
 }
 
 class FakeBackfillMarker implements BackfillMarker {
-  bool complete = false;
+  FakeBackfillMarker({
+    this.version = 0,
+    SmsImportCheckpoint? checkpoint,
+  }) : checkpointValue = checkpoint;
+
+  int version;
+  SmsImportCheckpoint? checkpointValue;
+  final List<SmsImportCheckpoint> savedCheckpoints = [];
+  int markCount = 0;
+  int resetCount = 0;
 
   @override
-  Future<bool> isComplete() async => complete;
+  Future<SmsImportCheckpoint?> checkpoint() async => checkpointValue;
 
   @override
-  Future<void> markComplete() async {
-    complete = true;
+  Future<int> completedVersion() async => version;
+
+  @override
+  Future<void> markCompleted(int version) async {
+    this.version = version;
+    checkpointValue = null;
+    markCount++;
+  }
+
+  @override
+  Future<void> saveCheckpoint(SmsImportCheckpoint checkpoint) async {
+    checkpointValue = checkpoint;
+    savedCheckpoints.add(checkpoint);
+  }
+
+  @override
+  Future<void> reset() async {
+    version = 0;
+    checkpointValue = null;
+    resetCount++;
   }
 }
 
 class FakeParserCascade extends ParserCascade {
-  FakeParserCascade.ok(this._record)
+  FakeParserCascade(this._record, {this.throwIds = const {}})
       : super(templateMatcher: const TemplateMatcher(registries: []));
 
   final NormalizedTransactionRecord _record;
+  final Set<String> throwIds;
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
     RawSms sms,
   ) async {
+    if (throwIds.contains(sms.id)) throw StateError('simulated parse failure');
     return Ok(_record);
   }
 }

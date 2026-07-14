@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -24,6 +25,21 @@ void main() {
             purgeAfter: DateTime.utc(2025, 1, 31),
           ),
         );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_expired',
+            ts: DateTime.utc(2025).millisecondsSinceEpoch,
+            amount: 100,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            smsId: const Value('expired'),
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: DateTime.utc(2025),
+            updatedAt: DateTime.utc(2025),
+          ),
+        );
     final pipeline = NightlyPipeline.production(database);
 
     final result = await pipeline.run(now: DateTime.utc(2026, 7, 12));
@@ -31,6 +47,10 @@ void main() {
     expect(result.completed, isTrue);
     expect(result.stagesRun, NightlyStage.values);
     expect(await database.select(database.rawSms).get(), isEmpty);
+    final transaction =
+        await database.select(database.transactions).getSingle();
+    expect(transaction.id, 'txn_expired');
+    expect(transaction.smsId, isNull);
   });
 
   test('failed run resumes after the last completed stage', () async {

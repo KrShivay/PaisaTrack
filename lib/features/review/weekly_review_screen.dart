@@ -212,7 +212,7 @@ class _ReviewCentre extends StatelessWidget {
               ),
             _ReviewMode.list => _ReviewList(
                 items: items,
-                selectedIds: const {},
+                selectedIds: selectedIds,
                 onToggle: onToggle,
                 onSelectAll: onSelectAll,
                 onConfirmSelected: onConfirmSelected,

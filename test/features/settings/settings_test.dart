@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:paisatrack/capture/permissions/sms_permission.dart';
+import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
+import 'package:paisatrack/capture/sms_backfill.dart';
+import 'package:paisatrack/capture/sms_import_state.dart';
 import 'package:paisatrack/core/crypto/database_cipher.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -12,6 +16,8 @@ import 'package:paisatrack/features/settings/app_data_reset_service.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/settings/settings_screen.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
+
+import '../../support/fake_sms_permission_gate.dart';
 
 class _FakePassphraseProvider implements DatabasePassphraseProvider {
   var cleared = false;
@@ -50,6 +56,41 @@ class _FakeLlmRuntime extends NoopLlmRuntime {
   }
 }
 
+class _FakeSmsHistoryImportRunner implements SmsHistoryImportRunner {
+  int runCount = 0;
+  bool? lastForce;
+
+  @override
+  Future<SmsImportResult> run({
+    bool force = false,
+    void Function(SmsImportProgress progress)? onProgress,
+  }) async {
+    runCount++;
+    lastForce = force;
+    onProgress?.call(const SmsImportProgress(processed: 240, failed: 0));
+    return const SmsImportResult(processed: 240, failed: 0);
+  }
+}
+
+class _FakeBackfillMarker implements BackfillMarker {
+  int resetCount = 0;
+
+  @override
+  Future<SmsImportCheckpoint?> checkpoint() async => null;
+
+  @override
+  Future<int> completedVersion() async => smsHistoryImportVersion;
+
+  @override
+  Future<void> markCompleted(int version) async {}
+
+  @override
+  Future<void> saveCheckpoint(SmsImportCheckpoint checkpoint) async {}
+
+  @override
+  Future<void> reset() async => resetCount++;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -85,6 +126,7 @@ void main() {
     // through tester.runAsync, which runs the real event loop.
     final directory = Directory.systemTemp.createTempSync('settings_ui_');
     final llmRuntime = _FakeLlmRuntime();
+    final smsRunner = _FakeSmsHistoryImportRunner();
     addTearDown(() => directory.deleteSync(recursive: true));
 
     await tester.pumpWidget(
@@ -92,6 +134,12 @@ void main() {
         overrides: [
           settingsDirectoryProvider.overrideWith((ref) async => directory),
           llmRuntimeProvider.overrideWithValue(llmRuntime),
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(
+              initialStatus: SmsPermissionStatus.granted,
+            ),
+          ),
+          smsHistoryImportRunnerProvider.overrideWith((ref) async => smsRunner),
         ],
         child: const MaterialApp(home: SettingsScreen()),
       ),
@@ -148,6 +196,19 @@ void main() {
     expect(find.text('Local LLM parsing'), findsOneWidget);
     expect(find.text('Model metrics'), findsOneWidget);
     expect(find.text('Delete everything'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Re-import all SMS history'),
+      300,
+    );
+    await tester.tap(find.text('Re-import all SMS history'));
+    await tester.pumpAndSettle();
+    expect(find.text('Re-import all SMS history?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Re-import'));
+    for (var i = 0; i < 10 && smsRunner.runCount == 0; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(smsRunner.runCount, 1);
+    expect(smsRunner.lastForce, isTrue);
   });
 
   test(
@@ -172,6 +233,7 @@ void main() {
     );
 
     final passphraseProvider = _FakePassphraseProvider();
+    final backfillMarker = _FakeBackfillMarker();
     final opened = <AppDatabase>[];
     final container = ProviderContainer(
       overrides: [
@@ -180,6 +242,7 @@ void main() {
         settingsDirectoryProvider
             .overrideWith((ref) async => settingsDirectory),
         databasePassphraseProvider.overrideWithValue(passphraseProvider),
+        backfillMarkerProvider.overrideWithValue(backfillMarker),
         appDatabaseProvider.overrideWith((ref) async {
           final database = AppDatabase(NativeDatabase.memory());
           opened.add(database);
@@ -195,6 +258,7 @@ void main() {
     expect(result.deletedFiles, 3);
     expect(result.categoryCount, greaterThan(0));
     expect(passphraseProvider.cleared, isTrue);
+    expect(backfillMarker.resetCount, 1);
     expect(
       await AppSettingsStore(settingsDirectory).read(),
       isA<AppSettings>()

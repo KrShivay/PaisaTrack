@@ -284,20 +284,22 @@ void main() {
   });
 
   group('detail screen', () {
-    // The screen's providers hold real drift `.watch()` streams. Cancelling
-    // one (e.g. on ProviderScope dispose) normally schedules a timer inside
-    // drift's StreamQueryStore so the query cache survives brief
-    // unsubscribe/resubscribe gaps - see the comment on
-    // `StreamQueryStore.markAsClosed`. In a widget test there's no later
-    // pump to flush that timer, which trips flutter_test's `!timersPending`
-    // invariant. Per drift's own guidance there, closing the database
-    // *before* the widget tree (and its stream subscriptions) tears down
-    // avoids scheduling the timer at all.
+    // Closing before ProviderScope disposal prevents drift from scheduling a
+    // zero-delay query-cache timer after the final widget-test pump.
     Future<void> unmount(WidgetTester tester) async {
       databaseClosed = true;
       await database.close();
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
+    }
+
+    // After a watched write, let the stream emission finish and cancel its
+    // subscription before closing the database to avoid waiting on itself.
+    Future<void> unmountAfterStreamWrite(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1));
+      databaseClosed = true;
+      await tester.runAsync(database.close);
     }
 
     Future<void> pumpDetail(WidgetTester tester) async {
@@ -449,24 +451,43 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('confirms a suggested category from transaction detail',
-        (tester) async {
-      await (database.update(database.transactions)
-            ..where((row) => row.id.equals('txn_1')))
-          .write(const TransactionsCompanion(status: Value('needs_review')));
-      await pumpDetail(tester);
+    group('category confirmation', () {
+      setUp(() async {
+        await (database.update(database.transactions)
+              ..where((row) => row.id.equals('txn_1')))
+            .write(
+          const TransactionsCompanion(status: Value('needs_review')),
+        );
+      });
 
-      expect(find.text('Verify category'), findsOneWidget);
-      await tester.tap(find.text('Category is correct'));
-      await tester.pumpAndSettle();
+      testWidgets('confirms a suggested category from transaction detail',
+          (tester) async {
+        await pumpDetail(tester);
 
-      final row = await (database.select(database.transactions)
-            ..where((transaction) => transaction.id.equals('txn_1')))
-          .getSingle();
-      expect(row.status, 'confirmed');
-      expect(find.text('Category confirmed'), findsOneWidget);
+        expect(find.text('Verify category'), findsOneWidget);
+        await tester.tap(find.text('Category is correct'));
+        Transaction? row;
+        for (var i = 0; i < 40; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 2)),
+          );
+          await tester.pump(const Duration(milliseconds: 25));
+          row = await tester.runAsync(
+            () => (database.select(database.transactions)
+                  ..where((transaction) => transaction.id.equals('txn_1')))
+                .getSingle(),
+          );
+          if (row?.status == 'confirmed') break;
+        }
+        expect(row?.status, 'confirmed');
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        await tester.pump(const Duration(milliseconds: 25));
+        expect(find.text('Category confirmed'), findsOneWidget);
 
-      await unmount(tester);
+        await unmountAfterStreamWrite(tester);
+      });
     });
 
     testWidgets('tapping a transactions list row opens the detail screen',

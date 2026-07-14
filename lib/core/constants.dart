@@ -33,11 +33,11 @@ class AppConstants {
   /// Number of days raw SMS bodies may remain before purge.
   static const rawSmsRetentionDays = 30;
 
-  /// Months of inbox history read on first permission grant (T-023 backfill).
-  static const smsBackfillMonths = 3;
-
-  /// Historical messages processed per yield so backfill never blocks the UI.
-  static const smsBackfillChunkSize = 25;
+  /// Raw inbox rows requested per page during full-history SMS import.
+  ///
+  /// Paging bounds platform-channel payloads and yields between pages while
+  /// still scanning the entire inbox; it is not a history or message cap.
+  static const smsHistoryImportPageSize = 200;
 
   /// Max minutes apart two SMS may arrive and still be treated as one
   /// paired bank+wallet/UPI notification for duplicate suppression (T-025).

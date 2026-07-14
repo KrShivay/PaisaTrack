@@ -312,6 +312,7 @@ class HeroFinancialCard extends StatelessWidget {
     required this.spent,
     required this.received,
     required this.monthComparison,
+    required this.comparisonPeriodLabel,
     this.onTap,
   });
 
@@ -319,6 +320,7 @@ class HeroFinancialCard extends StatelessWidget {
   final double spent;
   final double received;
   final MonthOverMonthSpend monthComparison;
+  final String comparisonPeriodLabel;
   final VoidCallback? onTap;
 
   @override
@@ -328,9 +330,10 @@ class HeroFinancialCard extends StatelessWidget {
     final netIsPositive = net >= 0;
     final comparison = monthComparison.pctChange;
     final comparisonText = comparison == null
-        ? 'Not enough history for last-month comparison'
+        ? 'Not enough history for $comparisonPeriodLabel comparison'
         : '${(comparison.abs() * 100).round()}% '
-            '${comparison <= 0 ? 'lower' : 'higher'} than last month';
+            '${comparison <= 0 ? 'lower' : 'higher'} than '
+            '$comparisonPeriodLabel';
 
     return Card(
       child: InkWell(
@@ -430,11 +433,13 @@ class CompactMetricRow extends StatelessWidget {
     required this.dailyAverage,
     required this.monthComparison,
     required this.projectedSpend,
+    required this.comparisonLabel,
   });
 
   final double dailyAverage;
   final MonthOverMonthSpend monthComparison;
-  final double projectedSpend;
+  final double? projectedSpend;
+  final String comparisonLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -455,17 +460,19 @@ class CompactMetricRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: StatTile(
-              label: 'vs last month',
+              label: comparisonLabel,
               value: changeValue,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: StatTile(
-              label: 'Projected',
-              value: formatInr(projectedSpend),
+          if (projectedSpend != null) ...[
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: StatTile(
+                label: 'Projected',
+                value: formatInr(projectedSpend!),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

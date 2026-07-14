@@ -34,17 +34,22 @@ class _FakeLlmRuntime implements LlmRuntime {
 }
 
 class _IntentLlmRuntime implements LlmRuntime {
+  var extractionCalls = 0;
+
   @override
   Future<LlmResult<Map<String, Object?>>> extractJson(
     String prompt,
     Map<String, Object?> schema,
-  ) async =>
-      const LlmSuccess({
-        'intent': 'period_total',
-        'metric': 'spend',
-        'aggregation': 'sum',
-        'time_range': {'kind': 'month', 'month': '2026-07'},
-      });
+  ) async {
+    extractionCalls++;
+    return const LlmSuccess({
+      'i': 'p',
+      'q': 's',
+      'g': 's',
+      'k': 'm',
+      'mo': '2026-07',
+    });
+  }
 
   @override
   Future<LlmResult<String>> complete(String prompt) async =>
@@ -72,7 +77,7 @@ void main() {
   Future<String> askWith(LlmUnavailableReason reason) => AssistantController(
         runtime: _FakeLlmRuntime(reason),
         database: database,
-      ).ask('how much did I spend this month');
+      ).ask('Analyse my finances in your own way');
 
   test('modelAbsent tells the user to download the model', () async {
     expect(
@@ -100,6 +105,44 @@ void main() {
     final message = await askWith(LlmUnavailableReason.featureDisabled);
     expect(message, contains('turned off'));
     expect(message, isNot(contains('Download the model')));
+  });
+
+  test('common questions bypass the model-backed runtime', () async {
+    final answer = await AssistantController(
+      runtime: _FakeLlmRuntime(LlmUnavailableReason.modelAbsent),
+      database: database,
+      clock: () => DateTime(2026, 7, 13),
+    ).ask('How much did I spend this month?');
+
+    expect(answer, contains('No matching transactions'));
+    expect(answer, isNot(contains('Download the model')));
+  });
+
+  test('oversized questions refuse before loading the model', () async {
+    final runtime = _IntentLlmRuntime();
+    final answer = await AssistantController(
+      runtime: runtime,
+      database: database,
+    ).ask('money ${List.filled(500, 'x').join()}');
+
+    expect(answer, contains('under 500 characters'));
+    expect(runtime.extractionCalls, 0);
+  });
+
+  test('repeated fallback questions reuse the intent but re-run the query',
+      () async {
+    final runtime = _IntentLlmRuntime();
+    final controller = AssistantController(
+      runtime: runtime,
+      database: database,
+      clock: () => DateTime(2026, 7, 13),
+    );
+
+    await controller.ask('Summarize my financial activity this month');
+    await controller.ask('Summarize my financial activity this month');
+
+    expect(runtime.extractionCalls, 1);
+    expect(controller.history, hasLength(4));
   });
 
   test('current-month Ask result includes local July transactions', () async {

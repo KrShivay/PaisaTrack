@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 
+const llmJsonSchemaPlaceholder = '{{JSON_SCHEMA}}';
+const llmJsonValidationOnlyPlaceholder = '{{VALIDATE_JSON_ONLY}}';
+
 enum LlmUnavailableReason {
   featureDisabled,
   modelAbsent,
@@ -80,20 +83,31 @@ class PlatformLlmRuntime implements LlmRuntime {
     Map<String, Object?> schema,
   ) async {
     final schemaText = jsonEncode(schema);
-    var request =
-        '$prompt\nReturn only JSON matching this schema:\n$schemaText';
-    for (var attempt = 0; attempt < 2; attempt++) {
-      final result = await complete(request);
-      if (result is LlmUnavailable<String>) {
-        return LlmUnavailable(result.reason);
+    String buildRequest(String instruction) {
+      final schemaInstruction = '$instruction\n$schemaText';
+      if (prompt.contains(llmJsonSchemaPlaceholder)) {
+        return prompt.replaceFirst(
+          llmJsonSchemaPlaceholder,
+          schemaInstruction,
+        );
       }
-      final text = (result as LlmSuccess<String>).value;
-      final decoded = _validatedObject(text, schema);
-      if (decoded != null) return LlmSuccess(decoded);
-      request =
-          '$prompt\nYour previous response was invalid. Return ONLY a JSON '
-          'object matching this schema exactly:\n$schemaText';
+      if (prompt.contains(llmJsonValidationOnlyPlaceholder)) {
+        return prompt.replaceFirst(
+          llmJsonValidationOnlyPlaceholder,
+          instruction.replaceFirst('this schema', 'the field contract above'),
+        );
+      }
+      return '$prompt\n$schemaInstruction';
     }
+
+    final request = buildRequest('Return only JSON matching this schema:');
+    final result = await complete(request);
+    if (result is LlmUnavailable<String>) {
+      return LlmUnavailable(result.reason);
+    }
+    final text = (result as LlmSuccess<String>).value;
+    final decoded = _validatedObject(text, schema);
+    if (decoded != null) return LlmSuccess(decoded);
     return const LlmUnavailable(LlmUnavailableReason.failure);
   }
 
@@ -129,51 +143,65 @@ class PlatformLlmRuntime implements LlmRuntime {
     String response,
     Map<String, Object?> schema,
   ) {
-    final candidate = _extractJsonObject(response);
-    if (candidate == null) return null;
-    try {
-      final decoded = jsonDecode(candidate);
-      if (decoded is! Map<String, Object?> ||
-          !_matchesSchema(decoded, schema)) {
-        return null;
-      }
-      return decoded;
-    } on FormatException {
-      return null;
-    }
-  }
-
-  /// Small on-device models rarely emit pure JSON: they wrap it in markdown
-  /// code fences or add prose before/after. Pull out the first balanced
-  /// `{...}` block so a well-formed object isn't rejected for its wrapper.
-  String? _extractJsonObject(String response) {
-    final start = response.indexOf('{');
-    if (start == -1) return null;
-    var depth = 0;
-    var inString = false;
-    var escaped = false;
-    for (var i = start; i < response.length; i++) {
-      final char = response[i];
-      if (inString) {
-        if (escaped) {
-          escaped = false;
-        } else if (char == r'\') {
-          escaped = true;
-        } else if (char == '"') {
-          inString = false;
+    for (final candidate in _extractJsonObjects(response)) {
+      try {
+        final decoded = jsonDecode(candidate);
+        if (decoded is Map<String, Object?> &&
+            _matchesSchema(decoded, schema)) {
+          return decoded;
         }
-        continue;
-      }
-      if (char == '"') {
-        inString = true;
-      } else if (char == '{') {
-        depth++;
-      } else if (char == '}') {
-        depth--;
-        if (depth == 0) return response.substring(start, i + 1);
+      } on FormatException {
+        // Keep scanning: small models sometimes emit a malformed example or
+        // echo the schema before producing the usable values object.
       }
     }
     return null;
+  }
+
+  /// Small on-device models rarely emit pure JSON: they wrap it in markdown
+  /// code fences, add prose, or echo the schema. Scan balanced `{...}` blocks
+  /// so a later schema-valid values object is not rejected with its wrapper.
+  Iterable<String> _extractJsonObjects(String response) sync* {
+    var searchFrom = 0;
+    while (searchFrom < response.length) {
+      final start = response.indexOf('{', searchFrom);
+      if (start == -1) return;
+      var depth = 0;
+      var inString = false;
+      var escaped = false;
+      var end = -1;
+      for (var i = start; i < response.length; i++) {
+        final char = response[i];
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+          } else if (char == r'\') {
+            escaped = true;
+          } else if (char == '"') {
+            inString = false;
+          }
+          continue;
+        }
+        if (char == '"') {
+          inString = true;
+        } else if (char == '{') {
+          depth++;
+        } else if (char == '}') {
+          depth--;
+          if (depth == 0) {
+            end = i;
+            break;
+          }
+        }
+      }
+      if (end >= 0) {
+        yield response.substring(start, end + 1);
+        searchFrom = end + 1;
+      } else {
+        // An unbalanced prefix must not hide a later valid object.
+        searchFrom = start + 1;
+      }
+    }
   }
 
   bool _matchesSchema(Object? value, Map<String, Object?> schema) {

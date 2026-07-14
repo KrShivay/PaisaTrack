@@ -174,7 +174,7 @@ class _AssistantWelcome extends StatelessWidget {
     'How much did I spend on food this month?',
     'What subscriptions renew this week?',
     'Why is spending higher than last month?',
-    'Show payments above ₹5,000.',
+    'How many payments did I make this month?',
     'How much did I pay in bank fees?',
   ];
 

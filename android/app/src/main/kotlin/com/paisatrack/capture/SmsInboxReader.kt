@@ -1,6 +1,8 @@
 package com.paisatrack.capture
 
+import android.content.ContentResolver
 import android.content.Context
+import android.os.Bundle
 import android.provider.Telephony
 
 /**
@@ -17,36 +19,65 @@ import android.provider.Telephony
 class SmsInboxReader(context: Context) {
     private val appContext = context.applicationContext
 
-    /**
-     * Returns filter-approved inbox messages received at or after
-     * [sinceEpochMillis], newest first. Callers run this off the main thread.
-     */
-    fun readSince(sinceEpochMillis: Long): List<Map<String, Any>> {
+    /** Returns one raw-inbox page, filtered to financial messages. */
+    fun readPage(
+        beforeEpochMillis: Long?,
+        beforeId: Long?,
+        limit: Int,
+    ): Map<String, Any> {
+        require(limit in 1..MaxPageSize)
+        require((beforeEpochMillis == null) == (beforeId == null))
         val projection = arrayOf(
+            Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
         )
-        val selection = "${Telephony.Sms.DATE} >= ?"
-        val selectionArgs = arrayOf(sinceEpochMillis.toString())
+        val selection = beforeEpochMillis?.let {
+            "(${Telephony.Sms.DATE} < ?) OR " +
+                "(${Telephony.Sms.DATE} = ? AND ${Telephony.Sms._ID} < ?)"
+        }
+        val selectionArgs = beforeEpochMillis?.let {
+            arrayOf(it.toString(), it.toString(), beforeId.toString())
+        }
+        val queryArgs = Bundle().apply {
+            if (selection != null) {
+                putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+            }
+            putString(
+                ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
+                "${Telephony.Sms.DATE} DESC, ${Telephony.Sms._ID} DESC",
+            )
+            // One look-ahead row tells the caller whether another page exists.
+            putInt(ContentResolver.QUERY_ARG_LIMIT, limit + 1)
+        }
         val cursor = appContext.contentResolver.query(
             Telephony.Sms.Inbox.CONTENT_URI,
             projection,
-            selection,
-            selectionArgs,
-            "${Telephony.Sms.DATE} DESC",
-        ) ?: return emptyList()
+            queryArgs,
+            null,
+        ) ?: return mapOf("messages" to emptyList<Map<String, Any>>(), "hasMore" to false)
 
         val results = mutableListOf<Map<String, Any>>()
+        var scanned = 0
+        var lastDate: Long? = null
+        var lastId: Long? = null
+        var hasMore = false
         cursor.use { rows ->
+            val idIndex = rows.getColumnIndexOrThrow(Telephony.Sms._ID)
             val addressIndex = rows.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
             val bodyIndex = rows.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val dateIndex = rows.getColumnIndexOrThrow(Telephony.Sms.DATE)
 
-            while (rows.moveToNext()) {
+            while (scanned < limit && rows.moveToNext()) {
+                scanned++
+                val inboxId = rows.getLong(idIndex)
+                val receivedAtEpochMillis = rows.getLong(dateIndex)
+                lastId = inboxId
+                lastDate = receivedAtEpochMillis
                 val sender = rows.getString(addressIndex) ?: continue
                 val body = rows.getString(bodyIndex) ?: continue
-                val receivedAtEpochMillis = rows.getLong(dateIndex)
                 if (!SmsFilter.isAllowed(sender, body)) continue
 
                 results.add(
@@ -62,7 +93,20 @@ class SmsInboxReader(context: Context) {
                     ),
                 )
             }
+            hasMore = rows.moveToNext()
         }
-        return results
+        return mutableMapOf<String, Any>(
+            "messages" to results,
+            "hasMore" to hasMore,
+        ).apply {
+            if (hasMore && lastDate != null && lastId != null) {
+                put("nextBeforeEpochMillis", checkNotNull(lastDate))
+                put("nextBeforeId", checkNotNull(lastId))
+            }
+        }
+    }
+
+    private companion object {
+        const val MaxPageSize = 500
     }
 }

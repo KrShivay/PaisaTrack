@@ -32,7 +32,10 @@ class SmsReceiver : BroadcastReceiver() {
                 part.displayMessageBody ?: part.messageBody ?: ""
             }
             if (SmsFilter.isAllowed(sender, body)) {
-                val receivedAtEpochMillis = System.currentTimeMillis()
+                // The inbox provider stores the SMS/PDU timestamp. Hash the
+                // same value here so a later full-history import resolves to
+                // the identical SMS and transaction ids.
+                val receivedAtEpochMillis = parts.minOf { it.timestampMillis }
                 CapturedSmsSink.current.accept(
                     CapturedSms(
                         id = CapturedSmsId.forMessage(

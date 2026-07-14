@@ -276,6 +276,8 @@ void main() {
       'needs_review',
     );
     expect(rows.every((row) => row.categoryId == null), isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets('category correction requires explicit scope selection',
@@ -322,7 +324,7 @@ void main() {
     expect(find.textContaining('will remember'), findsNothing);
     await tester.runAsync(database.close);
     await tester.pumpWidget(const SizedBox());
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets('group confirm updates every row for one counterparty',
@@ -372,5 +374,7 @@ void main() {
       rows.singleWhere((row) => row.id == 'txn_group_other').status,
       'needs_review',
     );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 }

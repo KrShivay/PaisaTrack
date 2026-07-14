@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../capture/sms_import_state.dart';
 import '../../data/db/database_provider.dart';
 import 'app_settings.dart';
 
@@ -32,6 +33,7 @@ class AppDataResetService {
 
     await _ref.read(databasePassphraseProvider).clearStoredPassphrase();
     await _ref.read(appSettingsControllerProvider.notifier).resetToDefaults();
+    await _ref.read(backfillMarkerProvider).reset();
 
     _ref.invalidate(appDatabaseProvider);
     final freshDatabase = await _ref.read(appDatabaseProvider.future);

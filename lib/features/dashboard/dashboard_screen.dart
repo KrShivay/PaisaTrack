@@ -15,21 +15,6 @@ import 'dashboard_widgets.dart';
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
-  static const _monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -44,8 +29,8 @@ class DashboardScreen extends ConsumerWidget {
     final reviewAttention = ref.watch(reviewAttentionProvider);
     final recent = ref.watch(recentTransactionsProvider);
     final upcoming = ref.watch(upcomingRecurringProvider);
+    final period = ref.watch(dashboardPeriodProvider);
 
-    final now = DateTime.now();
     final hasActivity = totals.debitTotal > 0 || totals.creditTotal > 0;
 
     return Scaffold(
@@ -75,15 +60,30 @@ class DashboardScreen extends ConsumerWidget {
       body: ListView(
         padding: AppSpacing.screen,
         children: [
-          Text(
-            _monthNames[now.month - 1],
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => _selectPeriod(context, ref, period),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: Text(
+                period.label,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Monthly overview',
+            period.isCalendarMonth
+                ? 'Monthly overview'
+                : 'Selected period overview',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -95,6 +95,9 @@ class DashboardScreen extends ConsumerWidget {
               spent: totals.debitTotal,
               received: totals.creditTotal,
               monthComparison: mom,
+              comparisonPeriodLabel: period.isCalendarMonth
+                  ? 'the previous month'
+                  : 'the previous period',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const TransactionsScreen(),
@@ -106,13 +109,14 @@ class DashboardScreen extends ConsumerWidget {
               dailyAverage: dailyAvg,
               monthComparison: mom,
               projectedSpend: projected,
+              comparisonLabel: period.comparisonLabel,
             ),
           ] else
             EmptyStateView(
               illustration: AppIllustrations.wallet,
-              title: 'No transactions this month',
+              title: 'No transactions in ${period.label}',
               message:
-                  'Transactions read from SMS or added manually will build your monthly overview here.',
+                  'Transactions read from SMS or added manually will build your overview here.',
               actionLabel: 'Add transaction',
               onAction: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -185,5 +189,231 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+enum _DashboardPeriodChoice {
+  currentMonth,
+  previousMonth,
+  today,
+  last7Days,
+  last30Days,
+  chooseMonth,
+  customRange,
+}
+
+Future<void> _selectPeriod(
+  BuildContext context,
+  WidgetRef ref,
+  DashboardPeriod current,
+) async {
+  final choice = await showModalBottomSheet<_DashboardPeriodChoice>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.calendar_view_month_outlined),
+            title: const Text('Current month'),
+            onTap: () => Navigator.pop(
+              context,
+              _DashboardPeriodChoice.currentMonth,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.history_outlined),
+            title: const Text('Previous month'),
+            onTap: () => Navigator.pop(
+              context,
+              _DashboardPeriodChoice.previousMonth,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.today_outlined),
+            title: const Text('Today'),
+            onTap: () => Navigator.pop(context, _DashboardPeriodChoice.today),
+          ),
+          ListTile(
+            leading: const Icon(Icons.date_range_outlined),
+            title: const Text('Last 7 days'),
+            onTap: () =>
+                Navigator.pop(context, _DashboardPeriodChoice.last7Days),
+          ),
+          ListTile(
+            leading: const Icon(Icons.date_range_outlined),
+            title: const Text('Last 30 days'),
+            onTap: () =>
+                Navigator.pop(context, _DashboardPeriodChoice.last30Days),
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_month_outlined),
+            title: const Text('Choose month'),
+            onTap: () =>
+                Navigator.pop(context, _DashboardPeriodChoice.chooseMonth),
+          ),
+          ListTile(
+            leading: const Icon(Icons.edit_calendar_outlined),
+            title: const Text('Custom date range'),
+            onTap: () =>
+                Navigator.pop(context, _DashboardPeriodChoice.customRange),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null || !context.mounted) return;
+
+  final now = DateTime.now();
+  DashboardPeriod? selected;
+  switch (choice) {
+    case _DashboardPeriodChoice.currentMonth:
+      selected = DashboardPeriod.month(now);
+    case _DashboardPeriodChoice.previousMonth:
+      selected = DashboardPeriod.month(DateTime(now.year, now.month - 1));
+    case _DashboardPeriodChoice.today:
+      selected = DashboardPeriod.lastDays(1, now: now);
+    case _DashboardPeriodChoice.last7Days:
+      selected = DashboardPeriod.lastDays(7, now: now);
+    case _DashboardPeriodChoice.last30Days:
+      selected = DashboardPeriod.lastDays(30, now: now);
+    case _DashboardPeriodChoice.chooseMonth:
+      final month = await showDialog<DateTime>(
+        context: context,
+        builder: (context) => _MonthPickerDialog(
+          initialMonth: current.start,
+          lastMonth: now,
+        ),
+      );
+      if (month != null) selected = DashboardPeriod.month(month);
+    case _DashboardPeriodChoice.customRange:
+      final initialEnd = current.end
+          .subtract(const Duration(days: 1))
+          .clampDate(DateTime(2000), now);
+      final initialStart = current.start.clampDate(DateTime(2000), initialEnd);
+      final range = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2000),
+        lastDate: now,
+        initialDateRange: DateTimeRange(
+          start: initialStart,
+          end: initialEnd,
+        ),
+        helpText: 'Choose dashboard date range',
+      );
+      if (range != null) {
+        selected = DashboardPeriod.range(range.start, range.end);
+      }
+  }
+
+  if (selected != null) {
+    ref.read(dashboardPeriodProvider.notifier).state = selected;
+  }
+}
+
+class _MonthPickerDialog extends StatefulWidget {
+  const _MonthPickerDialog({
+    required this.initialMonth,
+    required this.lastMonth,
+  });
+
+  final DateTime initialMonth;
+  final DateTime lastMonth;
+
+  @override
+  State<_MonthPickerDialog> createState() => _MonthPickerDialogState();
+}
+
+class _MonthPickerDialogState extends State<_MonthPickerDialog> {
+  late int _year = widget.initialMonth.year;
+
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      titlePadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.sm,
+      ),
+      title: Row(
+        children: [
+          IconButton(
+            tooltip: 'Previous year',
+            onPressed: _year > 2000 ? () => setState(() => _year--) : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Expanded(
+            child: Text(
+              '$_year',
+              textAlign: TextAlign.center,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Next year',
+            onPressed: _year < widget.lastMonth.year
+                ? () => setState(() => _year++)
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 320,
+        child: GridView.builder(
+          shrinkWrap: true,
+          itemCount: 12,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: 1.8,
+            crossAxisSpacing: AppSpacing.sm,
+            mainAxisSpacing: AppSpacing.sm,
+          ),
+          itemBuilder: (context, index) {
+            final month = DateTime(_year, index + 1);
+            final isFuture = month.isAfter(
+              DateTime(widget.lastMonth.year, widget.lastMonth.month),
+            );
+            final isSelected = currentMonth(widget.initialMonth) == month;
+            return FilledButton.tonal(
+              onPressed: isFuture ? null : () => Navigator.pop(context, month),
+              style: FilledButton.styleFrom(
+                backgroundColor: isSelected
+                    ? Theme.of(context).colorScheme.secondaryContainer
+                    : null,
+              ),
+              child: Text(_months[index]),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  static DateTime currentMonth(DateTime value) =>
+      DateTime(value.year, value.month);
+}
+
+extension on DateTime {
+  DateTime clampDate(DateTime minimum, DateTime maximum) {
+    if (isBefore(minimum)) return minimum;
+    if (isAfter(maximum)) return maximum;
+    return this;
   }
 }

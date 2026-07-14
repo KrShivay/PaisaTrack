@@ -27,8 +27,8 @@ import 'template_engine/template_matcher.dart';
 import 'template_engine/template_registry.dart';
 import 'template_engine/template_trust_ledger.dart';
 
-/// Parser cascade used by live SMS ingestion.
-final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
+/// Shared high-precision matcher used by live capture and bulk history import.
+final templateMatcherProvider = FutureProvider<TemplateMatcher>((ref) async {
   final database = await ref.watch(appDatabaseProvider.future);
   final registries = await Future.wait(
     const [
@@ -44,11 +44,16 @@ final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
     }),
   );
 
+  return TemplateMatcher(
+    registries: registries,
+    trustLedger: TemplateTrustLedger(database),
+  );
+});
+
+/// Parser cascade used by live SMS ingestion.
+final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
   return ParserCascade(
-    templateMatcher: TemplateMatcher(
-      registries: registries,
-      trustLedger: TemplateTrustLedger(database),
-    ),
+    templateMatcher: await ref.watch(templateMatcherProvider.future),
     llmExtractor: LlmExtractor(ref.watch(llmRuntimeProvider)),
   );
 });
@@ -114,6 +119,8 @@ class SmsIngestor {
     MerchantResolver? merchantResolver,
     int askDailyBudget = AppConstants.askNowDailyBudget,
     int Function()? askDailyBudgetResolver,
+    DecisionStatus? fixedStatus,
+    Set<String>? knownTransactionIds,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
@@ -122,6 +129,8 @@ class SmsIngestor {
         _categorizer = categorizer,
         _merchantResolver = merchantResolver,
         _askDailyBudget = askDailyBudgetResolver ?? (() => askDailyBudget),
+        _fixedStatus = fixedStatus,
+        _knownTransactionIds = knownTransactionIds,
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _now = now ?? DateTime.now;
@@ -138,13 +147,29 @@ class SmsIngestor {
   /// applies to the next ingest without rebuilding the capture pipeline
   /// (see smsCaptureBootstrapProvider).
   final int Function() _askDailyBudget;
+  final DecisionStatus? _fixedStatus;
+  final Set<String>? _knownTransactionIds;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
   final DateTime Function() _now;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
   Future<void> ingest(RawSms sms) async {
+    final transactionId = 'txn_${sms.id}';
+    if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     await _database.transaction(() async {
+      // Inbox re-import is intentionally non-destructive. A deterministic SMS
+      // id maps to a deterministic transaction id, so an existing row may
+      // contain user edits, confirmation state, or a user deletion that must
+      // never be overwritten by a newer parser/categorizer result. Check this
+      // before the raw upsert so re-import also does not resurrect bodies that
+      // the retention job already purged.
+      final existingTransaction = await (_database.select(
+        _database.transactions,
+      )..where((row) => row.id.equals(transactionId)))
+          .getSingleOrNull();
+      if (existingTransaction != null) return;
+
       await _database.into(_database.rawSms).insertOnConflictUpdate(
             RawSmsCompanion.insert(
               id: sms.id,
@@ -170,12 +195,13 @@ class SmsIngestor {
           // enter the ask flow or consume ask budget — keep them 'auto'.
           final status = duplicateOfTxnId != null
               ? DecisionStatus.auto
-              : merchant?.needsReview == true
-                  ? DecisionStatus.needsReview
-                  : await _decideStatus(
-                      value,
-                      categorization: categorization,
-                    );
+              : _fixedStatus ??
+                  (merchant?.needsReview == true
+                      ? DecisionStatus.needsReview
+                      : await _decideStatus(
+                          value,
+                          categorization: categorization,
+                        ));
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
