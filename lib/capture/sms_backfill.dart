@@ -12,6 +12,7 @@ import '../data/models/raw_sms.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
 import '../features/settings/app_settings.dart';
+import '../intelligence/recurring_detector.dart';
 import 'captured_sms_source.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
@@ -202,21 +203,6 @@ class SmsIncrementalCatchUp {
     if (await _marker.completedVersion() < smsHistoryImportVersion) {
       return const SmsImportResult(processed: 0, failed: 0, skipped: true);
     }
-    final rawId = _database.rawSms.id;
-    final rawIdRows = await (_database.selectOnly(_database.rawSms)
-          ..addColumns([rawId]))
-        .get();
-    final transactionSmsId = _database.transactions.smsId;
-    final transactionIdRows = await (_database.selectOnly(
-      _database.transactions,
-    )..addColumns([transactionSmsId]))
-        .get();
-    final knownIds = <String>{
-      for (final row in rawIdRows)
-        if (row.read(rawId) case final id?) id,
-      for (final row in transactionIdRows)
-        if (row.read(transactionSmsId) case final id?) id,
-    };
     var cursor = null as SmsInboxCursor?;
     var processed = 0;
     var failed = 0;
@@ -224,6 +210,27 @@ class SmsIncrementalCatchUp {
     var foundKnownBoundary = false;
     do {
       final page = await _reader.readPage(before: cursor, limit: _pageSize);
+      final pageIds = page.messages.map((sms) => sms.id).toList();
+      final knownIds = <String>{};
+      if (pageIds.isNotEmpty) {
+        final rawId = _database.rawSms.id;
+        final rawRows = await (_database.selectOnly(_database.rawSms)
+              ..addColumns([rawId])
+              ..where(rawId.isIn(pageIds)))
+            .get();
+        knownIds.addAll(rawRows.map((row) => row.read(rawId)!));
+
+        final transactionSmsId = _database.transactions.smsId;
+        final transactionRows = await (_database.selectOnly(
+          _database.transactions,
+        )
+              ..addColumns([transactionSmsId])
+              ..where(transactionSmsId.isIn(pageIds)))
+            .get();
+        knownIds.addAll(
+          transactionRows.map((row) => row.read(transactionSmsId)!),
+        );
+      }
       final pending = <RawSms>[];
       for (final sms in page.messages) {
         if (knownIds.contains(sms.id)) {
@@ -233,7 +240,6 @@ class SmsIncrementalCatchUp {
         pending.add(sms);
       }
       final batch = await _ingestor.ingestBatch(pending);
-      knownIds.addAll(batch.succeededIds);
       failed += batch.failed;
       processed += pending.length;
       if (page.nextCursor != null && page.nextCursor == cursor) {
@@ -378,18 +384,29 @@ final smsIncrementalCatchUpProvider =
 final smsIncrementalCatchUpBootstrapProvider = Provider<void>((ref) {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   final catchUp = ref.watch(smsIncrementalCatchUpProvider).valueOrNull;
-  if (permission != SmsPermissionStatus.granted || catchUp == null) return;
+  final database = ref.watch(appDatabaseProvider).valueOrNull;
+  final backfill = ref.watch(smsBackfillProvider);
+  if (permission != SmsPermissionStatus.granted ||
+      catchUp == null ||
+      database == null ||
+      backfill.isLoading) {
+    return;
+  }
 
-  void runCatchUp() => unawaited(_runCatchUpSafely(catchUp));
+  void runCatchUp() => unawaited(_runCatchUpSafely(catchUp, database));
   final observer = _SmsCatchUpLifecycleObserver(runCatchUp);
   WidgetsBinding.instance.addObserver(observer);
   ref.onDispose(() => WidgetsBinding.instance.removeObserver(observer));
   runCatchUp();
 });
 
-Future<void> _runCatchUpSafely(SmsIncrementalCatchUp catchUp) async {
+Future<void> _runCatchUpSafely(
+  SmsIncrementalCatchUp catchUp,
+  AppDatabase database,
+) async {
   try {
     await catchUp.run();
+    await ForegroundRecurringScanner(database).runIfStale();
   } catch (error, stackTrace) {
     developer.log(
       'Incremental SMS catch-up failed',
@@ -415,8 +432,10 @@ class _SmsCatchUpLifecycleObserver with WidgetsBindingObserver {
 final smsBackfillProvider = FutureProvider<int>((ref) async {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   if (permission != SmsPermissionStatus.granted) return 0;
-  // Let the shell paint before the first full-history import starts.
-  await Future<void>.delayed(const Duration(milliseconds: 100));
+  // Keep inbox/database maintenance out of the first rendered frame. The
+  // incremental path is page-bounded, so an arbitrary wall-clock delay is no
+  // longer needed and would leave timers behind when widget tests dispose.
+  await WidgetsBinding.instance.endOfFrame;
   try {
     final runner = await ref.watch(smsHistoryImportRunnerProvider.future);
     return (await runner.run(force: false)).processed;

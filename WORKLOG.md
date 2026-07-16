@@ -3,6 +3,27 @@
 This is a rolling handoff, not an append-only project history. Keep only the
 latest three development entries; Git history retains older evidence.
 
+## 2026-07-17 — Device-test blocker fixes (@claude)
+
+- S0/S1 payment_sources crash: bumped schema to v6 with a non-destructive
+  repair (`_repairPaymentSourcesV6`) that backfills NULLs, rescales millisecond
+  datetimes, and drops/recreates the source trigger; the v5 backfill and
+  trigger now write seconds and `is_active`. Regression fixture added
+  (`app_database_v6_payment_source_repair_test.dart`). Fixes the unusable
+  Transactions and Accounts screens without clearing data.
+- S1 assistant: `_matchCategory` resolves single distinctive tokens ("food" →
+  "Food & Dining") and fails closed on shared tokens; test added.
+- S1 lockout: `continueWithoutSmsProvider` routes a declining user into
+  HomeShell with a persistent dashboard permission banner; onboarding gained a
+  "Continue without SMS access" action; tests added.
+- S2/S3: Categories FAB tooltip; large-text stat cards wrap labels and scale
+  amounts; Accounts screen logs the raw error and shows a safe retry.
+- Filed fixes as T-111..T-114 (In Review, need device QA) and remaining
+  follow-ups T-115..T-120 (profiling, review/label scaling, recurring
+  diagnostics, menu backdrop, large-text tests).
+- Not runnable here: the bundled Flutter SDK is macOS-only, so `flutter
+  analyze`/tests and device QA must run on the developer machine.
+
 ## 2026-07-16 — Independent code review of the full application (@claude)
 
 - Reviewed all of lib/ and the Android capture/keystore code. Core verdict:
@@ -26,36 +47,18 @@ latest three development entries; Git history retains older evidence.
   ask/familiarity counts and dashboard aggregates run in SQL; transaction feeds
   page in 100-row increments with a six-row dashboard query.
 
-## 2026-07-16 — T-095, T-097, T-099, T-103, and T-104 implementation
+## Verification
 
-- T-095: reset now closes the current database, tolerates provider-open failure,
-  removes DB/key/settings/import state, and recreates cleanly without Drift's
-  duplicate-database warning.
-- T-097: added canonical payee labels over merchant/VPA aliases, affected-history
-  preview, preserved raw evidence, conflict refusal, Settings management, and
-  labeled transaction display.
-- T-099: added masked payment-source management, owned-source transfer pairing,
-  analytics exclusion, migration/backfill, Settings UI, and backup v2 support
-  with v1 compatibility.
-- T-103/T-104: app shell now paints before deferred startup work; imports yield
-  between rows; live EventChannel ingestion remains active; open/resume performs
-  newest-first incremental catch-up without a full rescan.
-- Fixed the hand-built v1 migration fixture so every additive migration reaches
-  schema v5 while preserving the v1→v2 duplicate-link assertions.
-- Remaining acceptance: validate startup responsiveness and real live/resume SMS
-  delivery on a physical Android device.
-
-## Verification (2026-07-16)
-
-- `flutter analyze --no-pub`: clean.
-- Full Flutter suite: 357/357 passed; focused T-105..T-107 suite: 52/52 passed.
-- `git diff --check` and project-local Markdown links: clean.
-- GitNexus full rebuild: 4,623 nodes, 10,045 edges, 231 flows.
-- `detect_changes(scope: all)`: critical breadth across 334 symbols, 49 files,
-  and 23 flows. This includes the earlier schema/startup/identity work plus the
-  reviewed capture, transaction-feed, and dashboard paths covered by the suite.
+- 2026-07-16 (pre-device): `flutter analyze --no-pub` clean; full suite
+  357/357; focused T-105..T-107 suite 52/52; `git diff --check` clean.
+- 2026-07-17 device-test fixes: NOT verified in-session — the bundled Flutter
+  SDK is macOS-only and cannot run in this Linux workspace. Before commit, run
+  on the developer machine: `flutter analyze --no-pub`; the new
+  `app_database_v6_payment_source_repair_test.dart`, assistant classifier, and
+  onboarding tests; the full suite; and re-run device QA for T-111..T-114.
 
 ## Next action
 
-Run T-103/T-104 physical-device acceptance. T-108 is the next code task while
-device evidence is unavailable, followed by T-102.
+Verify and QA T-111..T-114 on device (payment_sources repair, assistant
+category, denied-permission routing, accessibility). Then resume T-108 and the
+T-115..T-120 follow-ups.

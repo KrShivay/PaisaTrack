@@ -15,7 +15,63 @@ review queue are intentionally omitted; Git history is the archive.
 
 <!-- Kept for handoff automation; intentionally empty in this future-only view. -->
 
+## In Review
+
+### Device-test blocker fixes (2026-07-17; implemented by @claude, need QA)
+
+- [ ] T-111 [S0/S1] payment_sources v6 repair migration.
+      Fixed: schema bumped to v6 with `_repairPaymentSourcesV6` that backfills
+      NULLs and rescales millisecond datetimes in existing rows and drops/
+      recreates the source trigger to write seconds; v5 backfill/trigger now
+      write seconds + is_active. Regression fixture added
+      (`app_database_v6_payment_source_repair_test.dart`). Resolves the
+      unusable Transactions and Accounts screens without clearing app data.
+      QA: install over the affected v5 DB and confirm both screens load.
+- [ ] T-112 [S1] Assistant single-token category matching.
+      Fixed: `AssistantIntentClassifier._matchCategory` resolves an unambiguous
+      token like "food" to "Food & Dining"; shared tokens fail closed. Test
+      added. QA: "How much did I spend on food this month?" returns the same
+      total the dashboard shows.
+- [ ] T-113 [S1] Denied-SMS lockout.
+      Fixed: `continueWithoutSmsProvider` lets a user who declines enter
+      HomeShell (manual entry + Settings reachable) with a persistent
+      permission banner on the dashboard; onboarding offers "Continue without
+      SMS access". Tests added. QA: deny permission, confirm the app is usable
+      and permission can be granted later from the banner/Settings.
+- [ ] T-114 [S2/S3] Accessibility/error-handling fixes.
+      Fixed: Categories FAB tooltip; large-text stat cards wrap labels and
+      scale amounts (no ellipsized "vs previous month"/projected); Accounts
+      screen now logs the raw error and shows a safe retry instead of a bare
+      exception. QA: 1.5x font on dashboard; unlabeled-FAB check.
+
 ## Backlog
+
+### Remaining device-test follow-ups (2026-07-17)
+
+- [ ] T-115 (@codex) [S2] Profile startup and memory on a release/profile build.
+      Debug-build samples showed ~3.05s cold launch and 421–423 MB PSS baseline
+      rising to ~533 MB after navigation. Not a proven leak, but high.
+      AC: repeat with a signed profile/release APK; profile the embedded model,
+      GPU buffers, and native caches; record evidence toward T-092.
+- [ ] T-116 (@codex) [S3] Scale the Review backlog UI.
+      6,807 review rows across 2,467 merchants with only an "All" list.
+      AC: merchant/category grouping, search, filters, and merchant-level bulk
+      review/confirm. (Complements T-106's inflow fix.)
+- [ ] T-117 (@codex) [S3] Scale the Payee Labels screen.
+      Large raw-identity list has no search/filter.
+      AC: search, merchant grouping, unresolved-only filter, and duplicate
+      suggestions.
+- [ ] T-118 (@codex) [S3] Recurring empty-state diagnostics.
+      The screen promises detection after three matching transactions but never
+      explains why none qualify.
+      AC: show per-merchant eligibility/progress and fragmented-merchant
+      warnings instead of a bare empty state.
+- [ ] T-119 (@codex) [S3] Category action menu backdrop.
+      The popup darkens almost the whole screen, obscuring context.
+      AC: reduce backdrop emphasis or switch to a contextual bottom sheet.
+- [ ] T-120 (@codex) [S2] Large-text and semantics widget-test coverage.
+      AC: golden/widget tests at 1.5x font for the dashboard stat cards and a
+      semantics test asserting labeled controls (FABs, icon buttons).
 
 ### Remaining code-review fixes
 - [ ] T-108 (@codex) [P2] Capture coverage for major banks.

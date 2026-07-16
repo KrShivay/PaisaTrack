@@ -4,6 +4,8 @@ import 'package:drift/drift.dart';
 
 import '../data/db/database.dart';
 
+const _foregroundScanCheckpointKey = 'recurring_foreground_scan_checkpoint_v2';
+
 /// One detected recurring stream written to `recurring_series`.
 class RecurringDetection {
   const RecurringDetection({
@@ -52,7 +54,9 @@ class RecurringDetector {
       final transactions = await (_database.select(_database.transactions)
             ..where(
               (t) =>
-                  t.merchantId.isNotNull() &
+                  (t.merchantId.isNotNull() |
+                      t.counterpartyVpa.isNotNull() |
+                      t.merchantRaw.isNotNull()) &
                   t.isAnalyticsExcluded.equals(false) &
                   t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
@@ -64,10 +68,18 @@ class RecurringDetector {
             in await _database.select(_database.merchants).get())
           merchant.id: merchant,
       };
+      final knownMerchantIds = merchants.keys.toSet();
       final grouped = <String, List<_TransactionPoint>>{};
+      final fallbackLabels = <String, String>{};
       for (final txn in transactions) {
-        final merchantId = txn.merchantId;
-        if (merchantId == null) continue;
+        var merchantId = txn.merchantId;
+        if (merchantId == null) {
+          final evidence = txn.merchantRaw ?? txn.counterpartyVpa;
+          final normalized = _normalizeEvidence(evidence);
+          if (normalized == null) continue;
+          merchantId = 'merchant_evidence_$normalized';
+          fallbackLabels.putIfAbsent(merchantId, () => evidence!.trim());
+        }
         grouped.putIfAbsent('$merchantId\u0000${txn.direction}', () => []).add(
               _TransactionPoint(
                 id: txn.id,
@@ -84,16 +96,25 @@ class RecurringDetector {
 
       final detections = <RecurringDetection>[];
       for (final points in grouped.values) {
+        var detectedStableAmountCluster = false;
         for (final cluster in _amountClusters(points)) {
           final detection = _detectCluster(
             cluster,
             label: merchants[cluster.first.merchantId]?.userLabel ??
                 merchants[cluster.first.merchantId]?.canonicalName ??
+                fallbackLabels[cluster.first.merchantId] ??
                 cluster.first.merchantId,
             today: scanDate,
           );
           if (detection == null) continue;
+          detectedStableAmountCluster = true;
           detections.add(detection);
+          await _ensureMerchant(
+            detection.merchantId,
+            detection.label,
+            cluster,
+            knownMerchantIds: knownMerchantIds,
+          );
           await _database
               .into(_database.recurringSeries)
               .insertOnConflictUpdate(
@@ -114,9 +135,78 @@ class RecurringDetector {
                 ),
               );
         }
+        // Utilities and recharges recur on a stable cadence even when usage
+        // makes the amount vary. Keep the narrow amount clusters first to
+        // separate multiple subscriptions at one merchant, then fall back to
+        // cadence-only detection when none of those clusters qualify.
+        if (!detectedStableAmountCluster && points.length >= 3) {
+          final merchantId = points.first.merchantId;
+          final detection = _detectCluster(
+            points,
+            label: merchants[merchantId]?.userLabel ??
+                merchants[merchantId]?.canonicalName ??
+                fallbackLabels[merchantId] ??
+                merchantId,
+            today: scanDate,
+          );
+          if (detection != null) {
+            detections.add(detection);
+            await _ensureMerchant(
+              detection.merchantId,
+              detection.label,
+              points,
+              knownMerchantIds: knownMerchantIds,
+            );
+            await _database
+                .into(_database.recurringSeries)
+                .insertOnConflictUpdate(
+                  RecurringSeriesCompanion.insert(
+                    id: detection.id,
+                    merchantId: detection.merchantId,
+                    label: detection.label,
+                    expectedAmount: detection.expectedAmount,
+                    tolerancePct: amountTolerancePct,
+                    period: detection.period,
+                    periodDays: detection.periodDays,
+                    nextExpectedDate: detection.nextExpectedDate,
+                    lastAmount: detection.lastAmount,
+                    amountTrend: detection.amountTrend,
+                    occurrences: detection.occurrences,
+                    status: detection.status,
+                    kind: detection.kind,
+                  ),
+                );
+          }
+        }
       }
       return detections;
     });
+  }
+
+  String? _normalizeEvidence(String? value) {
+    final normalized =
+        value?.trim().toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+    return normalized == null || normalized.isEmpty ? null : normalized;
+  }
+
+  Future<void> _ensureMerchant(
+    String merchantId,
+    String label,
+    List<_TransactionPoint> points, {
+    required Set<String> knownMerchantIds,
+  }) async {
+    if (knownMerchantIds.contains(merchantId)) return;
+    final ordered = [...points]
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    await _database.into(_database.merchants).insertOnConflictUpdate(
+          MerchantsCompanion.insert(
+            id: merchantId,
+            canonicalName: label,
+            firstSeen: ordered.first.timestamp,
+            lastSeen: ordered.last.timestamp,
+          ),
+        );
+    knownMerchantIds.add(merchantId);
   }
 
   List<List<_TransactionPoint>> _amountClusters(
@@ -206,6 +296,22 @@ class RecurringDetector {
         normalized.contains('gas')) {
       return 'bill';
     }
+    if (normalized.contains('recharge') ||
+        normalized.contains('prepaid') ||
+        normalized.contains('postpaid') ||
+        normalized.contains('mobile') ||
+        normalized.contains('broadband') ||
+        normalized.contains('dth')) {
+      return 'recharge';
+    }
+    if (normalized.contains('mutual') ||
+        normalized.contains('fund') ||
+        normalized.contains('sip') ||
+        normalized.contains('nps') ||
+        normalized.contains('pension') ||
+        normalized.contains('investment')) {
+      return 'investment';
+    }
     return 'subscription';
   }
 
@@ -233,6 +339,41 @@ class RecurringDetector {
         ) /
         values.length;
     return math.sqrt(variance) / mean;
+  }
+}
+
+/// Runs the foreground recurring scan only when transaction data changed.
+///
+/// The nightly job remains responsible for time-based status refreshes. This
+/// checkpoint makes correctness independent of Android background scheduling
+/// without adding a full-table scan to every app resume.
+class ForegroundRecurringScanner {
+  const ForegroundRecurringScanner(this._database);
+
+  final AppDatabase _database;
+
+  Future<bool> runIfStale({DateTime? now}) async {
+    final startedAt = (now ?? DateTime.now()).toUtc();
+    final checkpoint = await (_database.select(_database.modelMeta)
+          ..where((row) => row.key.equals(_foregroundScanCheckpointKey)))
+        .getSingleOrNull();
+    final lastScan = DateTime.tryParse(checkpoint?.value ?? '')?.toUtc();
+    if (lastScan != null) {
+      final changed = await (_database.select(_database.transactions)
+            ..where((row) => row.updatedAt.isBiggerThanValue(lastScan))
+            ..limit(1))
+          .getSingleOrNull();
+      if (changed == null) return false;
+    }
+
+    await RecurringDetector(_database).run(today: startedAt);
+    await _database.into(_database.modelMeta).insertOnConflictUpdate(
+          ModelMetaCompanion.insert(
+            key: _foregroundScanCheckpointKey,
+            value: startedAt.toIso8601String(),
+          ),
+        );
+    return true;
   }
 }
 

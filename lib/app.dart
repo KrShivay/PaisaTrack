@@ -29,9 +29,11 @@ class PaisaTrackApp extends ConsumerWidget {
     ref.watch(askNowNotificationControllerProvider);
 
     final permission = ref.watch(smsPermissionControllerProvider);
-    // Denied/unknown/error states stay on onboarding, which explains the
-    // degraded (manual-only) state; only a granted permission unlocks the
-    // dashboard/transactions/dev shell.
+    // Granted permission unlocks the shell. A user who declines can still enter
+    // the shell via "continue without SMS access" (continueWithoutSmsProvider);
+    // manual entry, Settings, and a persistent permission banner live there, so
+    // a denied permission no longer traps the user on onboarding.
+    final continueWithoutSms = ref.watch(continueWithoutSmsProvider);
     final settings = ref.watch(appSettingsControllerProvider);
 
     return MaterialApp(
@@ -43,6 +45,7 @@ class PaisaTrackApp extends ConsumerWidget {
         AsyncData(:final value) when value == SmsPermissionStatus.granted =>
           const HomeShell(),
         AsyncLoading() => const _StartupScreen(),
+        _ when continueWithoutSms => const HomeShell(),
         _ => const OnboardingScreen(),
       },
     );

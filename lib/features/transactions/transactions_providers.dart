@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/database.dart';
@@ -7,10 +9,13 @@ import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/transaction_source_repository.dart';
 
 const transactionPageSize = 100;
+const reviewPageSize = 100;
 
 final transactionListLimitProvider = StateProvider<int>(
   (ref) => transactionPageSize,
 );
+
+final reviewQueueLimitProvider = StateProvider<int>((ref) => reviewPageSize);
 
 /// Live-updating list of non-deleted transactions, newest first.
 ///
@@ -24,7 +29,15 @@ final transactionListProvider =
   return databaseAsync.when(
     data: (database) => ref
         .watch(transactionRepositoryProvider(database))
-        .watchTransactions(limit: limit),
+        .watchTransactions(limit: limit)
+        .handleError((Object error, StackTrace stackTrace) {
+      developer.log(
+        'Transaction list query failed',
+        name: 'paisatrack.transactions',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }),
     loading: () => const Stream<List<TransactionListItem>>.empty(),
     error: (error, stackTrace) =>
         Stream<List<TransactionListItem>>.error(error, stackTrace),
@@ -61,12 +74,26 @@ final transactionSourceProvider =
 /// Live queue of transactions waiting for weekly batch review.
 final reviewQueueProvider = StreamProvider<List<TransactionReviewItem>>((ref) {
   final databaseAsync = ref.watch(appDatabaseProvider);
+  final limit = ref.watch(reviewQueueLimitProvider);
   return databaseAsync.when(
-    data: (database) =>
-        ref.watch(transactionRepositoryProvider(database)).watchReviewQueue(),
+    data: (database) => ref
+        .watch(transactionRepositoryProvider(database))
+        .watchReviewQueue(limit: limit),
     loading: () => const Stream<List<TransactionReviewItem>>.empty(),
     error: (error, stackTrace) =>
         Stream<List<TransactionReviewItem>>.error(error, stackTrace),
+  );
+});
+
+final reviewQueueSummaryProvider = StreamProvider<ReviewQueueSummary>((ref) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  return databaseAsync.when(
+    data: (database) => ref
+        .watch(transactionRepositoryProvider(database))
+        .watchReviewQueueSummary(),
+    loading: () => const Stream<ReviewQueueSummary>.empty(),
+    error: (error, stackTrace) =>
+        Stream<ReviewQueueSummary>.error(error, stackTrace),
   );
 });
 

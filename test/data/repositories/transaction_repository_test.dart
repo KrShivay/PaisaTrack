@@ -86,6 +86,29 @@ void main() {
     await database.close();
   });
 
+  test('review queue is bounded while its summary covers every row', () async {
+    final merchantId = await _seedMerchant(database, 'Electricity Board');
+    for (var index = 0; index < 125; index++) {
+      await _insertTxn(
+        database,
+        id: 'review_$index',
+        merchantId: index == 124 ? merchantId : null,
+        merchantRaw: index == 124 ? null : 'Payee ${index % 3}',
+        status: 'needs_review',
+      );
+    }
+    final repository = TransactionRepository(database);
+
+    final queue = await repository.watchReviewQueue(limit: 100).first;
+    final summary = await repository.watchReviewQueueSummary().first;
+
+    expect(queue, hasLength(100));
+    expect(summary.count, 125);
+    expect(summary.amount, 31250);
+    expect(summary.merchantCount, 4);
+    expect(summary.highestImpactLabel, isNotEmpty);
+  });
+
   group('correctWithRule', () {
     test(
         'writes a learned merchant alias when the transaction is already '

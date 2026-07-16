@@ -189,10 +189,11 @@ Future<void> initializeNightlyWork() async {
     nightlyWorkName,
     nightlyTaskName,
     frequency: const Duration(hours: 24),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+    // `keep` preserves constraints from an older install. `update` is needed
+    // so devices already holding the charging+idle job receive this fix.
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     constraints: Constraints(
-      requiresCharging: true,
-      requiresDeviceIdle: true,
+      requiresBatteryNotLow: true,
     ),
   );
 }

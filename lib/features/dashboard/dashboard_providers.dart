@@ -526,20 +526,13 @@ class ReviewAttention {
 }
 
 final reviewAttentionProvider = Provider<ReviewAttention?>((ref) {
-  final reviewItems = ref.watch(reviewQueueProvider).valueOrNull ?? const [];
-  if (reviewItems.isEmpty) return null;
-
-  var amount = 0.0;
-  TransactionReviewItem? highest;
-  for (final item in reviewItems) {
-    amount += item.amount;
-    if (highest == null || item.amount > highest.amount) highest = item;
-  }
+  final summary = ref.watch(reviewQueueSummaryProvider).valueOrNull;
+  if (summary == null || summary.count == 0) return null;
 
   return ReviewAttention(
-    count: reviewItems.length,
-    amount: amount,
-    highestImpactLabel: highest?.displayName ?? 'Unknown transaction',
+    count: summary.count,
+    amount: summary.amount,
+    highestImpactLabel: summary.highestImpactLabel,
   );
 });
 

@@ -270,6 +270,33 @@ void main() {
     expect(transactionIds, isNot(contains('txn_sms_outside_overlap')));
   });
 
+  test('incremental catch-up queries only IDs in the current inbox page',
+      () async {
+    for (var index = 0; index < 500; index++) {
+      await backfiller(
+        FakeInboxReader.single([message('historical_$index')]),
+      ).run();
+    }
+    final reader = FakeInboxReader.single([
+      message('sms_new'),
+      message('historical_499'),
+    ]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 1);
+    expect(reader.readCount, 1);
+  });
+
   test('incremental catch-up succeeds on an empty inbox', () async {
     final catchUp = SmsIncrementalCatchUp(
       database: database,

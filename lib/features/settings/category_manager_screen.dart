@@ -41,6 +41,7 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       appBar: AppBar(title: const Text('Categories')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addCategory(context, ref),
+        tooltip: 'Add category',
         child: const Icon(Icons.add),
       ),
       body: categories.when(

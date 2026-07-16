@@ -33,3 +33,10 @@ represent:
 
 Each migration must preserve existing rows, include upgrade tests from the
 previous version, and update encrypted backup/import coverage where relevant.
+
+Schema v6 is a repair migration: it backfills NULLs and rescales millisecond
+datetimes in `payment_sources` rows created by early v5 builds (which crashed
+the transactions and accounts screens through the generated force-unwrapping
+row mapper) and recreates the source-inference trigger to write second-based
+timestamps. It never clears app data. Regression fixture:
+`test/data/db/app_database_v6_payment_source_repair_test.dart`.

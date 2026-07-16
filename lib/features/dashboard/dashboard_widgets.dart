@@ -269,7 +269,9 @@ class StatTile extends StatelessWidget {
           children: [
             Text(
               label,
-              maxLines: 1,
+              // Wrap rather than truncate so labels like "vs previous month"
+              // stay legible at large font scales (S2 large-text fix).
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -277,18 +279,22 @@ class StatTile extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Flexible(
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: accent ?? theme.colorScheme.onSurface,
-                      fontFeatures: AppTheme.tabularFigures,
+                  // Scale the amount down instead of clipping it, so no digits
+                  // are lost when the tile is narrow at large text.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: accent ?? theme.colorScheme.onSurface,
+                        fontFeatures: AppTheme.tabularFigures,
+                      ),
                     ),
                   ),
                 ),

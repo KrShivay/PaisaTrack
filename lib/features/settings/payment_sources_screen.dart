@@ -1,8 +1,11 @@
+import 'dart:developer' as developer;
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/app_state_views.dart';
 import '../../data/repositories/payment_source_repository.dart';
 
 class PaymentSourcesScreen extends ConsumerWidget {
@@ -15,8 +18,21 @@ class PaymentSourcesScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Accounts and payment sources')),
       body: sources.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Accounts unavailable: $error')),
+        // Keep the raw exception in logs for diagnosis, but show the user a
+        // safe message with a retry instead of a bare Dart error string
+        // (S2 error-handling consistency; matches the transactions screen).
+        error: (error, stackTrace) {
+          developer.log(
+            'Failed to load payment sources',
+            name: 'paisatrack.accounts',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          return ErrorStateView(
+            message: 'Could not load accounts.',
+            onRetry: () => ref.invalidate(paymentSourcesProvider),
+          );
+        },
         data: (items) => items.isEmpty
             ? const Center(
                 child: Text('No masked account or payment source found yet.'),

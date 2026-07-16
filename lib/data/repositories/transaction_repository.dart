@@ -200,8 +200,61 @@ class TransactionRepository {
   }
 
   /// Watches transactions that need the weekly review batch flow.
-  Stream<List<TransactionReviewItem>> watchReviewQueue() {
-    return _watchQueueWithStatus('needs_review');
+  Stream<List<TransactionReviewItem>> watchReviewQueue({int limit = 100}) {
+    assert(limit > 0);
+    return _watchQueueWithStatus('needs_review', limit: limit);
+  }
+
+  /// Watches the small aggregate needed by Home and the Review header.
+  /// Keeping this separate prevents those surfaces from materializing the
+  /// complete review queue merely to compute a count, sum, and maximum.
+  Stream<ReviewQueueSummary> watchReviewQueueSummary() {
+    return _database
+        .customSelect(
+          '''
+SELECT
+  COUNT(*) AS item_count,
+  COALESCE(SUM(t.amount), 0.0) AS total_amount,
+  COUNT(DISTINCT COALESCE(
+    t.merchant_id,
+    t.counterparty_vpa,
+    t.merchant_raw,
+    t.description,
+    t.id
+  )) AS merchant_count,
+  COALESCE((
+    SELECT COALESCE(
+      m.user_label,
+      m.canonical_name,
+      highest.merchant_raw,
+      highest.counterparty_vpa,
+      highest.description,
+      'Unknown transaction'
+    )
+    FROM transactions AS highest
+    LEFT JOIN merchants AS m ON m.id = highest.merchant_id
+    WHERE highest.status = 'needs_review'
+      AND highest.is_deleted = 0
+      AND highest.duplicate_of_txn_id IS NULL
+    ORDER BY highest.amount DESC
+    LIMIT 1
+  ), 'Unknown transaction') AS highest_impact_label
+FROM transactions AS t
+WHERE t.status = 'needs_review'
+  AND t.is_deleted = 0
+  AND t.duplicate_of_txn_id IS NULL
+''',
+          readsFrom: {_database.transactions, _database.merchants},
+        )
+        .watchSingle()
+        .map(
+          (row) => ReviewQueueSummary(
+            count: row.read<int>('item_count'),
+            amount: row.read<double>('total_amount'),
+            merchantCount: row.read<int>('merchant_count'),
+            highestImpactLabel: row.read<String>('highest_impact_label'),
+          ),
+        );
   }
 
   /// Watches transactions currently awaiting an ask-now answer.
@@ -718,7 +771,10 @@ class TransactionRepository {
     return id;
   }
 
-  Stream<List<TransactionReviewItem>> _watchQueueWithStatus(String status) {
+  Stream<List<TransactionReviewItem>> _watchQueueWithStatus(
+    String status, {
+    int? limit,
+  }) {
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
         _database.merchants,
@@ -735,6 +791,7 @@ class TransactionRepository {
             _database.transactions.duplicateOfTxnId.isNull(),
       )
       ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);
+    if (limit != null) query.limit(limit);
 
     return query.watch().map(
           (rows) => rows.map(_toReviewItem).toList(growable: false),
@@ -812,6 +869,20 @@ class TransactionRepository {
       isLowTrustParse: _isLowTrustParse(txn),
     );
   }
+}
+
+class ReviewQueueSummary {
+  const ReviewQueueSummary({
+    required this.count,
+    required this.amount,
+    required this.merchantCount,
+    required this.highestImpactLabel,
+  });
+
+  final int count;
+  final double amount;
+  final int merchantCount;
+  final String highestImpactLabel;
 }
 
 class _RuleInput {

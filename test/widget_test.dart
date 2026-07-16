@@ -10,6 +10,9 @@ import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/features/insights/insights_screen.dart';
+import 'package:paisatrack/features/review/weekly_review_screen.dart';
+import 'package:paisatrack/features/transactions/transactions_screen.dart';
 
 import 'support/fake_sms_permission_gate.dart';
 import 'support/fake_captured_sms_source.dart';
@@ -50,7 +53,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Home'), findsWidgets);
-    expect(find.text('Transactions'), findsOneWidget);
+    expect(find.byType(TransactionsScreen), findsNothing);
+    expect(find.byType(WeeklyReviewScreen), findsNothing);
+    expect(find.byType(InsightsScreen), findsNothing);
+
+    await tester.tap(find.text('Transactions'));
+    await tester.pump();
+    expect(find.byType(TransactionsScreen), findsOneWidget);
+    expect(find.byType(WeeklyReviewScreen), findsNothing);
+    expect(find.text('Transactions'), findsWidgets);
     expect(find.text('Review'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
   });

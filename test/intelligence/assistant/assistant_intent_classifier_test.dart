@@ -98,6 +98,34 @@ void main() {
     });
   });
 
+  test('resolves a single distinctive token to a multi-word category', () {
+    // Device S1 regression: "food" must resolve to "Food & Dining" instead of
+    // falling through to a merchant lookup that returns nothing.
+    const multiWord = AssistantIntentClassifier();
+    Map<String, Object?>? ask(String q, List<String> cats) => multiWord.classify(
+          q,
+          today: today,
+          categoryNames: cats,
+        );
+
+    expect(ask('How much did I spend on food this month?', const [
+      'Food & Dining',
+      'Travel',
+    ]), {
+      'intent': 'period_total',
+      'metric': 'spend',
+      'aggregation': 'sum',
+      'filter': {'category': 'Food & Dining'},
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+
+    // A token shared by two categories is ambiguous, so it must NOT auto-pick a
+    // category (fail closed) — it falls through to a merchant lookup here.
+    final ambiguous =
+        ask('How much on food this month?', const ['Fast Food', 'Food Court']);
+    expect(ambiguous?['filter'], isNot(contains('category')));
+  });
+
   test('resolves years, quarters, and explicit ranges locally', () {
     expect(classify('How much did I spend in 2023?'), {
       'intent': 'period_total',

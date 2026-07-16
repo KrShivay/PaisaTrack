@@ -40,6 +40,16 @@ void main() {
         overrides: [
           transactionListProvider.overrideWith((ref) => Stream.value(items)),
           reviewQueueProvider.overrideWith((ref) => Stream.value(const [])),
+          reviewQueueSummaryProvider.overrideWith(
+            (ref) => Stream.value(
+              const ReviewQueueSummary(
+                count: 0,
+                amount: 0,
+                merchantCount: 0,
+                highestImpactLabel: 'Unknown transaction',
+              ),
+            ),
+          ),
           recurringSeriesProvider
               .overrideWith((ref) => Stream.value(recurring)),
         ],
