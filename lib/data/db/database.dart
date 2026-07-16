@@ -13,6 +13,7 @@ import 'tables/insights_table.dart';
 import 'tables/merchant_aliases_table.dart';
 import 'tables/merchants_table.dart';
 import 'tables/model_meta_table.dart';
+import 'tables/payment_sources_table.dart';
 import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
@@ -33,6 +34,7 @@ part 'database.g.dart';
     MerchantAliases,
     Merchants,
     ModelMeta,
+    PaymentSources,
     RawSms,
     RecurringSeries,
     Rules,
@@ -67,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -81,7 +83,6 @@ class AppDatabase extends _$AppDatabase {
           await migrator.addColumn(transactions, transactions.counterpartyVpa);
           await migrator.addColumn(transactions, transactions.duplicateOfTxnId);
           await migrator.createIndex(idxTransactionsDuplicateOfTxnId);
-          await _backfillDuplicateLinks();
         }
         if (from < 3) {
           await migrator.createTable(baselines);
@@ -92,9 +93,34 @@ class AppDatabase extends _$AppDatabase {
           await migrator.createIndex(idxRecurringSeriesMerchantId);
           await migrator.createIndex(idxRecurringSeriesNextExpectedDate);
         }
+        if (from < 4) {
+          await migrator.addColumn(merchants, merchants.userLabel);
+        }
+        if (from < 5) {
+          await migrator.createTable(paymentSources);
+          await migrator.addColumn(
+            transactions,
+            transactions.paymentSourceId,
+          );
+          await migrator.addColumn(
+            transactions,
+            transactions.ownedTransferId,
+          );
+          await migrator.addColumn(
+            transactions,
+            transactions.isAnalyticsExcluded,
+          );
+          await migrator.createIndex(idxTransactionsPaymentSourceId);
+          await migrator.createIndex(idxTransactionsOwnedTransferId);
+          await _backfillPaymentSources();
+        }
+        // Generated row mapping expects the latest non-null/defaulted columns,
+        // so legacy data backfills run only after every additive step above.
+        if (from < 2) await _backfillDuplicateLinks();
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
+        await _ensurePaymentSourceTrigger();
       },
     );
   }
@@ -160,6 +186,62 @@ class AppDatabase extends _$AppDatabase {
         name: 'AppDatabase.migration',
       );
     }
+  }
+
+  Future<void> _backfillPaymentSources() async {
+    await customStatement('''
+      INSERT OR IGNORE INTO payment_sources
+        (id, kind, masked_identifier, include_in_analytics, is_owned,
+         created_at, updated_at)
+      SELECT DISTINCT
+        'source_' || lower(replace(replace(replace(trim(account_hint),
+          ' ', ''), '*', 'x'), '-', '')) || '_' || lower(channel),
+        lower(channel), trim(account_hint), 1, 1,
+        CAST(unixepoch() * 1000 AS INTEGER),
+        CAST(unixepoch() * 1000 AS INTEGER)
+      FROM transactions
+      WHERE account_hint IS NOT NULL AND trim(account_hint) <> ''
+    ''');
+    await customStatement('''
+      UPDATE transactions
+      SET payment_source_id =
+        'source_' || lower(replace(replace(replace(trim(account_hint),
+          ' ', ''), '*', 'x'), '-', '')) || '_' || lower(channel)
+      WHERE payment_source_id IS NULL
+        AND account_hint IS NOT NULL AND trim(account_hint) <> ''
+    ''');
+  }
+
+  Future<void> _ensurePaymentSourceTrigger() async {
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS trg_transactions_payment_source
+      AFTER INSERT ON transactions
+      WHEN NEW.payment_source_id IS NULL
+        AND NEW.account_hint IS NOT NULL AND trim(NEW.account_hint) <> ''
+      BEGIN
+        INSERT OR IGNORE INTO payment_sources
+          (id, kind, masked_identifier, include_in_analytics, is_owned,
+           created_at, updated_at)
+        VALUES (
+          'source_' || lower(replace(replace(replace(trim(NEW.account_hint),
+            ' ', ''), '*', 'x'), '-', '')) || '_' || lower(NEW.channel),
+          lower(NEW.channel), trim(NEW.account_hint), 1, 1,
+          CAST(unixepoch() * 1000 AS INTEGER),
+          CAST(unixepoch() * 1000 AS INTEGER)
+        );
+        UPDATE transactions
+        SET payment_source_id =
+              'source_' || lower(replace(replace(replace(trim(NEW.account_hint),
+                ' ', ''), '*', 'x'), '-', '')) || '_' || lower(NEW.channel),
+            is_analytics_excluded = COALESCE((
+              SELECT NOT include_in_analytics FROM payment_sources
+              WHERE id = 'source_' || lower(replace(replace(replace(
+                trim(NEW.account_hint), ' ', ''), '*', 'x'), '-', '')) ||
+                '_' || lower(NEW.channel)
+            ), 0)
+        WHERE id = NEW.id;
+      END
+    ''');
   }
 }
 

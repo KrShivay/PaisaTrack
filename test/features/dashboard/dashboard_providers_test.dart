@@ -15,6 +15,8 @@ TransactionListItem _item({
   String? categoryName,
   String? categoryIcon,
   bool categoryIsSpending = true,
+  bool includeInAnalytics = true,
+  bool isOwnedTransfer = false,
 }) {
   return TransactionListItem(
     id: id,
@@ -26,6 +28,8 @@ TransactionListItem _item({
     categoryId: categoryId,
     categoryIcon: categoryIcon,
     categoryIsSpending: categoryIsSpending,
+    includeInAnalytics: includeInAnalytics,
+    isOwnedTransfer: isOwnedTransfer,
   );
 }
 
@@ -114,6 +118,43 @@ void main() {
     expect(c.read(monthNetProvider), 700);
     expect(c.read(categoryBreakdownProvider).single.name, 'Food');
     expect(c.read(topMerchantsProvider).single.name, 'spend');
+  });
+
+  test('analytics excludes opted-out sources and owned transfer pairs',
+      () async {
+    final c = await ready([
+      _item(
+        id: 'spend',
+        ts: thisMonth,
+        amount: 300,
+        direction: TransactionDirection.debit,
+      ),
+      _item(
+        id: 'excluded',
+        ts: thisMonth,
+        amount: 900,
+        direction: TransactionDirection.debit,
+        includeInAnalytics: false,
+      ),
+      _item(
+        id: 'transfer-out',
+        ts: thisMonth,
+        amount: 500,
+        direction: TransactionDirection.debit,
+        isOwnedTransfer: true,
+      ),
+      _item(
+        id: 'transfer-in',
+        ts: thisMonth,
+        amount: 500,
+        direction: TransactionDirection.credit,
+        isOwnedTransfer: true,
+      ),
+    ]);
+
+    expect(c.read(monthDirectionTotalsProvider).debitTotal, 300);
+    expect(c.read(monthDirectionTotalsProvider).creditTotal, 0);
+    expect(c.read(monthNetProvider), -300);
   });
 
   test('dailyAverageSpend divides debit by day of month', () async {

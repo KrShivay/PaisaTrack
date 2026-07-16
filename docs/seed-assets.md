@@ -1,11 +1,10 @@
 # Seed Assets
 
-Phase 0 ships seed data and the Drift loader for bundled categories.
+The app ships seed data and a Drift loader for bundled categories.
 
-- `assets/seed/categories.json` mirrors the default category taxonomy in
-  PLAN.md section 5.
+- `assets/seed/categories.json` is the default category taxonomy.
 - `assets/seed/category_seed.json` is a starter merchant-to-category map used by
-  the future categorizer ladder. It is intentionally small and should grow over
+  the categorizer ladder. It is intentionally small and should grow over
   time from sanitized fixtures, user feedback, and reviewed aliases.
 
 `AppDatabase.seedDefaultCategories()` loads `categories.json` into the

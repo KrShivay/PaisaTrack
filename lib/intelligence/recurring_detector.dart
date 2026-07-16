@@ -53,6 +53,8 @@ class RecurringDetector {
             ..where(
               (t) =>
                   t.merchantId.isNotNull() &
+                  t.isAnalyticsExcluded.equals(false) &
+                  t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
                   t.duplicateOfTxnId.isNull(),
             ))
@@ -85,7 +87,8 @@ class RecurringDetector {
         for (final cluster in _amountClusters(points)) {
           final detection = _detectCluster(
             cluster,
-            label: merchants[cluster.first.merchantId]?.canonicalName ??
+            label: merchants[cluster.first.merchantId]?.userLabel ??
+                merchants[cluster.first.merchantId]?.canonicalName ??
                 cluster.first.merchantId,
             today: scanDate,
           );

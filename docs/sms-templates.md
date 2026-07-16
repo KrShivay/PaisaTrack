@@ -7,8 +7,8 @@ sanitized, real fixture-backed variants (`test/fixtures/sms/<bank>/`).
 
 Both a template entry and its fixture expected JSON may include
 `"provenance": "public"`. Public (silver-tier) templates are capped at 0.85
-confidence, below the 0.9 silent-auto threshold, until T-074 promotes them
-from confirmation evidence. Omit the field for device (gold-tier) fixtures;
+confidence, below the 0.9 silent-auto threshold, until the trust ledger promotes
+them from confirmation evidence. Omit the field for device (gold-tier) fixtures;
 that is the backward-compatible default and retains the 0.97 template
 confidence. Never label an invented or unsourced fixture as either tier.
 

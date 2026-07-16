@@ -169,6 +169,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     await ref.read(transactionListProvider.future);
   }
 
+  void _loadOlder() {
+    ref.read(transactionListLimitProvider.notifier).state +=
+        transactionPageSize;
+  }
+
   @override
   Widget build(BuildContext context) {
     final transactions = ref.watch(transactionListProvider);
@@ -249,6 +254,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     value,
                     recurringMerchantIds,
                     anomalyTransactionIds,
+                    canLoadOlder:
+                        value.length >= ref.watch(transactionListLimitProvider),
                   ),
                 AsyncError() => ErrorStateView(
                     message: 'Could not load transactions.',
@@ -278,8 +285,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     BuildContext context,
     List<TransactionListItem> all,
     Set<String> recurringMerchantIds,
-    Set<String> anomalyTransactionIds,
-  ) {
+    Set<String> anomalyTransactionIds, {
+    required bool canLoadOlder,
+  }) {
     final filtered = _applyFilters(
       all,
       recurringMerchantIds,
@@ -335,8 +343,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final animate = !MediaQuery.of(context).disableAnimations;
 
     return ListView.builder(
-      itemCount: rows.length,
+      itemCount: rows.length + (canLoadOlder ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == rows.length) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: OutlinedButton(
+              onPressed: _loadOlder,
+              child: const Text('Load older transactions'),
+            ),
+          );
+        }
         final row = rows[index];
         if (row.header != null) {
           return _GroupHeader(label: row.header!);

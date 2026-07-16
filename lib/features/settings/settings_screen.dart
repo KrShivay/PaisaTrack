@@ -16,6 +16,8 @@ import '../dev/unparsed_sms_screen.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
 import 'category_manager_screen.dart';
+import 'payee_labels_screen.dart';
+import 'payment_sources_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -102,15 +104,35 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            const _Section(
+            _Section(
               title: 'Accounts and transactions',
               children: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.account_balance_outlined),
-                  title: Text('Accounts'),
-                  subtitle: Text(
-                    'Account labels are available in transaction filters',
+                  leading: const Icon(Icons.account_balance_outlined),
+                  title: const Text('Accounts and payment sources'),
+                  subtitle: const Text(
+                    'Nicknames, analytics inclusion and owned transfers',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PaymentSourcesScreen(),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.badge_outlined),
+                  title: const Text('Payee labels'),
+                  subtitle: const Text(
+                    'Name merchants, UPI IDs and counterparties',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PayeeLabelsScreen(),
+                    ),
                   ),
                 ),
               ],

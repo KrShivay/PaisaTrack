@@ -56,6 +56,10 @@ class TransactionListItem {
     this.reference,
     this.status = 'confirmed',
     this.parseSource = 'unknown',
+    this.paymentSourceId,
+    this.paymentSourceName,
+    this.includeInAnalytics = true,
+    this.isOwnedTransfer = false,
   });
 
   final String id;
@@ -74,6 +78,10 @@ class TransactionListItem {
   final String? reference;
   final String status;
   final String parseSource;
+  final String? paymentSourceId;
+  final String? paymentSourceName;
+  final bool includeInAnalytics;
+  final bool isOwnedTransfer;
 
   /// Whether the category counts toward spending. Transfers and cash
   /// withdrawals are excluded (PLAN §5) and render in a neutral color rather
@@ -148,7 +156,12 @@ class TransactionRepository {
   /// category display data resolved in the same query. Excludes rows the
   /// user deleted and rows suppressed as a cross-source duplicate echo
   /// (ADR 0003: `is_deleted` and `duplicate_of_txn_id` are independent).
-  Stream<List<TransactionListItem>> watchTransactions() {
+  Stream<List<TransactionListItem>> watchTransactions({
+    int limit = 100,
+    DateTime? start,
+    DateTime? end,
+  }) {
+    assert(limit > 0);
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
         _database.merchants,
@@ -158,12 +171,28 @@ class TransactionRepository {
         _database.categories,
         _database.categories.id.equalsExp(_database.transactions.categoryId),
       ),
+      leftOuterJoin(
+        _database.paymentSources,
+        _database.paymentSources.id
+            .equalsExp(_database.transactions.paymentSourceId),
+      ),
     ])
       ..where(
         _database.transactions.isDeleted.equals(false) &
-            _database.transactions.duplicateOfTxnId.isNull(),
+            _database.transactions.duplicateOfTxnId.isNull() &
+            (start == null
+                ? const Constant(true)
+                : _database.transactions.ts.isBiggerOrEqualValue(
+                    start.millisecondsSinceEpoch,
+                  )) &
+            (end == null
+                ? const Constant(true)
+                : _database.transactions.ts.isSmallerThanValue(
+                    end.millisecondsSinceEpoch,
+                  )),
       )
-      ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);
+      ..orderBy([OrderingTerm.desc(_database.transactions.ts)])
+      ..limit(limit);
 
     return query.watch().map(
           (rows) => rows.map(_toListItem).toList(growable: false),
@@ -203,7 +232,10 @@ class TransactionRepository {
           TransactionConfidenceTrail.fromJson(txn.confidenceJson);
       return TransactionDetail(
         txn: txn,
-        merchantName: row.readTableOrNull(_database.merchants)?.canonicalName,
+        merchantName: switch (row.readTableOrNull(_database.merchants)) {
+          final merchant? => merchant.userLabel ?? merchant.canonicalName,
+          null => null,
+        },
         categoryName: row.readTableOrNull(_database.categories)?.name,
         parseConfidence: confidenceTrail.parser?.confidence,
         confidenceTrail: confidenceTrail,
@@ -713,6 +745,7 @@ class TransactionRepository {
     final txn = row.readTable(_database.transactions);
     final merchant = row.readTableOrNull(_database.merchants);
     final category = row.readTableOrNull(_database.categories);
+    final paymentSource = row.readTableOrNull(_database.paymentSources);
     return TransactionListItem(
       id: txn.id,
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
@@ -721,7 +754,8 @@ class TransactionRepository {
       // Presentation-time fallback (merchant -> VPA -> description); the
       // write path keeps the signals independent (ADR 0003). Description
       // covers manual entries, which have no merchant/VPA provenance.
-      displayName: merchant?.canonicalName ??
+      displayName: merchant?.userLabel ??
+          merchant?.canonicalName ??
           txn.merchantRaw ??
           txn.counterpartyVpa ??
           txn.description ??
@@ -737,6 +771,11 @@ class TransactionRepository {
       reference: txn.refId,
       status: txn.status,
       parseSource: txn.parseSource,
+      paymentSourceId: txn.paymentSourceId,
+      paymentSourceName:
+          paymentSource?.nickname ?? paymentSource?.maskedIdentifier,
+      includeInAnalytics: !txn.isAnalyticsExcluded,
+      isOwnedTransfer: txn.ownedTransferId != null,
       // Unknown/uncategorized defaults to spending; only an explicit
       // non-spending category (transfers, cash withdrawal) flips this.
       categoryIsSpending: category?.isSpending ?? true,
@@ -752,7 +791,8 @@ class TransactionRepository {
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
       amount: txn.amount,
       direction: _directionFromWireName(txn.direction),
-      displayName: merchant?.canonicalName ??
+      displayName: merchant?.userLabel ??
+          merchant?.canonicalName ??
           txn.merchantRaw ??
           txn.counterpartyVpa ??
           txn.description ??

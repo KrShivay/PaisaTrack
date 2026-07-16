@@ -6,6 +6,12 @@ import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/transaction_source_repository.dart';
 
+const transactionPageSize = 100;
+
+final transactionListLimitProvider = StateProvider<int>(
+  (ref) => transactionPageSize,
+);
+
 /// Live-updating list of non-deleted transactions, newest first.
 ///
 /// Stays in the loading state until the app database has finished opening;
@@ -14,9 +20,11 @@ import '../../data/repositories/transaction_source_repository.dart';
 final transactionListProvider =
     StreamProvider<List<TransactionListItem>>((ref) {
   final databaseAsync = ref.watch(appDatabaseProvider);
+  final limit = ref.watch(transactionListLimitProvider);
   return databaseAsync.when(
-    data: (database) =>
-        ref.watch(transactionRepositoryProvider(database)).watchTransactions(),
+    data: (database) => ref
+        .watch(transactionRepositoryProvider(database))
+        .watchTransactions(limit: limit),
     loading: () => const Stream<List<TransactionListItem>>.empty(),
     error: (error, stackTrace) =>
         Stream<List<TransactionListItem>>.error(error, stackTrace),

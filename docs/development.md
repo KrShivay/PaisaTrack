@@ -1,98 +1,55 @@
 # Development Rules
 
-## Definition of Done
+## Definition of done
 
-Every feature must ship with tests, code documentation, and project
-documentation in the same change.
+Every feature includes implementation, tests, code documentation, and relevant
+project documentation in the same change.
 
-- Tests must prove the user-visible behavior, data contract, migration, parser
-  path, or integration point added by the feature.
-- Code documentation must describe public APIs, providers, repositories,
-  services, parsers, database helpers, and any non-obvious domain logic using
-  Dart `///` comments.
-- Project documentation must explain the new behavior, configuration, privacy
-  impact, schema change, workflow, or manual verification steps introduced by
-  the feature.
-- If a feature cannot reasonably include automated tests, document the reason
-  and add manual verification evidence in `WORKLOG.md`.
-- If a feature does not require code comments or project documentation beyond
-  existing docs, update the relevant task or `WORKLOG.md` entry with that
-  decision and why.
+- Run GitNexus impact analysis before editing an existing symbol.
+- Prefer additive schema migrations and preserve user data.
+- Test success, failure, idempotency, and privacy-sensitive paths.
+- Update architecture, schema, privacy, design, or an ADR when affected.
+- Run `detect_changes()` before committing.
 
-This rule applies to app features, infrastructure changes, parser/template
-behavior, database changes, CI changes, and user-facing assets.
+## Verification
 
-## Where To Put Tests
+Keep watched feeds bounded, aggregate full-history metrics in SQL, and batch
+bulk-import pages in one database transaction. Add scale regressions whenever a
+new UI surface reads transaction history.
 
-- Unit tests live under `test/` beside the feature area they exercise.
-- Widget/provider tests live under `test/` and should use fakes or in-memory
-  databases when possible.
-- Device-only checks live under `integration_test/` and must include manual
-  execution notes when CI cannot run them.
-- SMS parser fixtures must be sanitized and stored under
-  `test/fixtures/sms/<bank>/`. Use `SmsFixtureRunner` from
-  `test/fixtures/sms_fixture_runner.dart` to scan fixture pairs and compare
-  parser output with expected JSON.
+```sh
+.tooling/flutter/bin/flutter analyze --no-pub
+.tooling/flutter/bin/flutter test --no-pub --concurrency=1
+git diff --check
+```
 
-## Where To Put Documentation
+For Android changes:
 
-- Code comments belong directly above the public class, method, function, enum,
-  provider, or field they explain.
-- Product and architecture decisions belong in `PLAN.md` or `docs/`.
-- Schema details belong in `docs/schema.md`.
-- Privacy-sensitive behavior belongs in `docs/privacy.md`.
-- Durable technical decisions belong in `docs/decisions/` as ADRs.
-- Coordination, evidence, and one-off manual verification belong in
-  `WORKLOG.md`.
+```sh
+cd android
+./gradlew :app:testDebugUnitTest
+```
 
-## Code Documentation Style
+Device-only behavior—SMS, background jobs, local models, document pickers,
+performance, and accessibility—requires physical-device evidence.
 
-- Use `///` for public Dart APIs and domain types.
-- Explain intent, invariants, edge cases, privacy/security assumptions, and
-  accepted value ranges.
-- Prefer short comments before complex private logic only when the reason is not
-  obvious from the code.
-- Do not add comments that simply restate the identifier or assignment.
-- Keep generated files such as `*.g.dart` untouched.
+## Test placement
 
-## CI Guardrails
+- Unit/widget/provider tests: `test/`.
+- Device tests: `integration_test/`.
+- Sanitized SMS fixtures: `test/fixtures/sms/<bank>/`.
+- Statement fixtures: add sanitized, minimal fixtures under a dedicated
+  `test/fixtures/statements/<bank>/` directory when T-102 starts.
 
-CI (pinned to Flutter 3.44.4 for reproducible codegen) runs
-`dart run build_runner build --delete-conflicting-outputs` and fails if any
-`*.g.dart` file is modified or newly created and left uncommitted, so Drift
-schema edits (and any future generator targets) must commit their generated
-code. Regenerate locally with the same command. CI also runs `flutter analyze`
-and `flutter test`.
+## Future-feature test requirements
 
-`integration_test/encrypted_database_migration_test.dart` requires an Android
-device or emulator with SQLCipher support. Until CI has a device runner, execute
-that test manually and record the device evidence in `WORKLOG.md`.
+- Statements: parser mappings, malformed rows, idempotency, deduplication,
+  ambiguity, and transactional rollback.
+- Refunds: partial/multiple links, net totals, unlink behavior.
+- Recurring calendar: reminder-vs-transaction separation, duplicate reminders,
+  settlement matching, cancellation, and missed events.
+- Budgets: month boundaries, excluded sources/transfers, repayments, thresholds,
+  and projections.
 
-## Settings Reset Manual Check
-
-For T-042 and later import flows, verify on a debug device:
-
-1. Change Settings theme and ask budget.
-2. Seed or capture at least one transaction.
-3. Settings -> Delete everything -> confirm.
-4. Relaunch app and confirm the database contains no transactions, default
-   categories are present, settings are back to dark/2 asks, and the SQLCipher
-   passphrase was regenerated by the Android Keystore channel.
-
-## Encrypted Backup Manual Check
-
-T-043 uses the free/open-source `cryptography` package for Argon2id and
-AES-GCM. T-077 routes export through Android's system document picker and
-imports through the matching open-document picker; no storage permission is
-requested. Manual check: export with a passphrase to Downloads, Delete
-everything, select that file for import with the same passphrase, and confirm
-domain rows are restored. Re-run with a wrong passphrase and confirm existing
-rows are unchanged. Dismiss each picker and confirm the app reports cancellation
-without creating or restoring anything.
-
-## Category Manager Manual Check
-
-Settings -> Manage categories supports adding, renaming, and merging
-categories. Merge is destructive for the source category: verify transactions
-and rules that referenced the source now reference the target, and the source
-category no longer appears.
+Never commit raw SMS, real statements, full account/card identifiers, model
+prompts containing personal data, or plaintext financial exports.

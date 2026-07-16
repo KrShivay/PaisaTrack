@@ -1,60 +1,91 @@
-# Task Board
-Last updated: 2026-07-13 by @codex (T-067 public Kotak/Central Bank fixture packs and templates completed; awaiting independent review.)
+# Future Development Board
 
-## In Progress          <!-- max 1 task per agent at a time -->
+Only unfinished delivery work is retained here. Completed work and the current
+review queue are intentionally omitted; Git history is the archive.
 
-## Ready                <!-- groomed, unambiguous AC, ordered by priority -->
-<!-- 2026-07-12 @claude (@human-directed): T-051 + T-052 pulled into Ready to give @codex
-     a live execution runway — both depend only on Done work (T-048/T-049/T-050). T-051
-     (merchant resolver) is the Phase 3 critical-path head; T-052 (classifier) is
-     parallel-safe (separate files) but T-051 leads by queue order. Owners @codex build /
-     @claude review; the real-usage Phase 3 exit (T-064) is now @claude. Note: these carry no per-task
-     Model line, so the dispatcher uses CLI defaults — set one if a specific tier is wanted. -->
-## Phase 3 — Intelligence (groomed backlog; gated on the Phase 2.5b trust loop T-072..T-074, cleared 2026-07-11; remaining items still blocked on T-050 or same-phase deps)
-<!-- PLAN §7 (implementation), §4 [P3] inventory, §9 Phase 3 exit criteria. Do NOT
-     start until T-046 → Done (commit unblocked + canonical device test green).
-     Dependency-ordered; schema v3 (T-048, now in Ready) unblocks the analytics
-     chain, embedder (T-050) unblocks resolver/classifier. Owners provisional
-     (@codex build / @claude review) per COLLABORATION.md; the real-usage exit
-     review (T-064) is @claude. -->
-- [ ] T-064 (@claude) [P3] Phase 3 exit review
-      AC: verifies PLAN §9 Phase 3 exit criteria against T-048..T-063 evidence — after 2 weeks of feedback the classifier auto-labels ≥80% of new transactions with ≤10% correction rate (proven on the T-062 metrics screen); real subscriptions/EMIs all appear in recurring with correct next dates; ≥1 genuine anomaly and ≥1 forecast insight have fired correctly; WORKLOG "PHASE P3 EXIT REVIEW"; blockers listed before Phase 4 grooming.
+## In Progress
 
-## Phase 4 — Assistant & LLM layer (groomed; gated on Phase 3 exit T-064 + T-075; ADR 0006)
-## Blocked
-## Backlog (ungroomed)
-<!-- 2026-07-12 @claude: the three T-071 donation-sanitizer follow-ups were groomed into
-     Ready and renumbered T-080/T-081/T-082 — they had been mis-logged as T-077/T-078/T-079,
-     colliding with the already-completed T-077 (Save exports) and T-078 (Weekly review).
-     ID T-079 is retired and left unused rather than reassigned, per the never-reuse rule. -->
-<!-- (empty) -->
+<!-- empty -->
+
+## Ready
+
+<!-- Promote one dependency-ready backlog task here before implementation. -->
 
 ## In Review
-- [ ] T-067 (@codex → review @claude) [P2] Kotak + Central Bank template packs (public provenance)
-      AC: >=10 source-noted public transactional SMS per bank in test/fixtures/sms/{kotak,centbk}/; hand-computed expected JSON; public-provenance template packs; explicit per-bank coverage; 0.85 confidence cap; docs updated.
-      Evidence: 10/10 exact template parses per bank; focused capture/fixture suite 73/73; full Flutter suite 319/319; `flutter analyze --no-pub` clean; `git diff --check` clean; source URLs recorded per fixture.
 
-## Done                 <!-- move here only after review passes; keep last 20, archive rest to docs/tasks-archive.md -->
-<!-- One-line verdicts only; full review notes live in docs/tasks-archive.md and WORKLOG.md. -->
-- [x] T-084/T-085 (@codex, review @claude: PASS) [P4] Validated local-LLM unmatched-SMS fallback + aggregate-only monthly narrative (2026-07-12)
-- [x] T-076 (@codex, review @codex: PASS) [P4] In-app assistant: ask your money anything (2026-07-12)
-- [x] T-061 (@codex, review @codex: PASS) [P3] Nightly WorkManager orchestrator (2026-07-12)
-- [x] T-075 (@codex, review @codex: PASS) [P4] On-device LLM runtime foundation (2026-07-12)
-- [x] T-063 (@codex, review @claude: PASS) [P3] Atomic correction learning loop (2026-07-12)
-- [x] T-062 (@codex, review @claude: PASS) [P3] Model metrics dev screen (2026-07-12)
-- [x] T-054 (@codex, review @claude: PASS) [P3] Adaptive decision thresholds (2026-07-12)
-- [x] T-053 (@codex, review @claude: PASS) [P3] Nightly classifier trainer (2026-07-12)
-- [x] T-052 (@codex, review @claude: PASS) [P3] Local classifier ladder step (2026-07-12)
-- [x] T-051 (@codex, review @claude: PASS) [P3] Merchant resolver v2 (2026-07-12)
-- [x] T-083 (@claude build / @codex review: PASS) [P4] Spec: in-app assistant NLQ grounding contract (2026-07-12)
-- [x] T-080/T-081/T-082 (@claude build / @codex review: PASS) [P2/P3] Donation sanitizer hardening (2026-07-12)
-- [x] T-071 (@codex implemented 2026-07-11; review @claude: PASS) [P2] In-app sanitized SMS donation flow (unparsed screen) (2026-07-11)
-- [x] T-050 (@claude, verification/review @codex: PASS) [P3] On-device text embedder (2026-07-11)
-- [x] T-060 (@codex, review @claude: PASS) [P3] Insights screen (2026-07-11)
-- [x] T-059 (@codex, review @claude: PASS) [P3] Deterministic insights engine (2026-07-11)
-- [x] T-056 (@codex, review @claude: PASS) [P3] Recurring screen (2026-07-11)
-- [x] T-058 (@codex, review @claude: PASS) [P3] Burn-rate forecaster (2026-07-11)
-- [x] T-070 (@claude, review @claude: PASS) [P2] Unparsed screen: per-stage generic rejection reason (2026-07-11)
-- [x] T-018 (@claude, review @claude: PASS) [P0] CI generated-code and build_runner guards (2026-07-11)
+<!-- Kept for handoff automation; intentionally empty in this future-only view. -->
 
-## Proposed
+## Backlog
+
+### Remaining code-review fixes
+- [ ] T-108 (@codex) [P2] Capture coverage for major banks.
+      SmsFilter allowlists ~26 sender tokens and templates cover 6 banks;
+      HDFC/ICICI rely entirely on the 0.5–0.6-confidence generic parser and
+      unlisted banks capture nothing, invisibly.
+      AC: add sanitized-fixture templates for HDFC and ICICI, extend the
+      sender allowlist, and surface "sender not recognized" counts in the dev
+      screen so gaps are measurable.
+- [ ] T-109 (@codex) [P3] Correction-rule matching semantics.
+      `existingAndFuture` loads all rows and filters in Dart, and merchant
+      matching uses substring `contains` which over-matches (e.g. an "Amazon"
+      rule hits "Amazon Pay Later").
+      AC: SQL-side target selection with exact/normalized-prefix semantics and
+      tests for near-name merchants.
+- [ ] T-110 (@codex) [P4] Backup completeness and passphrase floor.
+      Export omits baselines, insights, model_meta, and recurring_series, so
+      adaptive thresholds and trust-ledger state silently reset on restore;
+      no minimum passphrase strength is enforced.
+      AC: include or explicitly document excluded tables; enforce a minimum
+      passphrase length in the export UI.
+
+### Device acceptance
+
+- [ ] T-103 (@codex) [P1/QA] Validate responsive startup on the target device.
+      Implemented: shell-first startup, deferred WorkManager setup, immediate
+      progress UI, delayed history import, and yielding between imported rows.
+      AC: cold open remains interactive during initial load and records evidence
+      toward T-092's <2s cold-start budget.
+- [ ] T-104 (@codex) [P1/QA] Validate live and resume SMS ingestion on-device.
+      Implemented: EventChannel live ingestion plus newest-first incremental
+      catch-up with bounded recent-gap recovery; no automatic full rescan.
+      AC: a real incoming transaction appears without manual re-import, and SMS
+      received while stopped is caught up after resume/open without UI stalls.
+
+### Identity and data quality
+
+- [ ] T-102 (@codex) [P2] Local statement import and reconciliation.
+      AC: preview and idempotently import CSV statements, reconcile safely against SMS/manual rows, and summarize matched/imported/ambiguous/rejected rows.
+- [ ] T-096 (@codex) [P2/P3] Tolerant free-text category resolution.
+      AC: common typos resolve safely; ambiguous matches refuse instead of silently selecting a category.
+
+### Planning and commitments
+
+- [ ] T-100 (@codex) [P2] Reimbursement, refund, and reversal tracking.
+      AC: link full/partial repayments to original expenses and use explained net amounts in spending and budgets.
+- [ ] T-101 (@codex) [P3] Recurring-payment calendar and upcoming-message detection.
+      AC: combine detected series with bill-due/autopay SMS, keep expected events separate from settled transactions, and match later debits safely.
+- [ ] T-098 (@codex) [P3] Monthly category budgets.
+      Depends: T-100
+      AC: calendar-month limits show spent, net refunds/reimbursements, remaining, threshold state, and projected month end while excluding transfers and excluded sources.
+
+### Release hardening
+
+- [ ] T-090 (@codex) [P5] App lock.
+      AC: protect launch/resume with safe recovery and unavailable-biometric paths without weakening encrypted storage.
+- [ ] T-091 (@codex) [P5] Privacy-safe home widget.
+      Depends: T-090
+      AC: configurable summary reveals no raw SMS or sensitive detail while the device/app is locked.
+- [ ] T-092 (@codex) [P5] Performance budgets.
+      AC: measure and meet cold start <2 seconds and 10,000-message import <60 seconds on the target device.
+- [ ] T-093 (@codex) [P5] Accessibility and onboarding acceptance.
+      AC: TalkBack, contrast, large text, touch targets, light/dark themes, and unaided onboarding pass on-device.
+- [ ] T-094 (@codex) [P5] Distribution and portfolio release package.
+      Depends: T-090, T-092, T-093
+      AC: signed release path, SMS-permission declaration or maintained sideload page, screenshots, privacy/architecture story, checklist, and rollback notes.
+
+## Board rules
+
+- Keep only unfinished work.
+- Move at most one implementation task to `In Progress`.
+- `In Review` is temporary; remove reviewed tasks instead of retaining a Done log.
+- Record durable decisions in ADRs and use Git history for completed evidence.

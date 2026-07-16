@@ -33,7 +33,8 @@ void main() {
 
     test('no usable amount (only a balance figure)', () {
       expect(
-        parser.rejectionReason(sms('Amount debited. Avl Bal Rs. 1200 A/c XX12')),
+        parser
+            .rejectionReason(sms('Amount debited. Avl Bal Rs. 1200 A/c XX12')),
         GenericParseRejection.noAmount,
       );
     });
@@ -70,5 +71,17 @@ void main() {
         reason: 'exactly one of record/reason must be non-null for: $body',
       );
     }
+  });
+
+  test('extracts a UPI handle without treating an email address as a VPA', () {
+    final upi = parser.parse(
+      sms('Rs. 250 debited via UPI to friend@okaxis'),
+    );
+    final email = parser.parse(
+      sms('Rs. 250 debited via UPI to support@example.com'),
+    );
+
+    expect(upi?.counterpartyVpa, 'friend@okaxis');
+    expect(email?.counterpartyVpa, isNull);
   });
 }

@@ -39,7 +39,9 @@ class GenericTransactionParser {
     r'(?:a/c|ac|acct|account)\s*(?:no\.?\s*)?[Xx*\d]*?(\d{3,6})(?=\D|$)',
     caseSensitive: false,
   );
-  static final RegExp _vpa = RegExp(r'([a-zA-Z0-9._-]+@[a-zA-Z]{2,})');
+  static final RegExp _vpa = RegExp(
+    r'(?<![a-zA-Z0-9._%+-])([a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z][a-zA-Z0-9-]+)(?![a-zA-Z0-9.-])',
+  );
   static final RegExp _balance = RegExp(
     r'(?:Avl(?:\.|bl)?\s*Bal|Balance|Bal)[:\s]*(?:INR|Rs\.?|₹)?\s*[\d,]+(?:\.\d{1,2})?',
     caseSensitive: false,
@@ -64,7 +66,8 @@ class GenericTransactionParser {
   ///
   /// Shares [_evaluate] with [parse] so the reported reason can never drift
   /// from the guard that actually made the decision.
-  GenericParseRejection? rejectionReason(RawSms sms) => _evaluate(sms).rejection;
+  GenericParseRejection? rejectionReason(RawSms sms) =>
+      _evaluate(sms).rejection;
 
   /// Runs the guard once, yielding either the parsed record or the reason the
   /// guard stopped. Exactly one field is non-null.

@@ -191,7 +191,14 @@ void main() {
     expect(find.byTooltip('Delete AI model'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Developer options'), 300);
     expect(find.text('Developer options'), findsOneWidget);
-    await tester.tap(find.text('Developer options'));
+    await tester.drag(find.byType(ListView), const Offset(0, -250));
+    await tester.pumpAndSettle();
+    final developerOptionsCenter = tester.getCenter(
+      find.text('Developer options'),
+    );
+    await tester.tapAt(
+      Offset(developerOptionsCenter.dx, developerOptionsCenter.dy - 24),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Local LLM parsing'), findsOneWidget);
     expect(find.text('Model metrics'), findsOneWidget);
@@ -280,5 +287,56 @@ void main() {
         // Some entries are intentionally closed by the reset service.
       }
     }
+  });
+
+  test('delete everything recovers when the current database cannot open',
+      () async {
+    final databaseDirectory =
+        await Directory.systemTemp.createTemp('reset_error_db_test_');
+    final settingsDirectory =
+        await Directory.systemTemp.createTemp('reset_error_settings_test_');
+    addTearDown(() => databaseDirectory.delete(recursive: true));
+    addTearDown(() => settingsDirectory.delete(recursive: true));
+    await File(p.join(databaseDirectory.path, appDatabaseFileName))
+        .writeAsString('unreadable');
+
+    final passphraseProvider = _FakePassphraseProvider();
+    final backfillMarker = _FakeBackfillMarker();
+    var openAttempts = 0;
+    AppDatabase? recoveredDatabase;
+    final container = ProviderContainer(
+      overrides: [
+        databaseDirectoryProvider
+            .overrideWith((ref) async => databaseDirectory),
+        settingsDirectoryProvider
+            .overrideWith((ref) async => settingsDirectory),
+        databasePassphraseProvider.overrideWithValue(passphraseProvider),
+        backfillMarkerProvider.overrideWithValue(backfillMarker),
+        appDatabaseProvider.overrideWith((ref) async {
+          openAttempts++;
+          if (openAttempts == 1) {
+            throw StateError('database open failed');
+          }
+          return recoveredDatabase = AppDatabase(NativeDatabase.memory());
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(() async {
+      try {
+        await recoveredDatabase?.close();
+      } on StateError {
+        // Provider disposal may already have closed the recovered database.
+      }
+    });
+
+    final result =
+        await container.read(appDataResetServiceProvider).deleteEverything();
+
+    expect(openAttempts, 2);
+    expect(result.deletedFiles, 1);
+    expect(result.categoryCount, greaterThan(0));
+    expect(passphraseProvider.cleared, isTrue);
+    expect(backfillMarker.resetCount, 1);
   });
 }

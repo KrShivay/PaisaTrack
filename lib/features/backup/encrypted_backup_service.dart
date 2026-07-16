@@ -93,12 +93,13 @@ class EncryptedBackupService {
 
   Future<Map<String, Object?>> _readArchive() async {
     return {
-      'version': 1,
+      'version': 2,
       'tables': {
         'categories': await _rows(_database.categories),
         'merchants': await _rows(_database.merchants),
         'raw_sms': await _rows(_database.rawSms),
         'merchant_aliases': await _rows(_database.merchantAliases),
+        'payment_sources': await _rows(_database.paymentSources),
         'transactions': await _rows(_database.transactions),
         'rules': await _rows(_database.rules),
         'feedback': await _rows(_database.feedback),
@@ -125,6 +126,7 @@ class EncryptedBackupService {
       await database.delete(database.rules).go();
       await database.delete(database.merchantAliases).go();
       await database.delete(database.transactions).go();
+      await database.delete(database.paymentSources).go();
       await database.delete(database.rawSms).go();
       await database.delete(database.merchants).go();
       await database.delete(database.categories).go();
@@ -133,7 +135,9 @@ class EncryptedBackupService {
         await database.into(database.categories).insert(Category.fromJson(row));
       }
       for (final row in _tableRows(tables, 'merchants')) {
-        await database.into(database.merchants).insert(Merchant.fromJson(row));
+        await database.into(database.merchants).insert(
+              Merchant.fromJson({'userLabel': null, ...row}),
+            );
       }
       for (final row in _tableRows(tables, 'raw_sms')) {
         await database.into(database.rawSms).insert(RawSm.fromJson(row));
@@ -143,10 +147,20 @@ class EncryptedBackupService {
             .into(database.merchantAliases)
             .insert(MerchantAliase.fromJson(row));
       }
-      for (final row in _tableRows(tables, 'transactions')) {
+      for (final row in _optionalTableRows(tables, 'payment_sources')) {
         await database
-            .into(database.transactions)
-            .insert(Transaction.fromJson(row));
+            .into(database.paymentSources)
+            .insert(PaymentSource.fromJson(row));
+      }
+      for (final row in _tableRows(tables, 'transactions')) {
+        await database.into(database.transactions).insert(
+              Transaction.fromJson({
+                'paymentSourceId': null,
+                'ownedTransferId': null,
+                'isAnalyticsExcluded': false,
+                ...row,
+              }),
+            );
       }
       for (final row in _tableRows(tables, 'rules')) {
         await database.into(database.rules).insert(Rule.fromJson(row));
@@ -172,8 +186,24 @@ class EncryptedBackupService {
         .toList(growable: false);
   }
 
+  List<Map<String, dynamic>> _optionalTableRows(
+    Map<String, Object?> tables,
+    String name,
+  ) {
+    final value = tables[name];
+    if (value == null) return const [];
+    if (value is! List) {
+      throw EncryptedBackupException('Invalid table $name');
+    }
+    return value
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList(growable: false);
+  }
+
   void _validateArchive(Map<String, Object?> archive) {
-    if (archive['version'] != 1 || archive['tables'] is! Map<String, Object?>) {
+    final version = archive['version'];
+    if ((version != 1 && version != 2) ||
+        archive['tables'] is! Map<String, Object?>) {
       throw const EncryptedBackupException('Unsupported encrypted export');
     }
   }

@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants.dart';
+import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/raw_sms.dart';
 import '../enrichment/categorizer.dart';
@@ -155,14 +157,9 @@ class SmsBackfiller {
     var cursor = initialCursor;
     do {
       final page = await _reader.readPage(before: cursor, limit: _pageSize);
-      for (final sms in page.messages) {
-        try {
-          await _ingestor.ingest(sms);
-        } catch (_) {
-          failed++;
-        }
-        processed++;
-      }
+      final batch = await _ingestor.ingestBatch(page.messages);
+      failed += batch.failed;
+      processed += page.messages.length;
       onProgress?.call(SmsImportProgress(processed: processed, failed: failed));
       if (page.nextCursor != null && page.nextCursor == cursor) {
         throw StateError('SMS inbox pagination did not advance');
@@ -172,6 +169,86 @@ class SmsBackfiller {
       }
       cursor = page.nextCursor;
       await Future<void>.delayed(Duration.zero);
+    } while (cursor != null);
+    return SmsImportResult(processed: processed, failed: failed);
+  }
+}
+
+class SmsIncrementalCatchUp {
+  SmsIncrementalCatchUp({
+    required AppDatabase database,
+    required SmsIngestor ingestor,
+    required SmsInboxReader reader,
+    required BackfillMarker marker,
+    int pageSize = AppConstants.smsHistoryImportPageSize,
+  })  : _database = database,
+        _ingestor = ingestor,
+        _reader = reader,
+        _marker = marker,
+        _pageSize = pageSize;
+
+  final AppDatabase _database;
+  final SmsIngestor _ingestor;
+  final SmsInboxReader _reader;
+  final BackfillMarker _marker;
+  final int _pageSize;
+  Future<SmsImportResult>? _active;
+
+  Future<SmsImportResult> run() {
+    return _active ??= _run().whenComplete(() => _active = null);
+  }
+
+  Future<SmsImportResult> _run() async {
+    if (await _marker.completedVersion() < smsHistoryImportVersion) {
+      return const SmsImportResult(processed: 0, failed: 0, skipped: true);
+    }
+    final rawId = _database.rawSms.id;
+    final rawIdRows = await (_database.selectOnly(_database.rawSms)
+          ..addColumns([rawId]))
+        .get();
+    final transactionSmsId = _database.transactions.smsId;
+    final transactionIdRows = await (_database.selectOnly(
+      _database.transactions,
+    )..addColumns([transactionSmsId]))
+        .get();
+    final knownIds = <String>{
+      for (final row in rawIdRows)
+        if (row.read(rawId) case final id?) id,
+      for (final row in transactionIdRows)
+        if (row.read(transactionSmsId) case final id?) id,
+    };
+    var cursor = null as SmsInboxCursor?;
+    var processed = 0;
+    var failed = 0;
+    var recoveryPagesLeft = 1;
+    var foundKnownBoundary = false;
+    do {
+      final page = await _reader.readPage(before: cursor, limit: _pageSize);
+      final pending = <RawSms>[];
+      for (final sms in page.messages) {
+        if (knownIds.contains(sms.id)) {
+          foundKnownBoundary = true;
+          continue;
+        }
+        pending.add(sms);
+      }
+      final batch = await _ingestor.ingestBatch(pending);
+      knownIds.addAll(batch.succeededIds);
+      failed += batch.failed;
+      processed += pending.length;
+      if (page.nextCursor != null && page.nextCursor == cursor) {
+        throw StateError('SMS inbox pagination did not advance');
+      }
+      // Finish the boundary page and one older page. This bounded overlap
+      // recovers an isolated live-ingest failure hidden behind a newer known
+      // SMS without turning every resume into a full-history rescan.
+      if (foundKnownBoundary) {
+        if (recoveryPagesLeft == 0 || page.nextCursor == null) {
+          return SmsImportResult(processed: processed, failed: failed);
+        }
+        recoveryPagesLeft--;
+      }
+      cursor = page.nextCursor;
     } while (cursor != null);
     return SmsImportResult(processed: processed, failed: failed);
   }
@@ -275,10 +352,71 @@ final smsHistoryImportRunnerProvider =
   );
 });
 
+final smsIncrementalCatchUpProvider =
+    FutureProvider<SmsIncrementalCatchUp>((ref) async {
+  final database = await ref.watch(appDatabaseProvider.future);
+  final parser = ParserCascade(
+    templateMatcher: await ref.watch(templateMatcherProvider.future),
+  );
+  final categorizer = await ref.watch(categorizerProvider.future);
+  return SmsIncrementalCatchUp(
+    database: database,
+    ingestor: SmsIngestor(
+      database: database,
+      parser: parser,
+      categorizer: categorizer,
+      fixedStatus: DecisionStatus.needsReview,
+      askDailyBudgetResolver: () =>
+          ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
+          AppConstants.askNowDailyBudget,
+    ),
+    reader: ref.watch(smsInboxReaderProvider),
+    marker: ref.watch(backfillMarkerProvider),
+  );
+});
+
+final smsIncrementalCatchUpBootstrapProvider = Provider<void>((ref) {
+  final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
+  final catchUp = ref.watch(smsIncrementalCatchUpProvider).valueOrNull;
+  if (permission != SmsPermissionStatus.granted || catchUp == null) return;
+
+  void runCatchUp() => unawaited(_runCatchUpSafely(catchUp));
+  final observer = _SmsCatchUpLifecycleObserver(runCatchUp);
+  WidgetsBinding.instance.addObserver(observer);
+  ref.onDispose(() => WidgetsBinding.instance.removeObserver(observer));
+  runCatchUp();
+});
+
+Future<void> _runCatchUpSafely(SmsIncrementalCatchUp catchUp) async {
+  try {
+    await catchUp.run();
+  } catch (error, stackTrace) {
+    developer.log(
+      'Incremental SMS catch-up failed',
+      name: 'paisatrack.sms_import',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+}
+
+class _SmsCatchUpLifecycleObserver with WidgetsBindingObserver {
+  const _SmsCatchUpLifecycleObserver(this._onResume);
+
+  final void Function() _onResume;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _onResume();
+  }
+}
+
 /// Runs the newest full-history import version once permission and DB are ready.
 final smsBackfillProvider = FutureProvider<int>((ref) async {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   if (permission != SmsPermissionStatus.granted) return 0;
+  // Let the shell paint before the first full-history import starts.
+  await Future<void>.delayed(const Duration(milliseconds: 100));
   try {
     final runner = await ref.watch(smsHistoryImportRunnerProvider.future);
     return (await runner.run(force: false)).processed;

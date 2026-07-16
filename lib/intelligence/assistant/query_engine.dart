@@ -82,7 +82,7 @@ class AssistantQueryEngine {
     final all = await database.select(database.transactions).get();
     final merchants = {
       for (final row in await database.select(database.merchants).get())
-        row.id: row.canonicalName,
+        row.id: row.userLabel ?? row.canonicalName,
     };
     return all.where((row) {
       final timestamp =
@@ -91,6 +91,7 @@ class AssistantQueryEngine {
         return false;
       }
       if (row.isDeleted || row.duplicateOfTxnId != null) return false;
+      if (row.isAnalyticsExcluded || row.ownedTransferId != null) return false;
       if (intent.categoryId != null && row.categoryId != intent.categoryId) {
         return false;
       }

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -40,6 +41,17 @@ void main() {
   test('export import round-trips domain rows without plaintext temp files',
       () async {
     final before = await database.select(database.categories).get();
+    final now = DateTime.utc(2026, 7, 16);
+    await database.into(database.paymentSources).insert(
+          PaymentSourcesCompanion.insert(
+            id: 'source_card',
+            kind: 'card',
+            maskedIdentifier: 'xx4242',
+            nickname: const Value('Daily card'),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
     final file = await service().exportToFile(
       directory: directory,
       passphrase: 'correct horse battery staple',
@@ -55,6 +67,9 @@ void main() {
 
     final after = await database.select(database.categories).get();
     expect(after.map((row) => row.toJson()), before.map((row) => row.toJson()));
+    final restoredSource =
+        await database.select(database.paymentSources).getSingle();
+    expect(restoredSource.nickname, 'Daily card');
   });
 
   test('wrong passphrase fails closed and leaves current data untouched',
