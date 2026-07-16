@@ -91,6 +91,18 @@ class _FakeBackfillMarker implements BackfillMarker {
   Future<void> reset() async => resetCount++;
 }
 
+class _ReadySettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async => const AppSettings();
+}
+
+class _FailingSettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async {
+    throw StateError('private settings failure detail');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -110,6 +122,76 @@ void main() {
 
     expect(settings.themeChoice, AppThemeChoice.system);
     expect(settings.askDailyBudget, 4);
+  });
+
+  testWidgets('backup export requires a confirmed strong passphrase',
+      (tester) async {
+    tester.view.physicalSize = const Size(900, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appSettingsControllerProvider.overrideWith(
+            _ReadySettingsController.new,
+          ),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Export encrypted backup'),
+      300,
+    );
+    await tester.tap(find.text('Export encrypted backup'));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    expect(fields, findsNWidgets(2));
+    await tester.enterText(fields.at(0), 'short');
+    await tester.tap(find.widgetWithText(FilledButton, 'Export'));
+    await tester.pump();
+    expect(
+      find.text('Use at least $minimumBackupPassphraseLength characters'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(fields.at(0), 'correct horse battery staple');
+    await tester.enterText(fields.at(1), 'different passphrase');
+    await tester.tap(find.widgetWithText(FilledButton, 'Export'));
+    await tester.pump();
+    expect(find.text('Passphrases do not match'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Export encrypted backup'), findsOneWidget);
+  });
+
+  testWidgets('settings load errors never expose raw exception text',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appSettingsControllerProvider.overrideWith(
+            _FailingSettingsController.new,
+          ),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not load settings.'), findsOneWidget);
+    expect(
+      find.textContaining('private settings failure detail'),
+      findsNothing,
+    );
+    expect(find.text('Retry'), findsOneWidget);
   });
 
   testWidgets('settings screen changes theme and ask budget', (tester) async {

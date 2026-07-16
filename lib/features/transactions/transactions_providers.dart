@@ -37,6 +37,7 @@ final transactionListProvider =
         error: error,
         stackTrace: stackTrace,
       );
+      Error.throwWithStackTrace(error, stackTrace);
     }),
     loading: () => const Stream<List<TransactionListItem>>.empty(),
     error: (error, stackTrace) =>

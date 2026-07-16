@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -114,15 +114,12 @@ class AppDatabase extends _$AppDatabase {
           await migrator.createIndex(idxTransactionsOwnedTransferId);
           await _backfillPaymentSources();
         }
-        if (from >= 5 && from < 6) {
-          // v5 shipped a payment_sources table whose rows could carry NULLs in
-          // non-null-typed columns (early-iteration table shapes that predate a
-          // schemaVersion bump) and datetimes written in milliseconds while the
-          // generated mapping reads seconds. The generated row mapper force-
-          // unwraps those columns, so a single bad row crashed the transactions
-          // and accounts screens. Repair rows in place — never by clearing app
-          // data — and drop the old millisecond-writing trigger so beforeOpen
-          // recreates the corrected one.
+        if (from >= 5 && from < 7) {
+          // Early payment_sources tables were shipped with more than one
+          // physical shape. Besides nullable required values and millisecond
+          // datetimes, some v6 devices lack later optional columns such as
+          // institution entirely. Repair the table shape and rows in place —
+          // never by clearing app data — then recreate the corrected trigger.
           await _repairPaymentSourcesV6();
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
@@ -223,9 +220,9 @@ class AppDatabase extends _$AppDatabase {
     ''');
   }
 
-  /// Repairs v5 `payment_sources` rows so the generated (force-unwrapping) row
-  /// mapper can never hit a NULL, and normalizes millisecond datetimes written
-  /// by the old backfill/trigger back to the second-based values drift expects.
+  /// Repairs legacy `payment_sources` shapes and rows to match the generated
+  /// v7 mapper, then normalizes millisecond datetimes written by the old
+  /// backfill/trigger back to the second-based values drift expects.
   ///
   /// Idempotent: it only fills NULLs and rescales values that are unambiguously
   /// in milliseconds, so running it on an already-correct table is a no-op.
@@ -234,13 +231,19 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _repairPaymentSourcesV6() async {
     final nowSeconds = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
 
-    // Any column that could legitimately be absent on an early-iteration table
-    // is added defensively; ADD COLUMN is a no-op-by-failure we tolerate so the
-    // repair works regardless of the exact installed shape.
+    // Every non-key column is added defensively. ADD COLUMN is a
+    // no-op-by-failure we tolerate so this works across the multiple v5/v6
+    // shapes observed on upgraded devices.
     const addColumns = <String>[
+      'ALTER TABLE payment_sources ADD COLUMN kind TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN masked_identifier TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN nickname TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN institution TEXT',
       'ALTER TABLE payment_sources ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
       'ALTER TABLE payment_sources ADD COLUMN include_in_analytics INTEGER NOT NULL DEFAULT 1',
       'ALTER TABLE payment_sources ADD COLUMN is_owned INTEGER NOT NULL DEFAULT 1',
+      'ALTER TABLE payment_sources ADD COLUMN created_at INTEGER',
+      'ALTER TABLE payment_sources ADD COLUMN updated_at INTEGER',
     ];
     for (final statement in addColumns) {
       try {

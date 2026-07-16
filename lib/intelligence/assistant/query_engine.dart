@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
+
 import '../../data/db/database.dart';
 import 'assistant_intent.dart';
 
@@ -79,27 +81,42 @@ class AssistantQueryEngine {
     AssistantIntent intent,
     AssistantTimeRange range,
   ) async {
-    final all = await database.select(database.transactions).get();
-    final merchants = {
-      for (final row in await database.select(database.merchants).get())
-        row.id: row.userLabel ?? row.canonicalName,
-    };
-    return all.where((row) {
-      final timestamp =
-          DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true);
-      if (timestamp.isBefore(range.start) || !timestamp.isBefore(range.end)) {
-        return false;
+    final query = database.select(database.transactions)
+      ..where((row) {
+        Expression<bool> predicate =
+            row.ts.isBiggerOrEqualValue(range.start.millisecondsSinceEpoch) &
+                row.ts.isSmallerThanValue(range.end.millisecondsSinceEpoch) &
+                row.isDeleted.equals(false) &
+                row.duplicateOfTxnId.isNull() &
+                row.isAnalyticsExcluded.equals(false) &
+                row.ownedTransferId.isNull();
+        if (intent.categoryId != null) {
+          predicate &= row.categoryId.equals(intent.categoryId!);
+        }
+        if (intent.direction != null) {
+          predicate &= row.direction.equals(intent.direction!);
+        }
+        return predicate;
+      });
+    final rows = await query.get();
+    if (intent.merchant == null) return rows;
+
+    final merchantIds = rows
+        .map((row) => row.merchantId)
+        .whereType<String>()
+        .toSet()
+        .toList(growable: false);
+    final merchants = <String, String>{};
+    if (merchantIds.isNotEmpty) {
+      final merchantQuery = database.select(database.merchants)
+        ..where((row) => row.id.isIn(merchantIds));
+      for (final row in await merchantQuery.get()) {
+        merchants[row.id] = row.userLabel ?? row.canonicalName;
       }
-      if (row.isDeleted || row.duplicateOfTxnId != null) return false;
-      if (row.isAnalyticsExcluded || row.ownedTransferId != null) return false;
-      if (intent.categoryId != null && row.categoryId != intent.categoryId) {
-        return false;
-      }
-      if (intent.direction != null && row.direction != intent.direction) {
-        return false;
-      }
+    }
+    final literal = intent.merchant!.toLowerCase();
+    return rows.where((row) {
       if (intent.merchant != null) {
-        final literal = intent.merchant!.toLowerCase();
         final stored =
             (merchants[row.merchantId] ?? row.merchantRaw ?? '').toLowerCase();
         if (!stored.contains(literal)) return false;

@@ -81,7 +81,7 @@ class ErrorStateView extends StatelessWidget {
     final theme = Theme.of(context);
     final paisa = PaisaColors.of(context);
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),

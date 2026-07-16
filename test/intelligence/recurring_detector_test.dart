@@ -275,4 +275,39 @@ void main() {
       row.merchantId,
     );
   });
+
+  test('large single-merchant histories are clustered in bounded time',
+      () async {
+    await merchant('large-history', 'Large History');
+    var amount = 1.0;
+    await database.batch((batch) {
+      for (var index = 0; index < 6000; index++) {
+        final date = DateTime.utc(2010).add(Duration(days: index));
+        batch.insert(
+          database.transactions,
+          TransactionsCompanion.insert(
+            id: 'large_$index',
+            ts: date.millisecondsSinceEpoch,
+            amount: amount,
+            direction: 'debit',
+            channel: 'card',
+            merchantId: const Value('large-history'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'auto',
+            createdAt: date,
+            updatedAt: date,
+          ),
+        );
+        amount *= 1.1;
+      }
+    });
+
+    final stopwatch = Stopwatch()..start();
+    final detections = await RecurringDetector(database).run();
+    stopwatch.stop();
+
+    expect(detections, isEmpty);
+    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
+  });
 }

@@ -40,3 +40,9 @@ the transactions and accounts screens through the generated force-unwrapping
 row mapper) and recreates the source-inference trigger to write second-based
 timestamps. It never clears app data. Regression fixture:
 `test/data/db/app_database_v6_payment_source_repair_test.dart`.
+
+Schema v7 repairs another legacy v5/v6 table shape that omitted newer
+`payment_sources` columns such as `institution` and `nickname`. It adds every
+expected non-key column defensively, keeps existing account rows, reruns the v6
+value/timestamp normalization, and recreates the trigger. Regression fixture:
+`test/data/db/app_database_v7_payment_source_shape_repair_test.dart`.
