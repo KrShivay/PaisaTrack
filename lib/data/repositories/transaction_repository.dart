@@ -56,6 +56,10 @@ class TransactionListItem {
     this.reference,
     this.status = 'confirmed',
     this.parseSource = 'unknown',
+    this.paymentSourceId,
+    this.paymentSourceName,
+    this.includeInAnalytics = true,
+    this.isOwnedTransfer = false,
   });
 
   final String id;
@@ -74,6 +78,10 @@ class TransactionListItem {
   final String? reference;
   final String status;
   final String parseSource;
+  final String? paymentSourceId;
+  final String? paymentSourceName;
+  final bool includeInAnalytics;
+  final bool isOwnedTransfer;
 
   /// Whether the category counts toward spending. Transfers and cash
   /// withdrawals are excluded (PLAN §5) and render in a neutral color rather
@@ -148,7 +156,12 @@ class TransactionRepository {
   /// category display data resolved in the same query. Excludes rows the
   /// user deleted and rows suppressed as a cross-source duplicate echo
   /// (ADR 0003: `is_deleted` and `duplicate_of_txn_id` are independent).
-  Stream<List<TransactionListItem>> watchTransactions() {
+  Stream<List<TransactionListItem>> watchTransactions({
+    int limit = 100,
+    DateTime? start,
+    DateTime? end,
+  }) {
+    assert(limit > 0);
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
         _database.merchants,
@@ -158,12 +171,28 @@ class TransactionRepository {
         _database.categories,
         _database.categories.id.equalsExp(_database.transactions.categoryId),
       ),
+      leftOuterJoin(
+        _database.paymentSources,
+        _database.paymentSources.id
+            .equalsExp(_database.transactions.paymentSourceId),
+      ),
     ])
       ..where(
         _database.transactions.isDeleted.equals(false) &
-            _database.transactions.duplicateOfTxnId.isNull(),
+            _database.transactions.duplicateOfTxnId.isNull() &
+            (start == null
+                ? const Constant(true)
+                : _database.transactions.ts.isBiggerOrEqualValue(
+                    start.millisecondsSinceEpoch,
+                  )) &
+            (end == null
+                ? const Constant(true)
+                : _database.transactions.ts.isSmallerThanValue(
+                    end.millisecondsSinceEpoch,
+                  )),
       )
-      ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);
+      ..orderBy([OrderingTerm.desc(_database.transactions.ts)])
+      ..limit(limit);
 
     return query.watch().map(
           (rows) => rows.map(_toListItem).toList(growable: false),
@@ -171,8 +200,61 @@ class TransactionRepository {
   }
 
   /// Watches transactions that need the weekly review batch flow.
-  Stream<List<TransactionReviewItem>> watchReviewQueue() {
-    return _watchQueueWithStatus('needs_review');
+  Stream<List<TransactionReviewItem>> watchReviewQueue({int limit = 100}) {
+    assert(limit > 0);
+    return _watchQueueWithStatus('needs_review', limit: limit);
+  }
+
+  /// Watches the small aggregate needed by Home and the Review header.
+  /// Keeping this separate prevents those surfaces from materializing the
+  /// complete review queue merely to compute a count, sum, and maximum.
+  Stream<ReviewQueueSummary> watchReviewQueueSummary() {
+    return _database
+        .customSelect(
+          '''
+SELECT
+  COUNT(*) AS item_count,
+  COALESCE(SUM(t.amount), 0.0) AS total_amount,
+  COUNT(DISTINCT COALESCE(
+    t.merchant_id,
+    t.counterparty_vpa,
+    t.merchant_raw,
+    t.description,
+    t.id
+  )) AS merchant_count,
+  COALESCE((
+    SELECT COALESCE(
+      m.user_label,
+      m.canonical_name,
+      highest.merchant_raw,
+      highest.counterparty_vpa,
+      highest.description,
+      'Unknown transaction'
+    )
+    FROM transactions AS highest
+    LEFT JOIN merchants AS m ON m.id = highest.merchant_id
+    WHERE highest.status = 'needs_review'
+      AND highest.is_deleted = 0
+      AND highest.duplicate_of_txn_id IS NULL
+    ORDER BY highest.amount DESC
+    LIMIT 1
+  ), 'Unknown transaction') AS highest_impact_label
+FROM transactions AS t
+WHERE t.status = 'needs_review'
+  AND t.is_deleted = 0
+  AND t.duplicate_of_txn_id IS NULL
+''',
+          readsFrom: {_database.transactions, _database.merchants},
+        )
+        .watchSingle()
+        .map(
+          (row) => ReviewQueueSummary(
+            count: row.read<int>('item_count'),
+            amount: row.read<double>('total_amount'),
+            merchantCount: row.read<int>('merchant_count'),
+            highestImpactLabel: row.read<String>('highest_impact_label'),
+          ),
+        );
   }
 
   /// Watches transactions currently awaiting an ask-now answer.
@@ -203,7 +285,10 @@ class TransactionRepository {
           TransactionConfidenceTrail.fromJson(txn.confidenceJson);
       return TransactionDetail(
         txn: txn,
-        merchantName: row.readTableOrNull(_database.merchants)?.canonicalName,
+        merchantName: switch (row.readTableOrNull(_database.merchants)) {
+          final merchant? => merchant.userLabel ?? merchant.canonicalName,
+          null => null,
+        },
         categoryName: row.readTableOrNull(_database.categories)?.name,
         parseConfidence: confidenceTrail.parser?.confidence,
         confidenceTrail: confidenceTrail,
@@ -686,7 +771,10 @@ class TransactionRepository {
     return id;
   }
 
-  Stream<List<TransactionReviewItem>> _watchQueueWithStatus(String status) {
+  Stream<List<TransactionReviewItem>> _watchQueueWithStatus(
+    String status, {
+    int? limit,
+  }) {
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
         _database.merchants,
@@ -703,6 +791,7 @@ class TransactionRepository {
             _database.transactions.duplicateOfTxnId.isNull(),
       )
       ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);
+    if (limit != null) query.limit(limit);
 
     return query.watch().map(
           (rows) => rows.map(_toReviewItem).toList(growable: false),
@@ -713,6 +802,7 @@ class TransactionRepository {
     final txn = row.readTable(_database.transactions);
     final merchant = row.readTableOrNull(_database.merchants);
     final category = row.readTableOrNull(_database.categories);
+    final paymentSource = row.readTableOrNull(_database.paymentSources);
     return TransactionListItem(
       id: txn.id,
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
@@ -721,7 +811,8 @@ class TransactionRepository {
       // Presentation-time fallback (merchant -> VPA -> description); the
       // write path keeps the signals independent (ADR 0003). Description
       // covers manual entries, which have no merchant/VPA provenance.
-      displayName: merchant?.canonicalName ??
+      displayName: merchant?.userLabel ??
+          merchant?.canonicalName ??
           txn.merchantRaw ??
           txn.counterpartyVpa ??
           txn.description ??
@@ -737,6 +828,11 @@ class TransactionRepository {
       reference: txn.refId,
       status: txn.status,
       parseSource: txn.parseSource,
+      paymentSourceId: txn.paymentSourceId,
+      paymentSourceName:
+          paymentSource?.nickname ?? paymentSource?.maskedIdentifier,
+      includeInAnalytics: !txn.isAnalyticsExcluded,
+      isOwnedTransfer: txn.ownedTransferId != null,
       // Unknown/uncategorized defaults to spending; only an explicit
       // non-spending category (transfers, cash withdrawal) flips this.
       categoryIsSpending: category?.isSpending ?? true,
@@ -752,7 +848,8 @@ class TransactionRepository {
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
       amount: txn.amount,
       direction: _directionFromWireName(txn.direction),
-      displayName: merchant?.canonicalName ??
+      displayName: merchant?.userLabel ??
+          merchant?.canonicalName ??
           txn.merchantRaw ??
           txn.counterpartyVpa ??
           txn.description ??
@@ -772,6 +869,20 @@ class TransactionRepository {
       isLowTrustParse: _isLowTrustParse(txn),
     );
   }
+}
+
+class ReviewQueueSummary {
+  const ReviewQueueSummary({
+    required this.count,
+    required this.amount,
+    required this.merchantCount,
+    required this.highestImpactLabel,
+  });
+
+  final int count;
+  final double amount;
+  final int merchantCount;
+  final String highestImpactLabel;
 }
 
 class _RuleInput {

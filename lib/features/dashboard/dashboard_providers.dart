@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/repositories/dashboard_repository.dart';
 import '../../data/db/database.dart';
+import '../../data/db/database_provider.dart';
 import '../recurring/recurring_screen.dart';
 import '../transactions/transactions_providers.dart';
 
@@ -149,6 +151,44 @@ final dashboardPeriodProvider = StateProvider<DashboardPeriod>(
   (ref) => DashboardPeriod.month(DateTime.now()),
 );
 
+final dashboardAggregateProvider =
+    FutureProvider<DashboardAggregateSnapshot>((ref) async {
+  // The bounded joined feed already watches every table that affects dashboard
+  // labels or inclusion. Reuse it as the invalidation signal instead of
+  // keeping a second long-lived database watcher.
+  ref.watch(transactionListProvider);
+  final database = await ref.watch(appDatabaseProvider.future);
+  final period = ref.watch(dashboardPeriodProvider);
+  final previous = period.previous;
+  final anchor = period.trendAnchor;
+  final trendStart = DateTime(anchor.year, anchor.month - (_trendMonths - 1));
+  final trendEnd = DateTime(anchor.year, anchor.month + 1);
+  return DashboardRepository(database).load(
+    DashboardQueryWindow(
+      start: period.start,
+      end: period.end,
+      previousStart: previous.start,
+      previousEnd: previous.end,
+      trendStart: trendStart,
+      trendEnd: trendEnd,
+    ),
+  );
+});
+
+final dashboardRecentTransactionsProvider =
+    StreamProvider<List<TransactionListItem>>((ref) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  final period = ref.watch(dashboardPeriodProvider);
+  return databaseAsync.when(
+    data: (database) => ref
+        .watch(transactionRepositoryProvider(database))
+        .watchTransactions(limit: 6, start: period.start, end: period.end),
+    loading: () => const Stream<List<TransactionListItem>>.empty(),
+    error: (error, stackTrace) =>
+        Stream<List<TransactionListItem>>.error(error, stackTrace),
+  );
+});
+
 class MonthDirectionTotals {
   const MonthDirectionTotals({
     required this.debitTotal,
@@ -160,9 +200,19 @@ class MonthDirectionTotals {
 }
 
 bool _countsAsSpending(TransactionListItem txn) =>
-    txn.direction == TransactionDirection.debit && txn.categoryIsSpending;
+    txn.includeInAnalytics &&
+    !txn.isOwnedTransfer &&
+    txn.direction == TransactionDirection.debit &&
+    txn.categoryIsSpending;
 
 final monthDirectionTotalsProvider = Provider<MonthDirectionTotals>((ref) {
+  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
+  if (aggregate != null) {
+    return MonthDirectionTotals(
+      debitTotal: aggregate.debitTotal,
+      creditTotal: aggregate.creditTotal,
+    );
+  }
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   final period = ref.watch(dashboardPeriodProvider);
@@ -171,6 +221,7 @@ final monthDirectionTotalsProvider = Provider<MonthDirectionTotals>((ref) {
 
   for (final txn in transactions) {
     if (!period.contains(txn.ts)) continue;
+    if (!txn.includeInAnalytics || txn.isOwnedTransfer) continue;
     switch (txn.direction) {
       case TransactionDirection.debit:
         if (txn.categoryIsSpending) debitTotal += txn.amount;
@@ -218,6 +269,16 @@ class MonthOverMonthSpend {
 }
 
 final monthOverMonthSpendProvider = Provider<MonthOverMonthSpend>((ref) {
+  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
+  if (aggregate != null) {
+    final current = aggregate.debitTotal;
+    final previous = aggregate.previousSpend;
+    return MonthOverMonthSpend(
+      current: current,
+      previous: previous,
+      pctChange: previous > 0 ? (current - previous) / previous : null,
+    );
+  }
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   final period = ref.watch(dashboardPeriodProvider);
@@ -261,6 +322,37 @@ class CategorySlice {
 const _maxCategorySlices = 5;
 
 final categoryBreakdownProvider = Provider<List<CategorySlice>>((ref) {
+  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
+  if (aggregate != null) {
+    final entries = aggregate.categories;
+    final grandTotal = entries.fold<double>(0, (sum, row) => sum + row.total);
+    if (grandTotal <= 0) return const [];
+    final slices = [
+      for (final row in entries.take(_maxCategorySlices))
+        CategorySlice(
+          categoryId: row.categoryId,
+          name: row.name,
+          icon: row.icon,
+          total: row.total,
+          share: row.total / grandTotal,
+        ),
+    ];
+    if (entries.length > _maxCategorySlices) {
+      final otherTotal = entries
+          .skip(_maxCategorySlices)
+          .fold<double>(0, (sum, row) => sum + row.total);
+      slices.add(
+        CategorySlice(
+          categoryId: null,
+          name: 'Other',
+          icon: null,
+          total: otherTotal,
+          share: otherTotal / grandTotal,
+        ),
+      );
+    }
+    return slices;
+  }
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   final period = ref.watch(dashboardPeriodProvider);
@@ -337,6 +429,13 @@ class MerchantStat {
 const _maxMerchants = 5;
 
 final topMerchantsProvider = Provider<List<MerchantStat>>((ref) {
+  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
+  if (aggregate != null) {
+    return [
+      for (final row in aggregate.merchants)
+        MerchantStat(name: row.name, count: row.count, total: row.total),
+    ];
+  }
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   final period = ref.watch(dashboardPeriodProvider);
@@ -380,6 +479,7 @@ class MonthPoint {
 const _trendMonths = 6;
 
 final sixMonthTrendProvider = Provider<List<MonthPoint>>((ref) {
+  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   final anchor = ref.watch(dashboardPeriodProvider).trendAnchor;
@@ -389,16 +489,20 @@ final sixMonthTrendProvider = Provider<List<MonthPoint>>((ref) {
   for (var i = _trendMonths - 1; i >= 0; i--) {
     final month = DateTime(anchor.year, anchor.month - i);
     final key = '${month.year}-${month.month}';
-    buckets[key] = 0;
+    buckets[key] = aggregate?.trendByMonth[
+            '${month.year}-${month.month.toString().padLeft(2, '0')}'] ??
+        0;
     order[key] = month;
   }
 
-  for (final txn in transactions) {
-    if (!_countsAsSpending(txn)) continue;
-    final local = txn.ts.toLocal();
-    final key = '${local.year}-${local.month}';
-    if (!buckets.containsKey(key)) continue;
-    buckets[key] = (buckets[key] ?? 0) + txn.amount;
+  if (aggregate == null) {
+    for (final txn in transactions) {
+      if (!_countsAsSpending(txn)) continue;
+      final local = txn.ts.toLocal();
+      final key = '${local.year}-${local.month}';
+      if (!buckets.containsKey(key)) continue;
+      buckets[key] = (buckets[key] ?? 0) + txn.amount;
+    }
   }
 
   final keys = order.keys.toList()
@@ -422,24 +526,19 @@ class ReviewAttention {
 }
 
 final reviewAttentionProvider = Provider<ReviewAttention?>((ref) {
-  final reviewItems = ref.watch(reviewQueueProvider).valueOrNull ?? const [];
-  if (reviewItems.isEmpty) return null;
-
-  var amount = 0.0;
-  TransactionReviewItem? highest;
-  for (final item in reviewItems) {
-    amount += item.amount;
-    if (highest == null || item.amount > highest.amount) highest = item;
-  }
+  final summary = ref.watch(reviewQueueSummaryProvider).valueOrNull;
+  if (summary == null || summary.count == 0) return null;
 
   return ReviewAttention(
-    count: reviewItems.length,
-    amount: amount,
-    highestImpactLabel: highest?.displayName ?? 'Unknown transaction',
+    count: summary.count,
+    amount: summary.amount,
+    highestImpactLabel: summary.highestImpactLabel,
   );
 });
 
 final recentTransactionsProvider = Provider<List<TransactionListItem>>((ref) {
+  final bounded = ref.watch(dashboardRecentTransactionsProvider).valueOrNull;
+  if (bounded != null) return bounded;
   final transactions =
       ref.watch(transactionListProvider).valueOrNull ?? const [];
   final period = ref.watch(dashboardPeriodProvider);

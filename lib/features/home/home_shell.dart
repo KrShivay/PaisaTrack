@@ -19,6 +19,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  final Set<int> _visitedTabs = {0};
 
   static const _home = _Tab(
     screen: DashboardScreen(),
@@ -66,8 +67,19 @@ class _HomeShellState extends State<HomeShell> {
     ];
     final body = IndexedStack(
       index: _index,
-      children: [for (final tab in _tabs) tab.screen],
+      children: [
+        for (var index = 0; index < _tabs.length; index++)
+          if (_visitedTabs.contains(index))
+            _tabs[index].screen
+          else
+            const SizedBox.shrink(),
+      ],
     );
+
+    void selectTab(int index) => setState(() {
+          _index = index;
+          _visitedTabs.add(index);
+        });
 
     return Scaffold(
       body: useRail
@@ -75,8 +87,7 @@ class _HomeShellState extends State<HomeShell> {
               children: [
                 NavigationRail(
                   selectedIndex: _index,
-                  onDestinationSelected: (index) =>
-                      setState(() => _index = index),
+                  onDestinationSelected: selectTab,
                   labelType: NavigationRailLabelType.all,
                   destinations: [
                     for (final tab in _tabs)
@@ -96,7 +107,7 @@ class _HomeShellState extends State<HomeShell> {
           ? null
           : NavigationBar(
               selectedIndex: _index,
-              onDestinationSelected: (index) => setState(() => _index = index),
+              onDestinationSelected: selectTab,
               destinations: destinations,
             ),
     );

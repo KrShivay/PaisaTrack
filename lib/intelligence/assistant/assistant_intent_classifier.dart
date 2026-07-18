@@ -12,13 +12,7 @@ class AssistantIntentClassifier {
         _isClearlyUnsupported(normalized)) {
       return {'intent': 'unsupported'};
     }
-    final category = categoryNames
-        .where((name) => _containsPhrase(normalized, _normalize(name)))
-        .fold<String?>(
-          null,
-          (best, name) =>
-              best == null || name.length > best.length ? name : best,
-        );
+    final category = _matchCategory(normalized, categoryNames);
     final metric = _metric(normalized);
     final aggregation = _aggregation(normalized);
     final range = _range(normalized, today);
@@ -603,6 +597,67 @@ class AssistantIntentClassifier {
 
   static bool _containsAny(String text, Iterable<String> values) =>
       values.any(text.contains);
+
+  /// Resolves a category filter from [normalized], tolerating single-token
+  /// references like "food" for "Food & Dining".
+  ///
+  /// A full normalized-name phrase match always wins (longest on ties). Failing
+  /// that, a single distinctive token is accepted only when it belongs to
+  /// exactly one category, so shared/ambiguous words (e.g. "food" when both
+  /// "Food & Dining" and "Fast Food" exist) fail closed rather than guessing.
+  static String? _matchCategory(
+    String normalized,
+    Iterable<String> categoryNames,
+  ) {
+    final names = categoryNames.toList(growable: false);
+    final full = names
+        .where((name) => _containsPhrase(normalized, _normalize(name)))
+        .fold<String?>(
+          null,
+          (best, name) =>
+              best == null || name.length > best.length ? name : best,
+        );
+    if (full != null) return full;
+
+    final tokenOwners = <String, Set<String>>{};
+    for (final name in names) {
+      for (final token in _categoryTokens(name)) {
+        (tokenOwners[token] ??= <String>{}).add(name);
+      }
+    }
+    String? matched;
+    for (final entry in tokenOwners.entries) {
+      if (entry.value.length != 1) continue; // token shared across categories
+      if (!_containsPhrase(normalized, entry.key)) continue;
+      final owner = entry.value.first;
+      // Tokens from two different categories in one question are ambiguous.
+      if (matched != null && matched != owner) return null;
+      matched = owner;
+    }
+    return matched;
+  }
+
+  /// Distinctive, matchable tokens of a category name: normalized words of at
+  /// least three letters that are not pure connectors or generic buckets.
+  static Iterable<String> _categoryTokens(String name) sync* {
+    const stopwords = {
+      'and',
+      'the',
+      'for',
+      'misc',
+      'other',
+      'others',
+      'general',
+      'expense',
+      'expenses',
+    };
+    for (final token in _normalize(name).split(' ')) {
+      if (token.length < 3) continue;
+      if (int.tryParse(token) != null) continue;
+      if (stopwords.contains(token)) continue;
+      yield token;
+    }
+  }
 
   static bool _containsPhrase(String text, String phrase) =>
       RegExp('(^|\\s)${RegExp.escape(phrase)}(?=\\s|\$)').hasMatch(text);

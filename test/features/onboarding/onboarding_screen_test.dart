@@ -72,4 +72,55 @@ void main() {
     expect(find.textContaining('Could not read'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Grant SMS access'), findsOneWidget);
   });
+
+  testWidgets('denied offers continue-without-SMS and sets the flag',
+      (tester) async {
+    late WidgetRef capturedRef;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.denied),
+          ),
+        ],
+        child: MaterialApp(
+          home: Consumer(
+            builder: (context, ref, _) {
+              capturedRef = ref;
+              return const OnboardingScreen();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(capturedRef.read(continueWithoutSmsProvider), isFalse);
+
+    final continueButton =
+        find.widgetWithText(TextButton, 'Continue without SMS access');
+    expect(continueButton, findsOneWidget);
+
+    await tester.tap(continueButton);
+    await tester.pump();
+
+    // The routing flag flips so PaisaTrackApp shows HomeShell instead of
+    // trapping the user on onboarding (S1 lockout fix).
+    expect(capturedRef.read(continueWithoutSmsProvider), isTrue);
+  });
+
+  testWidgets('permanently denied still offers continue-without-SMS',
+      (tester) async {
+    await pumpOnboarding(
+      tester,
+      FakeSmsPermissionGate(
+        initialStatus: SmsPermissionStatus.permanentlyDenied,
+      ),
+    );
+
+    expect(
+      find.widgetWithText(TextButton, 'Continue without SMS access'),
+      findsOneWidget,
+    );
+  });
 }

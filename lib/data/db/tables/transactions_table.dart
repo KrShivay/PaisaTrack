@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import 'categories_table.dart';
 import 'merchants_table.dart';
+import 'payment_sources_table.dart';
 import 'raw_sms_table.dart';
 
 /// Normalized financial transactions shown to the user.
@@ -14,6 +15,14 @@ import 'raw_sms_table.dart';
 @TableIndex(name: 'idx_transactions_ref_id', columns: {#refId})
 @TableIndex(name: 'idx_transactions_status', columns: {#status})
 @TableIndex(
+  name: 'idx_transactions_payment_source_id',
+  columns: {#paymentSourceId},
+)
+@TableIndex(
+  name: 'idx_transactions_owned_transfer_id',
+  columns: {#ownedTransferId},
+)
+@TableIndex(
   name: 'idx_transactions_duplicate_of_txn_id',
   columns: {#duplicateOfTxnId},
 )
@@ -24,6 +33,8 @@ class Transactions extends Table {
   TextColumn get direction => text()();
   TextColumn get channel => text()();
   TextColumn get accountHint => text().nullable()();
+  TextColumn get paymentSourceId =>
+      text().nullable().references(PaymentSources, #id)();
   TextColumn get merchantRaw => text().nullable()();
   TextColumn get merchantId => text().nullable().references(Merchants, #id)();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
@@ -44,6 +55,11 @@ class Transactions extends Table {
   // (ADR 0003). Replaces the v1 `isDeleted` overload for dedup suppression.
   TextColumn get duplicateOfTxnId =>
       text().nullable().references(Transactions, #id)();
+  // Shared id on a conservative debit/credit pair between owned sources.
+  TextColumn get ownedTransferId => text().nullable()();
+  // Materialized source policy keeps all analytics engines consistent.
+  BoolColumn get isAnalyticsExcluded =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

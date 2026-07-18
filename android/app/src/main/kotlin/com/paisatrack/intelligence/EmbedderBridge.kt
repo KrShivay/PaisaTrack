@@ -28,7 +28,8 @@ class EmbedderBridge(private val context: Context) {
                 "text_embedder%2Funiversal_sentence_encoder%2Ffloat32%2F1%2F" +
                 "universal_sentence_encoder.tflite?generation=1682480025058456&alt=media"
         const val PINNED_MODEL_SIZE = 6_120_274L
-        const val PINNED_MODEL_MD5 = "5123e0bb50df2978272ca25bfc7194f1"
+        const val PINNED_MODEL_SHA256 =
+            "89ad3c74175dd8caa398cc22b657296d94302d20c525c12b58b29420f7249749"
         const val MODEL_FILE_NAME = "universal_sentence_encoder.tflite"
     }
 
@@ -44,7 +45,7 @@ class EmbedderBridge(private val context: Context) {
     }
 
     /**
-     * Downloads the pinned artifact to a temp file, verifies size + MD5
+     * Downloads the pinned artifact to a temp file, verifies size + SHA-256
      * against the ADR 0007 pin, then atomically moves it into place.
      * Returns true when the verified model is in place (including when it
      * already was). Never leaves a partial or unverified file behind.
@@ -63,7 +64,7 @@ class EmbedderBridge(private val context: Context) {
             }
             connection.disconnect()
             if (temp.length() != PINNED_MODEL_SIZE) return false
-            if (md5Hex(temp) != PINNED_MODEL_MD5) return false
+            if (sha256Hex(temp) != PINNED_MODEL_SHA256) return false
             closeEmbedder()
             target.delete()
             if (!temp.renameTo(target)) {
@@ -125,8 +126,8 @@ class EmbedderBridge(private val context: Context) {
         textEmbedder = null
     }
 
-    private fun md5Hex(file: File): String {
-        val digest = MessageDigest.getInstance("MD5")
+    private fun sha256Hex(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->
             val buffer = ByteArray(64 * 1024)
             while (true) {

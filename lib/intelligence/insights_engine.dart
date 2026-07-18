@@ -67,6 +67,8 @@ class InsightsEngine {
                   ) &
                   t.ts.isSmallerThanValue(nextMonth.millisecondsSinceEpoch) &
                   t.direction.equals('debit') &
+                  t.isAnalyticsExcluded.equals(false) &
+                  t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
                   t.duplicateOfTxnId.isNull(),
             ))

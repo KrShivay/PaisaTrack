@@ -110,6 +110,16 @@ Future<void> _ingestSafely(SmsIngestor ingestor, RawSms sms) async {
   }
 }
 
+class SmsBatchIngestResult {
+  const SmsBatchIngestResult({
+    required this.succeededIds,
+    required this.failed,
+  });
+
+  final Set<String> succeededIds;
+  final int failed;
+}
+
 /// Persists raw SMS rows and emits transactions when parsing succeeds.
 class SmsIngestor {
   SmsIngestor({
@@ -223,6 +233,28 @@ class SmsIngestor {
     });
   }
 
+  /// Imports one inbox page under a single outer transaction so Drift emits
+  /// one coherent change notification instead of rebuilding consumers once
+  /// per SMS. Nested per-message transactions preserve failure isolation.
+  Future<SmsBatchIngestResult> ingestBatch(List<RawSms> messages) {
+    return _database.transaction(() async {
+      final succeededIds = <String>{};
+      var failed = 0;
+      for (final sms in messages) {
+        try {
+          await ingest(sms);
+          succeededIds.add(sms.id);
+        } catch (_) {
+          failed++;
+        }
+      }
+      return SmsBatchIngestResult(
+        succeededIds: succeededIds,
+        failed: failed,
+      );
+    });
+  }
+
   /// Id of an already-stored transaction describing the same real-world
   /// payment as [record] (e.g. a bank SMS and its wallet/UPI echo, T-025),
   /// or null if none is found. Suppressed/deleted rows are never candidates.
@@ -279,40 +311,38 @@ class SmsIngestor {
   Future<int> _countAskedToday() async {
     final now = _now().toUtc();
     final start = DateTime.utc(now.year, now.month, now.day);
-    final askedRows = await (_database.select(_database.transactions)
-          ..where(
-            (row) =>
-                row.status.equals(DecisionStatus.asked.wireName) &
-                row.isDeleted.equals(false) &
-                row.duplicateOfTxnId.isNull() &
-                row.createdAt.isBiggerOrEqualValue(start),
-          ))
-        .get();
-    final askedTxnIds = askedRows.map((row) => row.id).toSet();
-    final answeredAskFeedback = await (_database.select(_database.feedback)
-          ..where(
-            (row) =>
-                row.context.equals('ask_now') &
-                row.createdAt.isBiggerOrEqualValue(start),
-          ))
-        .get();
-    final answeredTxnIds = answeredAskFeedback
-        .map((row) => row.txnId)
-        .toSet()
-        .difference(askedTxnIds);
-    if (answeredTxnIds.isEmpty) {
-      return askedTxnIds.length;
-    }
-    final answeredRows = await (_database.select(_database.transactions)
-          ..where(
-            (row) =>
-                row.id.isIn(answeredTxnIds) &
-                row.isDeleted.equals(false) &
-                row.duplicateOfTxnId.isNull() &
-                row.createdAt.isBiggerOrEqualValue(start),
-          ))
-        .get();
-    return askedTxnIds.length + answeredRows.length;
+    final askedCount = _database.transactions.id.count();
+    final askedQuery = _database.selectOnly(_database.transactions)
+      ..addColumns([askedCount])
+      ..where(
+        _database.transactions.status.equals(DecisionStatus.asked.wireName) &
+            _database.transactions.isDeleted.equals(false) &
+            _database.transactions.duplicateOfTxnId.isNull() &
+            _database.transactions.createdAt.isBiggerOrEqualValue(start),
+      );
+    final asked = (await askedQuery.getSingle()).read(askedCount) ?? 0;
+
+    final answeredCount = _database.transactions.id.count(distinct: true);
+    final answeredQuery = _database.selectOnly(_database.transactions).join([
+      innerJoin(
+        _database.feedback,
+        _database.feedback.txnId.equalsExp(_database.transactions.id),
+        useColumns: false,
+      ),
+    ])
+      ..addColumns([answeredCount])
+      ..where(
+        _database.feedback.context.equals('ask_now') &
+            _database.feedback.createdAt.isBiggerOrEqualValue(start) &
+            _database.transactions.status
+                .equals(DecisionStatus.asked.wireName)
+                .not() &
+            _database.transactions.isDeleted.equals(false) &
+            _database.transactions.duplicateOfTxnId.isNull() &
+            _database.transactions.createdAt.isBiggerOrEqualValue(start),
+      );
+    final answered = (await answeredQuery.getSingle()).read(answeredCount) ?? 0;
+    return asked + answered;
   }
 
   Future<int> _countPriorMerchantTransactions(
@@ -325,19 +355,19 @@ class SmsIngestor {
       return 0;
     }
 
-    final rows = await (_database.select(_database.transactions)
-          ..where(
-            (row) =>
-                row.isDeleted.equals(false) &
-                row.duplicateOfTxnId.isNull() &
-                _sameKnownCounterparty(
-                  row,
-                  merchantRaw: merchantRaw,
-                  counterpartyVpa: counterpartyVpa,
-                ),
-          ))
-        .get();
-    return rows.length;
+    final count = _database.transactions.id.count();
+    final query = _database.selectOnly(_database.transactions)
+      ..addColumns([count])
+      ..where(
+        _database.transactions.isDeleted.equals(false) &
+            _database.transactions.duplicateOfTxnId.isNull() &
+            _sameKnownCounterparty(
+              _database.transactions,
+              merchantRaw: merchantRaw,
+              counterpartyVpa: counterpartyVpa,
+            ),
+      );
+    return (await query.getSingle()).read(count) ?? 0;
   }
 
   Future<bool> _hasSeenCounterparty(String? counterpartyVpa) async {

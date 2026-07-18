@@ -115,10 +115,19 @@ void main() {
         status: DecisionStatus.asked,
       ),
       (
-        name: 'seen p2p counterparty still reviews',
+        name: 'seen p2p counterparty can auto at high confidence',
         input: input(
           merchantConfidence: 1,
           categoryConfidence: 1,
+          counterpartyVpa: 'friend@upi',
+        ),
+        status: DecisionStatus.auto,
+      ),
+      (
+        name: 'seen p2p counterparty still reviews at low confidence',
+        input: input(
+          merchantConfidence: 0.2,
+          categoryConfidence: 0.2,
           counterpartyVpa: 'friend@upi',
         ),
         status: DecisionStatus.needsReview,

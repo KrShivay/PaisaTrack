@@ -31,7 +31,7 @@ void main() {
         await database.customSelect('PRAGMA user_version').getSingle();
     // Opening a v1 file applies every additive migration through the current
     // schema, while the assertions below continue to prove the v1->v2 step.
-    expect(schemaVersion.data['user_version'], 3);
+    expect(schemaVersion.data['user_version'], database.schemaVersion);
 
     final columns =
         await database.customSelect("PRAGMA table_info('transactions')").get();
@@ -69,13 +69,27 @@ void main() {
   });
 }
 
-/// Hand-builds a v1 `transactions` table (pre-ADR-0003 shape: no
+/// Hand-builds the relevant v1 tables (pre-ADR-0003 shape: no
 /// `counterparty_vpa`/`duplicate_of_txn_id`) with `user_version=1`, seeding a
 /// suppressed cross-source echo pair plus one suppressed row with no match.
 void _createV1Database(String path) {
   final db = sqlite3.open(path);
   try {
     db.execute('PRAGMA user_version = 1');
+    // Merchants existed in the production v1 schema. Keeping it in this
+    // fixture lets later additive migrations run while the test remains
+    // focused on the v1->v2 transaction changes.
+    db.execute('''
+      CREATE TABLE merchants (
+        id TEXT NOT NULL PRIMARY KEY,
+        canonical_name TEXT NOT NULL,
+        category_hint TEXT,
+        embedding BLOB,
+        txn_count INTEGER NOT NULL DEFAULT 0,
+        first_seen INTEGER NOT NULL,
+        last_seen INTEGER NOT NULL
+      )
+    ''');
     db.execute('''
       CREATE TABLE transactions (
         id TEXT NOT NULL PRIMARY KEY,

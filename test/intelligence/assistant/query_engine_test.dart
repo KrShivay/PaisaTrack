@@ -174,4 +174,37 @@ void main() {
     expect(insights.items, hasLength(1));
     expect(insights.items.single.figures['projected_spend'], 123);
   });
+
+  test('transaction predicates run in SQL before rows are materialized',
+      () async {
+    await txn('valid', DateTime.utc(2026, 7, 2), 100);
+    final createdAt = DateTime.utc(2026, 7, 3);
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'outside-dart-datetime-range',
+            ts: 9223372036854775807,
+            amount: 999,
+            direction: 'debit',
+            channel: 'upi',
+            merchantId: const Value('swiggy'),
+            categoryId: const Value('food'),
+            parseSource: 'test',
+            confidenceJson: '{}',
+            status: 'auto',
+            createdAt: createdAt,
+            updatedAt: createdAt,
+          ),
+        );
+
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.periodTotal,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+      ),
+    ) as TotalQueryResult;
+
+    expect((result.value, result.count), (100, 1));
+  });
 }

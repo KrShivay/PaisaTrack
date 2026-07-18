@@ -23,9 +23,15 @@ class AppDataResetService {
   final Ref _ref;
 
   Future<AppDataResetResult> deleteEverything() async {
-    final existingDatabase = _ref.read(appDatabaseProvider).valueOrNull;
-    if (existingDatabase != null) {
+    // Await the provider's current open before invalidating it. Reading only
+    // AsyncValue.valueOrNull starts an open but can return null while that open
+    // is pending, allowing the replacement database to overlap with it.
+    try {
+      final existingDatabase = await _ref.read(appDatabaseProvider.future);
       await closeAppDatabase(existingDatabase);
+    } on Object {
+      // Reset is also the recovery path for an unreadable/corrupt database or
+      // a failed passphrase lookup. File/key deletion must still be attempted.
     }
 
     final directory = await _ref.read(databaseDirectoryProvider.future);

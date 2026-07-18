@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/permissions/sms_permission.dart';
+import '../../capture/permissions/sms_permission_provider.dart';
 import '../../core/theme/app_tokens.dart';
+import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../assistant/assistant_screen.dart';
 import '../review/weekly_review_screen.dart';
@@ -60,6 +63,7 @@ class DashboardScreen extends ConsumerWidget {
       body: ListView(
         padding: AppSpacing.screen,
         children: [
+          const _SmsPermissionBanner(),
           Align(
             alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(
@@ -415,5 +419,72 @@ extension on DateTime {
     if (isBefore(minimum)) return minimum;
     if (isAfter(maximum)) return maximum;
     return this;
+  }
+}
+
+/// Persistent reminder shown while SMS access is not granted, so a user who
+/// entered the app without permission can turn on automatic capture later
+/// (docs/design-system.md §9: warning tint, not error). Renders nothing once
+/// permission is granted.
+class _SmsPermissionBanner extends ConsumerWidget {
+  const _SmsPermissionBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
+    if (permission == null || permission.isGranted) {
+      return const SizedBox.shrink();
+    }
+
+    final paisa = PaisaColors.of(context);
+    final permanentlyDenied =
+        permission == SmsPermissionStatus.permanentlyDenied;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: paisa.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.sms_failed_outlined, size: 20, color: paisa.warning),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  permanentlyDenied
+                      ? 'Automatic SMS capture is off. Enable SMS access in '
+                          'system settings to turn it on. You can still add '
+                          'transactions manually.'
+                      : 'Automatic SMS capture is off. Grant SMS access to '
+                          'capture bank and UPI messages automatically.',
+                ),
+                if (!permanentlyDenied) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: ref
+                          .read(smsPermissionControllerProvider.notifier)
+                          .request,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 0),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Grant SMS access'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

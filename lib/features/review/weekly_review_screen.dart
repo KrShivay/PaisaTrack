@@ -30,6 +30,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final queue = ref.watch(reviewQueueProvider);
+    final summary = ref.watch(reviewQueueSummaryProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -50,6 +51,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         AsyncData(:final value) when value.isEmpty => const _EmptyReviewState(),
         AsyncData(:final value) => _ReviewCentre(
             items: value,
+            summary: summary,
             mode: _mode,
             selectedIds: _visibleSelection(value),
             onModeChanged: (mode) => setState(() {
@@ -70,11 +72,14 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
               [id],
               successLabel: 'transaction confirmed',
             ),
+            onLoadMore: () => ref
+                .read(reviewQueueLimitProvider.notifier)
+                .state += reviewPageSize,
           ),
         AsyncError() => const ErrorStateView(
             message: 'Could not load the review queue.',
           ),
-        _ => const Center(child: CircularProgressIndicator()),
+        _ => const ListLoadingSkeleton(),
       },
     );
   }
@@ -133,6 +138,7 @@ enum _ReviewMode { quick, list }
 class _ReviewCentre extends StatelessWidget {
   const _ReviewCentre({
     required this.items,
+    required this.summary,
     required this.mode,
     required this.selectedIds,
     required this.onModeChanged,
@@ -141,9 +147,11 @@ class _ReviewCentre extends StatelessWidget {
     required this.onConfirmSelected,
     required this.onConfirmGroup,
     required this.onConfirmOne,
+    required this.onLoadMore,
   });
 
   final List<TransactionReviewItem> items;
+  final ReviewQueueSummary? summary;
   final _ReviewMode mode;
   final Set<String> selectedIds;
   final ValueChanged<_ReviewMode> onModeChanged;
@@ -152,14 +160,18 @@ class _ReviewCentre extends StatelessWidget {
   final VoidCallback onConfirmSelected;
   final void Function(Set<String> ids) onConfirmGroup;
   final ValueChanged<String> onConfirmOne;
+  final VoidCallback onLoadMore;
 
   @override
   Widget build(BuildContext context) {
-    final total = items.fold<double>(0, (sum, item) => sum + item.amount);
-    final merchants = items
+    final loadedTotal = items.fold<double>(0, (sum, item) => sum + item.amount);
+    final loadedMerchants = items
         .map((item) => item.counterpartyKey ?? item.displayName)
         .toSet()
         .length;
+    final totalCount = summary?.count ?? items.length;
+    final totalAmount = summary?.amount ?? loadedTotal;
+    final merchantCount = summary?.merchantCount ?? loadedMerchants;
     return Column(
       children: [
         Padding(
@@ -168,12 +180,12 @@ class _ReviewCentre extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${items.length} transactions need review',
+                '$totalCount transactions need review',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                '${formatInr(total)} total · From $merchants merchants',
+                '${formatInr(totalAmount)} total · From $merchantCount merchants',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -202,7 +214,7 @@ class _ReviewCentre extends StatelessWidget {
           child: switch (mode) {
             _ReviewMode.quick => _QuickReview(
                 item: items.first,
-                remainingCount: items.length - 1,
+                remainingCount: totalCount - 1,
                 matchingGroupIds: {
                   for (final item in items)
                     if (item.counterpartyKey == items.first.counterpartyKey)
@@ -217,6 +229,8 @@ class _ReviewCentre extends StatelessWidget {
                 onSelectAll: onSelectAll,
                 onConfirmSelected: onConfirmSelected,
                 onConfirmGroup: onConfirmGroup,
+                remainingCount: totalCount - items.length,
+                onLoadMore: onLoadMore,
               ),
           },
         ),
@@ -338,6 +352,8 @@ class _ReviewList extends ConsumerWidget {
     required this.onSelectAll,
     required this.onConfirmSelected,
     required this.onConfirmGroup,
+    required this.remainingCount,
+    required this.onLoadMore,
   });
 
   final List<TransactionReviewItem> items;
@@ -346,6 +362,8 @@ class _ReviewList extends ConsumerWidget {
   final VoidCallback onSelectAll;
   final VoidCallback onConfirmSelected;
   final void Function(Set<String> ids) onConfirmGroup;
+  final int remainingCount;
+  final VoidCallback onLoadMore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -403,6 +421,17 @@ class _ReviewList extends ConsumerWidget {
             const Divider(height: 1),
           ],
         ],
+        if (remainingCount > 0)
+          Padding(
+            padding: AppSpacing.screen,
+            child: OutlinedButton.icon(
+              onPressed: onLoadMore,
+              icon: const Icon(Icons.expand_more),
+              label: Text(
+                'Load ${remainingCount.clamp(0, reviewPageSize)} more',
+              ),
+            ),
+          ),
       ],
     );
   }

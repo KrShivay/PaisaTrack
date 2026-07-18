@@ -13,6 +13,7 @@ import 'tables/insights_table.dart';
 import 'tables/merchant_aliases_table.dart';
 import 'tables/merchants_table.dart';
 import 'tables/model_meta_table.dart';
+import 'tables/payment_sources_table.dart';
 import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
@@ -33,6 +34,7 @@ part 'database.g.dart';
     MerchantAliases,
     Merchants,
     ModelMeta,
+    PaymentSources,
     RawSms,
     RecurringSeries,
     Rules,
@@ -67,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 7;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -81,7 +83,6 @@ class AppDatabase extends _$AppDatabase {
           await migrator.addColumn(transactions, transactions.counterpartyVpa);
           await migrator.addColumn(transactions, transactions.duplicateOfTxnId);
           await migrator.createIndex(idxTransactionsDuplicateOfTxnId);
-          await _backfillDuplicateLinks();
         }
         if (from < 3) {
           await migrator.createTable(baselines);
@@ -92,9 +93,42 @@ class AppDatabase extends _$AppDatabase {
           await migrator.createIndex(idxRecurringSeriesMerchantId);
           await migrator.createIndex(idxRecurringSeriesNextExpectedDate);
         }
+        if (from < 4) {
+          await migrator.addColumn(merchants, merchants.userLabel);
+        }
+        if (from < 5) {
+          await migrator.createTable(paymentSources);
+          await migrator.addColumn(
+            transactions,
+            transactions.paymentSourceId,
+          );
+          await migrator.addColumn(
+            transactions,
+            transactions.ownedTransferId,
+          );
+          await migrator.addColumn(
+            transactions,
+            transactions.isAnalyticsExcluded,
+          );
+          await migrator.createIndex(idxTransactionsPaymentSourceId);
+          await migrator.createIndex(idxTransactionsOwnedTransferId);
+          await _backfillPaymentSources();
+        }
+        if (from >= 5 && from < 7) {
+          // Early payment_sources tables were shipped with more than one
+          // physical shape. Besides nullable required values and millisecond
+          // datetimes, some v6 devices lack later optional columns such as
+          // institution entirely. Repair the table shape and rows in place —
+          // never by clearing app data — then recreate the corrected trigger.
+          await _repairPaymentSourcesV6();
+        }
+        // Generated row mapping expects the latest non-null/defaulted columns,
+        // so legacy data backfills run only after every additive step above.
+        if (from < 2) await _backfillDuplicateLinks();
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
+        await _ensurePaymentSourceTrigger();
       },
     );
   }
@@ -160,6 +194,128 @@ class AppDatabase extends _$AppDatabase {
         name: 'AppDatabase.migration',
       );
     }
+  }
+
+  Future<void> _backfillPaymentSources() async {
+    await customStatement('''
+      INSERT OR IGNORE INTO payment_sources
+        (id, kind, masked_identifier, is_active, include_in_analytics, is_owned,
+         created_at, updated_at)
+      SELECT DISTINCT
+        'source_' || lower(replace(replace(replace(trim(account_hint),
+          ' ', ''), '*', 'x'), '-', '')) || '_' || lower(channel),
+        lower(channel), trim(account_hint), 1, 1, 1,
+        CAST(unixepoch() AS INTEGER),
+        CAST(unixepoch() AS INTEGER)
+      FROM transactions
+      WHERE account_hint IS NOT NULL AND trim(account_hint) <> ''
+    ''');
+    await customStatement('''
+      UPDATE transactions
+      SET payment_source_id =
+        'source_' || lower(replace(replace(replace(trim(account_hint),
+          ' ', ''), '*', 'x'), '-', '')) || '_' || lower(channel)
+      WHERE payment_source_id IS NULL
+        AND account_hint IS NOT NULL AND trim(account_hint) <> ''
+    ''');
+  }
+
+  /// Repairs legacy `payment_sources` shapes and rows to match the generated
+  /// v7 mapper, then normalizes millisecond datetimes written by the old
+  /// backfill/trigger back to the second-based values drift expects.
+  ///
+  /// Idempotent: it only fills NULLs and rescales values that are unambiguously
+  /// in milliseconds, so running it on an already-correct table is a no-op.
+  /// It also drops the old millisecond-writing trigger; [_ensurePaymentSourceTrigger]
+  /// recreates the corrected one in `beforeOpen` after this migration step.
+  Future<void> _repairPaymentSourcesV6() async {
+    final nowSeconds = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+
+    // Every non-key column is added defensively. ADD COLUMN is a
+    // no-op-by-failure we tolerate so this works across the multiple v5/v6
+    // shapes observed on upgraded devices.
+    const addColumns = <String>[
+      'ALTER TABLE payment_sources ADD COLUMN kind TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN masked_identifier TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN nickname TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN institution TEXT',
+      'ALTER TABLE payment_sources ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
+      'ALTER TABLE payment_sources ADD COLUMN include_in_analytics INTEGER NOT NULL DEFAULT 1',
+      'ALTER TABLE payment_sources ADD COLUMN is_owned INTEGER NOT NULL DEFAULT 1',
+      'ALTER TABLE payment_sources ADD COLUMN created_at INTEGER',
+      'ALTER TABLE payment_sources ADD COLUMN updated_at INTEGER',
+    ];
+    for (final statement in addColumns) {
+      try {
+        await customStatement(statement);
+      } on Object {
+        // Column already exists — expected on correctly-shaped tables.
+      }
+    }
+
+    // Fill NULLs in every non-null-typed column with a safe default.
+    await customStatement('''
+      UPDATE payment_sources SET
+        kind = COALESCE(NULLIF(trim(kind), ''), 'unknown'),
+        masked_identifier =
+          COALESCE(NULLIF(trim(masked_identifier), ''), 'unknown'),
+        is_active = COALESCE(is_active, 1),
+        include_in_analytics = COALESCE(include_in_analytics, 1),
+        is_owned = COALESCE(is_owned, 1),
+        created_at = COALESCE(created_at, $nowSeconds),
+        updated_at = COALESCE(updated_at, $nowSeconds)
+    ''');
+
+    // Rescale ms → s. A real second-based timestamp for this app is ~1.7e9;
+    // anything past the year-5138 boundary (1e11 seconds) can only be ms.
+    await customStatement('''
+      UPDATE payment_sources
+      SET created_at = created_at / 1000
+      WHERE created_at > 100000000000
+    ''');
+    await customStatement('''
+      UPDATE payment_sources
+      SET updated_at = updated_at / 1000
+      WHERE updated_at > 100000000000
+    ''');
+
+    // Drop the old trigger so beforeOpen recreates the corrected (seconds,
+    // is_active) version — CREATE TRIGGER IF NOT EXISTS would otherwise keep it.
+    await customStatement(
+      'DROP TRIGGER IF EXISTS trg_transactions_payment_source',
+    );
+  }
+
+  Future<void> _ensurePaymentSourceTrigger() async {
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS trg_transactions_payment_source
+      AFTER INSERT ON transactions
+      WHEN NEW.payment_source_id IS NULL
+        AND NEW.account_hint IS NOT NULL AND trim(NEW.account_hint) <> ''
+      BEGIN
+        INSERT OR IGNORE INTO payment_sources
+          (id, kind, masked_identifier, is_active, include_in_analytics,
+           is_owned, created_at, updated_at)
+        VALUES (
+          'source_' || lower(replace(replace(replace(trim(NEW.account_hint),
+            ' ', ''), '*', 'x'), '-', '')) || '_' || lower(NEW.channel),
+          lower(NEW.channel), trim(NEW.account_hint), 1, 1, 1,
+          CAST(unixepoch() AS INTEGER),
+          CAST(unixepoch() AS INTEGER)
+        );
+        UPDATE transactions
+        SET payment_source_id =
+              'source_' || lower(replace(replace(replace(trim(NEW.account_hint),
+                ' ', ''), '*', 'x'), '-', '')) || '_' || lower(NEW.channel),
+            is_analytics_excluded = COALESCE((
+              SELECT NOT include_in_analytics FROM payment_sources
+              WHERE id = 'source_' || lower(replace(replace(replace(
+                trim(NEW.account_hint), ' ', ''), '*', 'x'), '-', '')) ||
+                '_' || lower(NEW.channel)
+            ), 0)
+        WHERE id = NEW.id;
+      END
+    ''');
   }
 }
 

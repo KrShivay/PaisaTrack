@@ -68,6 +68,7 @@ Transaction _existing({
     status: 'auto',
     isDeleted: isDeleted,
     duplicateOfTxnId: duplicateOfTxnId,
+    isAnalyticsExcluded: false,
     createdAt: ts,
     updatedAt: ts,
   );

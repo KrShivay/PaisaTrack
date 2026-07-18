@@ -50,7 +50,6 @@ class DecisionPolicy {
             ? DecisionStatus.asked
             : DecisionStatus.needsReview;
       }
-      return DecisionStatus.needsReview;
     }
 
     if (confidence >=

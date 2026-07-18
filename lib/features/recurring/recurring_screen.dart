@@ -242,6 +242,8 @@ class _StatusChip extends StatelessWidget {
 String _kindLabel(String kind) => switch (kind) {
       'emi' => 'EMI',
       'bill' => 'Bill',
+      'recharge' => 'Recharge',
+      'investment' => 'Investment',
       'income' => 'Income',
       _ => 'Subscription',
     };
@@ -249,6 +251,8 @@ String _kindLabel(String kind) => switch (kind) {
 IconData _kindIcon(String kind) => switch (kind) {
       'emi' => Icons.account_balance_outlined,
       'bill' => Icons.receipt_outlined,
+      'recharge' => Icons.phone_android_outlined,
+      'investment' => Icons.trending_up_outlined,
       'income' => Icons.savings_outlined,
       _ => Icons.subscriptions_outlined,
     };

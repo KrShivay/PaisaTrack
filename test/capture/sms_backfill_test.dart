@@ -105,6 +105,22 @@ void main() {
     expect(await database.select(database.transactions).get(), hasLength(2));
   });
 
+  test('one imported page emits one transaction-table change', () async {
+    final emissions = <List<Transaction>>[];
+    final subscription =
+        database.select(database.transactions).watch().listen(emissions.add);
+    addTearDown(subscription.cancel);
+    await pumpEventQueue();
+
+    await backfiller(
+      FakeInboxReader.single([message('sms_a'), message('sms_b')]),
+    ).run();
+    await pumpEventQueue();
+
+    expect(emissions.where((rows) => rows.isNotEmpty), hasLength(1));
+    expect(emissions.last, hasLength(2));
+  });
+
   test('version 1 marker automatically catches up to full-history version',
       () async {
     final marker = FakeBackfillMarker(version: 1);
@@ -212,6 +228,128 @@ void main() {
     expect(result.failed, 1);
     expect(marker.version, smsHistoryImportVersion);
     expect(marker.markCount, 1);
+  });
+
+  test('incremental catch-up recovers a recent gap behind a known SMS',
+      () async {
+    await backfiller(FakeInboxReader.single([message('sms_known')])).run();
+    const next = SmsInboxCursor(beforeEpochMillis: 700, beforeId: 7);
+    const older = SmsInboxCursor(beforeEpochMillis: 600, beforeId: 6);
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: [message('sms_new'), message('sms_known')],
+        nextCursor: next,
+      ),
+      SmsInboxPage(
+        messages: [message('sms_gap', year: 2025)],
+        nextCursor: older,
+      ),
+      SmsInboxPage(messages: [message('sms_outside_overlap', year: 2024)]),
+    ]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+      pageSize: 3,
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 2);
+    expect(reader.readCount, 2);
+    final transactionIds = (await database.select(database.transactions).get())
+        .map((row) => row.id);
+    expect(
+      transactionIds,
+      containsAll(['txn_sms_known', 'txn_sms_new', 'txn_sms_gap']),
+    );
+    expect(transactionIds, isNot(contains('txn_sms_outside_overlap')));
+  });
+
+  test('incremental catch-up queries only IDs in the current inbox page',
+      () async {
+    for (var index = 0; index < 500; index++) {
+      await backfiller(
+        FakeInboxReader.single([message('historical_$index')]),
+      ).run();
+    }
+    final reader = FakeInboxReader.single([
+      message('sms_new'),
+      message('historical_499'),
+    ]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 1);
+    expect(reader.readCount, 1);
+  });
+
+  test('incremental catch-up succeeds on an empty inbox', () async {
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+      ),
+      reader: FakeInboxReader.single([]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 0);
+    expect(result.failed, 0);
+  });
+
+  test('incremental catch-up succeeds on a single-page inbox', () async {
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+      ),
+      reader: FakeInboxReader.single([message('sms_single')]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 1);
+    expect(
+      (await database.select(database.transactions).get()).single.id,
+      'txn_sms_single',
+    );
+  });
+
+  test('incremental catch-up waits for the initial versioned import', () async {
+    final reader = FakeInboxReader.single([message('sms_new')]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion - 1),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.skipped, isTrue);
+    expect(reader.readCount, 0);
   });
 }
 

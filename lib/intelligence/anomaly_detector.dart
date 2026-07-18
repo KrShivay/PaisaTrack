@@ -56,6 +56,8 @@ class AnomalyDetector {
             (t) =>
                 t.ts.isBiggerOrEqualValue(start.millisecondsSinceEpoch) &
                 t.ts.isSmallerThanValue(end.millisecondsSinceEpoch) &
+                t.isAnalyticsExcluded.equals(false) &
+                t.ownedTransferId.isNull() &
                 t.isDeleted.equals(false) &
                 t.duplicateOfTxnId.isNull(),
           ))

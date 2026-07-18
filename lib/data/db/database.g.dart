@@ -682,6 +682,507 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   }
 }
 
+class $PaymentSourcesTable extends PaymentSources
+    with TableInfo<$PaymentSourcesTable, PaymentSource> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PaymentSourcesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _maskedIdentifierMeta =
+      const VerificationMeta('maskedIdentifier');
+  @override
+  late final GeneratedColumn<String> maskedIdentifier = GeneratedColumn<String>(
+      'masked_identifier', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nicknameMeta =
+      const VerificationMeta('nickname');
+  @override
+  late final GeneratedColumn<String> nickname = GeneratedColumn<String>(
+      'nickname', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _institutionMeta =
+      const VerificationMeta('institution');
+  @override
+  late final GeneratedColumn<String> institution = GeneratedColumn<String>(
+      'institution', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isActiveMeta =
+      const VerificationMeta('isActive');
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+      'is_active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_active" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _includeInAnalyticsMeta =
+      const VerificationMeta('includeInAnalytics');
+  @override
+  late final GeneratedColumn<bool> includeInAnalytics = GeneratedColumn<bool>(
+      'include_in_analytics', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("include_in_analytics" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _isOwnedMeta =
+      const VerificationMeta('isOwned');
+  @override
+  late final GeneratedColumn<bool> isOwned = GeneratedColumn<bool>(
+      'is_owned', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_owned" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        kind,
+        maskedIdentifier,
+        nickname,
+        institution,
+        isActive,
+        includeInAnalytics,
+        isOwned,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'payment_sources';
+  @override
+  VerificationContext validateIntegrity(Insertable<PaymentSource> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('masked_identifier')) {
+      context.handle(
+          _maskedIdentifierMeta,
+          maskedIdentifier.isAcceptableOrUnknown(
+              data['masked_identifier']!, _maskedIdentifierMeta));
+    } else if (isInserting) {
+      context.missing(_maskedIdentifierMeta);
+    }
+    if (data.containsKey('nickname')) {
+      context.handle(_nicknameMeta,
+          nickname.isAcceptableOrUnknown(data['nickname']!, _nicknameMeta));
+    }
+    if (data.containsKey('institution')) {
+      context.handle(
+          _institutionMeta,
+          institution.isAcceptableOrUnknown(
+              data['institution']!, _institutionMeta));
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(_isActiveMeta,
+          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+    }
+    if (data.containsKey('include_in_analytics')) {
+      context.handle(
+          _includeInAnalyticsMeta,
+          includeInAnalytics.isAcceptableOrUnknown(
+              data['include_in_analytics']!, _includeInAnalyticsMeta));
+    }
+    if (data.containsKey('is_owned')) {
+      context.handle(_isOwnedMeta,
+          isOwned.isAcceptableOrUnknown(data['is_owned']!, _isOwnedMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PaymentSource map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PaymentSource(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      maskedIdentifier: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}masked_identifier'])!,
+      nickname: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}nickname']),
+      institution: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}institution']),
+      isActive: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_active'])!,
+      includeInAnalytics: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}include_in_analytics'])!,
+      isOwned: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_owned'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $PaymentSourcesTable createAlias(String alias) {
+    return $PaymentSourcesTable(attachedDatabase, alias);
+  }
+}
+
+class PaymentSource extends DataClass implements Insertable<PaymentSource> {
+  final String id;
+  final String kind;
+  final String maskedIdentifier;
+  final String? nickname;
+  final String? institution;
+  final bool isActive;
+  final bool includeInAnalytics;
+  final bool isOwned;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const PaymentSource(
+      {required this.id,
+      required this.kind,
+      required this.maskedIdentifier,
+      this.nickname,
+      this.institution,
+      required this.isActive,
+      required this.includeInAnalytics,
+      required this.isOwned,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['kind'] = Variable<String>(kind);
+    map['masked_identifier'] = Variable<String>(maskedIdentifier);
+    if (!nullToAbsent || nickname != null) {
+      map['nickname'] = Variable<String>(nickname);
+    }
+    if (!nullToAbsent || institution != null) {
+      map['institution'] = Variable<String>(institution);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    map['include_in_analytics'] = Variable<bool>(includeInAnalytics);
+    map['is_owned'] = Variable<bool>(isOwned);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PaymentSourcesCompanion toCompanion(bool nullToAbsent) {
+    return PaymentSourcesCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      maskedIdentifier: Value(maskedIdentifier),
+      nickname: nickname == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nickname),
+      institution: institution == null && nullToAbsent
+          ? const Value.absent()
+          : Value(institution),
+      isActive: Value(isActive),
+      includeInAnalytics: Value(includeInAnalytics),
+      isOwned: Value(isOwned),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PaymentSource.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PaymentSource(
+      id: serializer.fromJson<String>(json['id']),
+      kind: serializer.fromJson<String>(json['kind']),
+      maskedIdentifier: serializer.fromJson<String>(json['maskedIdentifier']),
+      nickname: serializer.fromJson<String?>(json['nickname']),
+      institution: serializer.fromJson<String?>(json['institution']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      includeInAnalytics: serializer.fromJson<bool>(json['includeInAnalytics']),
+      isOwned: serializer.fromJson<bool>(json['isOwned']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(kind),
+      'maskedIdentifier': serializer.toJson<String>(maskedIdentifier),
+      'nickname': serializer.toJson<String?>(nickname),
+      'institution': serializer.toJson<String?>(institution),
+      'isActive': serializer.toJson<bool>(isActive),
+      'includeInAnalytics': serializer.toJson<bool>(includeInAnalytics),
+      'isOwned': serializer.toJson<bool>(isOwned),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PaymentSource copyWith(
+          {String? id,
+          String? kind,
+          String? maskedIdentifier,
+          Value<String?> nickname = const Value.absent(),
+          Value<String?> institution = const Value.absent(),
+          bool? isActive,
+          bool? includeInAnalytics,
+          bool? isOwned,
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      PaymentSource(
+        id: id ?? this.id,
+        kind: kind ?? this.kind,
+        maskedIdentifier: maskedIdentifier ?? this.maskedIdentifier,
+        nickname: nickname.present ? nickname.value : this.nickname,
+        institution: institution.present ? institution.value : this.institution,
+        isActive: isActive ?? this.isActive,
+        includeInAnalytics: includeInAnalytics ?? this.includeInAnalytics,
+        isOwned: isOwned ?? this.isOwned,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('PaymentSource(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('maskedIdentifier: $maskedIdentifier, ')
+          ..write('nickname: $nickname, ')
+          ..write('institution: $institution, ')
+          ..write('isActive: $isActive, ')
+          ..write('includeInAnalytics: $includeInAnalytics, ')
+          ..write('isOwned: $isOwned, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, kind, maskedIdentifier, nickname,
+      institution, isActive, includeInAnalytics, isOwned, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PaymentSource &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.maskedIdentifier == this.maskedIdentifier &&
+          other.nickname == this.nickname &&
+          other.institution == this.institution &&
+          other.isActive == this.isActive &&
+          other.includeInAnalytics == this.includeInAnalytics &&
+          other.isOwned == this.isOwned &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PaymentSourcesCompanion extends UpdateCompanion<PaymentSource> {
+  final Value<String> id;
+  final Value<String> kind;
+  final Value<String> maskedIdentifier;
+  final Value<String?> nickname;
+  final Value<String?> institution;
+  final Value<bool> isActive;
+  final Value<bool> includeInAnalytics;
+  final Value<bool> isOwned;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PaymentSourcesCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.maskedIdentifier = const Value.absent(),
+    this.nickname = const Value.absent(),
+    this.institution = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.includeInAnalytics = const Value.absent(),
+    this.isOwned = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PaymentSourcesCompanion.insert({
+    required String id,
+    required String kind,
+    required String maskedIdentifier,
+    this.nickname = const Value.absent(),
+    this.institution = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.includeInAnalytics = const Value.absent(),
+    this.isOwned = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        kind = Value(kind),
+        maskedIdentifier = Value(maskedIdentifier),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<PaymentSource> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? maskedIdentifier,
+    Expression<String>? nickname,
+    Expression<String>? institution,
+    Expression<bool>? isActive,
+    Expression<bool>? includeInAnalytics,
+    Expression<bool>? isOwned,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (maskedIdentifier != null) 'masked_identifier': maskedIdentifier,
+      if (nickname != null) 'nickname': nickname,
+      if (institution != null) 'institution': institution,
+      if (isActive != null) 'is_active': isActive,
+      if (includeInAnalytics != null)
+        'include_in_analytics': includeInAnalytics,
+      if (isOwned != null) 'is_owned': isOwned,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PaymentSourcesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? kind,
+      Value<String>? maskedIdentifier,
+      Value<String?>? nickname,
+      Value<String?>? institution,
+      Value<bool>? isActive,
+      Value<bool>? includeInAnalytics,
+      Value<bool>? isOwned,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return PaymentSourcesCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      maskedIdentifier: maskedIdentifier ?? this.maskedIdentifier,
+      nickname: nickname ?? this.nickname,
+      institution: institution ?? this.institution,
+      isActive: isActive ?? this.isActive,
+      includeInAnalytics: includeInAnalytics ?? this.includeInAnalytics,
+      isOwned: isOwned ?? this.isOwned,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (maskedIdentifier.present) {
+      map['masked_identifier'] = Variable<String>(maskedIdentifier.value);
+    }
+    if (nickname.present) {
+      map['nickname'] = Variable<String>(nickname.value);
+    }
+    if (institution.present) {
+      map['institution'] = Variable<String>(institution.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (includeInAnalytics.present) {
+      map['include_in_analytics'] = Variable<bool>(includeInAnalytics.value);
+    }
+    if (isOwned.present) {
+      map['is_owned'] = Variable<bool>(isOwned.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PaymentSourcesCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('maskedIdentifier: $maskedIdentifier, ')
+          ..write('nickname: $nickname, ')
+          ..write('institution: $institution, ')
+          ..write('isActive: $isActive, ')
+          ..write('includeInAnalytics: $includeInAnalytics, ')
+          ..write('isOwned: $isOwned, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $MerchantsTable extends Merchants
     with TableInfo<$MerchantsTable, Merchant> {
   @override
@@ -699,6 +1200,12 @@ class $MerchantsTable extends Merchants
   late final GeneratedColumn<String> canonicalName = GeneratedColumn<String>(
       'canonical_name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userLabelMeta =
+      const VerificationMeta('userLabel');
+  @override
+  late final GeneratedColumn<String> userLabel = GeneratedColumn<String>(
+      'user_label', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _categoryHintMeta =
       const VerificationMeta('categoryHint');
   @override
@@ -735,6 +1242,7 @@ class $MerchantsTable extends Merchants
   List<GeneratedColumn> get $columns => [
         id,
         canonicalName,
+        userLabel,
         categoryHint,
         embedding,
         txnCount,
@@ -763,6 +1271,10 @@ class $MerchantsTable extends Merchants
               data['canonical_name']!, _canonicalNameMeta));
     } else if (isInserting) {
       context.missing(_canonicalNameMeta);
+    }
+    if (data.containsKey('user_label')) {
+      context.handle(_userLabelMeta,
+          userLabel.isAcceptableOrUnknown(data['user_label']!, _userLabelMeta));
     }
     if (data.containsKey('category_hint')) {
       context.handle(
@@ -803,6 +1315,8 @@ class $MerchantsTable extends Merchants
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       canonicalName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}canonical_name'])!,
+      userLabel: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_label']),
       categoryHint: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}category_hint']),
       embedding: attachedDatabase.typeMapping
@@ -825,6 +1339,7 @@ class $MerchantsTable extends Merchants
 class Merchant extends DataClass implements Insertable<Merchant> {
   final String id;
   final String canonicalName;
+  final String? userLabel;
   final String? categoryHint;
   final Uint8List? embedding;
   final int txnCount;
@@ -833,6 +1348,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
   const Merchant(
       {required this.id,
       required this.canonicalName,
+      this.userLabel,
       this.categoryHint,
       this.embedding,
       required this.txnCount,
@@ -843,6 +1359,9 @@ class Merchant extends DataClass implements Insertable<Merchant> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['canonical_name'] = Variable<String>(canonicalName);
+    if (!nullToAbsent || userLabel != null) {
+      map['user_label'] = Variable<String>(userLabel);
+    }
     if (!nullToAbsent || categoryHint != null) {
       map['category_hint'] = Variable<String>(categoryHint);
     }
@@ -859,6 +1378,9 @@ class Merchant extends DataClass implements Insertable<Merchant> {
     return MerchantsCompanion(
       id: Value(id),
       canonicalName: Value(canonicalName),
+      userLabel: userLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userLabel),
       categoryHint: categoryHint == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryHint),
@@ -877,6 +1399,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
     return Merchant(
       id: serializer.fromJson<String>(json['id']),
       canonicalName: serializer.fromJson<String>(json['canonicalName']),
+      userLabel: serializer.fromJson<String?>(json['userLabel']),
       categoryHint: serializer.fromJson<String?>(json['categoryHint']),
       embedding: serializer.fromJson<Uint8List?>(json['embedding']),
       txnCount: serializer.fromJson<int>(json['txnCount']),
@@ -890,6 +1413,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'canonicalName': serializer.toJson<String>(canonicalName),
+      'userLabel': serializer.toJson<String?>(userLabel),
       'categoryHint': serializer.toJson<String?>(categoryHint),
       'embedding': serializer.toJson<Uint8List?>(embedding),
       'txnCount': serializer.toJson<int>(txnCount),
@@ -901,6 +1425,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
   Merchant copyWith(
           {String? id,
           String? canonicalName,
+          Value<String?> userLabel = const Value.absent(),
           Value<String?> categoryHint = const Value.absent(),
           Value<Uint8List?> embedding = const Value.absent(),
           int? txnCount,
@@ -909,6 +1434,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
       Merchant(
         id: id ?? this.id,
         canonicalName: canonicalName ?? this.canonicalName,
+        userLabel: userLabel.present ? userLabel.value : this.userLabel,
         categoryHint:
             categoryHint.present ? categoryHint.value : this.categoryHint,
         embedding: embedding.present ? embedding.value : this.embedding,
@@ -921,6 +1447,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
     return (StringBuffer('Merchant(')
           ..write('id: $id, ')
           ..write('canonicalName: $canonicalName, ')
+          ..write('userLabel: $userLabel, ')
           ..write('categoryHint: $categoryHint, ')
           ..write('embedding: $embedding, ')
           ..write('txnCount: $txnCount, ')
@@ -931,7 +1458,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
   }
 
   @override
-  int get hashCode => Object.hash(id, canonicalName, categoryHint,
+  int get hashCode => Object.hash(id, canonicalName, userLabel, categoryHint,
       $driftBlobEquality.hash(embedding), txnCount, firstSeen, lastSeen);
   @override
   bool operator ==(Object other) =>
@@ -939,6 +1466,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
       (other is Merchant &&
           other.id == this.id &&
           other.canonicalName == this.canonicalName &&
+          other.userLabel == this.userLabel &&
           other.categoryHint == this.categoryHint &&
           $driftBlobEquality.equals(other.embedding, this.embedding) &&
           other.txnCount == this.txnCount &&
@@ -949,6 +1477,7 @@ class Merchant extends DataClass implements Insertable<Merchant> {
 class MerchantsCompanion extends UpdateCompanion<Merchant> {
   final Value<String> id;
   final Value<String> canonicalName;
+  final Value<String?> userLabel;
   final Value<String?> categoryHint;
   final Value<Uint8List?> embedding;
   final Value<int> txnCount;
@@ -958,6 +1487,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
   const MerchantsCompanion({
     this.id = const Value.absent(),
     this.canonicalName = const Value.absent(),
+    this.userLabel = const Value.absent(),
     this.categoryHint = const Value.absent(),
     this.embedding = const Value.absent(),
     this.txnCount = const Value.absent(),
@@ -968,6 +1498,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
   MerchantsCompanion.insert({
     required String id,
     required String canonicalName,
+    this.userLabel = const Value.absent(),
     this.categoryHint = const Value.absent(),
     this.embedding = const Value.absent(),
     this.txnCount = const Value.absent(),
@@ -981,6 +1512,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
   static Insertable<Merchant> custom({
     Expression<String>? id,
     Expression<String>? canonicalName,
+    Expression<String>? userLabel,
     Expression<String>? categoryHint,
     Expression<Uint8List>? embedding,
     Expression<int>? txnCount,
@@ -991,6 +1523,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (canonicalName != null) 'canonical_name': canonicalName,
+      if (userLabel != null) 'user_label': userLabel,
       if (categoryHint != null) 'category_hint': categoryHint,
       if (embedding != null) 'embedding': embedding,
       if (txnCount != null) 'txn_count': txnCount,
@@ -1003,6 +1536,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
   MerchantsCompanion copyWith(
       {Value<String>? id,
       Value<String>? canonicalName,
+      Value<String?>? userLabel,
       Value<String?>? categoryHint,
       Value<Uint8List?>? embedding,
       Value<int>? txnCount,
@@ -1012,6 +1546,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
     return MerchantsCompanion(
       id: id ?? this.id,
       canonicalName: canonicalName ?? this.canonicalName,
+      userLabel: userLabel ?? this.userLabel,
       categoryHint: categoryHint ?? this.categoryHint,
       embedding: embedding ?? this.embedding,
       txnCount: txnCount ?? this.txnCount,
@@ -1029,6 +1564,9 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
     }
     if (canonicalName.present) {
       map['canonical_name'] = Variable<String>(canonicalName.value);
+    }
+    if (userLabel.present) {
+      map['user_label'] = Variable<String>(userLabel.value);
     }
     if (categoryHint.present) {
       map['category_hint'] = Variable<String>(categoryHint.value);
@@ -1056,6 +1594,7 @@ class MerchantsCompanion extends UpdateCompanion<Merchant> {
     return (StringBuffer('MerchantsCompanion(')
           ..write('id: $id, ')
           ..write('canonicalName: $canonicalName, ')
+          ..write('userLabel: $userLabel, ')
           ..write('categoryHint: $categoryHint, ')
           ..write('embedding: $embedding, ')
           ..write('txnCount: $txnCount, ')
@@ -1444,6 +1983,15 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> accountHint = GeneratedColumn<String>(
       'account_hint', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _paymentSourceIdMeta =
+      const VerificationMeta('paymentSourceId');
+  @override
+  late final GeneratedColumn<String> paymentSourceId = GeneratedColumn<String>(
+      'payment_source_id', aliasedName, true,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES payment_sources (id)'));
   static const VerificationMeta _merchantRawMeta =
       const VerificationMeta('merchantRaw');
   @override
@@ -1535,6 +2083,22 @@ class $TransactionsTable extends Transactions
       requiredDuringInsert: false,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES transactions (id)'));
+  static const VerificationMeta _ownedTransferIdMeta =
+      const VerificationMeta('ownedTransferId');
+  @override
+  late final GeneratedColumn<String> ownedTransferId = GeneratedColumn<String>(
+      'owned_transfer_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isAnalyticsExcludedMeta =
+      const VerificationMeta('isAnalyticsExcluded');
+  @override
+  late final GeneratedColumn<bool> isAnalyticsExcluded = GeneratedColumn<bool>(
+      'is_analytics_excluded', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_analytics_excluded" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -1555,6 +2119,7 @@ class $TransactionsTable extends Transactions
         direction,
         channel,
         accountHint,
+        paymentSourceId,
         merchantRaw,
         merchantId,
         categoryId,
@@ -1568,6 +2133,8 @@ class $TransactionsTable extends Transactions
         isDeleted,
         counterpartyVpa,
         duplicateOfTxnId,
+        ownedTransferId,
+        isAnalyticsExcluded,
         createdAt,
         updatedAt
       ];
@@ -1614,6 +2181,12 @@ class $TransactionsTable extends Transactions
           _accountHintMeta,
           accountHint.isAcceptableOrUnknown(
               data['account_hint']!, _accountHintMeta));
+    }
+    if (data.containsKey('payment_source_id')) {
+      context.handle(
+          _paymentSourceIdMeta,
+          paymentSourceId.isAcceptableOrUnknown(
+              data['payment_source_id']!, _paymentSourceIdMeta));
     }
     if (data.containsKey('merchant_raw')) {
       context.handle(
@@ -1691,6 +2264,18 @@ class $TransactionsTable extends Transactions
           duplicateOfTxnId.isAcceptableOrUnknown(
               data['duplicate_of_txn_id']!, _duplicateOfTxnIdMeta));
     }
+    if (data.containsKey('owned_transfer_id')) {
+      context.handle(
+          _ownedTransferIdMeta,
+          ownedTransferId.isAcceptableOrUnknown(
+              data['owned_transfer_id']!, _ownedTransferIdMeta));
+    }
+    if (data.containsKey('is_analytics_excluded')) {
+      context.handle(
+          _isAnalyticsExcludedMeta,
+          isAnalyticsExcluded.isAcceptableOrUnknown(
+              data['is_analytics_excluded']!, _isAnalyticsExcludedMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -1724,6 +2309,8 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}channel'])!,
       accountHint: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}account_hint']),
+      paymentSourceId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}payment_source_id']),
       merchantRaw: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}merchant_raw']),
       merchantId: attachedDatabase.typeMapping
@@ -1750,6 +2337,10 @@ class $TransactionsTable extends Transactions
           DriftSqlType.string, data['${effectivePrefix}counterparty_vpa']),
       duplicateOfTxnId: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}duplicate_of_txn_id']),
+      ownedTransferId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}owned_transfer_id']),
+      isAnalyticsExcluded: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}is_analytics_excluded'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -1770,6 +2361,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String direction;
   final String channel;
   final String? accountHint;
+  final String? paymentSourceId;
   final String? merchantRaw;
   final String? merchantId;
   final String? categoryId;
@@ -1783,6 +2375,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final bool isDeleted;
   final String? counterpartyVpa;
   final String? duplicateOfTxnId;
+  final String? ownedTransferId;
+  final bool isAnalyticsExcluded;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction(
@@ -1792,6 +2386,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.direction,
       required this.channel,
       this.accountHint,
+      this.paymentSourceId,
       this.merchantRaw,
       this.merchantId,
       this.categoryId,
@@ -1805,6 +2400,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.isDeleted,
       this.counterpartyVpa,
       this.duplicateOfTxnId,
+      this.ownedTransferId,
+      required this.isAnalyticsExcluded,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -1817,6 +2414,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['channel'] = Variable<String>(channel);
     if (!nullToAbsent || accountHint != null) {
       map['account_hint'] = Variable<String>(accountHint);
+    }
+    if (!nullToAbsent || paymentSourceId != null) {
+      map['payment_source_id'] = Variable<String>(paymentSourceId);
     }
     if (!nullToAbsent || merchantRaw != null) {
       map['merchant_raw'] = Variable<String>(merchantRaw);
@@ -1849,6 +2449,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || duplicateOfTxnId != null) {
       map['duplicate_of_txn_id'] = Variable<String>(duplicateOfTxnId);
     }
+    if (!nullToAbsent || ownedTransferId != null) {
+      map['owned_transfer_id'] = Variable<String>(ownedTransferId);
+    }
+    map['is_analytics_excluded'] = Variable<bool>(isAnalyticsExcluded);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -1864,6 +2468,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       accountHint: accountHint == null && nullToAbsent
           ? const Value.absent()
           : Value(accountHint),
+      paymentSourceId: paymentSourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paymentSourceId),
       merchantRaw: merchantRaw == null && nullToAbsent
           ? const Value.absent()
           : Value(merchantRaw),
@@ -1893,6 +2500,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       duplicateOfTxnId: duplicateOfTxnId == null && nullToAbsent
           ? const Value.absent()
           : Value(duplicateOfTxnId),
+      ownedTransferId: ownedTransferId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownedTransferId),
+      isAnalyticsExcluded: Value(isAnalyticsExcluded),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -1908,6 +2519,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       direction: serializer.fromJson<String>(json['direction']),
       channel: serializer.fromJson<String>(json['channel']),
       accountHint: serializer.fromJson<String?>(json['accountHint']),
+      paymentSourceId: serializer.fromJson<String?>(json['paymentSourceId']),
       merchantRaw: serializer.fromJson<String?>(json['merchantRaw']),
       merchantId: serializer.fromJson<String?>(json['merchantId']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
@@ -1921,6 +2533,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       counterpartyVpa: serializer.fromJson<String?>(json['counterpartyVpa']),
       duplicateOfTxnId: serializer.fromJson<String?>(json['duplicateOfTxnId']),
+      ownedTransferId: serializer.fromJson<String?>(json['ownedTransferId']),
+      isAnalyticsExcluded:
+          serializer.fromJson<bool>(json['isAnalyticsExcluded']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1935,6 +2550,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'direction': serializer.toJson<String>(direction),
       'channel': serializer.toJson<String>(channel),
       'accountHint': serializer.toJson<String?>(accountHint),
+      'paymentSourceId': serializer.toJson<String?>(paymentSourceId),
       'merchantRaw': serializer.toJson<String?>(merchantRaw),
       'merchantId': serializer.toJson<String?>(merchantId),
       'categoryId': serializer.toJson<String?>(categoryId),
@@ -1948,6 +2564,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'counterpartyVpa': serializer.toJson<String?>(counterpartyVpa),
       'duplicateOfTxnId': serializer.toJson<String?>(duplicateOfTxnId),
+      'ownedTransferId': serializer.toJson<String?>(ownedTransferId),
+      'isAnalyticsExcluded': serializer.toJson<bool>(isAnalyticsExcluded),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1960,6 +2578,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           String? direction,
           String? channel,
           Value<String?> accountHint = const Value.absent(),
+          Value<String?> paymentSourceId = const Value.absent(),
           Value<String?> merchantRaw = const Value.absent(),
           Value<String?> merchantId = const Value.absent(),
           Value<String?> categoryId = const Value.absent(),
@@ -1973,6 +2592,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           bool? isDeleted,
           Value<String?> counterpartyVpa = const Value.absent(),
           Value<String?> duplicateOfTxnId = const Value.absent(),
+          Value<String?> ownedTransferId = const Value.absent(),
+          bool? isAnalyticsExcluded,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Transaction(
@@ -1982,6 +2603,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         direction: direction ?? this.direction,
         channel: channel ?? this.channel,
         accountHint: accountHint.present ? accountHint.value : this.accountHint,
+        paymentSourceId: paymentSourceId.present
+            ? paymentSourceId.value
+            : this.paymentSourceId,
         merchantRaw: merchantRaw.present ? merchantRaw.value : this.merchantRaw,
         merchantId: merchantId.present ? merchantId.value : this.merchantId,
         categoryId: categoryId.present ? categoryId.value : this.categoryId,
@@ -2000,6 +2624,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         duplicateOfTxnId: duplicateOfTxnId.present
             ? duplicateOfTxnId.value
             : this.duplicateOfTxnId,
+        ownedTransferId: ownedTransferId.present
+            ? ownedTransferId.value
+            : this.ownedTransferId,
+        isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -2012,6 +2640,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('direction: $direction, ')
           ..write('channel: $channel, ')
           ..write('accountHint: $accountHint, ')
+          ..write('paymentSourceId: $paymentSourceId, ')
           ..write('merchantRaw: $merchantRaw, ')
           ..write('merchantId: $merchantId, ')
           ..write('categoryId: $categoryId, ')
@@ -2025,6 +2654,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('isDeleted: $isDeleted, ')
           ..write('counterpartyVpa: $counterpartyVpa, ')
           ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
+          ..write('ownedTransferId: $ownedTransferId, ')
+          ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2039,6 +2670,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         direction,
         channel,
         accountHint,
+        paymentSourceId,
         merchantRaw,
         merchantId,
         categoryId,
@@ -2052,6 +2684,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         isDeleted,
         counterpartyVpa,
         duplicateOfTxnId,
+        ownedTransferId,
+        isAnalyticsExcluded,
         createdAt,
         updatedAt
       ]);
@@ -2065,6 +2699,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.direction == this.direction &&
           other.channel == this.channel &&
           other.accountHint == this.accountHint &&
+          other.paymentSourceId == this.paymentSourceId &&
           other.merchantRaw == this.merchantRaw &&
           other.merchantId == this.merchantId &&
           other.categoryId == this.categoryId &&
@@ -2078,6 +2713,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.isDeleted == this.isDeleted &&
           other.counterpartyVpa == this.counterpartyVpa &&
           other.duplicateOfTxnId == this.duplicateOfTxnId &&
+          other.ownedTransferId == this.ownedTransferId &&
+          other.isAnalyticsExcluded == this.isAnalyticsExcluded &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2089,6 +2726,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> direction;
   final Value<String> channel;
   final Value<String?> accountHint;
+  final Value<String?> paymentSourceId;
   final Value<String?> merchantRaw;
   final Value<String?> merchantId;
   final Value<String?> categoryId;
@@ -2102,6 +2740,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<bool> isDeleted;
   final Value<String?> counterpartyVpa;
   final Value<String?> duplicateOfTxnId;
+  final Value<String?> ownedTransferId;
+  final Value<bool> isAnalyticsExcluded;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -2112,6 +2752,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.direction = const Value.absent(),
     this.channel = const Value.absent(),
     this.accountHint = const Value.absent(),
+    this.paymentSourceId = const Value.absent(),
     this.merchantRaw = const Value.absent(),
     this.merchantId = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -2125,6 +2766,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.isDeleted = const Value.absent(),
     this.counterpartyVpa = const Value.absent(),
     this.duplicateOfTxnId = const Value.absent(),
+    this.ownedTransferId = const Value.absent(),
+    this.isAnalyticsExcluded = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2136,6 +2779,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String direction,
     required String channel,
     this.accountHint = const Value.absent(),
+    this.paymentSourceId = const Value.absent(),
     this.merchantRaw = const Value.absent(),
     this.merchantId = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -2149,6 +2793,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.isDeleted = const Value.absent(),
     this.counterpartyVpa = const Value.absent(),
     this.duplicateOfTxnId = const Value.absent(),
+    this.ownedTransferId = const Value.absent(),
+    this.isAnalyticsExcluded = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -2169,6 +2815,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? direction,
     Expression<String>? channel,
     Expression<String>? accountHint,
+    Expression<String>? paymentSourceId,
     Expression<String>? merchantRaw,
     Expression<String>? merchantId,
     Expression<String>? categoryId,
@@ -2182,6 +2829,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<bool>? isDeleted,
     Expression<String>? counterpartyVpa,
     Expression<String>? duplicateOfTxnId,
+    Expression<String>? ownedTransferId,
+    Expression<bool>? isAnalyticsExcluded,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -2193,6 +2842,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (direction != null) 'direction': direction,
       if (channel != null) 'channel': channel,
       if (accountHint != null) 'account_hint': accountHint,
+      if (paymentSourceId != null) 'payment_source_id': paymentSourceId,
       if (merchantRaw != null) 'merchant_raw': merchantRaw,
       if (merchantId != null) 'merchant_id': merchantId,
       if (categoryId != null) 'category_id': categoryId,
@@ -2206,6 +2856,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (counterpartyVpa != null) 'counterparty_vpa': counterpartyVpa,
       if (duplicateOfTxnId != null) 'duplicate_of_txn_id': duplicateOfTxnId,
+      if (ownedTransferId != null) 'owned_transfer_id': ownedTransferId,
+      if (isAnalyticsExcluded != null)
+        'is_analytics_excluded': isAnalyticsExcluded,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -2219,6 +2872,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String>? direction,
       Value<String>? channel,
       Value<String?>? accountHint,
+      Value<String?>? paymentSourceId,
       Value<String?>? merchantRaw,
       Value<String?>? merchantId,
       Value<String?>? categoryId,
@@ -2232,6 +2886,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<bool>? isDeleted,
       Value<String?>? counterpartyVpa,
       Value<String?>? duplicateOfTxnId,
+      Value<String?>? ownedTransferId,
+      Value<bool>? isAnalyticsExcluded,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -2242,6 +2898,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       direction: direction ?? this.direction,
       channel: channel ?? this.channel,
       accountHint: accountHint ?? this.accountHint,
+      paymentSourceId: paymentSourceId ?? this.paymentSourceId,
       merchantRaw: merchantRaw ?? this.merchantRaw,
       merchantId: merchantId ?? this.merchantId,
       categoryId: categoryId ?? this.categoryId,
@@ -2255,6 +2912,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       isDeleted: isDeleted ?? this.isDeleted,
       counterpartyVpa: counterpartyVpa ?? this.counterpartyVpa,
       duplicateOfTxnId: duplicateOfTxnId ?? this.duplicateOfTxnId,
+      ownedTransferId: ownedTransferId ?? this.ownedTransferId,
+      isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -2281,6 +2940,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     }
     if (accountHint.present) {
       map['account_hint'] = Variable<String>(accountHint.value);
+    }
+    if (paymentSourceId.present) {
+      map['payment_source_id'] = Variable<String>(paymentSourceId.value);
     }
     if (merchantRaw.present) {
       map['merchant_raw'] = Variable<String>(merchantRaw.value);
@@ -2321,6 +2983,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (duplicateOfTxnId.present) {
       map['duplicate_of_txn_id'] = Variable<String>(duplicateOfTxnId.value);
     }
+    if (ownedTransferId.present) {
+      map['owned_transfer_id'] = Variable<String>(ownedTransferId.value);
+    }
+    if (isAnalyticsExcluded.present) {
+      map['is_analytics_excluded'] = Variable<bool>(isAnalyticsExcluded.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2342,6 +3010,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('direction: $direction, ')
           ..write('channel: $channel, ')
           ..write('accountHint: $accountHint, ')
+          ..write('paymentSourceId: $paymentSourceId, ')
           ..write('merchantRaw: $merchantRaw, ')
           ..write('merchantId: $merchantId, ')
           ..write('categoryId: $categoryId, ')
@@ -2355,6 +3024,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('isDeleted: $isDeleted, ')
           ..write('counterpartyVpa: $counterpartyVpa, ')
           ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
+          ..write('ownedTransferId: $ownedTransferId, ')
+          ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -4612,6 +5283,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabaseManager get managers => _$AppDatabaseManager(this);
   late final $BaselinesTable baselines = $BaselinesTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
+  late final $PaymentSourcesTable paymentSources = $PaymentSourcesTable(this);
   late final $MerchantsTable merchants = $MerchantsTable(this);
   late final $RawSmsTable rawSms = $RawSmsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
@@ -4625,6 +5297,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RulesTable rules = $RulesTable(this);
   late final Index idxInsightsPeriod = Index('idx_insights_period',
       'CREATE INDEX idx_insights_period ON insights (period)');
+  late final Index idxPaymentSourcesIdentity = Index(
+      'idx_payment_sources_identity',
+      'CREATE UNIQUE INDEX idx_payment_sources_identity ON payment_sources (kind, masked_identifier)');
   late final Index idxRecurringSeriesMerchantId = Index(
       'idx_recurring_series_merchant_id',
       'CREATE INDEX idx_recurring_series_merchant_id ON recurring_series (merchant_id)');
@@ -4643,6 +5318,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       'CREATE INDEX idx_transactions_ref_id ON transactions (ref_id)');
   late final Index idxTransactionsStatus = Index('idx_transactions_status',
       'CREATE INDEX idx_transactions_status ON transactions (status)');
+  late final Index idxTransactionsPaymentSourceId = Index(
+      'idx_transactions_payment_source_id',
+      'CREATE INDEX idx_transactions_payment_source_id ON transactions (payment_source_id)');
+  late final Index idxTransactionsOwnedTransferId = Index(
+      'idx_transactions_owned_transfer_id',
+      'CREATE INDEX idx_transactions_owned_transfer_id ON transactions (owned_transfer_id)');
   late final Index idxTransactionsDuplicateOfTxnId = Index(
       'idx_transactions_duplicate_of_txn_id',
       'CREATE INDEX idx_transactions_duplicate_of_txn_id ON transactions (duplicate_of_txn_id)');
@@ -4653,6 +5334,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
         baselines,
         categories,
+        paymentSources,
         merchants,
         rawSms,
         transactions,
@@ -4663,6 +5345,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         recurringSeries,
         rules,
         idxInsightsPeriod,
+        idxPaymentSourcesIdentity,
         idxRecurringSeriesMerchantId,
         idxRecurringSeriesNextExpectedDate,
         idxTransactionsTs,
@@ -4670,6 +5353,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         idxTransactionsCategoryId,
         idxTransactionsRefId,
         idxTransactionsStatus,
+        idxTransactionsPaymentSourceId,
+        idxTransactionsOwnedTransferId,
         idxTransactionsDuplicateOfTxnId
       ];
 }
@@ -5028,9 +5713,247 @@ class $$CategoriesTableOrderingComposer
   }
 }
 
+typedef $$PaymentSourcesTableInsertCompanionBuilder = PaymentSourcesCompanion
+    Function({
+  required String id,
+  required String kind,
+  required String maskedIdentifier,
+  Value<String?> nickname,
+  Value<String?> institution,
+  Value<bool> isActive,
+  Value<bool> includeInAnalytics,
+  Value<bool> isOwned,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$PaymentSourcesTableUpdateCompanionBuilder = PaymentSourcesCompanion
+    Function({
+  Value<String> id,
+  Value<String> kind,
+  Value<String> maskedIdentifier,
+  Value<String?> nickname,
+  Value<String?> institution,
+  Value<bool> isActive,
+  Value<bool> includeInAnalytics,
+  Value<bool> isOwned,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$PaymentSourcesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PaymentSourcesTable,
+    PaymentSource,
+    $$PaymentSourcesTableFilterComposer,
+    $$PaymentSourcesTableOrderingComposer,
+    $$PaymentSourcesTableProcessedTableManager,
+    $$PaymentSourcesTableInsertCompanionBuilder,
+    $$PaymentSourcesTableUpdateCompanionBuilder> {
+  $$PaymentSourcesTableTableManager(
+      _$AppDatabase db, $PaymentSourcesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$PaymentSourcesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$PaymentSourcesTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$PaymentSourcesTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> maskedIdentifier = const Value.absent(),
+            Value<String?> nickname = const Value.absent(),
+            Value<String?> institution = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
+            Value<bool> includeInAnalytics = const Value.absent(),
+            Value<bool> isOwned = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PaymentSourcesCompanion(
+            id: id,
+            kind: kind,
+            maskedIdentifier: maskedIdentifier,
+            nickname: nickname,
+            institution: institution,
+            isActive: isActive,
+            includeInAnalytics: includeInAnalytics,
+            isOwned: isOwned,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String kind,
+            required String maskedIdentifier,
+            Value<String?> nickname = const Value.absent(),
+            Value<String?> institution = const Value.absent(),
+            Value<bool> isActive = const Value.absent(),
+            Value<bool> includeInAnalytics = const Value.absent(),
+            Value<bool> isOwned = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PaymentSourcesCompanion.insert(
+            id: id,
+            kind: kind,
+            maskedIdentifier: maskedIdentifier,
+            nickname: nickname,
+            institution: institution,
+            isActive: isActive,
+            includeInAnalytics: includeInAnalytics,
+            isOwned: isOwned,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$PaymentSourcesTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $PaymentSourcesTable,
+    PaymentSource,
+    $$PaymentSourcesTableFilterComposer,
+    $$PaymentSourcesTableOrderingComposer,
+    $$PaymentSourcesTableProcessedTableManager,
+    $$PaymentSourcesTableInsertCompanionBuilder,
+    $$PaymentSourcesTableUpdateCompanionBuilder> {
+  $$PaymentSourcesTableProcessedTableManager(super.$state);
+}
+
+class $$PaymentSourcesTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $PaymentSourcesTable> {
+  $$PaymentSourcesTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get maskedIdentifier => $state.composableBuilder(
+      column: $state.table.maskedIdentifier,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get nickname => $state.composableBuilder(
+      column: $state.table.nickname,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get institution => $state.composableBuilder(
+      column: $state.table.institution,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get isActive => $state.composableBuilder(
+      column: $state.table.isActive,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get includeInAnalytics => $state.composableBuilder(
+      column: $state.table.includeInAnalytics,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get isOwned => $state.composableBuilder(
+      column: $state.table.isOwned,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ComposableFilter transactionsRefs(
+      ComposableFilter Function($$TransactionsTableFilterComposer f) f) {
+    final $$TransactionsTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.paymentSourceId,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableFilterComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return f(composer);
+  }
+}
+
+class $$PaymentSourcesTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $PaymentSourcesTable> {
+  $$PaymentSourcesTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get maskedIdentifier => $state.composableBuilder(
+      column: $state.table.maskedIdentifier,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get nickname => $state.composableBuilder(
+      column: $state.table.nickname,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get institution => $state.composableBuilder(
+      column: $state.table.institution,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get isActive => $state.composableBuilder(
+      column: $state.table.isActive,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get includeInAnalytics => $state.composableBuilder(
+      column: $state.table.includeInAnalytics,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get isOwned => $state.composableBuilder(
+      column: $state.table.isOwned,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$MerchantsTableInsertCompanionBuilder = MerchantsCompanion Function({
   required String id,
   required String canonicalName,
+  Value<String?> userLabel,
   Value<String?> categoryHint,
   Value<Uint8List?> embedding,
   Value<int> txnCount,
@@ -5041,6 +5964,7 @@ typedef $$MerchantsTableInsertCompanionBuilder = MerchantsCompanion Function({
 typedef $$MerchantsTableUpdateCompanionBuilder = MerchantsCompanion Function({
   Value<String> id,
   Value<String> canonicalName,
+  Value<String?> userLabel,
   Value<String?> categoryHint,
   Value<Uint8List?> embedding,
   Value<int> txnCount,
@@ -5071,6 +5995,7 @@ class $$MerchantsTableTableManager extends RootTableManager<
           getUpdateCompanionBuilder: ({
             Value<String> id = const Value.absent(),
             Value<String> canonicalName = const Value.absent(),
+            Value<String?> userLabel = const Value.absent(),
             Value<String?> categoryHint = const Value.absent(),
             Value<Uint8List?> embedding = const Value.absent(),
             Value<int> txnCount = const Value.absent(),
@@ -5081,6 +6006,7 @@ class $$MerchantsTableTableManager extends RootTableManager<
               MerchantsCompanion(
             id: id,
             canonicalName: canonicalName,
+            userLabel: userLabel,
             categoryHint: categoryHint,
             embedding: embedding,
             txnCount: txnCount,
@@ -5091,6 +6017,7 @@ class $$MerchantsTableTableManager extends RootTableManager<
           getInsertCompanionBuilder: ({
             required String id,
             required String canonicalName,
+            Value<String?> userLabel = const Value.absent(),
             Value<String?> categoryHint = const Value.absent(),
             Value<Uint8List?> embedding = const Value.absent(),
             Value<int> txnCount = const Value.absent(),
@@ -5101,6 +6028,7 @@ class $$MerchantsTableTableManager extends RootTableManager<
               MerchantsCompanion.insert(
             id: id,
             canonicalName: canonicalName,
+            userLabel: userLabel,
             categoryHint: categoryHint,
             embedding: embedding,
             txnCount: txnCount,
@@ -5133,6 +6061,11 @@ class $$MerchantsTableFilterComposer
 
   ColumnFilters<String> get canonicalName => $state.composableBuilder(
       column: $state.table.canonicalName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get userLabel => $state.composableBuilder(
+      column: $state.table.userLabel,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -5213,6 +6146,11 @@ class $$MerchantsTableOrderingComposer
 
   ColumnOrderings<String> get canonicalName => $state.composableBuilder(
       column: $state.table.canonicalName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get userLabel => $state.composableBuilder(
+      column: $state.table.userLabel,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -5419,6 +6357,7 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   required String direction,
   required String channel,
   Value<String?> accountHint,
+  Value<String?> paymentSourceId,
   Value<String?> merchantRaw,
   Value<String?> merchantId,
   Value<String?> categoryId,
@@ -5432,6 +6371,8 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   Value<bool> isDeleted,
   Value<String?> counterpartyVpa,
   Value<String?> duplicateOfTxnId,
+  Value<String?> ownedTransferId,
+  Value<bool> isAnalyticsExcluded,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -5444,6 +6385,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String> direction,
   Value<String> channel,
   Value<String?> accountHint,
+  Value<String?> paymentSourceId,
   Value<String?> merchantRaw,
   Value<String?> merchantId,
   Value<String?> categoryId,
@@ -5457,6 +6399,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<bool> isDeleted,
   Value<String?> counterpartyVpa,
   Value<String?> duplicateOfTxnId,
+  Value<String?> ownedTransferId,
+  Value<bool> isAnalyticsExcluded,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -5488,6 +6432,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> direction = const Value.absent(),
             Value<String> channel = const Value.absent(),
             Value<String?> accountHint = const Value.absent(),
+            Value<String?> paymentSourceId = const Value.absent(),
             Value<String?> merchantRaw = const Value.absent(),
             Value<String?> merchantId = const Value.absent(),
             Value<String?> categoryId = const Value.absent(),
@@ -5501,6 +6446,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<bool> isDeleted = const Value.absent(),
             Value<String?> counterpartyVpa = const Value.absent(),
             Value<String?> duplicateOfTxnId = const Value.absent(),
+            Value<String?> ownedTransferId = const Value.absent(),
+            Value<bool> isAnalyticsExcluded = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -5512,6 +6459,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             direction: direction,
             channel: channel,
             accountHint: accountHint,
+            paymentSourceId: paymentSourceId,
             merchantRaw: merchantRaw,
             merchantId: merchantId,
             categoryId: categoryId,
@@ -5525,6 +6473,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             isDeleted: isDeleted,
             counterpartyVpa: counterpartyVpa,
             duplicateOfTxnId: duplicateOfTxnId,
+            ownedTransferId: ownedTransferId,
+            isAnalyticsExcluded: isAnalyticsExcluded,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -5536,6 +6486,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             required String direction,
             required String channel,
             Value<String?> accountHint = const Value.absent(),
+            Value<String?> paymentSourceId = const Value.absent(),
             Value<String?> merchantRaw = const Value.absent(),
             Value<String?> merchantId = const Value.absent(),
             Value<String?> categoryId = const Value.absent(),
@@ -5549,6 +6500,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<bool> isDeleted = const Value.absent(),
             Value<String?> counterpartyVpa = const Value.absent(),
             Value<String?> duplicateOfTxnId = const Value.absent(),
+            Value<String?> ownedTransferId = const Value.absent(),
+            Value<bool> isAnalyticsExcluded = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -5560,6 +6513,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             direction: direction,
             channel: channel,
             accountHint: accountHint,
+            paymentSourceId: paymentSourceId,
             merchantRaw: merchantRaw,
             merchantId: merchantId,
             categoryId: categoryId,
@@ -5573,6 +6527,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             isDeleted: isDeleted,
             counterpartyVpa: counterpartyVpa,
             duplicateOfTxnId: duplicateOfTxnId,
+            ownedTransferId: ownedTransferId,
+            isAnalyticsExcluded: isAnalyticsExcluded,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -5670,6 +6626,16 @@ class $$TransactionsTableFilterComposer
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
+  ColumnFilters<String> get ownedTransferId => $state.composableBuilder(
+      column: $state.table.ownedTransferId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get isAnalyticsExcluded => $state.composableBuilder(
+      column: $state.table.isAnalyticsExcluded,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
   ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
       column: $state.table.createdAt,
       builder: (column, joinBuilders) =>
@@ -5679,6 +6645,18 @@ class $$TransactionsTableFilterComposer
       column: $state.table.updatedAt,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
+
+  $$PaymentSourcesTableFilterComposer get paymentSourceId {
+    final $$PaymentSourcesTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.paymentSourceId,
+        referencedTable: $state.db.paymentSources,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$PaymentSourcesTableFilterComposer(ComposerState($state.db,
+                $state.db.paymentSources, joinBuilder, parentComposers)));
+    return composer;
+  }
 
   $$MerchantsTableFilterComposer get merchantId {
     final $$MerchantsTableFilterComposer composer = $state.composerBuilder(
@@ -5833,6 +6811,16 @@ class $$TransactionsTableOrderingComposer
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
+  ColumnOrderings<String> get ownedTransferId => $state.composableBuilder(
+      column: $state.table.ownedTransferId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get isAnalyticsExcluded => $state.composableBuilder(
+      column: $state.table.isAnalyticsExcluded,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
   ColumnOrderings<DateTime> get createdAt => $state.composableBuilder(
       column: $state.table.createdAt,
       builder: (column, joinBuilders) =>
@@ -5842,6 +6830,19 @@ class $$TransactionsTableOrderingComposer
       column: $state.table.updatedAt,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  $$PaymentSourcesTableOrderingComposer get paymentSourceId {
+    final $$PaymentSourcesTableOrderingComposer composer =
+        $state.composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.paymentSourceId,
+            referencedTable: $state.db.paymentSources,
+            getReferencedColumn: (t) => t.id,
+            builder: (joinBuilder, parentComposers) =>
+                $$PaymentSourcesTableOrderingComposer(ComposerState($state.db,
+                    $state.db.paymentSources, joinBuilder, parentComposers)));
+    return composer;
+  }
 
   $$MerchantsTableOrderingComposer get merchantId {
     final $$MerchantsTableOrderingComposer composer = $state.composerBuilder(
@@ -6980,6 +7981,8 @@ class _$AppDatabaseManager {
       $$BaselinesTableTableManager(_db, _db.baselines);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
+  $$PaymentSourcesTableTableManager get paymentSources =>
+      $$PaymentSourcesTableTableManager(_db, _db.paymentSources);
   $$MerchantsTableTableManager get merchants =>
       $$MerchantsTableTableManager(_db, _db.merchants);
   $$RawSmsTableTableManager get rawSms =>

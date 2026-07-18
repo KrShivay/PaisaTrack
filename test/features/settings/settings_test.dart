@@ -91,6 +91,18 @@ class _FakeBackfillMarker implements BackfillMarker {
   Future<void> reset() async => resetCount++;
 }
 
+class _ReadySettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async => const AppSettings();
+}
+
+class _FailingSettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async {
+    throw StateError('private settings failure detail');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -110,6 +122,76 @@ void main() {
 
     expect(settings.themeChoice, AppThemeChoice.system);
     expect(settings.askDailyBudget, 4);
+  });
+
+  testWidgets('backup export requires a confirmed strong passphrase',
+      (tester) async {
+    tester.view.physicalSize = const Size(900, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appSettingsControllerProvider.overrideWith(
+            _ReadySettingsController.new,
+          ),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Export encrypted backup'),
+      300,
+    );
+    await tester.tap(find.text('Export encrypted backup'));
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextFormField);
+    expect(fields, findsNWidgets(2));
+    await tester.enterText(fields.at(0), 'short');
+    await tester.tap(find.widgetWithText(FilledButton, 'Export'));
+    await tester.pump();
+    expect(
+      find.text('Use at least $minimumBackupPassphraseLength characters'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(fields.at(0), 'correct horse battery staple');
+    await tester.enterText(fields.at(1), 'different passphrase');
+    await tester.tap(find.widgetWithText(FilledButton, 'Export'));
+    await tester.pump();
+    expect(find.text('Passphrases do not match'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Export encrypted backup'), findsOneWidget);
+  });
+
+  testWidgets('settings load errors never expose raw exception text',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appSettingsControllerProvider.overrideWith(
+            _FailingSettingsController.new,
+          ),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not load settings.'), findsOneWidget);
+    expect(
+      find.textContaining('private settings failure detail'),
+      findsNothing,
+    );
+    expect(find.text('Retry'), findsOneWidget);
   });
 
   testWidgets('settings screen changes theme and ask budget', (tester) async {
@@ -191,7 +273,14 @@ void main() {
     expect(find.byTooltip('Delete AI model'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Developer options'), 300);
     expect(find.text('Developer options'), findsOneWidget);
-    await tester.tap(find.text('Developer options'));
+    await tester.drag(find.byType(ListView), const Offset(0, -250));
+    await tester.pumpAndSettle();
+    final developerOptionsCenter = tester.getCenter(
+      find.text('Developer options'),
+    );
+    await tester.tapAt(
+      Offset(developerOptionsCenter.dx, developerOptionsCenter.dy - 24),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Local LLM parsing'), findsOneWidget);
     expect(find.text('Model metrics'), findsOneWidget);
@@ -280,5 +369,56 @@ void main() {
         // Some entries are intentionally closed by the reset service.
       }
     }
+  });
+
+  test('delete everything recovers when the current database cannot open',
+      () async {
+    final databaseDirectory =
+        await Directory.systemTemp.createTemp('reset_error_db_test_');
+    final settingsDirectory =
+        await Directory.systemTemp.createTemp('reset_error_settings_test_');
+    addTearDown(() => databaseDirectory.delete(recursive: true));
+    addTearDown(() => settingsDirectory.delete(recursive: true));
+    await File(p.join(databaseDirectory.path, appDatabaseFileName))
+        .writeAsString('unreadable');
+
+    final passphraseProvider = _FakePassphraseProvider();
+    final backfillMarker = _FakeBackfillMarker();
+    var openAttempts = 0;
+    AppDatabase? recoveredDatabase;
+    final container = ProviderContainer(
+      overrides: [
+        databaseDirectoryProvider
+            .overrideWith((ref) async => databaseDirectory),
+        settingsDirectoryProvider
+            .overrideWith((ref) async => settingsDirectory),
+        databasePassphraseProvider.overrideWithValue(passphraseProvider),
+        backfillMarkerProvider.overrideWithValue(backfillMarker),
+        appDatabaseProvider.overrideWith((ref) async {
+          openAttempts++;
+          if (openAttempts == 1) {
+            throw StateError('database open failed');
+          }
+          return recoveredDatabase = AppDatabase(NativeDatabase.memory());
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(() async {
+      try {
+        await recoveredDatabase?.close();
+      } on StateError {
+        // Provider disposal may already have closed the recovered database.
+      }
+    });
+
+    final result =
+        await container.read(appDataResetServiceProvider).deleteEverything();
+
+    expect(openAttempts, 2);
+    expect(result.deletedFiles, 1);
+    expect(result.categoryCount, greaterThan(0));
+    expect(passphraseProvider.cleared, isTrue);
+    expect(backfillMarker.resetCount, 1);
   });
 }

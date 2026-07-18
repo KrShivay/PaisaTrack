@@ -7,6 +7,13 @@ final smsPermissionGateProvider = Provider<SmsPermissionGate>((ref) {
   return const PlatformSmsPermissionGate();
 });
 
+/// Set when the user chooses to continue into the app without granting SMS
+/// access. It lets onboarding hand off to the main shell (where manual entry,
+/// Settings, and a persistent permission banner live) instead of trapping a
+/// user who declined. Granting permission later makes this irrelevant, and the
+/// value resets on a cold start so first-run onboarding still shows.
+final continueWithoutSmsProvider = StateProvider<bool>((ref) => false);
+
 /// Exposes the current SMS permission status and a way to request it.
 ///
 /// `build` reads the status without prompting so onboarding can render the

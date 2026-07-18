@@ -315,20 +315,28 @@ void main() {
     expect(txn.status, 'auto');
   });
 
-  test('decision policy asks once for unseen p2p counterparty', () async {
+  test('decision policy asks once then auto-classifies a seen counterparty',
+      () async {
+    await database.into(database.rules).insert(
+          RulesCompanion.insert(
+            id: 'rule_friend',
+            matchType: 'merchant',
+            matchValue: 'amzn',
+            setCategoryId: const Value('shopping'),
+            createdAt: DateTime.utc(2026, 7, 5),
+          ),
+        );
     final ingestor = _ingestorFor(
       database,
       null,
       recordsById: {
         'sms_first_friend': _sampleRecord(
           amount: 49,
-          merchantRaw: null,
           counterpartyVpa: 'friend@upi',
           ts: DateTime.utc(2026, 7, 5, 10, 30),
         ),
         'sms_second_friend': _sampleRecord(
           amount: 49,
-          merchantRaw: null,
           counterpartyVpa: 'friend@upi',
           ts: DateTime.utc(2026, 7, 5, 10, 45),
         ),
@@ -344,7 +352,7 @@ void main() {
         .get();
     expect(transactions.map((row) => row.status), [
       'asked',
-      'needs_review',
+      'auto',
     ]);
   });
 

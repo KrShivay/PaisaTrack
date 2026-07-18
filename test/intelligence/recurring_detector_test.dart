@@ -27,7 +27,9 @@ void main() {
 
   Future<void> txn({
     required String id,
-    required String merchantId,
+    String? merchantId,
+    String? merchantRaw,
+    String? counterpartyVpa,
     required DateTime date,
     required double amount,
     String direction = 'debit',
@@ -40,6 +42,8 @@ void main() {
             direction: direction,
             channel: 'card',
             merchantId: Value(merchantId),
+            merchantRaw: Value(merchantRaw),
+            counterpartyVpa: Value(counterpartyVpa),
             parseSource: 'template',
             confidenceJson: '{}',
             status: 'auto',
@@ -160,5 +164,150 @@ void main() {
 
     expect(detections, isEmpty);
     expect(await database.select(database.recurringSeries).get(), isEmpty);
+  });
+
+  test('detects variable monthly electricity bills by cadence', () async {
+    await merchant('utility', 'City Electricity Bill');
+    for (final entry in [
+      ('b1', DateTime.utc(2026, 1, 5), 940.0),
+      ('b2', DateTime.utc(2026, 2, 4), 1320.0),
+      ('b3', DateTime.utc(2026, 3, 6), 780.0),
+      ('b4', DateTime.utc(2026, 4, 5), 1510.0),
+    ]) {
+      await txn(
+        id: entry.$1,
+        merchantId: 'utility',
+        date: entry.$2,
+        amount: entry.$3,
+      );
+    }
+
+    await RecurringDetector(database).run(today: DateTime.utc(2026, 4, 10));
+
+    final row = await database.select(database.recurringSeries).getSingle();
+    expect(row.kind, 'bill');
+    expect(row.period, 'monthly');
+    expect(row.occurrences, 4);
+  });
+
+  test('classifies mutual fund and NPS series as investments', () async {
+    for (final entry in [
+      ('mutual', 'Mutual Fund SIP'),
+      ('nps', 'NPS Pension Investment'),
+    ]) {
+      await merchant(entry.$1, entry.$2);
+      for (var month = 1; month <= 3; month++) {
+        await txn(
+          id: '${entry.$1}$month',
+          merchantId: entry.$1,
+          date: DateTime.utc(2026, month, 10),
+          amount: entry.$1 == 'mutual' ? 5000 : 2000,
+        );
+      }
+    }
+
+    await RecurringDetector(database).run(today: DateTime.utc(2026, 3, 15));
+
+    final rows = await database.select(database.recurringSeries).get();
+    expect(rows, hasLength(2));
+    expect(rows.map((row) => row.kind), everyElement('investment'));
+  });
+
+  test('foreground scanner runs once and reruns after transaction changes',
+      () async {
+    await merchant('mobile', 'Mobile Recharge');
+    for (var month = 1; month <= 3; month++) {
+      await txn(
+        id: 'r$month',
+        merchantId: 'mobile',
+        date: DateTime.utc(2026, month, 1),
+        amount: 299,
+      );
+    }
+    final scanner = ForegroundRecurringScanner(database);
+
+    expect(
+      await scanner.runIfStale(now: DateTime.utc(2026, 3, 10)),
+      isTrue,
+    );
+    expect(
+      await scanner.runIfStale(now: DateTime.utc(2026, 3, 11)),
+      isFalse,
+    );
+
+    await txn(
+      id: 'r4',
+      merchantId: 'mobile',
+      date: DateTime.utc(2026, 4, 1),
+      amount: 349,
+    );
+    expect(
+      await scanner.runIfStale(now: DateTime.utc(2026, 4, 2)),
+      isTrue,
+    );
+    expect(
+      (await database.select(database.recurringSeries).getSingle()).kind,
+      'recharge',
+    );
+  });
+
+  test('detects imported history without resolved merchant ids', () async {
+    for (var month = 1; month <= 4; month++) {
+      await txn(
+        id: 'unresolved_$month',
+        merchantRaw: 'Mobile Recharge',
+        date: DateTime.utc(2026, month, 2),
+        amount: month.isEven ? 349 : 299,
+      );
+    }
+
+    await RecurringDetector(database).run(today: DateTime.utc(2026, 4, 10));
+
+    final row = await database.select(database.recurringSeries).getSingle();
+    expect(row.kind, 'recharge');
+    expect(row.occurrences, 4);
+    expect(row.merchantId, startsWith('merchant_evidence_'));
+    expect(
+      (await (database.select(database.merchants)
+                ..where((merchant) => merchant.id.equals(row.merchantId)))
+              .getSingle())
+          .id,
+      row.merchantId,
+    );
+  });
+
+  test('large single-merchant histories are clustered in bounded time',
+      () async {
+    await merchant('large-history', 'Large History');
+    var amount = 1.0;
+    await database.batch((batch) {
+      for (var index = 0; index < 6000; index++) {
+        final date = DateTime.utc(2010).add(Duration(days: index));
+        batch.insert(
+          database.transactions,
+          TransactionsCompanion.insert(
+            id: 'large_$index',
+            ts: date.millisecondsSinceEpoch,
+            amount: amount,
+            direction: 'debit',
+            channel: 'card',
+            merchantId: const Value('large-history'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'auto',
+            createdAt: date,
+            updatedAt: date,
+          ),
+        );
+        amount *= 1.1;
+      }
+    });
+
+    final stopwatch = Stopwatch()..start();
+    final detections = await RecurringDetector(database).run();
+    stopwatch.stop();
+
+    expect(detections, isEmpty);
+    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
   });
 }

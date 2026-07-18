@@ -3,10 +3,15 @@
 PaisaTrack is local-first:
 
 - Raw SMS and transactions never leave the device by default.
-- Historical inbox backfill (T-023) reads `Telephony.Sms.Inbox` on-device only; the
-  filtered messages flow straight into the encrypted local store and message bodies
-  are never logged, even on error paths.
-- Raw SMS retention is capped by the purge policy in PLAN.md.
+- Historical inbox import keyset-pages the full
+  `Telephony.Sms.Inbox` on-device only. Filtered messages flow straight into the
+  encrypted local store; page checkpoints contain only timestamp/id cursors,
+  and message bodies are never logged, even on error paths. The explicit
+  Settings re-import rescans locally and preserves user edits/deletions.
+- After the versioned initial import, open/resume catch-up reads only messages
+  newer than the first known SMS. Live receiver and catch-up paths share the
+  same on-device parser and encrypted store.
+- Raw SMS retention is capped by `AppConstants.rawSmsRetentionDays`.
 - There is no cloud inference path (ADR 0002). No network call ever carries user
   data; the only permitted network use is the optional one-time download of
   open-weight model files. All intelligence — parsing, classification,
@@ -27,25 +32,32 @@ PaisaTrack is local-first:
 - Developer tooling: the dev screen's transactions-JSON export is compiled out
   of release builds (`kDebugMode`). It warns that normalized financial data is
   plaintext before Android's system document picker lets the developer choose
-  a destination. Bank statements and reconciliation reports used for Phase 1
-  verification live in the gitignored `BankStatement/` folder and are never
-  committed; the same applies to copied on-device transaction exports.
+  a destination. Real statements, reconciliation reports, and copied on-device
+  exports are gitignored and must never be committed.
 - Settings `Delete everything` closes the local database, deletes SQLCipher
   database files, clears Android Keystore-wrapped passphrase material, resets
-  app-private settings, and recreates the database with bundled categories only.
+  app-private settings and SMS-import checkpoints, and recreates the database
+  with bundled categories only.
 - User-facing backup export/import writes `paisatrack_export.ptrack`, a
   passphrase-encrypted JSON archive using Argon2id and AES-GCM. Plaintext domain
   JSON is kept in memory only and is never written as a temp file. Android's
   Storage Access Framework writes/reads only the document the user selects and
   requires no broad storage permission.
-- The Android manifest gained the INTERNET permission for exactly one purpose:
-  downloading pinned, integrity-checked open-weight model files (ADR 0007 now;
-  ADR 0008's Phase 4 LLM later). The download request carries no user data and
-  inference code paths never open a network connection; the permission's scope
-  is documented inline in the manifest and enforced by review.
+- User labels and payment-source nicknames are local metadata. Only masked
+  source identifiers are stored; excluding a source or owned transfer from
+  analytics does not delete its underlying transaction evidence.
+- The Android manifest includes INTERNET permission only for downloading the
+  pinned, integrity-checked open-weight models described by ADR 0007/0008. The
+  download request carries no user data and inference code paths never open a
+  network connection; the permission's scope is documented inline.
+
+Future statement import must parse locally, avoid retaining the source file,
+store only required normalized/source-fingerprint data, and require explicit
+user export for any reconciliation report.
+
 ## On-device language model
 
-The optional Phase 4 language model is downloaded only after you tap Download
+The optional language model is downloaded only after you tap Download
 in Settings, stored in app-private storage, and can be deleted there. Inference
 is fully offline: prompts and responses never leave the phone. Extraction
 prompts may contain the raw SMS text needed to parse a transaction, but that

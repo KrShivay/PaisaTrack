@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import '../../core/constants.dart';
 import '../../core/platform/system_document_gateway.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
+import '../../core/widgets/app_state_views.dart';
 import '../../intelligence/llm/llm_runtime.dart';
 import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
@@ -16,6 +19,10 @@ import '../dev/unparsed_sms_screen.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
 import 'category_manager_screen.dart';
+import 'payee_labels_screen.dart';
+import 'payment_sources_screen.dart';
+
+const minimumBackupPassphraseLength = 12;
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -102,15 +109,35 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
-            const _Section(
+            _Section(
               title: 'Accounts and transactions',
               children: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.account_balance_outlined),
-                  title: Text('Accounts'),
-                  subtitle: Text(
-                    'Account labels are available in transaction filters',
+                  leading: const Icon(Icons.account_balance_outlined),
+                  title: const Text('Accounts and payment sources'),
+                  subtitle: const Text(
+                    'Nicknames, analytics inclusion and owned transfers',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PaymentSourcesScreen(),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.badge_outlined),
+                  title: const Text('Payee labels'),
+                  subtitle: const Text(
+                    'Name merchants, UPI IDs and counterparties',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PayeeLabelsScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -188,9 +215,18 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ],
         ),
-        error: (error, stackTrace) => Center(
-          child: Text('Settings unavailable: $error'),
-        ),
+        error: (error, stackTrace) {
+          developer.log(
+            'Failed to load settings',
+            name: 'paisatrack.settings',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          return ErrorStateView(
+            message: 'Could not load settings.',
+            onRetry: () => ref.invalidate(appSettingsControllerProvider),
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
       ),
     );
@@ -255,6 +291,8 @@ class SettingsScreen extends ConsumerWidget {
       context,
       title: 'Export encrypted backup',
       action: 'Export',
+      minimumLength: minimumBackupPassphraseLength,
+      confirmPassphrase: true,
     );
     if (passphrase == null || !context.mounted) return;
 
@@ -322,32 +360,113 @@ class SettingsScreen extends ConsumerWidget {
     BuildContext context, {
     required String title,
     required String action,
+    int? minimumLength,
+    bool confirmPassphrase = false,
   }) {
-    final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Passphrase'),
-          onSubmitted: (_) {
-            Navigator.of(context).pop(controller.text);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: Text(action),
-          ),
-        ],
+      builder: (_) => _PassphraseDialog(
+        title: title,
+        action: action,
+        minimumLength: minimumLength,
+        confirmPassphrase: confirmPassphrase,
       ),
+    );
+  }
+}
+
+class _PassphraseDialog extends StatefulWidget {
+  const _PassphraseDialog({
+    required this.title,
+    required this.action,
+    required this.minimumLength,
+    required this.confirmPassphrase,
+  });
+
+  final String title;
+  final String action;
+  final int? minimumLength;
+  final bool confirmPassphrase;
+
+  @override
+  State<_PassphraseDialog> createState() => _PassphraseDialogState();
+}
+
+class _PassphraseDialogState extends State<_PassphraseDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _controller = TextEditingController();
+  final _confirmationController = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.clear();
+    _confirmationController.clear();
+    _controller.dispose();
+    _confirmationController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() ?? false) {
+      Navigator.of(context).pop(_controller.text);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _controller,
+              autofocus: true,
+              obscureText: true,
+              textInputAction: widget.confirmPassphrase
+                  ? TextInputAction.next
+                  : TextInputAction.done,
+              decoration: const InputDecoration(labelText: 'Passphrase'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Enter a passphrase';
+                }
+                if (widget.minimumLength != null &&
+                    value.length < widget.minimumLength!) {
+                  return 'Use at least ${widget.minimumLength} characters';
+                }
+                return null;
+              },
+              onFieldSubmitted:
+                  widget.confirmPassphrase ? null : (_) => _submit(),
+            ),
+            if (widget.confirmPassphrase) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _confirmationController,
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm passphrase',
+                ),
+                validator: (value) => value == _controller.text
+                    ? null
+                    : 'Passphrases do not match',
+                onFieldSubmitted: (_) => _submit(),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: Text(widget.action)),
+      ],
     );
   }
 }

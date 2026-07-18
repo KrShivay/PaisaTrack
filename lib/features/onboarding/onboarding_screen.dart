@@ -96,10 +96,17 @@ class _PermissionBody extends ConsumerWidget {
       AsyncData(:final value) when value.isGranted => const _GrantedNotice(),
       AsyncData(:final value)
           when value == SmsPermissionStatus.permanentlyDenied =>
-        const _DegradedNotice(
-          message: 'SMS access is blocked. Enable it in system settings to '
-              'turn on automatic capture. You can still add transactions '
-              'manually.',
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _DegradedNotice(
+              message: 'SMS access is blocked. Enable it in system settings to '
+                  'turn on automatic capture. You can still add transactions '
+                  'manually.',
+            ),
+            SizedBox(height: AppSpacing.lg),
+            _ContinueWithoutSmsButton(),
+          ],
         ),
       AsyncData(:final value) when value == SmsPermissionStatus.denied =>
         Column(
@@ -112,6 +119,8 @@ class _PermissionBody extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             _GrantButton(onPressed: isBusy ? null : controller.request),
+            const SizedBox(height: AppSpacing.sm),
+            const _ContinueWithoutSmsButton(),
           ],
         ),
       AsyncError() => Column(
@@ -122,10 +131,27 @@ class _PermissionBody extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             _GrantButton(onPressed: isBusy ? null : controller.request),
+            const SizedBox(height: AppSpacing.sm),
+            const _ContinueWithoutSmsButton(),
           ],
         ),
       _ => _GrantButton(onPressed: isBusy ? null : controller.request),
     };
+  }
+}
+
+/// Lets a user who declined SMS access enter the app anyway. The main shell
+/// keeps a persistent banner so they can grant access later from Settings.
+class _ContinueWithoutSmsButton extends ConsumerWidget {
+  const _ContinueWithoutSmsButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TextButton(
+      onPressed: () =>
+          ref.read(continueWithoutSmsProvider.notifier).state = true,
+      child: const Text('Continue without SMS access'),
+    );
   }
 }
 

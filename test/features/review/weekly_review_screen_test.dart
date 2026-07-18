@@ -183,6 +183,52 @@ void main() {
     expect(find.byType(Checkbox), findsNothing);
   });
 
+  testWidgets('list mode loads the next bounded review page', (tester) async {
+    final items = [
+      for (var index = 0; index < 4; index++)
+        reviewItem(
+          id: 'paged_$index',
+          displayName: 'Payee $index',
+          counterpartyKey: 'raw:Payee $index',
+        ),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueLimitProvider.overrideWith((ref) => 2),
+          reviewQueueProvider.overrideWith(
+            (ref) => Stream.value(
+              items.take(ref.watch(reviewQueueLimitProvider)).toList(),
+            ),
+          ),
+          reviewQueueSummaryProvider.overrideWith(
+            (ref) => Stream.value(
+              const ReviewQueueSummary(
+                count: 4,
+                amount: 400,
+                merchantCount: 4,
+                highestImpactLabel: 'Payee 0',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: WeeklyReviewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('All'));
+    await tester.pump();
+    await tester.scrollUntilVisible(find.text('Load 2 more'), 200);
+
+    await tester.tap(find.text('Load 2 more'));
+    await tester.pump();
+    await tester.pump();
+    await tester.scrollUntilVisible(find.text('Payee 3'), 200);
+
+    expect(find.text('Payee 3'), findsOneWidget);
+    expect(find.textContaining('Load '), findsNothing);
+  });
+
   testWidgets(
       'low-trust review rows explain that transaction details need confirmation',
       (tester) async {
