@@ -41,10 +41,14 @@ object SmsFilter {
 
     val liveFilterDropCount = AtomicLong(0)
     val batchFilterDropCount = AtomicLong(0)
+    val liveUnknownSenderDropCount = AtomicLong(0)
+    val batchUnknownSenderDropCount = AtomicLong(0)
 
     fun resetCounters() {
         liveFilterDropCount.set(0)
         batchFilterDropCount.set(0)
+        liveUnknownSenderDropCount.set(0)
+        batchUnknownSenderDropCount.set(0)
     }
 
     /**
@@ -53,13 +57,22 @@ object SmsFilter {
      */
     fun isAllowed(sender: String, body: String, isBatch: Boolean = false): Boolean {
         val normalizedSender = sender.trim().uppercase()
-        if (normalizedSender.isEmpty()) return false
+        if (normalizedSender.isEmpty()) {
+            recordUnknownSenderDrop(isBatch)
+            return false
+        }
 
         // Personal numbers (all digits, optionally +country code) are not banks.
-        if (normalizedSender.removePrefix("+").all { it.isDigit() }) return false
+        if (normalizedSender.removePrefix("+").all { it.isDigit() }) {
+            recordUnknownSenderDrop(isBatch)
+            return false
+        }
 
-        val token = headerToken(normalizedSender) ?: return false
-        if (token !in bankTokens) return false
+        val token = headerToken(normalizedSender)
+        if (token == null || token !in bankTokens) {
+            recordUnknownSenderDrop(isBatch)
+            return false
+        }
 
         val lowerBody = body.lowercase()
         val hasSettledVerb = settledVerbs.any { lowerBody.contains(it) }
@@ -90,6 +103,14 @@ object SmsFilter {
             batchFilterDropCount.incrementAndGet()
         } else {
             liveFilterDropCount.incrementAndGet()
+        }
+    }
+
+    private fun recordUnknownSenderDrop(isBatch: Boolean) {
+        if (isBatch) {
+            batchUnknownSenderDropCount.incrementAndGet()
+        } else {
+            liveUnknownSenderDropCount.incrementAndGet()
         }
     }
 

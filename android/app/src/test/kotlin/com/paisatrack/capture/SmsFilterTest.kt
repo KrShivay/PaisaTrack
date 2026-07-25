@@ -141,12 +141,20 @@ class SmsFilterTest {
     fun tracksLiveAndBatchDropCountersSeparately() {
         assertEquals(0L, SmsFilter.liveFilterDropCount.get())
         assertEquals(0L, SmsFilter.batchFilterDropCount.get())
+        assertEquals(0L, SmsFilter.liveUnknownSenderDropCount.get())
+        assertEquals(0L, SmsFilter.batchUnknownSenderDropCount.get())
 
         SmsFilter.isAllowed("VK-HDFCBK", "Your OTP for login is 123456", isBatch = false)
         SmsFilter.isAllowed("VK-HDFCBK", "Your OTP for login is 654321", isBatch = true)
 
         assertEquals(1L, SmsFilter.liveFilterDropCount.get())
         assertEquals(1L, SmsFilter.batchFilterDropCount.get())
+
+        SmsFilter.isAllowed("AD-SHOPXY", "Rs 999 debited for your order.", isBatch = false)
+        SmsFilter.isAllowed("+919876543210", "Hey did you get the Rs 500?", isBatch = true)
+
+        assertEquals(1L, SmsFilter.liveUnknownSenderDropCount.get())
+        assertEquals(1L, SmsFilter.batchUnknownSenderDropCount.get())
     }
 }
 
