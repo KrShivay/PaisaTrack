@@ -361,5 +361,47 @@ void main() {
       expect(rows.singleWhere((row) => row.id == 'three').categoryId, 'other');
       expect(await database.select(database.rules).get(), isEmpty);
     });
+
+    test(
+        'existing and future scope matches exact or prefix merchant names, refusing over-matches',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'txn_exact',
+        merchantRaw: 'Amazon',
+      );
+      await _insertTxn(
+        database,
+        id: 'txn_prefix',
+        merchantRaw: 'Amazon Fresh',
+      );
+      await _insertTxn(
+        database,
+        id: 'txn_overmatch',
+        merchantRaw: 'AmazonPayLater',
+      );
+
+      final result = await TransactionRepository(database).correctCategory(
+        txnId: 'txn_exact',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+
+      expect(result.affectedTransactionCount, 2);
+      final rows = await database.select(database.transactions).get();
+      expect(
+        rows.singleWhere((row) => row.id == 'txn_exact').categoryId,
+        'food_dining',
+      );
+      expect(
+        rows.singleWhere((row) => row.id == 'txn_prefix').categoryId,
+        'food_dining',
+      );
+      expect(
+        rows.singleWhere((row) => row.id == 'txn_overmatch').categoryId,
+        'other',
+      );
+    });
   });
 }

@@ -691,15 +691,27 @@ WHERE t.status = 'needs_review'
           .get();
     }
     if (scope == CorrectionScope.existingAndFuture && ruleInput != null) {
-      final visible = await (_database.select(_database.transactions)
-            ..where(
-              (row) =>
-                  row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
-            ))
-          .get();
-      return visible
-          .where((transaction) => _matchesRuleInput(transaction, ruleInput))
-          .toList(growable: false);
+      final expected = ruleInput.matchValue.trim().toLowerCase();
+      final query = _database.select(_database.transactions)
+        ..where(
+          (row) =>
+              row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
+        );
+
+      if (ruleInput.matchType == 'counterparty') {
+        query.where((row) => row.counterpartyVpa.lower().equals(expected));
+      } else {
+        query.where(
+          (row) =>
+              row.merchantRaw.lower().equals(expected) |
+              row.merchantRaw.lower().like('$expected %') |
+              row.merchantRaw.lower().like('$expected*%') |
+              row.merchantRaw.lower().like('$expected-%') |
+              row.merchantRaw.lower().like('$expected/%') |
+              row.merchantRaw.lower().like('$expected.%'),
+        );
+      }
+      return query.get();
     }
     return [current];
   }
@@ -905,15 +917,6 @@ _RuleInput? _ruleInputFor(Transaction txn) {
     return _RuleInput(matchType: 'merchant', matchValue: merchant);
   }
   return null;
-}
-
-bool _matchesRuleInput(Transaction transaction, _RuleInput input) {
-  final expected = input.matchValue.trim().toLowerCase();
-  if (input.matchType == 'counterparty') {
-    return transaction.counterpartyVpa?.trim().toLowerCase() == expected;
-  }
-  return transaction.merchantRaw?.trim().toLowerCase().contains(expected) ==
-      true;
 }
 
 TransactionDirection _directionFromWireName(String wireName) {
