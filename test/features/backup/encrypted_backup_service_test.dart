@@ -187,7 +187,8 @@ void main() {
     );
   });
 
-  test('export and import enforce minimum passphrase length floor of 12 chars',
+  test(
+      'export enforces minimum passphrase length floor of 12 chars while import allows short legacy passphrases',
       () async {
     await expectLater(
       service().exportBytes(passphrase: 'short'),
@@ -199,16 +200,17 @@ void main() {
         ),
       ),
     );
+
     await expectLater(
       service().importBytes(
         bytes: Uint8List(0),
-        passphrase: 'short',
+        passphrase: '',
       ),
       throwsA(
         isA<EncryptedBackupException>().having(
           (e) => e.message,
           'message',
-          contains('at least 12 characters'),
+          contains('Passphrase is required'),
         ),
       ),
     );

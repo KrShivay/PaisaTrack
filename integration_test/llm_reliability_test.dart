@@ -75,7 +75,7 @@ Set status to ok.
       final tempDir = await getTemporaryDirectory();
       final dbFile = File('${tempDir.path}/llm_reliability_test.db');
       if (dbFile.existsSync()) dbFile.deleteSync();
-      final passphrase = await const AndroidKeystoreDatabasePassphraseProvider()
+      final passphrase = await AndroidKeystoreDatabasePassphraseProvider()
           .getPassphrase();
       final database = AppDatabase(
         openEncryptedDatabase(file: dbFile, passphrase: passphrase),
@@ -115,7 +115,7 @@ Set status to ok.
       final tempDir = await getTemporaryDirectory();
       final dbFile = File('${tempDir.path}/llm_accuracy_test.db');
       if (dbFile.existsSync()) dbFile.deleteSync();
-      final passphrase = await const AndroidKeystoreDatabasePassphraseProvider()
+      final passphrase = await AndroidKeystoreDatabasePassphraseProvider()
           .getPassphrase();
       final database = AppDatabase(
         openEncryptedDatabase(file: dbFile, passphrase: passphrase),

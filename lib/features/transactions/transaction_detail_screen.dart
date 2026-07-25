@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -441,18 +443,26 @@ class _TransactionDetailScreenState
         ),
         _DetailSection(
           title: 'Technical details',
-          child: Builder(
-            builder: (context) {
-              final source = ref.watch(transactionSourceProvider(widget.txnId)).valueOrNull;
+          child: Consumer(
+            builder: (context, ref, _) {
+              final source = kDebugMode
+                  ? ref
+                      .watch(transactionSourceProvider(widget.txnId))
+                      .valueOrNull
+                  : null;
+              final prettyEvidence = _prettyJson(txn.confidenceJson);
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _FieldRow(label: 'Parse source', value: txn.parseSource),
                   _FieldRow(
                     label: 'Parse confidence',
                     value: detail.parseConfidence?.toStringAsFixed(2),
                   ),
-                  _FieldRow(label: 'SMS sender', value: source?.smsSender),
-                  _FieldRow(label: 'SMS body', value: source?.smsBody),
+                  if (kDebugMode) ...[
+                    _FieldRow(label: 'SMS sender', value: source?.smsSender),
+                    _FieldRow(label: 'SMS body', value: source?.smsBody),
+                  ],
                   _FieldRow(
                     label: 'Merchant value',
                     value: detail.confidenceTrail.merchant?.value?.toString(),
@@ -479,10 +489,20 @@ class _TransactionDetailScreenState
                     label: 'Category rule',
                     value: detail.confidenceTrail.category?.ruleId,
                   ),
-                  _FieldRow(
-                    label: 'Confidence evidence',
-                    value: txn.confidenceJson,
-                  ),
+                  if (kDebugMode && prettyEvidence != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Confidence evidence',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      prettyEvidence,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                          ),
+                    ),
+                  ],
                 ],
               );
             },
@@ -513,6 +533,16 @@ class _TransactionDetailScreenState
     return detail.txn.categoryId == null
         ? 'Choose a category to help organise this transaction.'
         : 'This category needs your confirmation when it looks incorrect.';
+  }
+
+  String? _prettyJson(String? rawJson) {
+    if (rawJson == null || rawJson.isEmpty) return null;
+    try {
+      final object = jsonDecode(rawJson);
+      return const JsonEncoder.withIndent('  ').convert(object);
+    } catch (_) {
+      return rawJson;
+    }
   }
 }
 

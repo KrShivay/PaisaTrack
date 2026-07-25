@@ -47,6 +47,7 @@ class EncryptedBackupService {
   final AppDatabase _database;
   final Random _random;
   final Argon2id _kdf;
+  static const minimumPassphraseLength = 12;
   final AesGcm _cipher;
 
   Future<File> exportToFile({
@@ -62,17 +63,21 @@ class EncryptedBackupService {
 
   /// Builds the encrypted archive in memory for a system document destination.
   Future<Uint8List> exportBytes({required String passphrase}) async {
-    if (passphrase.length < 12) {
-      throw const EncryptedBackupException(
-        'Passphrase must be at least 12 characters long',
-      );
-    }
+    _assertExportPassphrase(passphrase);
     final archive = await _readArchive();
     final payload = await _encrypt(
       utf8.encode(jsonEncode(archive)),
       passphrase: passphrase,
     );
     return Uint8List.fromList(utf8.encode(jsonEncode(payload)));
+  }
+
+  void _assertExportPassphrase(String passphrase) {
+    if (passphrase.runes.length < minimumPassphraseLength) {
+      throw const EncryptedBackupException(
+        'Passphrase must be at least $minimumPassphraseLength characters long',
+      );
+    }
   }
 
   Future<void> importFromFile({
@@ -94,22 +99,24 @@ class EncryptedBackupService {
     required Uint8List bytes,
     required String passphrase,
   }) async {
-    if (passphrase.length < 12) {
-      throw const EncryptedBackupException(
-        'Passphrase must be at least 12 characters long',
-      );
+    if (passphrase.isEmpty) {
+      throw const EncryptedBackupException('Passphrase is required');
     }
     final payload = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
     final plaintext = await _decrypt(payload, passphrase: passphrase);
     final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, Object?>;
     _validateArchive(archive);
 
-    await _restoreArchive(archive);
+    try {
+      await _restoreArchive(archive);
+    } on TypeError catch (e) {
+      throw EncryptedBackupException('Malformed archive table row: $e');
+    }
   }
 
   Future<Map<String, Object?>> _readArchive() async {
     return {
-      'version': 2,
+      'version': 3,
       'tables': {
         'categories': await _rows(_database.categories),
         'merchants': await _rows(_database.merchants),
@@ -242,7 +249,7 @@ class EncryptedBackupService {
 
   void _validateArchive(Map<String, Object?> archive) {
     final version = archive['version'];
-    if ((version != 1 && version != 2) ||
+    if ((version != 1 && version != 2 && version != 3) ||
         archive['tables'] is! Map<String, Object?>) {
       throw const EncryptedBackupException('Unsupported encrypted export');
     }

@@ -88,14 +88,34 @@ class FieldNormalizer {
       return _parseAlphaMonthDate(value) ?? fallback;
     }
 
+    if (format == 'dd-MMM-yy' || format == 'dd/MMM/yy') {
+      final parts = value.split(RegExp(r'[-/]'));
+      if (parts.length != 3) {
+        return fallback;
+      }
+      final month = _monthNames[parts[1].toLowerCase()];
+      if (month == null) {
+        return fallback;
+      }
+      final day = int.tryParse(parts[0]);
+      final year = int.tryParse(parts[2]);
+      if (day == null || year == null) {
+        throw const FormatException('Date components must be numeric');
+      }
+      return DateTime.utc(_expandTwoDigitYear(year), month, day);
+    }
+
     final parts = value.split(RegExp(r'[-/]'));
     if (parts.length != 3) {
       return fallback;
     }
 
-    final first = int.parse(parts[0]);
-    final second = int.parse(parts[1]);
-    final third = int.parse(parts[2]);
+    final first = int.tryParse(parts[0]);
+    final second = int.tryParse(parts[1]);
+    final third = int.tryParse(parts[2]);
+    if (first == null || second == null || third == null) {
+      throw const FormatException('Date components must be numeric');
+    }
 
     if (format == 'dd-MM-yy' || format == 'dd/MM/yy') {
       return DateTime.utc(_expandTwoDigitYear(third), second, first);

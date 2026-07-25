@@ -62,7 +62,8 @@ final transactionDetailProvider =
 /// Copy/view provenance actions load independently from the main transaction
 /// model so raw SMS retention does not complicate every list and review row.
 final transactionSourceProvider =
-    StreamProvider.family<TransactionSourceInfo?, String>((ref, txnId) {
+    StreamProvider.autoDispose.family<TransactionSourceInfo?, String>(
+        (ref, txnId) {
   final databaseAsync = ref.watch(appDatabaseProvider);
   return databaseAsync.when(
     data: (database) => TransactionSourceRepository(database).watch(txnId),

@@ -14,7 +14,7 @@ const appDatabaseFileName = 'paisatrack.db';
 /// Tests can override this provider or `appDatabaseProvider` directly when a
 /// fake or in-memory database is more appropriate than platform channels.
 final databasePassphraseProvider = Provider<DatabasePassphraseProvider>((ref) {
-  return const AndroidKeystoreDatabasePassphraseProvider();
+  return AndroidKeystoreDatabasePassphraseProvider();
 });
 
 /// Resolves the app-private directory that contains the encrypted database.
@@ -30,13 +30,30 @@ final databaseDirectoryProvider = FutureProvider<Directory>((ref) async {
 final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
   final directory = await ref.watch(databaseDirectoryProvider.future);
   final passphraseProvider = ref.watch(databasePassphraseProvider);
-  final passphrase = await passphraseProvider.getPassphrase();
+  final dbFile = File(p.join(directory.path, appDatabaseFileName));
+  final dbExists = dbFile.existsSync();
+
+  DatabasePassphrase passphrase;
+  try {
+    passphrase = await passphraseProvider.getPassphrase();
+  } on Exception catch (e) {
+    if (dbExists) {
+      throw DatabaseKeyLostError(
+        'Database passphrase decryption failed against an existing database file',
+        e,
+      );
+    }
+    await passphraseProvider.clearStoredPassphrase();
+    passphrase = await passphraseProvider.getPassphrase();
+  }
+
   final database = AppDatabase(
     openEncryptedDatabase(
-      file: File(p.join(directory.path, appDatabaseFileName)),
+      file: dbFile,
       passphrase: passphrase,
     ),
   );
+
 
   ref.onDispose(() {
     closeAppDatabase(database);

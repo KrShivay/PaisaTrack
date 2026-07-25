@@ -27,7 +27,7 @@ For Android changes:
 
 ```sh
 cd android
-./gradlew :app:testDebugUnitTest
+./gradlew :app:testDebugUnitTest :paisatrack_keystore:testDebugUnitTest
 ```
 
 Device-only behavior—SMS, background jobs, local models, document pickers,

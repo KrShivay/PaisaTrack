@@ -1,0 +1,19 @@
+{
+  "sender": "DM-ICICIB",
+  "received_at": 1784332800000,
+  "expected": {
+    "ok": {
+      "amount": 250.0,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "Bookstore",
+      "counterparty_vpa": null,
+      "account_hint": "xx4321",
+      "balance_after": null,
+      "ref_id": "987654321012",
+      "ts": 1784332800000,
+      "parse_source": "template",
+      "parse_confidence": 0.85
+    }
+  }
+}

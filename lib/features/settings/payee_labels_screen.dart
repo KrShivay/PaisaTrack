@@ -12,8 +12,15 @@ class PayeeLabelsScreen extends ConsumerStatefulWidget {
 }
 
 class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
+  final _searchController = TextEditingController();
   String _searchQuery = '';
   bool _unlabeledOnly = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +36,9 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
           }
 
           final filtered = items.where((item) {
-            if (_unlabeledOnly && item.userLabel != null) return false;
+            if (_unlabeledOnly && (item.userLabel?.trim().isNotEmpty ?? false)) {
+              return false;
+            }
             if (_searchQuery.isEmpty) return true;
             final q = _searchQuery.toLowerCase();
             final nameMatches = item.displayName.toLowerCase().contains(q);
@@ -49,14 +58,18 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
                     Expanded(
                       child: TextField(
                         key: const ValueKey('payee_labels_search_field'),
+                        controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Search payees or aliases...',
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear),
-                                  onPressed: () =>
-                                      setState(() => _searchQuery = ''),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                    FocusScope.of(context).unfocus();
+                                  },
                                 )
                               : null,
                           isDense: true,

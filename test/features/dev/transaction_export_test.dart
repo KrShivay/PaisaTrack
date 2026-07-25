@@ -116,7 +116,20 @@ void main() {
         'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status',
       ),
     );
-    expect(csvStr, contains('499.0,debit,upi'));
+    expect(csvStr, contains('499.00,debit,upi'));
     expect(csvStr, contains('223047328116'));
+  });
+
+  test('TransactionCsvExporter neutralizes spreadsheet formula characters',
+      () async {
+    await insertTxn(
+      id: 'txn_formula',
+      amount: 100.0,
+      direction: 'debit',
+      refId: '=HYPERLINK("http://attacker.com")',
+    );
+
+    final csvStr = await TransactionCsvExporter(database).serializeCsv();
+    expect(csvStr, contains("'=HYPERLINK"));
   });
 }

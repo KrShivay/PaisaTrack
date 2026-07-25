@@ -196,6 +196,12 @@ void main() {
     );
 
     await tester.tap(find.byTooltip('Share sanitized SMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(copyCalls, 0);
+
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });
@@ -220,6 +226,21 @@ void main() {
     expect(find.textContaining('Rejection reasons:'), findsOneWidget);
     expect(find.textContaining('OTP / Authentication: 1'), findsOneWidget);
     expect(find.textContaining('Unmatched financial SMS: 1'), findsOneWidget);
+  });
+
+  test('categorizeUnparsedSms classifies balance and login footer messages correctly', () {
+    expect(
+      categorizeUnparsedSms('Avail Bal in A/C XX1234 is INR 5,230.00'),
+      UnparsedReason.balanceInfo,
+    );
+    expect(
+      categorizeUnparsedSms('Rs.500 debited from A/C x1234. Login to NetBanking.'),
+      UnparsedReason.unmatchedFinancial,
+    );
+    expect(
+      categorizeUnparsedSms('Your OTP for login is 123456'),
+      UnparsedReason.otpAuth,
+    );
   });
 
   test('repository lists unprocessed raw sms and excludes processed ones',

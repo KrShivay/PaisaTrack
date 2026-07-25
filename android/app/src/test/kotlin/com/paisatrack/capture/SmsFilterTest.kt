@@ -1,10 +1,17 @@
 package com.paisatrack.capture
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class SmsFilterTest {
+    @Before
+    fun setUp() {
+        SmsFilter.resetCounters()
+    }
+
     @Test
     fun allowsTransactionalBankAlert() {
         assertTrue(
@@ -21,6 +28,66 @@ class SmsFilterTest {
             SmsFilter.isAllowed(
                 "VM-PHONPE-S",
                 "You paid Rs 120 to Chai Point via UPI. Ref 123456.",
+            ),
+        )
+    }
+
+    @Test
+    fun allowsTransactionWithSecurityFooterNoComma() {
+        assertTrue(
+            SmsFilter.isAllowed(
+                "AD-HDFCBK",
+                "Rs 1200 debited from a/c XX1234. Do not share your PIN",
+            ),
+        )
+    }
+
+    @Test
+    fun allowsTransactionWithSecurityFooterWithComma() {
+        assertTrue(
+            SmsFilter.isAllowed(
+                "AD-HDFCBK",
+                "Rs 1,200 debited from a/c XX1234. Do not share your PIN",
+            ),
+        )
+    }
+
+    @Test
+    fun allowsCashbackCreditWithCongratulations() {
+        assertTrue(
+            SmsFilter.isAllowed(
+                "AD-HDFCBK",
+                "Congratulations! Rs 500 cashback credited to your a/c XX1234",
+            ),
+        )
+    }
+
+    @Test
+    fun allowsLegitimateCashbackNoticeNoAccountToken() {
+        assertTrue(
+            SmsFilter.isAllowed(
+                "AD-HDFCBK",
+                "You have earned Rs 50 cashback",
+            ),
+        )
+    }
+
+    @Test
+    fun rejectsNegativePromo() {
+        assertFalse(
+            SmsFilter.isAllowed(
+                "AD-HDFCBK",
+                "Congratulations! You've won a chance to get Rs 10,000",
+            ),
+        )
+    }
+
+    @Test
+    fun rejectsOtpWithSecureCode() {
+        assertFalse(
+            SmsFilter.isAllowed(
+                "VK-HDFCBK",
+                "Your OTP for bank login is 123456. Secure code.",
             ),
         )
     }
@@ -69,4 +136,17 @@ class SmsFilterTest {
     fun rejectsEmptySender() {
         assertFalse(SmsFilter.isAllowed("", "Rs 10 debited"))
     }
+
+    @Test
+    fun tracksLiveAndBatchDropCountersSeparately() {
+        assertEquals(0L, SmsFilter.liveFilterDropCount.get())
+        assertEquals(0L, SmsFilter.batchFilterDropCount.get())
+
+        SmsFilter.isAllowed("VK-HDFCBK", "Your OTP for login is 123456", isBatch = false)
+        SmsFilter.isAllowed("VK-HDFCBK", "Your OTP for login is 654321", isBatch = true)
+
+        assertEquals(1L, SmsFilter.liveFilterDropCount.get())
+        assertEquals(1L, SmsFilter.batchFilterDropCount.get())
+    }
 }
+

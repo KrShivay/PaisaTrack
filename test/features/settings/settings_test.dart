@@ -53,6 +53,7 @@ class _FakeLlmRuntime extends NoopLlmRuntime {
   Future<bool> downloadModelWithRetry({
     int maxRetries = 3,
     Duration delay = const Duration(seconds: 1),
+    Duration maxDelay = const Duration(seconds: 30),
   }) async {
     return downloadModel();
   }

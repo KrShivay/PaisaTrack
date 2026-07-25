@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' hide Column;
 
+import '../../core/theme/app_tokens.dart';
+import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 
@@ -15,13 +17,16 @@ class ModelMetrics {
     this.totalTransactions = 0,
     this.parseSourceCounts = const {},
     this.averageParseConfidence = 0.0,
+    this.averageParseConfidenceBySource = const {},
   });
+
   final double accuracy;
   final double askRate;
   final Map<String, double> correctionRates;
   final int totalTransactions;
   final Map<String, int> parseSourceCounts;
   final double averageParseConfidence;
+  final Map<String, double?> averageParseConfidenceBySource;
 }
 
 final modelMetricsProvider = FutureProvider<ModelMetrics>((ref) async {
@@ -32,6 +37,7 @@ final modelMetricsProvider = FutureProvider<ModelMetrics>((ref) async {
 class ModelMetricsRepository {
   ModelMetricsRepository(this._database);
   final AppDatabase _database;
+
   Future<ModelMetrics> load() async {
     final feedback = await (_database.select(_database.feedback)
           ..where((f) => f.field.equals('category_id'))
@@ -67,23 +73,26 @@ class ModelMetricsRepository {
     }
 
     final sourceCounts = <String, int>{};
+    final confidenceBySource = <String, ({double sum, int n})>{};
     double totalConfidence = 0.0;
     int confidenceCount = 0;
 
     for (final txn in transactions) {
       final src = txn.parseSource;
       sourceCounts[src] = (sourceCounts[src] ?? 0) + 1;
-      try {
-        final decoded =
-            jsonDecode(txn.confidenceJson) as Map<String, dynamic>?;
-        final parser = decoded?['parser'] as Map<String, dynamic>?;
-        final conf = (parser?['c'] as num?)?.toDouble();
-        if (conf != null) {
-          totalConfidence += conf;
-          confidenceCount++;
-        }
-      } catch (_) {}
+      final conf = parseConfidenceFromJson(txn.confidenceJson);
+      if (conf != null) {
+        totalConfidence += conf;
+        confidenceCount++;
+        final prior = confidenceBySource[src] ?? (sum: 0.0, n: 0);
+        confidenceBySource[src] = (sum: prior.sum + conf, n: prior.n + 1);
+      }
     }
+
+    final bySourceAvg = <String, double?>{
+      for (final entry in confidenceBySource.entries)
+        entry.key: entry.value.n > 0 ? entry.value.sum / entry.value.n : null,
+    };
 
     return ModelMetrics(
       accuracy: classifierFeedback.isEmpty
@@ -96,6 +105,7 @@ class ModelMetricsRepository {
       parseSourceCounts: sourceCounts,
       averageParseConfidence:
           confidenceCount > 0 ? totalConfidence / confidenceCount : 0.0,
+      averageParseConfidenceBySource: bySourceAvg,
     );
   }
 
@@ -115,6 +125,7 @@ class ModelMetricsRepository {
 
 class ModelMetricsScreen extends ConsumerWidget {
   const ModelMetricsScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final metrics = ref.watch(modelMetricsProvider);
@@ -122,11 +133,11 @@ class ModelMetricsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Model metrics (dev)')),
       body: switch (metrics) {
         AsyncData(:final value) => ListView(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(AppSpacing.md),
             children: [
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
                     children: [
                       Row(
@@ -149,7 +160,7 @@ class ModelMetricsScreen extends ConsumerWidget {
                         ],
                       ),
                       if (value.averageParseConfidence > 0) ...[
-                        const Divider(height: 24),
+                        const Divider(height: AppSpacing.xl),
                         Text(
                           'Avg Parse Confidence: ${(value.averageParseConfidence * 100).toStringAsFixed(1)}%',
                           style: Theme.of(context).textTheme.bodyMedium,
@@ -160,25 +171,30 @@ class ModelMetricsScreen extends ConsumerWidget {
                 ),
               ),
               if (value.parseSourceCounts.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                   child: Text(
                     'Parse Source Breakdown',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                ...value.parseSourceCounts.entries.map(
-                  (entry) => ListTile(
+                ...value.parseSourceCounts.entries.map((entry) {
+                  final avgConf = value.averageParseConfidenceBySource[entry.key];
+                  final avgText = avgConf != null
+                      ? ' · Avg conf ${(avgConf * 100).toStringAsFixed(1)}%'
+                      : '';
+                  return ListTile(
                     title: Text(entry.key),
+                    subtitle: avgText.isNotEmpty ? Text(avgText.trim()) : null,
                     trailing: Text('${entry.value}'),
-                  ),
-                ),
+                  );
+                }),
               ],
               if (value.correctionRates.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                   child: Text(
                     'Category Correction Rates',
                     style: Theme.of(context).textTheme.titleMedium,
@@ -218,7 +234,7 @@ class _MetricStat extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall,

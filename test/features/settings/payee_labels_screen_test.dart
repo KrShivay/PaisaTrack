@@ -66,4 +66,54 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets('clears search text when clear button is tapped', (tester) async {
+    const items = <PayeeIdentity>[
+      PayeeIdentity(
+        key: 'raw:swiggy food',
+        displayName: 'Swiggy Food',
+        userLabel: 'Swiggy',
+        merchantId: 'm1',
+        aliases: ['SWIGGY'],
+        transactionCount: 5,
+      ),
+      PayeeIdentity(
+        key: 'raw:zomato delivery',
+        displayName: 'Zomato Delivery',
+        userLabel: null,
+        merchantId: null,
+        aliases: ['ZOMATO'],
+        transactionCount: 2,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          payeeIdentitiesProvider.overrideWith((ref) => Stream.value(items)),
+        ],
+        child: const MaterialApp(home: PayeeLabelsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('payee_labels_search_field')),
+      'Zomato',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Swiggy Food'), findsNothing);
+    expect(find.text('Zomato Delivery'), findsOneWidget);
+
+    final clearButton = find.byIcon(Icons.clear);
+    expect(clearButton, findsOneWidget);
+    await tester.tap(clearButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Swiggy Food'), findsOneWidget);
+    expect(find.text('Zomato Delivery'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }

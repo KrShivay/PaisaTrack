@@ -4,9 +4,21 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 import 'package:sqlite3/open.dart';
+
+import 'package:paisatrack_keystore/paisatrack_keystore.dart' as keystore;
+
+/// Operational error when the database passphrase cannot be decrypted against an existing DB.
+class DatabaseKeyLostError implements Exception {
+  const DatabaseKeyLostError(this.message, [this.cause]);
+  final String message;
+  final Object? cause;
+
+  @override
+  String toString() =>
+      'DatabaseKeyLostError: $message${cause != null ? ' ($cause)' : ''}';
+}
 
 /// User- or device-derived secret used to unlock the encrypted database.
 class DatabasePassphrase {
@@ -33,38 +45,30 @@ abstract interface class DatabasePassphraseProvider {
 class AndroidKeystoreDatabasePassphraseProvider
     implements DatabasePassphraseProvider {
   const AndroidKeystoreDatabasePassphraseProvider({
-    MethodChannel channel = _defaultChannel,
-  }) : _channel = channel;
+    keystore.AndroidKeystoreDatabasePassphraseProvider? delegate,
+  }) : _delegate =
+            delegate ?? const keystore.AndroidKeystoreDatabasePassphraseProvider();
 
-  static const MethodChannel _defaultChannel = MethodChannel(
-    'com.paisatrack/database_passphrase',
-  );
-
-  final MethodChannel _channel;
+  final keystore.AndroidKeystoreDatabasePassphraseProvider _delegate;
 
   @override
   Future<DatabasePassphrase> getPassphrase() async {
-    final passphrase = await _channel.invokeMethod<String>('getPassphrase');
-    if (passphrase == null || passphrase.isEmpty) {
-      throw StateError(
-        'Android Keystore returned an empty database passphrase',
-      );
-    }
-
-    return DatabasePassphrase(passphrase);
+    final res = await _delegate.getPassphrase();
+    return DatabasePassphrase(res.value);
   }
 
   @override
   Future<void> clearStoredPassphrase() async {
-    await _channel.invokeMethod<void>('clearPassphrase');
+    await _delegate.clearStoredPassphrase();
   }
 
   /// Clears stored passphrase in debug builds for tests.
   @visibleForTesting
   Future<void> debugResetForTests() async {
-    await _channel.invokeMethod<void>('debugResetForTests');
+    await _delegate.debugResetForTests();
   }
 }
+
 
 /// Opens the app database through SQLCipher and fails closed if unavailable.
 ///

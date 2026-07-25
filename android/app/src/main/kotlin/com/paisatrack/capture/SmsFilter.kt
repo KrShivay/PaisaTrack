@@ -1,11 +1,12 @@
 package com.paisatrack.capture
 
+import java.util.concurrent.atomic.AtomicLong
+
 /**
  * Decides whether an incoming SMS should enter the capture pipeline.
  *
  * This is deliberately pure Kotlin (no Android framework types) so it can be
- * unit tested on the JVM. It is a first-pass allowlist: Phase 1 fixture work
- * (T-024) refines the sender tokens and rejection markers against real SMS.
+ * unit tested on the JVM. It is a first-pass allowlist.
  *
  * Privacy: this class never logs message bodies.
  */
@@ -21,21 +22,36 @@ object SmsFilter {
         "PAYTMB", "PHONPE", "GPAYUP", "AMZNUP", "MOBKWK", "SLICEIT",
     )
 
-    private val otpMarkers = listOf(
+    private val otpMarkers = setOf(
         "otp", "one time password", "one-time password", "do not share",
-        "verification code", "secure code",
+        "don't share", "never share", "verification code", "secure code",
     )
 
-    private val promoMarkers = listOf(
+    private val promoMarkers = setOf(
         "offer", "sale", "discount", "lowest price", "cashback offer",
         "win ", "congratulations", "limited period", "apply now", "pre-approved",
     )
+
+    private val settledVerbs = setOf(
+        "debited", "credited", "spent", "paid", "received", "transferred", "withdrawn",
+    )
+
+    private val accountTokenRegex = Regex("""\b(a/c|acct|card|xx\d{4}|x\d{4})\b""")
+    private val otpShapeRegex = Regex("""\b\d{4,8}\b""")
+
+    val liveFilterDropCount = AtomicLong(0)
+    val batchFilterDropCount = AtomicLong(0)
+
+    fun resetCounters() {
+        liveFilterDropCount.set(0)
+        batchFilterDropCount.set(0)
+    }
 
     /**
      * Returns true only for messages that look like transactional bank/UPI
      * alerts from a known sender and are not OTP or promotional.
      */
-    fun isAllowed(sender: String, body: String): Boolean {
+    fun isAllowed(sender: String, body: String, isBatch: Boolean = false): Boolean {
         val normalizedSender = sender.trim().uppercase()
         if (normalizedSender.isEmpty()) return false
 
@@ -46,9 +62,35 @@ object SmsFilter {
         if (token !in bankTokens) return false
 
         val lowerBody = body.lowercase()
-        if (otpMarkers.any { lowerBody.contains(it) }) return false
-        if (promoMarkers.any { lowerBody.contains(it) }) return false
+        val hasSettledVerb = settledVerbs.any { lowerBody.contains(it) }
+
+        // OTP check: reject if any OTP marker co-occurs with an OTP shape and no settled verb.
+        if (otpMarkers.any { lowerBody.contains(it) }) {
+            val hasOtpShape = otpShapeRegex.containsMatchIn(lowerBody)
+            if (hasOtpShape && !hasSettledVerb) {
+                recordDrop(isBatch)
+                return false
+            }
+        }
+
+        // Promo check: reject if promo marker occurs without a settled verb AND without an account token.
+        if (promoMarkers.any { lowerBody.contains(it) }) {
+            val hasAccountToken = accountTokenRegex.containsMatchIn(lowerBody)
+            if (!hasSettledVerb && !hasAccountToken) {
+                recordDrop(isBatch)
+                return false
+            }
+        }
+
         return true
+    }
+
+    private fun recordDrop(isBatch: Boolean) {
+        if (isBatch) {
+            batchFilterDropCount.incrementAndGet()
+        } else {
+            liveFilterDropCount.incrementAndGet()
+        }
     }
 
     /**
@@ -65,3 +107,4 @@ object SmsFilter {
         }
     }
 }
+

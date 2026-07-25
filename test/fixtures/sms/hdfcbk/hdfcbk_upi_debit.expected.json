@@ -1,0 +1,19 @@
+{
+  "sender": "VK-HDFCBK",
+  "received_at": 1784073600000,
+  "expected": {
+    "ok": {
+      "amount": 1450.5,
+      "direction": "debit",
+      "channel": "upi",
+      "merchant_raw": "Coffee Shop",
+      "counterparty_vpa": null,
+      "account_hint": "xx5678",
+      "balance_after": null,
+      "ref_id": "619283746510",
+      "ts": 1784073600000,
+      "parse_source": "template",
+      "parse_confidence": 0.85
+    }
+  }
+}

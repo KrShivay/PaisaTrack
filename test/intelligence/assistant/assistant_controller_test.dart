@@ -6,7 +6,7 @@ import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 
 class _FakeLlmRuntime extends NoopLlmRuntime {
-  _FakeLlmRuntime(LlmUnavailableReason reason) : super(reason: reason);
+  _FakeLlmRuntime(LlmUnavailableReason reason) : super(reason);
 
   @override
   Future<LlmResult<Map<String, Object?>>> extractJson(

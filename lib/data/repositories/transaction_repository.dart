@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../confidence_payload.dart';
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
 import '../models/transaction_confidence_trail.dart';
@@ -699,17 +700,31 @@ WHERE t.status = 'needs_review'
         );
 
       if (ruleInput.matchType == 'counterparty') {
+        // VPAs are exact identifiers: substring matching would sweep in
+        // 'notabc@ybl' and 'abc@ybl.fraud' when correcting 'abc@ybl'.
         query.where((row) => row.counterpartyVpa.lower().equals(expected));
       } else {
-        query.where(
-          (row) =>
-              row.merchantRaw.lower().equals(expected) |
-              row.merchantRaw.lower().like('$expected %') |
-              row.merchantRaw.lower().like('$expected*%') |
-              row.merchantRaw.lower().like('$expected-%') |
-              row.merchantRaw.lower().like('$expected/%') |
-              row.merchantRaw.lower().like('$expected.%'),
-        );
+        const boundaries = [' ', '*', '-', '/', '.', ':', '|', ',', '#'];
+        query.where((row) {
+          var expr = row.merchantRaw.lower().equals(expected);
+          for (final l in boundaries) {
+            expr = expr |
+                row.merchantRaw.lower().likeExp(
+                      Variable.withString('%$l$expected'),
+                    );
+            expr = expr |
+                row.merchantRaw.lower().likeExp(
+                      Variable.withString('$expected$l%'),
+                    );
+            for (final r in boundaries) {
+              expr = expr |
+                  row.merchantRaw.lower().likeExp(
+                        Variable.withString('%$l$expected$r%'),
+                      );
+            }
+          }
+          return expr;
+        });
       }
       return query.get();
     }
@@ -719,18 +734,8 @@ WHERE t.status = 'needs_review'
   /// Extracts the parse confidence from `confidence_json` (the `parser.c`
   /// entry SmsIngestor and insertManual write), or null when the payload has
   /// no parser entry (e.g. legacy rows).
-  double? _parseConfidenceOf(Transaction txn) {
-    try {
-      final decoded = jsonDecode(txn.confidenceJson);
-      final parser = (decoded as Map<String, Object?>)['parser'];
-      final confidence = (parser as Map<String, Object?>?)?['c'];
-      return (confidence as num?)?.toDouble();
-    } on FormatException {
-      return null;
-    } on TypeError {
-      return null;
-    }
-  }
+  double? _parseConfidenceOf(Transaction txn) =>
+      parseConfidenceFromJson(txn.confidenceJson);
 
   /// Low-trust records require a user parse verdict under ADR 0005: generic
   /// parses, plus public-provenance templates that are capped below auto.

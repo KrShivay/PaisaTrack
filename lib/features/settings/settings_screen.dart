@@ -22,7 +22,8 @@ import 'category_manager_screen.dart';
 import 'payee_labels_screen.dart';
 import 'payment_sources_screen.dart';
 
-const minimumBackupPassphraseLength = 12;
+const minimumBackupPassphraseLength =
+    EncryptedBackupService.minimumPassphraseLength;
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -666,14 +667,20 @@ class _LlmModelTileState extends ConsumerState<_LlmModelTile> {
   }
 
   Future<void> _download() async {
+    final runtime = ref.read(llmRuntimeProvider);
+    if (!await runtime.isDeviceSupported()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This device does not support the AI model')),
+      );
+      return;
+    }
+
     setState(() => _busy = true);
-    final succeeded =
-        await ref.read(llmRuntimeProvider).downloadModelWithRetry();
+    final succeeded = await runtime.downloadModelWithRetry();
     if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _available = succeeded;
-    });
+    setState(() => _busy = false);
+    await _refresh();
     if (!succeeded) {
       _showDownloadFailureDialog();
     } else {

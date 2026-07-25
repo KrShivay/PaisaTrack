@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,19 +20,19 @@ sealed class LlmResult<T> {
   const LlmResult();
 }
 
-final class LlmSuccess<T> extends LlmResult<T> {
+class LlmSuccess<T> extends LlmResult<T> {
   const LlmSuccess(this.value);
-
   final T value;
 }
 
-final class LlmUnavailable<T> extends LlmResult<T> {
+class LlmUnavailable<T> extends LlmResult<T> {
   const LlmUnavailable(this.reason);
-
   final LlmUnavailableReason reason;
 }
 
 abstract class LlmRuntime {
+  const LlmRuntime();
+
   Future<LlmResult<String>> complete(String prompt);
 
   Future<LlmResult<Map<String, Object?>>> extractJson(
@@ -42,23 +43,30 @@ abstract class LlmRuntime {
   Future<bool> isModelAvailable();
   Future<bool> isDeviceSupported();
   Future<bool> downloadModel();
+  Future<bool> deleteModel();
+
   Future<bool> downloadModelWithRetry({
     int maxRetries = 3,
     Duration delay = const Duration(seconds: 1),
+    Duration maxDelay = const Duration(seconds: 30),
   }) async {
+    final random = Random();
     for (var attempt = 0; attempt < maxRetries; attempt++) {
-      final ok = await downloadModel();
-      if (ok) return true;
-      if (attempt < maxRetries - 1 && delay > Duration.zero) {
-        await Future<void>.delayed(delay);
+      if (await downloadModel()) return true;
+      if (attempt == maxRetries - 1) break;
+      if (delay > Duration.zero) {
+        final backoff = delay * (1 << attempt);
+        final capped = backoff > maxDelay ? maxDelay : backoff;
+        await Future<void>.delayed(
+          Duration(milliseconds: random.nextInt(capped.inMilliseconds + 1)),
+        );
       }
     }
     return false;
   }
-  Future<bool> deleteModel();
 }
 
-class PlatformLlmRuntime implements LlmRuntime {
+class PlatformLlmRuntime extends LlmRuntime {
   const PlatformLlmRuntime({
     MethodChannel channel = const MethodChannel('com.paisatrack/llm'),
     this.enabled = AppConstants.enableLocalLlm,
@@ -134,26 +142,13 @@ class PlatformLlmRuntime implements LlmRuntime {
   Future<bool> downloadModel() => _boolCall('downloadModel');
 
   @override
-  Future<bool> downloadModelWithRetry({
-    int maxRetries = 3,
-    Duration delay = const Duration(seconds: 1),
-  }) async {
-    for (var attempt = 0; attempt < maxRetries; attempt++) {
-      final ok = await downloadModel();
-      if (ok) return true;
-      if (attempt < maxRetries - 1 && delay > Duration.zero) {
-        await Future<void>.delayed(delay);
-      }
-    }
-    return false;
-  }
-
-  @override
   Future<bool> deleteModel() => _boolCall('deleteModel');
 
   Future<bool> _boolCall(String method) async {
     try {
-      return await _channel.invokeMethod<bool>(method) ?? false;
+      final res = await _channel.invokeMethod<Object?>(method);
+      if (res is bool) return res;
+      return false;
     } on PlatformException {
       return false;
     } on MissingPluginException {
@@ -161,120 +156,94 @@ class PlatformLlmRuntime implements LlmRuntime {
     }
   }
 
-  LlmUnavailableReason _reasonFor(String code) => switch (code) {
-        'model_absent' => LlmUnavailableReason.modelAbsent,
-        'unsupported_device' => LlmUnavailableReason.unsupportedDevice,
-        _ => LlmUnavailableReason.failure,
-      };
+  LlmUnavailableReason _reasonFor(String code) {
+    return switch (code.toUpperCase()) {
+      'FEATURE_DISABLED' => LlmUnavailableReason.featureDisabled,
+      'MODEL_ABSENT' => LlmUnavailableReason.modelAbsent,
+      'UNSUPPORTED_DEVICE' => LlmUnavailableReason.unsupportedDevice,
+      _ => LlmUnavailableReason.failure,
+    };
+  }
 
   Map<String, Object?>? _validatedObject(
-    String response,
+    String text,
     Map<String, Object?> schema,
   ) {
-    for (final candidate in _extractJsonObjects(response)) {
+    final trimmed = text.trim();
+    final matches =
+        RegExp(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}').allMatches(trimmed);
+    for (final match in matches.toList().reversed) {
       try {
-        final decoded = jsonDecode(candidate);
+        final decoded = jsonDecode(match.group(0)!);
         if (decoded is Map<String, Object?> &&
-            _matchesSchema(decoded, schema)) {
+            _validateAgainstSchema(decoded, schema)) {
           return decoded;
         }
       } on FormatException {
-        // Keep scanning: small models sometimes emit a malformed example or
-        // echo the schema before producing the usable values object.
+        continue;
+      }
+    }
+
+    final start = trimmed.indexOf('{');
+    final end = trimmed.lastIndexOf('}');
+    if (start != -1 && end != -1 && end > start) {
+      try {
+        final decoded = jsonDecode(trimmed.substring(start, end + 1));
+        if (decoded is Map<String, Object?> &&
+            _validateAgainstSchema(decoded, schema)) {
+          return decoded;
+        }
+      } on FormatException {
+        return null;
       }
     }
     return null;
   }
 
-  /// Small on-device models rarely emit pure JSON: they wrap it in markdown
-  /// code fences, add prose, or echo the schema. Scan balanced `{...}` blocks
-  /// so a later schema-valid values object is not rejected with its wrapper.
-  Iterable<String> _extractJsonObjects(String response) sync* {
-    var searchFrom = 0;
-    while (searchFrom < response.length) {
-      final start = response.indexOf('{', searchFrom);
-      if (start == -1) return;
-      var depth = 0;
-      var inString = false;
-      var escaped = false;
-      var end = -1;
-      for (var i = start; i < response.length; i++) {
-        final char = response[i];
-        if (inString) {
-          if (escaped) {
-            escaped = false;
-          } else if (char == r'\') {
-            escaped = true;
-          } else if (char == '"') {
-            inString = false;
-          }
-          continue;
-        }
-        if (char == '"') {
-          inString = true;
-        } else if (char == '{') {
-          depth++;
-        } else if (char == '}') {
-          depth--;
-          if (depth == 0) {
-            end = i;
-            break;
-          }
-        }
-      }
-      if (end >= 0) {
-        yield response.substring(start, end + 1);
-        searchFrom = end + 1;
-      } else {
-        // An unbalanced prefix must not hide a later valid object.
-        searchFrom = start + 1;
+  bool _validateAgainstSchema(
+    Map<String, Object?> payload,
+    Map<String, Object?> schema,
+  ) {
+    final properties = schema['properties'];
+    final required = schema['required'];
+    final additionalProperties = schema['additionalProperties'];
+
+    if (additionalProperties == false && properties is Map<String, Object?>) {
+      for (final key in payload.keys) {
+        if (!properties.containsKey(key)) return false;
       }
     }
+
+    if (required is List) {
+      for (final key in required) {
+        if (key is String && !payload.containsKey(key)) return false;
+      }
+    }
+
+    if (properties is Map<String, Object?>) {
+      for (final entry in properties.entries) {
+        if (!payload.containsKey(entry.key)) continue;
+        final value = payload[entry.key];
+        final propertySchema = entry.value;
+        if (propertySchema is Map<String, Object?>) {
+          final expectedType = propertySchema['type'];
+          if (expectedType is String &&
+              !_matchesType(value, expectedType.toLowerCase())) {
+            return false;
+          }
+          final enumValues = propertySchema['enum'];
+          if (enumValues is List && !enumValues.contains(value)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
   }
 
-  bool _matchesSchema(Object? value, Map<String, Object?> schema) {
-    final enumValues = schema['enum'];
-    if (enumValues != null &&
-        (enumValues is! List || !enumValues.contains(value))) {
-      return false;
-    }
-    final type = schema['type'];
-    if (type == 'object') {
-      if (value is! Map<String, Object?>) return false;
-      final properties = schema['properties'];
-      // A schema that omits `properties` is deliberately open-shaped (e.g.
-      // assistantIntentSchema's time_range/compare_to, whose internal shape
-      // is checked later by IntentValidator) — accept any object for it.
-      if (properties == null) return true;
-      if (properties is! Map) return false;
-      final required =
-          (schema['required'] as List?)?.whereType<String>().toSet() ?? {};
-      if (!value.keys.toSet().containsAll(required)) return false;
-      if (schema['additionalProperties'] == false &&
-          value.keys.any((key) => !properties.containsKey(key))) {
-        return false;
-      }
-      for (final entry in value.entries) {
-        final child = properties[entry.key];
-        if (child is Map &&
-            !_matchesSchema(entry.value, Map<String, Object?>.from(child))) {
-          return false;
-        }
-      }
-      return true;
-    }
-    if (type == 'array') {
-      if (value is! List) return false;
-      final items = schema['items'];
-      return items is! Map ||
-          value.every(
-            (item) => _matchesSchema(
-              item,
-              Map<String, Object?>.from(items),
-            ),
-          );
-    }
-    return switch (type) {
+  bool _matchesType(Object? value, String expectedType) {
+    return switch (expectedType) {
       'string' => value is String,
       'integer' => value is int,
       'number' => value is num,
@@ -285,10 +254,10 @@ class PlatformLlmRuntime implements LlmRuntime {
   }
 }
 
-class NoopLlmRuntime implements LlmRuntime {
-  const NoopLlmRuntime({
-    this.reason = LlmUnavailableReason.modelAbsent,
-  });
+class NoopLlmRuntime extends LlmRuntime {
+  const NoopLlmRuntime([
+    this.reason = LlmUnavailableReason.unsupportedDevice,
+  ]);
 
   final LlmUnavailableReason reason;
 
@@ -311,13 +280,6 @@ class NoopLlmRuntime implements LlmRuntime {
 
   @override
   Future<bool> downloadModel() async => false;
-
-  @override
-  Future<bool> downloadModelWithRetry({
-    int maxRetries = 3,
-    Duration delay = const Duration(seconds: 1),
-  }) async =>
-      false;
 
   @override
   Future<bool> deleteModel() async => true;

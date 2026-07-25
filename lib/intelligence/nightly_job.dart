@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
@@ -109,7 +110,12 @@ class NightlyPipeline {
   final Duration timeLimit;
   final DateTime Function() _clock;
 
-  Future<NightlyRunResult> run({DateTime? now}) async {
+  Future<NightlyRunResult> run({DateTime? now}) => runStages(now: now);
+
+  Future<NightlyRunResult> runStages({
+    Set<NightlyStage>? only,
+    DateTime? now,
+  }) async {
     final startedAt = _clock();
     final runAt = (now ?? startedAt).toUtc();
     final runDay = _dayKey(runAt);
@@ -118,11 +124,15 @@ class NightlyPipeline {
     final stagesRun = <NightlyStage>[];
 
     while (nextIndex < NightlyStage.values.length) {
+      final stage = NightlyStage.values[nextIndex];
+      if (only != null && !only.contains(stage)) {
+        nextIndex++;
+        continue;
+      }
       final remaining = timeLimit - _clock().difference(startedAt);
       if (remaining <= Duration.zero) {
         return NightlyRunResult(completed: false, stagesRun: stagesRun);
       }
-      final stage = NightlyStage.values[nextIndex];
       final action = _actions[stage];
       if (action == null) {
         throw StateError('Missing nightly action for ${stage.name}');
@@ -173,6 +183,7 @@ void nightlyCallbackDispatcher() {
   Workmanager().executeTask((task, _) async {
     if (task != nightlyTaskName) return true;
     WidgetsFlutterBinding.ensureInitialized();
+    DartPluginRegistrant.ensureInitialized();
     final database = await _openWorkerDatabase();
     try {
       final result = await NightlyPipeline.production(database).run();
@@ -201,7 +212,7 @@ Future<void> initializeNightlyWork() async {
 Future<AppDatabase> _openWorkerDatabase() async {
   final directory = await getApplicationDocumentsDirectory();
   final passphrase =
-      await const AndroidKeystoreDatabasePassphraseProvider().getPassphrase();
+      await AndroidKeystoreDatabasePassphraseProvider().getPassphrase();
   return AppDatabase(
     openEncryptedDatabase(
       file: File(p.join(directory.path, appDatabaseFileName)),

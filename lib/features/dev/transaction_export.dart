@@ -80,7 +80,24 @@ final transactionJsonExportProvider =
       );
 });
 
-/// Export of all non-deleted transactions as plain CSV for external spreadsheet analysis.
+/// Writes the debug CSV export to a user-selected document.
+final transactionCsvExportProvider =
+    FutureProvider.autoDispose<bool>((ref) async {
+  final database = await ref.watch(appDatabaseProvider.future);
+  final bytes = await TransactionCsvExporter(database).exportCsvBytes();
+  return ref.read(systemDocumentGatewayProvider).saveDocument(
+        suggestedName: TransactionCsvExporter.fileName,
+        mimeType: 'text/csv',
+        bytes: bytes,
+      );
+});
+
+/// Debug-only plaintext CSV export of all non-deleted transactions.
+///
+/// Privacy: writes normalized, sensitive plaintext (merchant, amount,
+/// account hint, reference) to a user-selected document. The UI entry point
+/// MUST stay behind the kDebugMode guard on the dev screen and MUST warn
+/// before writing. This is NOT the user-facing encrypted export (T-043).
 class TransactionCsvExporter {
   const TransactionCsvExporter(this._database);
 
@@ -97,38 +114,56 @@ class TransactionCsvExporter {
     final categoryNames = {for (final c in categories) c.id: c.name};
 
     final buffer = StringBuffer();
-    buffer.writeln(
-      'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status',
+    buffer.write(
+      'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status\r\n',
     );
 
     for (final row in rows) {
-      final date = DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true)
-          .toIso8601String();
+      final local =
+          DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true).toLocal();
+      final date = _escapeCsv(
+        '${local.year.toString().padLeft(4, '0')}-'
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}',
+      );
       final merchant = _escapeCsv(row.merchantRaw ?? '');
-      final amount = row.amount.toString();
-      final direction = row.direction;
-      final channel = row.channel;
+      final amount = _escapeCsv(row.amount.toStringAsFixed(2));
+      final direction = _escapeCsv(row.direction);
+      final channel = _escapeCsv(row.channel);
       final category = _escapeCsv(categoryNames[row.categoryId] ?? '');
       final account = _escapeCsv(row.accountHint ?? '');
       final ref = _escapeCsv(row.refId ?? '');
-      final status = row.status;
+      final status = _escapeCsv(row.status);
 
-      buffer.writeln(
-        '$date,$merchant,$amount,$direction,$channel,$category,$account,$ref,$status',
+      buffer.write(
+        '$date,$merchant,$amount,$direction,$channel,$category,$account,$ref,$status\r\n',
       );
     }
     return buffer.toString();
   }
 
+  /// Quotes per RFC 4180 and neutralizes spreadsheet formula evaluation.
+  ///
+  /// Merchant/reference/account text originates from third-party SMS, so a
+  /// leading =, +, -, or @ would execute as a formula in Excel/Sheets on open
+  /// (e.g. =HYPERLINK/WEBSERVICE exfiltrating the row). Prefixing a single
+  /// quote is the standard mitigation and is stripped by spreadsheet importers.
   static String _escapeCsv(String field) {
-    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
-      return '"${field.replaceAll('"', '""')}"';
+    var value = field;
+    if (value.isNotEmpty && '=+-@\t\r'.contains(value[0])) {
+      value = "'$value";
     }
-    return field;
+    if (value.contains(',') ||
+        value.contains('"') ||
+        value.contains('\n') ||
+        value.contains('\r')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
   }
 
   Future<Uint8List> exportCsvBytes() async {
     final csvStr = await serializeCsv();
-    return Uint8List.fromList(utf8.encode(csvStr));
+    return Uint8List.fromList(utf8.encode('\uFEFF$csvStr'));
   }
 }

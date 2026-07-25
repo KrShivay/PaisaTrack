@@ -77,7 +77,7 @@ void main() {
     expect(notifier.state.processed, 100);
     expect(notifier.state.failed, 2);
 
-    notifier.markCompleted();
+    notifier.markCompleted(processed: 100, failed: 2);
     expect(notifier.state.stage, SmsBackfillStage.completed);
   });
 

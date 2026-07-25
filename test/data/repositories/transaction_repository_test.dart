@@ -403,5 +403,96 @@ void main() {
         'other',
       );
     });
+
+    test(
+        'counterparty matching requires exact VPA and rejects substring over-matches',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'txn_exact_vpa',
+        counterpartyVpa: 'abc@ybl',
+      );
+      await _insertTxn(
+        database,
+        id: 'txn_overmatch_vpa1',
+        counterpartyVpa: 'xabc@ybl2',
+      );
+      await _insertTxn(
+        database,
+        id: 'txn_overmatch_vpa2',
+        counterpartyVpa: 'notabc@ybl',
+      );
+
+      final result = await TransactionRepository(database).correctCategory(
+        txnId: 'txn_exact_vpa',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+
+      expect(result.affectedTransactionCount, 1);
+      final rows = await database.select(database.transactions).get();
+      expect(
+        rows.singleWhere((row) => row.id == 'txn_exact_vpa').categoryId,
+        'food_dining',
+      );
+      expect(
+        rows.singleWhere((row) => row.id == 'txn_overmatch_vpa1').categoryId,
+        'other',
+      );
+      expect(
+        rows.singleWhere((row) => row.id == 'txn_overmatch_vpa2').categoryId,
+        'other',
+      );
+    });
+
+    test(
+        'existing and future scope handles single quotes and prevents SQL injection',
+        () async {
+      await _insertTxn(
+        database,
+        id: 't1',
+        merchantRaw: "Domino's Pizza",
+      );
+      await _insertTxn(
+        database,
+        id: 't2',
+        merchantRaw: 'Swiggy',
+      );
+      await _insertTxn(
+        database,
+        id: 't3',
+        merchantRaw: 'Amazon',
+      );
+
+      final result1 = await TransactionRepository(database).correctCategory(
+        txnId: 't1',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+      expect(result1.affectedTransactionCount, 1);
+
+      await _insertTxn(
+        database,
+        id: 't_inj',
+        merchantRaw: "x' OR 1=1 --",
+      );
+
+      final result2 = await TransactionRepository(database).correctCategory(
+        txnId: 't_inj',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+      expect(result2.affectedTransactionCount, 1);
+      final rows = await database.select(database.transactions).get();
+      expect(
+        rows.singleWhere((row) => row.id == 't_inj').categoryId,
+        'food_dining',
+      );
+      expect(rows.singleWhere((row) => row.id == 't2').categoryId, 'other');
+      expect(rows.singleWhere((row) => row.id == 't3').categoryId, 'other');
+    });
   });
 }

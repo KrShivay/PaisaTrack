@@ -1,4 +1,4 @@
-package com.paisatrack
+package com.paisatrack.keystore
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

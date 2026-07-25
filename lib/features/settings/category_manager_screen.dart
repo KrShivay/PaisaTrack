@@ -232,8 +232,8 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       builder: (context) => AlertDialog(
         title: Text('Merge ${source.name} into ${target.name}?'),
         content: Text(
-          'All historical transactions and rules assigned to "${source.name}" '
-          'will be moved to "${target.name}".\n\n"${source.name}" will be deleted. '
+          'All historical transactions, subcategories, and rules assigned to "${source.name}" '
+          'will be re-parented and moved to "${target.name}".\n\n"${source.name}" will be deleted. '
           'This action cannot be undone.',
         ),
         actions: [

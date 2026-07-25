@@ -1,14 +1,17 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/crypto/database_cipher.dart';
+import 'package:paisatrack_keystore/paisatrack_keystore.dart' as keystore;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AndroidKeystoreDatabasePassphraseProvider', () {
     const channel = MethodChannel('test/database_passphrase');
-    const provider = AndroidKeystoreDatabasePassphraseProvider(
-      channel: channel,
+    final provider = AndroidKeystoreDatabasePassphraseProvider(
+      delegate: const keystore.AndroidKeystoreDatabasePassphraseProvider(
+        channel: channel,
+      ),
     );
 
     tearDown(() {

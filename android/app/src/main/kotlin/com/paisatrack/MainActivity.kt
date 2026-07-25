@@ -48,38 +48,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        val passphraseStore = DatabasePassphraseStore(applicationContext)
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            "com.paisatrack/database_passphrase",
-        ).setMethodCallHandler { call, result ->
-            try {
-                when (call.method) {
-                    "getPassphrase" -> result.success(passphraseStore.getOrCreate())
-                    "clearPassphrase" -> {
-                        passphraseStore.clear()
-                        result.success(null)
-                    }
-                    "debugResetForTests" -> {
-                        if (!isDebuggable()) {
-                            result.error(
-                                "unavailable",
-                                "Passphrase reset is only available in debug builds.",
-                                null,
-                            )
-                            return@setMethodCallHandler
-                        }
-
-                        passphraseStore.clearForTests()
-                        result.success(null)
-                    }
-                    else -> result.notImplemented()
-                }
-            } catch (error: Exception) {
-                result.error("database_passphrase", error.message, null)
-            }
-        }
-
         llmBridge?.close()
         val bridge = LlmBridge(applicationContext)
         llmBridge = bridge

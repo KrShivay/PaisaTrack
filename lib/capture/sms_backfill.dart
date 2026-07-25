@@ -12,6 +12,7 @@ import '../data/models/raw_sms.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
 import '../features/settings/app_settings.dart';
+import '../intelligence/nightly_job.dart';
 import '../intelligence/recurring_detector.dart';
 import 'captured_sms_source.dart';
 import 'parser_cascade.dart';
@@ -407,6 +408,9 @@ Future<void> _runCatchUpSafely(
   try {
     await catchUp.run();
     await ForegroundRecurringScanner(database).runIfStale();
+    await NightlyPipeline.production(database).runStages(
+      only: {NightlyStage.purgeExpiredRawSms},
+    );
   } catch (error, stackTrace) {
     developer.log(
       'Incremental SMS catch-up failed',
@@ -452,10 +456,26 @@ class SmsBackfillStatusState {
       failed: failed ?? this.failed,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SmsBackfillStatusState &&
+          runtimeType == other.runtimeType &&
+          stage == other.stage &&
+          processed == other.processed &&
+          failed == other.failed;
+
+  @override
+  int get hashCode => Object.hash(stage, processed, failed);
 }
 
 class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
   SmsBackfillStatusNotifier() : super(const SmsBackfillStatusState());
+
+  void markRunning() {
+    state = const SmsBackfillStatusState(stage: SmsBackfillStage.running);
+  }
 
   void updateProgress({required int processed, required int failed}) {
     state = state.copyWith(
@@ -465,8 +485,12 @@ class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
     );
   }
 
-  void markCompleted() {
-    state = state.copyWith(stage: SmsBackfillStage.completed);
+  void markCompleted({required int processed, required int failed}) {
+    state = state.copyWith(
+      stage: SmsBackfillStage.completed,
+      processed: processed,
+      failed: failed,
+    );
   }
 
   void markFailed() {
@@ -483,8 +507,14 @@ final smsBackfillStatusProvider =
 final smsBackfillProvider = FutureProvider<int>((ref) async {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   if (permission != SmsPermissionStatus.granted) return 0;
+  // Keep inbox/database maintenance out of the first rendered frame. The
+  // incremental path is page-bounded, so an arbitrary wall-clock delay is no
+  // longer needed and would leave timers behind when widget tests dispose.
   await WidgetsBinding.instance.endOfFrame;
   final notifier = ref.read(smsBackfillStatusProvider.notifier);
+  // Reset before awaiting: this provider re-runs on permission changes and
+  // would otherwise render the previous run's completed count as live.
+  notifier.markRunning();
   try {
     final runner = await ref.watch(smsHistoryImportRunnerProvider.future);
     final result = await runner.run(
@@ -496,10 +526,15 @@ final smsBackfillProvider = FutureProvider<int>((ref) async {
         );
       },
     );
-    notifier.markCompleted();
+    notifier.markCompleted(
+      processed: result.processed,
+      failed: result.failed,
+    );
     return result.processed;
   } catch (error, stackTrace) {
     notifier.markFailed();
+    // Keep diagnostics content-free: platform/query errors are actionable,
+    // while SMS sender/body data must never enter logs.
     developer.log(
       'Automatic SMS history import failed',
       name: 'paisatrack.sms_import',
