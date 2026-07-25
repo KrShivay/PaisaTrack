@@ -225,7 +225,30 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
         ],
       ),
     );
-    if (target == null) return;
+    if (target == null || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Merge ${source.name} into ${target.name}?'),
+        content: Text(
+          'All historical transactions and rules assigned to "${source.name}" '
+          'will be moved to "${target.name}".\n\n"${source.name}" will be deleted. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Merge'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
 
     await (await _repository(ref)).mergeCategory(
       sourceCategoryId: source.id,
