@@ -217,16 +217,25 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('All'));
-    await tester.pump();
-    await tester.scrollUntilVisible(find.text('Load 2 more'), 200);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Load 2 more'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     await tester.tap(find.text('Load 2 more'));
-    await tester.pump();
-    await tester.pump();
-    await tester.scrollUntilVisible(find.text('Payee 3'), 200);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Payee 3'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     expect(find.text('Payee 3'), findsOneWidget);
     expect(find.textContaining('Load '), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets(
@@ -420,6 +429,36 @@ void main() {
       rows.singleWhere((row) => row.id == 'txn_group_other').status,
       'needs_review',
     );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('filters review list by search query', (tester) async {
+    final items = [
+      reviewItem(
+        id: 'txn_swiggy',
+        displayName: 'Swiggy Instamart',
+        counterpartyKey: 'raw:swiggy instamart',
+      ),
+      reviewItem(
+        id: 'txn_zomato',
+        displayName: 'Zomato Food',
+        counterpartyKey: 'raw:zomato food',
+      ),
+    ];
+    await pumpActionableScreen(tester, items);
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Swiggy Instamart'), findsOneWidget);
+    expect(find.text('Zomato Food'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('review_search_field')), 'Swiggy');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Swiggy Instamart'), findsOneWidget);
+    expect(find.text('Zomato Food'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });

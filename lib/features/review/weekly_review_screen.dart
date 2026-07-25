@@ -344,7 +344,7 @@ String? _vpaFromReviewItem(TransactionReviewItem item) {
   return key?.startsWith('vpa:') == true ? key!.substring(4) : null;
 }
 
-class _ReviewList extends ConsumerWidget {
+class _ReviewList extends StatefulWidget {
   const _ReviewList({
     required this.items,
     required this.selectedIds,
@@ -366,19 +366,57 @@ class _ReviewList extends ConsumerWidget {
   final VoidCallback onLoadMore;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<_ReviewList> createState() => _ReviewListState();
+}
+
+class _ReviewListState extends State<_ReviewList> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredItems = widget.items.where((item) {
+      if (_searchQuery.isEmpty) return true;
+      final q = _searchQuery.toLowerCase();
+      final nameMatches = item.displayName.toLowerCase().contains(q);
+      final categoryMatches =
+          item.categoryName?.toLowerCase().contains(q) == true;
+      final keyMatches =
+          item.counterpartyKey?.toLowerCase().contains(q) == true;
+      return nameMatches || categoryMatches || keyMatches;
+    }).toList(growable: false);
+
     final groups = <String, List<TransactionReviewItem>>{};
-    for (final item in items) {
+    for (final item in filteredItems) {
       final key = item.counterpartyKey ??
           'display:${item.displayName.trim().toLowerCase()}';
       groups.putIfAbsent(key, () => []).add(item);
     }
-    final allSelected = items.every((item) => selectedIds.contains(item.id));
-    final someSelected = selectedIds.isNotEmpty;
+    final allSelected = filteredItems.isNotEmpty &&
+        filteredItems.every((item) => widget.selectedIds.contains(item.id));
+    final someSelected = widget.selectedIds.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: TextField(
+            key: const ValueKey('review_search_field'),
+            decoration: InputDecoration(
+              hintText: 'Search merchants or categories...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(() => _searchQuery = ''),
+                    )
+                  : null,
+              isDense: true,
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) => setState(() => _searchQuery = value),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Row(
@@ -391,13 +429,13 @@ class _ReviewList extends ConsumerWidget {
                         ? null
                         : false,
                 tristate: true,
-                onChanged: (_) => onSelectAll(),
+                onChanged: (_) => widget.onSelectAll(),
               ),
               const Expanded(child: Text('Select all')),
               FilledButton.icon(
-                onPressed: someSelected ? onConfirmSelected : null,
+                onPressed: someSelected ? widget.onConfirmSelected : null,
                 icon: const Icon(Icons.done_all),
-                label: Text('Confirm (${selectedIds.length})'),
+                label: Text('Confirm (${widget.selectedIds.length})'),
               ),
             ],
           ),
@@ -409,26 +447,26 @@ class _ReviewList extends ConsumerWidget {
             count: entry.value.length,
             total: entry.value.fold(0, (sum, item) => sum + item.amount),
             onConfirm: () =>
-                onConfirmGroup(entry.value.map((item) => item.id).toSet()),
+                widget.onConfirmGroup(entry.value.map((item) => item.id).toSet()),
           ),
           for (final item in entry.value) ...[
             _ReviewTile(
               item: item,
               matchingGroupIds: entry.value.map((item) => item.id).toSet(),
-              selected: selectedIds.contains(item.id),
-              onSelected: (selected) => onToggle(item.id, selected),
+              selected: widget.selectedIds.contains(item.id),
+              onSelected: (selected) => widget.onToggle(item.id, selected),
             ),
             const Divider(height: 1),
           ],
         ],
-        if (remainingCount > 0)
+        if (widget.remainingCount > 0)
           Padding(
             padding: AppSpacing.screen,
             child: OutlinedButton.icon(
-              onPressed: onLoadMore,
+              onPressed: widget.onLoadMore,
               icon: const Icon(Icons.expand_more),
               label: Text(
-                'Load ${remainingCount.clamp(0, reviewPageSize)} more',
+                'Load ${widget.remainingCount.clamp(0, reviewPageSize)} more',
               ),
             ),
           ),
