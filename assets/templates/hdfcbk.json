@@ -1,0 +1,40 @@
+{
+  "sender_patterns": [
+    "^[A-Z]{2}-HDFCBK(?:-[A-Z])?$",
+    "^[A-Z]{2}-HDFCBN(?:-[A-Z])?$"
+  ],
+  "templates": [
+    {
+      "id": "hdfc_upi_debit_v1",
+      "regex": "Money Transfer: Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*) debited from A/C x(?<account>\\d+) to (?<merchant>.+?) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) via UPI Ref (?<ref>\\d+)",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    },
+    {
+      "id": "hdfc_card_spent_v1",
+      "regex": "Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*) spent on HDFC Bank Card ending (?<account>\\d{4}) at (?<merchant>.+?) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2})",
+      "direction": "debit",
+      "channel": "card",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    },
+    {
+      "id": "hdfc_account_debit_v1",
+      "regex": "Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*) debited from HDFC Bank A/C x(?<account>\\d{4}) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) to (?<merchant>.+?)\\.(?: Avl Bal: Rs\\.?\\s?(?<balance>[\\d,]+\\.?\\d*))?",
+      "direction": "debit",
+      "channel": "unknown",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    },
+    {
+      "id": "hdfc_account_credit_v1",
+      "regex": "Rs\\.?\\s?(?<amount>[\\d,]+\\.?\\d*) credited to HDFC Bank A/C x(?<account>\\d{4}) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) by (?<merchant>.+?)\\.",
+      "direction": "credit",
+      "channel": "unknown",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    }
+  ]
+}

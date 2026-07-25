@@ -34,6 +34,8 @@ final templateMatcherProvider = FutureProvider<TemplateMatcher>((ref) async {
     const [
       'assets/templates/axisbk.json',
       'assets/templates/centbk.json',
+      'assets/templates/hdfcbk.json',
+      'assets/templates/icicib.json',
       'assets/templates/indusind.json',
       'assets/templates/kotak.json',
       'assets/templates/paytmb.json',

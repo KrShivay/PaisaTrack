@@ -1,0 +1,40 @@
+{
+  "sender_patterns": [
+    "^[A-Z]{2}-ICICIB(?:-[A-Z])?$",
+    "^[A-Z]{2}-ICICIP(?:-[A-Z])?$"
+  ],
+  "templates": [
+    {
+      "id": "icici_upi_debit_v1",
+      "regex": "Dear Customer, A/C X(?<account>\\d{4}) debited by Rs (?<amount>[\\d,]+\\.?\\d*) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) transfer to (?<merchant>.+?) UPI Ref (?<ref>\\d+)",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    },
+    {
+      "id": "icici_card_spent_v1",
+      "regex": "INR (?<amount>[\\d,]+\\.?\\d*) spent on ICICI Bank Credit Card xx(?<account>\\d{4}) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) at (?<merchant>.+?)\\.",
+      "direction": "debit",
+      "channel": "card",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    },
+    {
+      "id": "icici_account_debit_v1",
+      "regex": "A/C X(?<account>\\d{4}) Debited with INR (?<amount>[\\d,]+\\.?\\d*) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) info (?<merchant>.+?)\\.",
+      "direction": "debit",
+      "channel": "unknown",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    },
+    {
+      "id": "icici_account_credit_v1",
+      "regex": "Dear Customer, A/C X(?<account>\\d{4}) credited with INR (?<amount>[\\d,]+\\.?\\d*) on (?<date>\\d{2}-[A-Za-z]{3}-\\d{2}) by (?<merchant>.+?)\\.",
+      "direction": "credit",
+      "channel": "unknown",
+      "date_format": "dd-MMM-yy",
+      "provenance": "device"
+    }
+  ]
+}

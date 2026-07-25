@@ -34,3 +34,20 @@ final templateTrustAlertsProvider = StreamProvider<List<TemplateTrustEntry>>(
     );
   },
 );
+
+/// Groups unparsed raw SMS by sender and sorts them by frequency descending.
+final unrecognizedSenderCountsProvider =
+    Provider<List<MapEntry<String, int>>>((ref) {
+  final unparsed = ref.watch(unparsedSmsListProvider).valueOrNull ?? const [];
+  final counts = <String, int>{};
+  for (final item in unparsed) {
+    final sender = item.sender.toUpperCase().trim();
+    if (sender.isNotEmpty) {
+      counts[sender] = (counts[sender] ?? 0) + 1;
+    }
+  }
+  final sorted = counts.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return sorted;
+});
+
