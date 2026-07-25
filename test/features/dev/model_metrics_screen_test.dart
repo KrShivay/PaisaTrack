@@ -186,6 +186,13 @@ void main() {
 
       expect(metrics.accuracy, 1);
     });
+
+    test('computes parse source breakdown and avg parse confidence', () async {
+      await _insertTxn(database, id: 'txn_1', status: 'auto');
+      final metrics = await ModelMetricsRepository(database).load();
+      expect(metrics.totalTransactions, 1);
+      expect(metrics.parseSourceCounts['template'], 1);
+    });
   });
 
   group('ModelMetricsScreen', () {
