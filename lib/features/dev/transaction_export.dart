@@ -79,3 +79,56 @@ final transactionJsonExportProvider =
         bytes: bytes,
       );
 });
+
+/// Export of all non-deleted transactions as plain CSV for external spreadsheet analysis.
+class TransactionCsvExporter {
+  const TransactionCsvExporter(this._database);
+
+  static const fileName = 'transactions_export.csv';
+
+  final AppDatabase _database;
+
+  Future<String> serializeCsv() async {
+    final rows = await (_database.select(_database.transactions)
+          ..where((t) => t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.ts)]))
+        .get();
+    final categories = await _database.select(_database.categories).get();
+    final categoryNames = {for (final c in categories) c.id: c.name};
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+      'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status',
+    );
+
+    for (final row in rows) {
+      final date = DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true)
+          .toIso8601String();
+      final merchant = _escapeCsv(row.merchantRaw ?? '');
+      final amount = row.amount.toString();
+      final direction = row.direction;
+      final channel = row.channel;
+      final category = _escapeCsv(categoryNames[row.categoryId] ?? '');
+      final account = _escapeCsv(row.accountHint ?? '');
+      final ref = _escapeCsv(row.refId ?? '');
+      final status = row.status;
+
+      buffer.writeln(
+        '$date,$merchant,$amount,$direction,$channel,$category,$account,$ref,$status',
+      );
+    }
+    return buffer.toString();
+  }
+
+  static String _escapeCsv(String field) {
+    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
+      return '"${field.replaceAll('"', '""')}"';
+    }
+    return field;
+  }
+
+  Future<Uint8List> exportCsvBytes() async {
+    final csvStr = await serializeCsv();
+    return Uint8List.fromList(utf8.encode(csvStr));
+  }
+}
