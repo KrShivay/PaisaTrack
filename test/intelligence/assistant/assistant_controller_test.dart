@@ -5,9 +5,8 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 
-class _FakeLlmRuntime implements LlmRuntime {
-  _FakeLlmRuntime(this.reason);
-  final LlmUnavailableReason reason;
+class _FakeLlmRuntime extends NoopLlmRuntime {
+  _FakeLlmRuntime(LlmUnavailableReason reason) : super(reason: reason);
 
   @override
   Future<LlmResult<Map<String, Object?>>> extractJson(
@@ -19,21 +18,9 @@ class _FakeLlmRuntime implements LlmRuntime {
   @override
   Future<LlmResult<String>> complete(String prompt) async =>
       LlmUnavailable(reason);
-
-  @override
-  Future<bool> isModelAvailable() async => false;
-
-  @override
-  Future<bool> isDeviceSupported() async => false;
-
-  @override
-  Future<bool> downloadModel() async => false;
-
-  @override
-  Future<bool> deleteModel() async => true;
 }
 
-class _IntentLlmRuntime implements LlmRuntime {
+class _IntentLlmRuntime extends NoopLlmRuntime {
   var extractionCalls = 0;
 
   @override

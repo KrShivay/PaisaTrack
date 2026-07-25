@@ -42,6 +42,19 @@ abstract class LlmRuntime {
   Future<bool> isModelAvailable();
   Future<bool> isDeviceSupported();
   Future<bool> downloadModel();
+  Future<bool> downloadModelWithRetry({
+    int maxRetries = 3,
+    Duration delay = const Duration(seconds: 1),
+  }) async {
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      final ok = await downloadModel();
+      if (ok) return true;
+      if (attempt < maxRetries - 1 && delay > Duration.zero) {
+        await Future<void>.delayed(delay);
+      }
+    }
+    return false;
+  }
   Future<bool> deleteModel();
 }
 
@@ -119,6 +132,21 @@ class PlatformLlmRuntime implements LlmRuntime {
 
   @override
   Future<bool> downloadModel() => _boolCall('downloadModel');
+
+  @override
+  Future<bool> downloadModelWithRetry({
+    int maxRetries = 3,
+    Duration delay = const Duration(seconds: 1),
+  }) async {
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      final ok = await downloadModel();
+      if (ok) return true;
+      if (attempt < maxRetries - 1 && delay > Duration.zero) {
+        await Future<void>.delayed(delay);
+      }
+    }
+    return false;
+  }
 
   @override
   Future<bool> deleteModel() => _boolCall('deleteModel');
@@ -283,6 +311,13 @@ class NoopLlmRuntime implements LlmRuntime {
 
   @override
   Future<bool> downloadModel() async => false;
+
+  @override
+  Future<bool> downloadModelWithRetry({
+    int maxRetries = 3,
+    Duration delay = const Duration(seconds: 1),
+  }) async =>
+      false;
 
   @override
   Future<bool> deleteModel() async => true;

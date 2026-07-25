@@ -50,6 +50,14 @@ class _FakeLlmRuntime extends NoopLlmRuntime {
   }
 
   @override
+  Future<bool> downloadModelWithRetry({
+    int maxRetries = 3,
+    Duration delay = const Duration(seconds: 1),
+  }) async {
+    return downloadModel();
+  }
+
+  @override
   Future<bool> deleteModel() async {
     deleted = true;
     return true;

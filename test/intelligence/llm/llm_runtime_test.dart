@@ -273,4 +273,23 @@ void main() {
       isA<LlmUnavailable<Map<String, Object?>>>(),
     );
   });
+
+  test('downloadModelWithRetry retries on failure up to maxRetries', () async {
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'downloadModel') {
+        calls++;
+        return calls == 3;
+      }
+      return null;
+    });
+
+    final success = await runtime.downloadModelWithRetry(
+      maxRetries: 3,
+      delay: Duration.zero,
+    );
+
+    expect(success, isTrue);
+    expect(calls, 3);
+  });
 }

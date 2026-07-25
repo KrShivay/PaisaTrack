@@ -667,17 +667,43 @@ class _LlmModelTileState extends ConsumerState<_LlmModelTile> {
 
   Future<void> _download() async {
     setState(() => _busy = true);
-    final succeeded = await ref.read(llmRuntimeProvider).downloadModel();
+    final succeeded =
+        await ref.read(llmRuntimeProvider).downloadModelWithRetry();
     if (!mounted) return;
     setState(() {
       _busy = false;
       _available = succeeded;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          succeeded ? 'AI model downloaded' : 'Model download paused or failed',
+    if (!succeeded) {
+      _showDownloadFailureDialog();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI model downloaded')),
+      );
+    }
+  }
+
+  void _showDownloadFailureDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Model download failed'),
+        content: const Text(
+          'The AI model download was interrupted or failed. Check your internet connection and try again.',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _download();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
