@@ -4,41 +4,108 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../data/repositories/payee_label_repository.dart';
 
-class PayeeLabelsScreen extends ConsumerWidget {
+class PayeeLabelsScreen extends ConsumerStatefulWidget {
   const PayeeLabelsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PayeeLabelsScreen> createState() => _PayeeLabelsScreenState();
+}
+
+class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
+  String _searchQuery = '';
+  bool _unlabeledOnly = false;
+
+  @override
+  Widget build(BuildContext context) {
     final identities = ref.watch(payeeIdentitiesProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Payee labels')),
       body: identities.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Labels unavailable: $error')),
-        data: (items) => items.isEmpty
-            ? const Center(child: Text('No merchants or UPI IDs found yet.'))
-            : ListView.separated(
-                padding: AppSpacing.screen,
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.badge_outlined),
-                    title: Text(item.displayName),
-                    subtitle: Text(
-                      '${item.transactionCount} transaction'
-                      '${item.transactionCount == 1 ? '' : 's'} · '
-                      '${item.aliases.join(' · ')}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+        data: (items) {
+          if (items.isEmpty) {
+            return const Center(child: Text('No merchants or UPI IDs found yet.'));
+          }
+
+          final filtered = items.where((item) {
+            if (_unlabeledOnly && item.userLabel != null) return false;
+            if (_searchQuery.isEmpty) return true;
+            final q = _searchQuery.toLowerCase();
+            final nameMatches = item.displayName.toLowerCase().contains(q);
+            final labelMatches =
+                item.userLabel?.toLowerCase().contains(q) == true;
+            final aliasMatches =
+                item.aliases.any((a) => a.toLowerCase().contains(q));
+            return nameMatches || labelMatches || aliasMatches;
+          }).toList(growable: false);
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey('payee_labels_search_field'),
+                        decoration: InputDecoration(
+                          hintText: 'Search payees or aliases...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () =>
+                                      setState(() => _searchQuery = ''),
+                                )
+                              : null,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                        ),
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                      ),
                     ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _edit(context, ref, item),
-                  );
-                },
+                    const SizedBox(width: AppSpacing.xs),
+                    FilterChip(
+                      key: const ValueKey('unlabeled_filter_chip'),
+                      label: const Text('Unlabeled'),
+                      selected: _unlabeledOnly,
+                      onSelected: (selected) =>
+                          setState(() => _unlabeledOnly = selected),
+                    ),
+                  ],
+                ),
               ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? const Center(child: Text('No matching payees found.'))
+                    : ListView.separated(
+                        padding: AppSpacing.screen,
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = filtered[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.badge_outlined),
+                            title: Text(item.displayName),
+                            subtitle: Text(
+                              '${item.transactionCount} transaction'
+                              '${item.transactionCount == 1 ? '' : 's'} · '
+                              '${item.aliases.join(' · ')}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => _edit(context, ref, item),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
