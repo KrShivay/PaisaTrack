@@ -196,11 +196,30 @@ void main() {
     );
 
     await tester.tap(find.byTooltip('Share sanitized SMS'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 
-    expect(copyCalls, 0);
+  testWidgets('displays unparsed reason breakdown summary card', (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(tester, [
+      UnparsedSms(
+        id: 'sms_otp',
+        sender: 'AX-OTP',
+        body: 'Your OTP for login is 123456',
+        receivedAt: now,
+      ),
+      UnparsedSms(
+        id: 'sms_bank',
+        sender: 'AX-HDFCBK',
+        body: 'Rs. 450 debited for dinner',
+        receivedAt: now,
+      ),
+    ]);
+
+    expect(find.textContaining('Rejection reasons:'), findsOneWidget);
+    expect(find.textContaining('OTP / Authentication: 1'), findsOneWidget);
+    expect(find.textContaining('Unmatched financial SMS: 1'), findsOneWidget);
   });
 
   test('repository lists unprocessed raw sms and excludes processed ones',

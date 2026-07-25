@@ -51,3 +51,45 @@ final unrecognizedSenderCountsProvider =
   return sorted;
 });
 
+String categorizeUnparsedSms(String body) {
+  final lower = body.toLowerCase();
+  if (lower.contains('otp') ||
+      lower.contains('secret code') ||
+      lower.contains('verification code') ||
+      lower.contains('login') ||
+      lower.contains('password')) {
+    return 'OTP / Authentication';
+  }
+  if (lower.contains('debited') ||
+      lower.contains('credited') ||
+      lower.contains('spent') ||
+      lower.contains('paid') ||
+      lower.contains('received') ||
+      lower.contains('transferred') ||
+      lower.contains('inr') ||
+      lower.contains('rs.')) {
+    return 'Unmatched financial SMS';
+  }
+  if (lower.contains('balance') ||
+      lower.contains('avail bal') ||
+      lower.contains('statement') ||
+      lower.contains('bill due')) {
+    return 'Balance / Statement info';
+  }
+  return 'Non-transactional / Promo';
+}
+
+/// Groups unparsed raw SMS by rejection reason and sorts by count descending.
+final unparsedReasonCountsProvider =
+    Provider<List<MapEntry<String, int>>>((ref) {
+  final unparsed = ref.watch(unparsedSmsListProvider).valueOrNull ?? const [];
+  final counts = <String, int>{};
+  for (final item in unparsed) {
+    final reason = categorizeUnparsedSms(item.body);
+    counts[reason] = (counts[reason] ?? 0) + 1;
+  }
+  final sorted = counts.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return sorted;
+});
+

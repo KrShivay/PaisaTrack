@@ -35,6 +35,7 @@ class UnparsedSmsScreen extends ConsumerWidget {
         children: [
           if (trustAlerts.isNotEmpty) _TemplateTrustAlert(entries: trustAlerts),
           const _UnrecognizedSendersSummary(),
+          const _UnparsedReasonSummary(),
           Expanded(
             child: switch (unparsed) {
               AsyncData(:final value) when value.isEmpty =>
@@ -246,6 +247,39 @@ class _UnrecognizedSendersSummary extends ConsumerWidget {
             const SizedBox(height: 4.0),
             Text(
               topSenders,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnparsedReasonSummary extends ConsumerWidget {
+  const _UnparsedReasonSummary();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reasonCounts = ref.watch(unparsedReasonCountsProvider);
+    if (reasonCounts.isEmpty) return const SizedBox.shrink();
+
+    final topReasons =
+        reasonCounts.map((e) => '${e.key}: ${e.value}').join(' · ');
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Rejection reasons:',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4.0),
+            Text(
+              topReasons,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
