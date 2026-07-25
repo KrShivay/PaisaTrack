@@ -428,20 +428,78 @@ class _SmsCatchUpLifecycleObserver with WidgetsBindingObserver {
   }
 }
 
+enum SmsBackfillStage { idle, running, completed, failed }
+
+class SmsBackfillStatusState {
+  const SmsBackfillStatusState({
+    this.stage = SmsBackfillStage.idle,
+    this.processed = 0,
+    this.failed = 0,
+  });
+
+  final SmsBackfillStage stage;
+  final int processed;
+  final int failed;
+
+  SmsBackfillStatusState copyWith({
+    SmsBackfillStage? stage,
+    int? processed,
+    int? failed,
+  }) {
+    return SmsBackfillStatusState(
+      stage: stage ?? this.stage,
+      processed: processed ?? this.processed,
+      failed: failed ?? this.failed,
+    );
+  }
+}
+
+class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
+  SmsBackfillStatusNotifier() : super(const SmsBackfillStatusState());
+
+  void updateProgress({required int processed, required int failed}) {
+    state = state.copyWith(
+      stage: SmsBackfillStage.running,
+      processed: processed,
+      failed: failed,
+    );
+  }
+
+  void markCompleted() {
+    state = state.copyWith(stage: SmsBackfillStage.completed);
+  }
+
+  void markFailed() {
+    state = state.copyWith(stage: SmsBackfillStage.failed);
+  }
+}
+
+final smsBackfillStatusProvider =
+    StateNotifierProvider<SmsBackfillStatusNotifier, SmsBackfillStatusState>(
+  (ref) => SmsBackfillStatusNotifier(),
+);
+
 /// Runs the newest full-history import version once permission and DB are ready.
 final smsBackfillProvider = FutureProvider<int>((ref) async {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   if (permission != SmsPermissionStatus.granted) return 0;
-  // Keep inbox/database maintenance out of the first rendered frame. The
-  // incremental path is page-bounded, so an arbitrary wall-clock delay is no
-  // longer needed and would leave timers behind when widget tests dispose.
   await WidgetsBinding.instance.endOfFrame;
+  final notifier = ref.read(smsBackfillStatusProvider.notifier);
   try {
     final runner = await ref.watch(smsHistoryImportRunnerProvider.future);
-    return (await runner.run(force: false)).processed;
+    final result = await runner.run(
+      force: false,
+      onProgress: (progress) {
+        notifier.updateProgress(
+          processed: progress.processed,
+          failed: progress.failed,
+        );
+      },
+    );
+    notifier.markCompleted();
+    return result.processed;
   } catch (error, stackTrace) {
-    // Keep diagnostics content-free: platform/query errors are actionable,
-    // while SMS sender/body data must never enter logs.
+    notifier.markFailed();
     developer.log(
       'Automatic SMS history import failed',
       name: 'paisatrack.sms_import',
