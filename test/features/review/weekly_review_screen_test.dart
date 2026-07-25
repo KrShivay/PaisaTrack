@@ -218,18 +218,18 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       find.text('Load 2 more'),
-      200,
-      scrollable: find.byType(Scrollable).first,
+      find.byType(ListView).first,
+      const Offset(0, -200),
     );
 
     await tester.tap(find.text('Load 2 more'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       find.text('Payee 3'),
-      200,
-      scrollable: find.byType(Scrollable).first,
+      find.byType(ListView).first,
+      const Offset(0, -200),
     );
 
     expect(find.text('Payee 3'), findsOneWidget);
@@ -446,7 +446,15 @@ void main() {
         counterpartyKey: 'raw:zomato food',
       ),
     ];
-    await pumpActionableScreen(tester, items);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+        ],
+        child: const MaterialApp(home: WeeklyReviewScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
@@ -454,12 +462,13 @@ void main() {
     expect(find.text('Swiggy Instamart'), findsOneWidget);
     expect(find.text('Zomato Food'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const ValueKey('review_search_field')), 'Swiggy');
+    await tester.enterText(
+      find.byKey(const ValueKey('review_search_field')),
+      'Swiggy',
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Swiggy Instamart'), findsOneWidget);
     expect(find.text('Zomato Food'), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
   });
 }
