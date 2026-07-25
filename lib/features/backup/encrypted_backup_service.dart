@@ -62,6 +62,11 @@ class EncryptedBackupService {
 
   /// Builds the encrypted archive in memory for a system document destination.
   Future<Uint8List> exportBytes({required String passphrase}) async {
+    if (passphrase.length < 12) {
+      throw const EncryptedBackupException(
+        'Passphrase must be at least 12 characters long',
+      );
+    }
     final archive = await _readArchive();
     final payload = await _encrypt(
       utf8.encode(jsonEncode(archive)),
@@ -89,6 +94,11 @@ class EncryptedBackupService {
     required Uint8List bytes,
     required String passphrase,
   }) async {
+    if (passphrase.length < 12) {
+      throw const EncryptedBackupException(
+        'Passphrase must be at least 12 characters long',
+      );
+    }
     final payload = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
     final plaintext = await _decrypt(payload, passphrase: passphrase);
     final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, Object?>;
@@ -109,6 +119,10 @@ class EncryptedBackupService {
         'transactions': await _rows(_database.transactions),
         'rules': await _rows(_database.rules),
         'feedback': await _rows(_database.feedback),
+        'baselines': await _rows(_database.baselines),
+        'insights': await _rows(_database.insights),
+        'model_meta': await _rows(_database.modelMeta),
+        'recurring_series': await _rows(_database.recurringSeries),
       },
     };
   }
@@ -128,6 +142,10 @@ class EncryptedBackupService {
     final database = _database;
 
     await database.transaction(() async {
+      await database.delete(database.recurringSeries).go();
+      await database.delete(database.modelMeta).go();
+      await database.delete(database.insights).go();
+      await database.delete(database.baselines).go();
       await database.delete(database.feedback).go();
       await database.delete(database.rules).go();
       await database.delete(database.merchantAliases).go();
@@ -175,6 +193,22 @@ class EncryptedBackupService {
         await database
             .into(database.feedback)
             .insert(FeedbackData.fromJson(row));
+      }
+      for (final row in _optionalTableRows(tables, 'baselines')) {
+        await database.into(database.baselines).insert(Baseline.fromJson(row));
+      }
+      for (final row in _optionalTableRows(tables, 'insights')) {
+        await database.into(database.insights).insert(Insight.fromJson(row));
+      }
+      for (final row in _optionalTableRows(tables, 'model_meta')) {
+        await database
+            .into(database.modelMeta)
+            .insert(ModelMetaData.fromJson(row));
+      }
+      for (final row in _optionalTableRows(tables, 'recurring_series')) {
+        await database
+            .into(database.recurringSeries)
+            .insert(RecurringSery.fromJson(row));
       }
     });
   }

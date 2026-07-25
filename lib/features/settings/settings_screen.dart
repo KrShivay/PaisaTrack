@@ -338,6 +338,7 @@ class SettingsScreen extends ConsumerWidget {
       context,
       title: 'Import encrypted backup',
       action: 'Import',
+      minimumLength: minimumBackupPassphraseLength,
     );
     if (passphrase == null || !context.mounted) return;
 
