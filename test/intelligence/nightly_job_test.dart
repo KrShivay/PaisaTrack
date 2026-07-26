@@ -87,6 +87,7 @@ void main() {
         NightlyStage.baselines,
         NightlyStage.retrainClassifier,
         NightlyStage.recomputeThresholds,
+        NightlyStage.merchantClustering,
         NightlyStage.precomputeInsights,
       ],
     );
