@@ -1,4 +1,4 @@
-# Full-codebase review — 2026-07-25
+# Archived full-codebase review — 2026-07-25
 
 Scope: all of `lib/` (29,188 lines, 106 files), `android/app/src/main/kotlin`,
 and the product docs (`README`, `PLAN`, `docs/architecture.md`, `docs/privacy.md`,

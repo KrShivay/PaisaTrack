@@ -33,6 +33,9 @@ cd android
 Device-only behavior—SMS, background jobs, local models, document pickers,
 performance, and accessibility—requires physical-device evidence.
 
+CI/release acceptance also requires the Android app and Keystore Gradle unit
+tests. A release artifact is invalid when it falls back to debug signing.
+
 ## Test placement
 
 - Unit/widget/provider tests: `test/`.

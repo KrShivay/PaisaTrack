@@ -15,6 +15,8 @@ class FakeSmsPermissionGate implements SmsPermissionGate {
   int statusCalls = 0;
   int requestCalls = 0;
 
+  int openAppSettingsCalls = 0;
+
   @override
   Future<SmsPermissionStatus> status() async {
     statusCalls++;
@@ -28,5 +30,10 @@ class FakeSmsPermissionGate implements SmsPermissionGate {
   Future<SmsPermissionStatus> request() async {
     requestCalls++;
     return requestResult;
+  }
+
+  @override
+  Future<void> openAppSettings() async {
+    openAppSettingsCalls++;
   }
 }

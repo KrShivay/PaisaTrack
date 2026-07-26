@@ -59,9 +59,8 @@ class DuplicateMatchRule {
     final raw = (vpa != null && vpa.isNotEmpty) ? vpa : merchantRaw;
     if (raw == null || raw.isEmpty) return null;
     final localPart = raw.split('@').first;
-    final normalized = localPart
-        .toUpperCase()
-        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final normalized =
+        localPart.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     return normalized.isEmpty ? null : normalized;
   }
 }

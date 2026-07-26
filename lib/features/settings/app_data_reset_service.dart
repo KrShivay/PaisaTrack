@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
@@ -36,6 +37,15 @@ class AppDataResetService {
 
     final directory = await _ref.read(databaseDirectoryProvider.future);
     final deletedFiles = await _deleteDatabaseFiles(directory);
+
+    try {
+      await const MethodChannel('com.paisatrack/reset')
+          .invokeMethod<void>('clearAllNativeState');
+    } on MissingPluginException {
+      // Ignored when host channel is not registered (e.g. desktop unit tests)
+    } catch (_) {
+      // Ignore native reset failures during local erasure
+    }
 
     await _ref.read(databasePassphraseProvider).clearStoredPassphrase();
     await _ref.read(appSettingsControllerProvider.notifier).resetToDefaults();

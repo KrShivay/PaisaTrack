@@ -5,11 +5,13 @@ import 'capture/permissions/sms_permission.dart';
 import 'capture/permissions/sms_permission_provider.dart';
 import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
+import 'core/crypto/database_cipher.dart';
 import 'core/theme/app_theme.dart';
 import 'data/db/database_provider.dart';
 import 'features/home/home_shell.dart';
 import 'features/notifications/ask_now_notifications.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/recovery/database_error_screen.dart';
 import 'features/recovery/key_loss_screen.dart';
 import 'features/settings/app_settings.dart';
 
@@ -43,7 +45,9 @@ class PaisaTrackApp extends ConsumerWidget {
           _ when continueWithoutSms => const HomeShell(),
           _ => const OnboardingScreen(),
         },
-      AsyncError() => const KeyLossScreen(),
+      AsyncError(:final error) when error is DatabaseKeyLostError =>
+        const KeyLossScreen(),
+      AsyncError(:final error) => DatabaseErrorScreen(error: error),
       _ => const _StartupScreen(),
     };
 

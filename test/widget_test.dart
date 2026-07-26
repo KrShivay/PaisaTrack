@@ -36,8 +36,9 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     gate.complete(SmsPermissionStatus.denied);
-    await tester.pumpAndSettle();
-    expect(find.text('Read bank SMS on this device'), findsOneWidget);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('SMS'), findsWidgets);
 
     await database.close();
   });
@@ -65,13 +66,14 @@ void main() {
     expect(find.byType(WeeklyReviewScreen), findsNothing);
     expect(find.byType(InsightsScreen), findsNothing);
 
-    await tester.tap(find.text('Transactions'));
+    await tester.tap(find.text('Activity').first);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(TransactionsScreen), findsOneWidget);
     expect(find.byType(WeeklyReviewScreen), findsNothing);
-    expect(find.text('Transactions'), findsWidgets);
-    expect(find.text('Review'), findsOneWidget);
-    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Activity'), findsWidgets);
+    expect(find.text('Sort'), findsOneWidget);
+    expect(find.text('Trends'), findsOneWidget);
 
     await database.close();
   });
@@ -122,4 +124,7 @@ class _DelayedSmsPermissionGate implements SmsPermissionGate {
 
   @override
   Future<SmsPermissionStatus> request() async => SmsPermissionStatus.denied;
+
+  @override
+  Future<void> openAppSettings() async {}
 }

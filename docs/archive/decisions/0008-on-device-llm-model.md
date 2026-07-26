@@ -1,4 +1,4 @@
-# ADR 0008 — Pinned on-device LLM artifact (T-075)
+# Archived ADR 0008 — Pinned on-device LLM artifact (T-075)
 
 Status: superseded by ADR 0009 (2026-07-26)
 

@@ -46,8 +46,8 @@ class AndroidKeystoreDatabasePassphraseProvider
     implements DatabasePassphraseProvider {
   const AndroidKeystoreDatabasePassphraseProvider({
     keystore.AndroidKeystoreDatabasePassphraseProvider? delegate,
-  }) : _delegate =
-            delegate ?? const keystore.AndroidKeystoreDatabasePassphraseProvider();
+  }) : _delegate = delegate ??
+            const keystore.AndroidKeystoreDatabasePassphraseProvider();
 
   final keystore.AndroidKeystoreDatabasePassphraseProvider _delegate;
 
@@ -68,7 +68,6 @@ class AndroidKeystoreDatabasePassphraseProvider
     await _delegate.debugResetForTests();
   }
 }
-
 
 /// Opens the app database through SQLCipher and fails closed if unavailable.
 ///
@@ -102,7 +101,8 @@ Future<void> _prepareSqlCipher() async {
     // caller's `PRAGMA cipher_version` guard degrades gracefully.
     final libPath = _findDesktopSqlCipherLib();
     if (libPath != null) {
-      final os = Platform.isMacOS ? OperatingSystem.macOS : OperatingSystem.linux;
+      final os =
+          Platform.isMacOS ? OperatingSystem.macOS : OperatingSystem.linux;
       open.overrideFor(os, () => DynamicLibrary.open(libPath));
     }
   }

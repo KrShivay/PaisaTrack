@@ -20,3 +20,10 @@ __pycache__/
 .claude/settings.local.json
 .tokensave/
 .handoff/
+
+# Release signing keys & properties — never commit
+keystore.properties
+android/keystore.properties
+*.jks
+*.keystore
+

@@ -36,4 +36,18 @@ class SmsPermissionController extends AsyncNotifier<SmsPermissionStatus> {
     state = const AsyncLoading<SmsPermissionStatus>().copyWithPrevious(state);
     state = await AsyncValue.guard(gate.request);
   }
+
+  /// Opens the Android app settings so the user can grant permanently-denied
+  /// permissions, then waits for the outcome on app resume.
+  Future<void> openSettings() async {
+    final gate = ref.read(smsPermissionGateProvider);
+    await gate.openAppSettings();
+  }
+
+  /// Re-reads the current permission status (e.g. after returning from
+  /// system settings) and publishes the result.
+  Future<void> recheckStatus() async {
+    final gate = ref.read(smsPermissionGateProvider);
+    state = await AsyncValue.guard(gate.status);
+  }
 }

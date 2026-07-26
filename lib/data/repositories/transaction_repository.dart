@@ -315,6 +315,7 @@ WHERE t.status = 'needs_review'
     Value<double> amount = const Value.absent(),
     Value<String> direction = const Value.absent(),
     Value<String?> merchantRaw = const Value.absent(),
+    Value<String> status = const Value.absent(),
     String context = 'detail_edit',
     bool recordParseCorrections = false,
     DateTime Function() clock = DateTime.now,
@@ -323,7 +324,8 @@ WHERE t.status = 'needs_review'
     return _database.transaction(() async {
       final row = await (_database.select(_database.transactions)
             ..where((t) => t.id.equals(txnId)))
-          .getSingle();
+          .getSingleOrNull();
+      if (row == null) return 0;
       final now = clock().toUtc();
       final confidence = _parseConfidenceOf(row);
       if (amount.present && amount.value <= 0) {
@@ -406,6 +408,9 @@ WHERE t.status = 'needs_review'
       );
       if (merchantRaw.present && merchantRaw.value != row.merchantRaw) {
         companion = companion.copyWith(merchantRaw: merchantRaw);
+      }
+      if (status.present && status.value != row.status) {
+        companion = companion.copyWith(status: status);
       }
 
       if (recordParseCorrections) {
@@ -695,8 +700,7 @@ WHERE t.status = 'needs_review'
       final expected = ruleInput.matchValue.trim().toLowerCase();
       final query = _database.select(_database.transactions)
         ..where(
-          (row) =>
-              row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
+          (row) => row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
         );
 
       if (ruleInput.matchType == 'counterparty') {

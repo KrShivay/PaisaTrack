@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/dashboard_repository.dart';
+import '../../data/repositories/budget_repository.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../recurring/recurring_screen.dart';
@@ -147,15 +148,18 @@ class DashboardPeriod {
   ];
 }
 
+enum DashboardMetricChoice { safeToday, netFlow, burn, runway }
+
+final selectedDashboardMetricProvider = StateProvider<DashboardMetricChoice>(
+  (ref) => DashboardMetricChoice.safeToday,
+);
+
 final dashboardPeriodProvider = StateProvider<DashboardPeriod>(
   (ref) => DashboardPeriod.month(DateTime.now()),
 );
 
 final dashboardAggregateProvider =
     FutureProvider<DashboardAggregateSnapshot>((ref) async {
-  // The bounded joined feed already watches every table that affects dashboard
-  // labels or inclusion. Reuse it as the invalidation signal instead of
-  // keeping a second long-lived database watcher.
   ref.watch(transactionListProvider);
   final database = await ref.watch(appDatabaseProvider.future);
   final period = ref.watch(dashboardPeriodProvider);
@@ -243,6 +247,59 @@ final dailyAverageSpendProvider = Provider<double>((ref) {
   final daysElapsed = ref.watch(dashboardPeriodProvider).elapsedDays();
   if (daysElapsed <= 0) return 0;
   return totals.debitTotal / daysElapsed;
+});
+
+final commitmentsTotalProvider = Provider<double>((ref) {
+  final period = ref.watch(dashboardPeriodProvider);
+  if (!period.isCurrentMonth()) return 0;
+  final upcoming = ref.watch(upcomingRecurringProvider);
+  final now = DateTime.now();
+  var sum = 0.0;
+  for (final series in upcoming) {
+    if (series.nextExpectedDate.year == now.year &&
+        series.nextExpectedDate.month == now.month) {
+      sum += series.expectedAmount;
+    }
+  }
+  return sum;
+});
+
+/// Safe today = (budget - spent - remaining commitments) / inclusive days remaining.
+/// Only meaningful for the current calendar month — returns null otherwise.
+final safeTodayValueProvider = Provider<double?>((ref) {
+  final period = ref.watch(dashboardPeriodProvider);
+  if (!period.isCurrentMonth()) return null;
+
+  final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
+  if (budget == null) return null;
+
+  final totals = ref.watch(monthDirectionTotalsProvider);
+  final commitments = ref.watch(commitmentsTotalProvider);
+  final now = DateTime.now();
+  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+  final daysRemaining = daysInMonth - now.day + 1;
+  if (daysRemaining <= 0) return 0;
+
+  final remainingBudget = budget - totals.debitTotal - commitments;
+  return remainingBudget / daysRemaining;
+});
+
+/// Runway in days = (budget - spent - commitments) / daily burn.
+/// Only meaningful for the current calendar month — returns null otherwise.
+final runwayValueProvider = Provider<double?>((ref) {
+  final period = ref.watch(dashboardPeriodProvider);
+  if (!period.isCurrentMonth()) return null;
+
+  final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
+  if (budget == null) return null;
+
+  final totals = ref.watch(monthDirectionTotalsProvider);
+  final commitments = ref.watch(commitmentsTotalProvider);
+  final burn = ref.watch(dailyAverageSpendProvider);
+  if (burn <= 0) return null;
+
+  final remainingBudget = budget - totals.debitTotal - commitments;
+  return remainingBudget / burn;
 });
 
 final projectedMonthEndSpendProvider = Provider<double?>((ref) {
@@ -555,4 +612,33 @@ final upcomingRecurringProvider = Provider<List<RecurringSery>>((ref) {
       .toList(growable: false)
     ..sort((a, b) => a.nextExpectedDate.compareTo(b.nextExpectedDate));
   return upcoming.take(3).toList(growable: false);
+});
+
+/// Shared controller provider for shell tab index (0=Home, 1=Activity, 2=Sort, 3=Trends).
+final homeTabControllerProvider = StateProvider<int>((ref) => 0);
+
+/// Dynamic greeting based on time of day.
+final dashboardGreetingProvider = Provider<String>((ref) {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+});
+
+/// Derived financial status subline based on actual spend/budget metrics.
+final dashboardStatusSublineProvider = Provider<String>((ref) {
+  final mom = ref.watch(monthOverMonthSpendProvider);
+  if (mom.pctChange != null) {
+    final pct = (mom.pctChange! * 100).abs().toStringAsFixed(0);
+    if (mom.pctChange! < 0) {
+      return '$pct% lower spend than last month';
+    } else if (mom.pctChange! > 0) {
+      return '$pct% higher spend than last month';
+    }
+  }
+  final safeToday = ref.watch(safeTodayValueProvider);
+  if (safeToday != null && safeToday >= 0) {
+    return 'Budget on track today';
+  }
+  return 'Track your daily activity';
 });

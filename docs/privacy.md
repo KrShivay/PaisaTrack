@@ -11,7 +11,10 @@ PaisaTrack is local-first:
 - After the versioned initial import, open/resume catch-up reads only messages
   newer than the first known SMS. Live receiver and catch-up paths share the
   same on-device parser and encrypted store.
-- Raw SMS retention is capped by `AppConstants.rawSmsRetentionDays`.
+- On-device `raw_sms` retention is capped by
+  `AppConstants.rawSmsRetentionDays`. Current encrypted backups include
+  `raw_sms`, so exported archives can retain bodies beyond that window; T-127
+  must exclude/scrub them before the retention claim covers backups.
 - There is no cloud inference path (ADR 0002). No network call ever carries user
   data; the only permitted network use is the optional one-time download of
   open-weight model files. All intelligence — parsing, classification,
@@ -34,10 +37,12 @@ PaisaTrack is local-first:
   plaintext before Android's system document picker lets the developer choose
   a destination. Real statements, reconciliation reports, and copied on-device
   exports are gitignored and must never be committed.
-- Settings `Delete everything` closes the local database, deletes SQLCipher
-  database files, clears Android Keystore-wrapped passphrase material, resets
-  app-private settings and SMS-import checkpoints, and recreates the database
-  with bundled categories only.
+- Settings `Delete everything` currently closes the local database, deletes
+  SQLCipher files, clears Android Keystore-wrapped passphrase material, resets
+  Dart settings and SMS-import checkpoints, and recreates bundled categories.
+  It does not yet clear native pending ask-answer preferences, posted
+  notifications, or downloaded/partial model files. Until T-124 lands, the UI
+  must not promise complete device erasure.
 - User-facing backup export/import writes `paisatrack_export.ptrack`, a
   passphrase-encrypted JSON archive using Argon2id and AES-GCM. Plaintext domain
   JSON is kept in memory only and is never written as a temp file. Android's
@@ -47,7 +52,7 @@ PaisaTrack is local-first:
   source identifiers are stored; excluding a source or owned transfer from
   analytics does not delete its underlying transaction evidence.
 - The Android manifest includes INTERNET permission only for downloading the
-  pinned, integrity-checked open-weight models described by ADR 0007/0008. The
+  pinned, integrity-checked open-weight models described by ADR 0007/0009. The
   download request carries no user data and inference code paths never open a
   network connection; the permission's scope is documented inline.
 

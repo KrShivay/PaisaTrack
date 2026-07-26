@@ -22,9 +22,31 @@ String formatInr(double amount) {
   return '$sign₹${groups.join(',')},$lastThree.$decimals';
 }
 
+/// Compact rupee format for charts and stats (e.g. ₹4.5k, ₹1.2L).
+String formatInrCompact(double amount) {
+  final absVal = amount.abs();
+  final sign = amount.isNegative ? '-' : '';
+  if (absVal >= 100000) {
+    return '$sign₹${(absVal / 100000).toStringAsFixed(1)}L';
+  } else if (absVal >= 1000) {
+    return '$sign₹${(absVal / 1000).toStringAsFixed(1)}k';
+  }
+  return '$sign₹${absVal.toStringAsFixed(0)}';
+}
+
 const _monthAbbrev = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _clock12h(DateTime t) {
@@ -43,8 +65,9 @@ String _clock12h(DateTime t) {
 String formatTxnTime(DateTime ts, {DateTime? now}) {
   final local = ts.toLocal();
   final ref = (now ?? DateTime.now()).toLocal();
-  final isSameDay =
-      local.year == ref.year && local.month == ref.month && local.day == ref.day;
+  final isSameDay = local.year == ref.year &&
+      local.month == ref.month &&
+      local.day == ref.day;
   if (isSameDay) return _clock12h(local);
 
   final day = local.day;
@@ -65,8 +88,18 @@ String formatDateGroup(DateTime ts, {DateTime? now}) {
   if (diff == 1) return 'Yesterday';
 
   const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   final base = '${local.day} ${months[local.month - 1]}';
   return local.year == ref.year ? base : '$base ${local.year}';

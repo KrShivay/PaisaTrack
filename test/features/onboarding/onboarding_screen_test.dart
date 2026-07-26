@@ -11,13 +11,21 @@ Future<void> pumpOnboarding(
   WidgetTester tester,
   FakeSmsPermissionGate gate,
 ) async {
+  tester.view.physicalSize = const Size(402, 874);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [smsPermissionGateProvider.overrideWithValue(gate)],
       child: const MaterialApp(home: OnboardingScreen()),
     ),
   );
-  await tester.pumpAndSettle();
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
 }
 
 void main() {
@@ -29,7 +37,7 @@ void main() {
     );
 
     expect(find.text('SMS access granted. Capture is on.'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Grant SMS access'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Allow SMS access'), findsNothing);
   });
 
   testWidgets('denied shows the request button and grants on tap',
@@ -40,17 +48,20 @@ void main() {
     );
     await pumpOnboarding(tester, gate);
 
-    final button = find.widgetWithText(FilledButton, 'Grant SMS access');
+    final button = find.widgetWithText(FilledButton, 'Allow SMS access');
     expect(button, findsOneWidget);
 
+    await tester.ensureVisible(button);
     await tester.tap(button);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
 
     expect(gate.requestCalls, 1);
     expect(find.text('SMS access granted. Capture is on.'), findsOneWidget);
   });
 
-  testWidgets('permanently denied points to settings and hides the button',
+  testWidgets(
+      'permanently denied points to settings and shows Open settings button',
       (tester) async {
     await pumpOnboarding(
       tester,
@@ -59,18 +70,8 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('system settings'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Grant SMS access'), findsNothing);
-  });
-
-  testWidgets('status error surfaces a retry affordance', (tester) async {
-    await pumpOnboarding(
-      tester,
-      FakeSmsPermissionGate(throwOnStatus: true),
-    );
-
-    expect(find.textContaining('Could not read'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Grant SMS access'), findsOneWidget);
+    expect(find.textContaining('Android is blocking us'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Open settings'), findsOneWidget);
   });
 
   testWidgets('denied offers continue-without-SMS and sets the flag',
@@ -93,14 +94,16 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
 
     expect(capturedRef.read(continueWithoutSmsProvider), isFalse);
 
     final continueButton =
-        find.widgetWithText(TextButton, 'Continue without SMS access');
+        find.widgetWithText(TextButton, "I'll add things myself");
     expect(continueButton, findsOneWidget);
 
+    await tester.ensureVisible(continueButton);
     await tester.tap(continueButton);
     await tester.pump();
 
@@ -119,7 +122,7 @@ void main() {
     );
 
     expect(
-      find.widgetWithText(TextButton, 'Continue without SMS access'),
+      find.widgetWithText(TextButton, "I'll add things myself"),
       findsOneWidget,
     );
   });

@@ -35,18 +35,26 @@ class AppSettings {
   const AppSettings({
     this.themeChoice = AppThemeChoice.dark,
     this.askDailyBudget = AppConstants.askNowDailyBudget,
+    this.showPaise = true,
+    this.streak = 0,
   });
 
   final AppThemeChoice themeChoice;
   final int askDailyBudget;
+  final bool showPaise;
+  final int streak;
 
   AppSettings copyWith({
     AppThemeChoice? themeChoice,
     int? askDailyBudget,
+    bool? showPaise,
+    int? streak,
   }) {
     return AppSettings(
       themeChoice: themeChoice ?? this.themeChoice,
       askDailyBudget: askDailyBudget ?? this.askDailyBudget,
+      showPaise: showPaise ?? this.showPaise,
+      streak: streak ?? this.streak,
     );
   }
 
@@ -54,6 +62,8 @@ class AppSettings {
     return {
       'theme_choice': themeChoice.name,
       'ask_daily_budget': askDailyBudget,
+      'show_paise': showPaise,
+      'streak': streak,
     };
   }
 
@@ -64,6 +74,8 @@ class AppSettings {
       ),
       askDailyBudget:
           json['ask_daily_budget'] as int? ?? AppConstants.askNowDailyBudget,
+      showPaise: json['show_paise'] as bool? ?? true,
+      streak: json['streak'] as int? ?? 0,
     );
   }
 }
@@ -138,6 +150,25 @@ class AppSettingsController extends AsyncNotifier<AppSettings> {
       askDailyBudget: budget,
     );
     await _save(next);
+  }
+
+  Future<void> setShowPaise(bool showPaise) async {
+    final next = (state.valueOrNull ?? const AppSettings()).copyWith(
+      showPaise: showPaise,
+    );
+    await _save(next);
+  }
+
+  Future<void> setStreak(int streak) async {
+    final next = (state.valueOrNull ?? const AppSettings()).copyWith(
+      streak: streak,
+    );
+    await _save(next);
+  }
+
+  Future<void> incrementStreak() async {
+    final current = state.valueOrNull?.streak ?? 0;
+    await setStreak(current + 1);
   }
 
   Future<void> resetToDefaults() async {

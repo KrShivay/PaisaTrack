@@ -1,4 +1,4 @@
-# Review Round 2 — Verification of Fixes (`codex/t108-bank-capture-coverage`)
+# Archived review round 2 — `codex/t108-bank-capture-coverage`
 
 **Scope:** re-verification of the 3 CRITICAL / 23 MAJOR / MINOR findings from
 `T-108-branch-code-review.md` against the current working tree (uncommitted).

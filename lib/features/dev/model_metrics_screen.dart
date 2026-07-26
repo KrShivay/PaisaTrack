@@ -173,14 +173,16 @@ class ModelMetricsScreen extends ConsumerWidget {
               if (value.parseSourceCounts.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                   child: Text(
                     'Parse Source Breakdown',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 ...value.parseSourceCounts.entries.map((entry) {
-                  final avgConf = value.averageParseConfidenceBySource[entry.key];
+                  final avgConf =
+                      value.averageParseConfidenceBySource[entry.key];
                   final avgText = avgConf != null
                       ? ' · Avg conf ${(avgConf * 100).toStringAsFixed(1)}%'
                       : '';
@@ -194,7 +196,8 @@ class ModelMetricsScreen extends ConsumerWidget {
               if (value.correctionRates.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.md),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                   child: Text(
                     'Category Correction Rates',
                     style: Theme.of(context).textTheme.titleMedium,

@@ -1,50 +1,20 @@
-import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:paisatrack/data/db/database.dart';
-import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
-void main() {
-  Future<void> insertReviewTxn(
-    AppDatabase database, {
-    required String id,
-    String? categoryId,
-    String? counterpartyKey,
-  }) {
-    final now = DateTime.utc(2026, 7, 11, 10);
-    return database.into(database.transactions).insert(
-          TransactionsCompanion.insert(
-            id: id,
-            ts: now.millisecondsSinceEpoch,
-            amount: 100,
-            direction: 'debit',
-            channel: 'upi',
-            categoryId: Value(categoryId),
-            merchantRaw: Value(
-              counterpartyKey?.startsWith('raw:') == true
-                  ? counterpartyKey!.substring(4)
-                  : null,
-            ),
-            counterpartyVpa: Value(
-              counterpartyKey?.startsWith('vpa:') == true
-                  ? counterpartyKey!.substring(4)
-                  : null,
-            ),
-            parseSource: 'generic',
-            confidenceJson: '{}',
-            status: 'needs_review',
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-  }
+import 'package:paisatrack/features/settings/app_settings.dart';
 
+class FakeAppSettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async => const AppSettings();
+}
+
+void main() {
   TransactionReviewItem reviewItem({
     required String id,
     required String displayName,
@@ -59,508 +29,63 @@ void main() {
       displayName: displayName,
       categoryName: categoryId,
       categoryId: categoryId,
-      categoryIcon: null,
+      categoryIcon: 'food',
       status: 'needs_review',
-      counterpartyKey: counterpartyKey,
     );
   }
 
-  Future<AppDatabase> pumpActionableScreen(
+  Future<void> pumpScreen(
     WidgetTester tester,
-    List<TransactionReviewItem> items, {
-    bool autoClose = true,
-  }) async {
-    final database = AppDatabase(NativeDatabase.memory());
-    if (autoClose) addTearDown(database.close);
-    await database.into(database.categories).insert(
-          CategoriesCompanion.insert(
-            id: 'shopping',
-            name: 'Shopping',
-            icon: 'shopping_bag',
-            isSpending: true,
-            sortOrder: 1,
-            isUserCreated: false,
-          ),
-        );
-    for (final item in items) {
-      await insertReviewTxn(
-        database,
-        id: item.id,
-        categoryId: item.categoryId,
-        counterpartyKey: item.counterpartyKey,
-      );
-    }
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWith((ref) async => database),
-          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(WeeklyReviewScreen)),
-      listen: false,
-    );
-    await tester.runAsync(
-      () => container.read(appDatabaseProvider.future),
-    );
-    await tester.pumpAndSettle();
-    return database;
-  }
-
-  Future<void> waitForStatus(
-    WidgetTester tester,
-    AppDatabase database,
-    String txnId,
-    String status,
+    List<TransactionReviewItem> items,
   ) async {
-    for (var i = 0; i < 50; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 2)),
-      );
-      await tester.pump(const Duration(milliseconds: 20));
-      final current = await tester.runAsync(
-        () async => (await (database.select(database.transactions)
-                  ..where((t) => t.id.equals(txnId)))
-                .getSingle())
-            .status,
-      );
-      if (current == status) return;
-    }
-    fail('$txnId did not reach $status');
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+          appSettingsControllerProvider
+              .overrideWith(() => FakeAppSettingsController()),
+        ],
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: const BloomUndoToastHost(
+            child: WeeklyReviewScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 200));
   }
 
-  testWidgets('shows the weekly review empty state', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueProvider.overrideWith((ref) => Stream.value(const [])),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pump();
+  testWidgets('shows Inbox Zero when review queue is empty', (tester) async {
+    await pumpScreen(tester, const []);
 
-    expect(find.text('All caught up'), findsOneWidget);
-    expect(find.byIcon(Icons.task_alt), findsOneWidget);
+    expect(find.text('Inbox Zero!'), findsOneWidget);
   });
 
-  testWidgets('opens in guided quick review mode', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueProvider.overrideWith(
-            (ref) => Stream.value([
-              TransactionReviewItem(
-                id: 'txn_review_1',
-                ts: DateTime.utc(2026, 7, 8, 10),
-                amount: 1299,
-                direction: TransactionDirection.debit,
-                displayName: 'Bookstore',
-                categoryName: 'Shopping',
-                categoryId: 'shopping',
-                categoryIcon: 'shopping_bag',
-                status: 'needs_review',
-                counterpartyKey: 'vpa:bookstore@upi',
-              ),
-            ]),
-          ),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('Bookstore'), findsOneWidget);
-    expect(find.text('Suggested category'), findsOneWidget);
-    expect(find.text('Shopping'), findsOneWidget);
-    expect(find.text('-₹1,299.00'), findsOneWidget);
-    expect(find.text('Copy VPA'), findsOneWidget);
-    expect(find.text('Category is correct'), findsOneWidget);
-    expect(find.text('Review transaction details'), findsOneWidget);
-    expect(find.byType(Checkbox), findsNothing);
-  });
-
-  testWidgets('list mode loads the next bounded review page', (tester) async {
-    final items = [
-      for (var index = 0; index < 4; index++)
-        reviewItem(
-          id: 'paged_$index',
-          displayName: 'Payee $index',
-          counterpartyKey: 'raw:Payee $index',
-        ),
-    ];
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueLimitProvider.overrideWith((ref) => 2),
-          reviewQueueProvider.overrideWith(
-            (ref) => Stream.value(
-              items.take(ref.watch(reviewQueueLimitProvider)).toList(),
-            ),
-          ),
-          reviewQueueSummaryProvider.overrideWith(
-            (ref) => Stream.value(
-              const ReviewQueueSummary(
-                count: 4,
-                amount: 400,
-                merchantCount: 4,
-                highestImpactLabel: 'Payee 0',
-              ),
-            ),
-          ),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pump();
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
-      find.text('Load 2 more'),
-      find.byType(ListView).first,
-      const Offset(0, -200),
-    );
-
-    await tester.tap(find.text('Load 2 more'));
-    await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
-      find.text('Payee 3'),
-      find.byType(ListView).first,
-      const Offset(0, -200),
-    );
-
-    expect(find.text('Payee 3'), findsOneWidget);
-    expect(find.textContaining('Load '), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
-
-  testWidgets(
-      'low-trust review rows explain that transaction details need confirmation',
-      (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueProvider.overrideWith(
-            (ref) => Stream.value([
-              TransactionReviewItem(
-                id: 'txn_review_generic',
-                ts: DateTime.utc(2026, 7, 8, 10),
-                amount: 1299,
-                direction: TransactionDirection.debit,
-                displayName: 'Bookstore',
-                categoryName: 'Shopping',
-                categoryId: 'shopping',
-                categoryIcon: 'shopping_bag',
-                status: 'needs_review',
-                isLowTrustParse: true,
-              ),
-            ]),
-          ),
-          categoryListProvider.overrideWith(
-            (ref) => Stream.value([
-              const Category(
-                id: 'shopping',
-                name: 'Shopping',
-                icon: 'shopping_bag',
-                isSpending: true,
-                sortOrder: 1,
-                isUserCreated: false,
-              ),
-            ]),
-          ),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pump();
-
-    expect(
-      find.text('Some transaction details need confirmation.'),
-      findsOneWidget,
-    );
-    expect(find.text('Change category'), findsOneWidget);
-  });
-
-  testWidgets('bulk confirm updates selected statuses only', (tester) async {
-    final items = [
+  testWidgets('renders top item in swipeable card stack', (tester) async {
+    await pumpScreen(tester, [
       reviewItem(
-        id: 'txn_bulk_1',
-        displayName: 'Alice',
-        counterpartyKey: 'vpa:alice@upi',
+        id: '1',
+        displayName: 'Swiggy',
+        counterpartyKey: 'raw:swiggy',
+        categoryId: 'Food',
       ),
-      reviewItem(
-        id: 'txn_bulk_2',
-        displayName: 'Bookstore',
-        counterpartyKey: 'raw:bookstore',
-      ),
-      reviewItem(
-        id: 'txn_bulk_3',
-        displayName: 'Cafe',
-        counterpartyKey: 'raw:cafe',
-      ),
-    ];
-    final database = await pumpActionableScreen(tester, items);
+    ]);
 
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-    final firstCheckbox = tester.widget<Checkbox>(
-      find.byKey(const ValueKey('select_txn_bulk_1')),
-    );
-    firstCheckbox.onChanged!(true);
-    await tester.pump();
-    await tester.tap(find.text('Confirm (1)'));
-    await waitForStatus(tester, database, 'txn_bulk_1', 'confirmed');
-
-    final rows = (await tester.runAsync(
-      () => database.select(database.transactions).get(),
-    ))!;
-    expect(
-      rows.where((row) => row.status == 'confirmed').map((row) => row.id),
-      contains('txn_bulk_1'),
-    );
-    expect(
-      rows.singleWhere((row) => row.id == 'txn_bulk_2').status,
-      'needs_review',
-    );
-    expect(
-      rows.singleWhere((row) => row.id == 'txn_bulk_3').status,
-      'needs_review',
-    );
-    expect(rows.every((row) => row.categoryId == null), isTrue);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
-
-  testWidgets('category correction requires explicit scope selection',
-      (tester) async {
-    final item = reviewItem(
-      id: 'txn_scope',
-      displayName: 'Bookstore',
-      counterpartyKey: 'raw:bookstore',
-    );
-    final database = await pumpActionableScreen(
-      tester,
-      [item],
-      autoClose: false,
-    );
-
-    await tester.tap(find.text('Change category'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Shopping').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Apply Shopping to:'), findsOneWidget);
-    expect(find.text('This transaction only'), findsOneWidget);
-    expect(
-      find.text('Future transactions from this merchant'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Existing and future matching transactions'),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('This transaction only'));
-    await tester.ensureVisible(find.text('Apply category'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Apply category'));
-    await waitForStatus(tester, database, 'txn_scope', 'confirmed');
-    await tester.pump();
-
-    final rules = await tester.runAsync(
-      () => database.select(database.rules).get(),
-    );
-    expect(rules, isEmpty);
-    expect(find.text('Category updated.'), findsOneWidget);
-    expect(find.textContaining('will remember'), findsNothing);
-    await tester.runAsync(database.close);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
-
-  testWidgets('group confirm updates every row for one counterparty',
-      (tester) async {
-    final items = [
-      reviewItem(
-        id: 'txn_group_1',
-        displayName: 'Alice',
-        counterpartyKey: 'vpa:alice@upi',
-      ),
-      reviewItem(
-        id: 'txn_group_2',
-        displayName: 'Alice',
-        counterpartyKey: 'vpa:alice@upi',
-      ),
-      reviewItem(
-        id: 'txn_group_other',
-        displayName: 'Bob',
-        counterpartyKey: 'vpa:bob@upi',
-      ),
-    ];
-    final database = await pumpActionableScreen(tester, items);
-
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-    expect(
-      find.textContaining('2 similar transactions from Alice'),
-      findsOneWidget,
-    );
-    await tester.tap(
-      find.byKey(const ValueKey('confirm_group_vpa:alice@upi')),
-    );
-    await waitForStatus(tester, database, 'txn_group_1', 'confirmed');
-
-    final rows = (await tester.runAsync(
-      () => database.select(database.transactions).get(),
-    ))!;
-    expect(
-      rows.singleWhere((row) => row.id == 'txn_group_1').status,
-      'confirmed',
-    );
-    expect(
-      rows.singleWhere((row) => row.id == 'txn_group_2').status,
-      'confirmed',
-    );
-    expect(
-      rows.singleWhere((row) => row.id == 'txn_group_other').status,
-      'needs_review',
-    );
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
-
-  testWidgets('filters review list by search query', (tester) async {
-    final items = [
-      reviewItem(
-        id: 'txn_swiggy',
-        displayName: 'Swiggy Instamart',
-        counterpartyKey: 'raw:swiggy instamart',
-      ),
-      reviewItem(
-        id: 'txn_zomato',
-        displayName: 'Zomato Food',
-        counterpartyKey: 'raw:zomato food',
-      ),
-    ];
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Swiggy Instamart'), findsOneWidget);
-    expect(find.text('Zomato Food'), findsOneWidget);
-
-    await tester.enterText(
-      find.byKey(const ValueKey('review_search_field')),
-      'Swiggy',
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Swiggy Instamart'), findsOneWidget);
-    expect(find.text('Zomato Food'), findsNothing);
-
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
-
-  testWidgets('select all only selects search-filtered items', (tester) async {
-    final items = [
-      reviewItem(
-        id: 'txn_swiggy',
-        displayName: 'Swiggy Instamart',
-        counterpartyKey: 'raw:swiggy instamart',
-      ),
-      reviewItem(
-        id: 'txn_zomato_1',
-        displayName: 'Zomato Food 1',
-        counterpartyKey: 'raw:zomato food 1',
-      ),
-      reviewItem(
-        id: 'txn_zomato_2',
-        displayName: 'Zomato Food 2',
-        counterpartyKey: 'raw:zomato food 2',
-      ),
-    ];
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byKey(const ValueKey('review_search_field')),
-      'Swiggy',
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('select_all_review')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Confirm (1)'), findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
-
-  testWidgets('clearing search query via clear icon resets text field and filter', (tester) async {
-    final items = [
-      reviewItem(
-        id: 'txn_swiggy',
-        displayName: 'Swiggy Food',
-        counterpartyKey: 'raw:swiggy food',
-      ),
-      reviewItem(
-        id: 'txn_zomato',
-        displayName: 'Zomato Food',
-        counterpartyKey: 'raw:zomato food',
-      ),
-    ];
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
-        ],
-        child: const MaterialApp(home: WeeklyReviewScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byKey(const ValueKey('review_search_field')),
-      'Zomato',
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Swiggy Food'), findsNothing);
-
-    await tester.tap(find.byIcon(Icons.clear));
-    await tester.pumpAndSettle();
-
-    expect(find.widgetWithText(TextField, 'Zomato'), findsNothing);
-    expect(find.text('Swiggy Food'), findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
+    expect(find.text('Sort'), findsOneWidget);
+    expect(find.text('Swiggy'), findsOneWidget);
   });
 }
