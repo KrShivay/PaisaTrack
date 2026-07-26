@@ -195,7 +195,7 @@ void main() {
       now: () => DateTime.utc(2026, 7, 5, 12),
     );
 
-    await ingestor.ingest(_message('sms_high_amount'));
+    await ingestor.ingest(_message('sms_high_amount', body: 'Spent Rs 500'));
 
     final transactions = await database.select(database.transactions).get();
     expect(transactions.single.status, 'asked');
@@ -673,11 +673,11 @@ SmsIngestor _ingestorFor(
   );
 }
 
-RawSms _message(String id) {
+RawSms _message(String id, {String? body}) {
   return RawSms(
     id: id,
     sender: 'VK-HDFCBK',
-    body: 'Spent Rs 449',
+    body: body ?? 'Spent Rs 449',
     receivedAt: DateTime.utc(2026, 7, 5, 10, 31),
   );
 }
@@ -782,13 +782,40 @@ class FakeParserCascade extends ParserCascade {
     RawSms sms,
   ) async {
     final recordsById = _recordsById;
-    if (recordsById != null) {
-      return Ok(recordsById[sms.id]!);
-    }
-
-    final record = _record;
-    if (record != null) {
-      return Ok(record);
+    var resRecord = recordsById != null ? recordsById[sms.id] : _record;
+    if (resRecord != null) {
+      if (resRecord.evidence == null || resRecord.evidence!.isEmpty) {
+        final amountStr = resRecord.amount == resRecord.amount.toInt()
+            ? resRecord.amount.toInt().toString()
+            : resRecord.amount.toString();
+        final idx = sms.body.indexOf(amountStr);
+        final start = idx >= 0 ? idx : 0;
+        final end = idx >= 0 ? idx + amountStr.length : sms.body.length;
+        resRecord = resRecord.withEvidence([
+          FieldEvidence(
+            field: 'amount',
+            start: start,
+            end: end,
+            verbatim: sms.body.substring(start, end),
+            extractor: 'test',
+          ),
+          FieldEvidence(
+            field: 'direction',
+            start: 0,
+            end: sms.body.length,
+            verbatim: sms.body,
+            extractor: 'test',
+          ),
+          FieldEvidence(
+            field: 'ts',
+            start: 0,
+            end: sms.body.length,
+            verbatim: sms.body,
+            extractor: 'test',
+          ),
+        ]);
+      }
+      return Ok(resRecord);
     }
 
     return Err(_error!);

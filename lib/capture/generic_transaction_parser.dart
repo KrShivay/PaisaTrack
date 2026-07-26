@@ -116,6 +116,30 @@ class GenericTransactionParser {
     }
 
     final merchant = _merchant.firstMatch(body)?.group(1)?.trim();
+    final evidence = <FieldEvidence>[
+      FieldEvidence(
+        field: 'amount',
+        start: amountMatch.start,
+        end: amountMatch.end,
+        verbatim: body.substring(amountMatch.start, amountMatch.end),
+        extractor: 'generic_regex',
+      ),
+      FieldEvidence(
+        field: 'direction',
+        start: direction.start,
+        end: direction.end,
+        verbatim: direction.verbatim,
+        extractor: 'generic_regex',
+      ),
+      FieldEvidence(
+        field: 'ts',
+        start: 0,
+        end: body.length,
+        verbatim: body,
+        extractor: 'generic_regex',
+      ),
+    ];
+
     return (
       record: NormalizedTransactionRecord(
         amount: amount,
@@ -132,12 +156,13 @@ class GenericTransactionParser {
             amounts.length == 1 && merchant != null && merchant.isNotEmpty
                 ? 0.6
                 : 0.5,
+        evidence: evidence,
       ),
       rejection: null,
     );
   }
 
-  ({TransactionDirection value, int index})? _direction(String body) {
+  ({TransactionDirection value, int index, int start, int end, String verbatim})? _direction(String body) {
     for (final entry in <({TransactionDirection value, RegExp pattern})>[
       (
         value: TransactionDirection.debit,
@@ -155,7 +180,15 @@ class GenericTransactionParser {
       ),
     ]) {
       final match = entry.pattern.firstMatch(body);
-      if (match != null) return (value: entry.value, index: match.start);
+      if (match != null) {
+        return (
+          value: entry.value,
+          index: match.start,
+          start: match.start,
+          end: match.end,
+          verbatim: body.substring(match.start, match.end),
+        );
+      }
     }
     return null;
   }

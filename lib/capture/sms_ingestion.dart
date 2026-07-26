@@ -23,6 +23,7 @@ import 'llm_extractor.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
+import 'span_verifier.dart';
 import 'template_engine/template_matcher.dart';
 import 'template_engine/template_registry.dart';
 import 'template_engine/template_trust_ledger.dart';
@@ -209,9 +210,7 @@ class SmsIngestor {
             value,
             merchantEmbedding: merchant?.embedding,
           );
-          // Suppressed echoes never surface to the user, so they must not
-          // enter the ask flow or consume ask budget — keep them 'auto'.
-          final status = duplicateOfTxnId != null
+          final initialStatus = duplicateOfTxnId != null
               ? DecisionStatus.auto
               : _fixedStatus ??
                   (merchant?.needsReview == true
@@ -220,6 +219,11 @@ class SmsIngestor {
                           value,
                           categorization: categorization,
                         ));
+          final status = SpanVerifier.enforceWriteGuard(
+            body: sms.body,
+            record: value,
+            requestedStatus: initialStatus,
+          );
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
