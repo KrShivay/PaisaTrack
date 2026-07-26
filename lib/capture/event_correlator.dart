@@ -183,4 +183,70 @@ class EventCorrelator {
 
     return null;
   }
+
+  /// Evaluates refund correlation against expense [candidates].
+  ///
+  /// Auto-links at confidence >= 0.90:
+  /// - Exact ref ID match within 30 days (confidence 0.99)
+  /// - Exact/partial amount + same counterparty within 30 days with single candidate (confidence >= 0.91)
+  ///
+  /// Ambiguous cases (multiple candidates) return null (fail closed, unlinked).
+  EventCorrelationResult? correlateRefund({
+    required NormalizedTransactionRecord refundRecord,
+    required List<Transaction> candidates,
+  }) {
+    final normRef = normalizeRefId(refundRecord.refId);
+
+    // Tier 1: Exact UTR / Ref match within 30 days
+    if (normRef != null) {
+      for (final candidate in candidates) {
+        if (candidate.direction != 'debit') continue;
+        final candNormRef = normalizeRefId(candidate.refId);
+        if (candNormRef == normRef) {
+          final diffMs = (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
+          if (diffMs <= const Duration(days: 30).inMilliseconds) {
+            return EventCorrelationResult(
+              matchedTransactionId: candidate.id,
+              linkType: TransactionLinkType.refunds,
+              basis: 'refund_ref_match:$normRef',
+              confidence: 0.99,
+            );
+          }
+        }
+      }
+    }
+
+    // Tier 2: Exact or partial amount + same counterparty within 30 days
+    final recordMerchant = refundRecord.merchantRaw?.toUpperCase();
+    final matchingCandidates = <Transaction>[];
+
+    for (final candidate in candidates) {
+      if (candidate.direction != 'debit') continue;
+      if (hasRefDisagreement(refundRecord.refId, candidate.refId)) continue;
+
+      final diffMs = (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
+      if (diffMs <= const Duration(days: 30).inMilliseconds) {
+        final amountMatch = (refundRecord.amount - candidate.amount).abs() <= 0.01 || refundRecord.amount <= candidate.amount;
+        final candMerchant = candidate.merchantRaw?.toUpperCase();
+        final merchantMatch = recordMerchant != null && candMerchant != null && (recordMerchant == candMerchant || recordMerchant.startsWith(candMerchant) || candMerchant.startsWith(recordMerchant));
+
+        if (amountMatch && merchantMatch) {
+          matchingCandidates.add(candidate);
+        }
+      }
+    }
+
+    if (matchingCandidates.length == 1) {
+      final match = matchingCandidates.single;
+      final isFullRefund = (refundRecord.amount - match.amount).abs() <= 0.01;
+      return EventCorrelationResult(
+        matchedTransactionId: match.id,
+        linkType: TransactionLinkType.refunds,
+        basis: isFullRefund ? 'refund_full_counterparty_match' : 'refund_partial_counterparty_match',
+        confidence: isFullRefund ? 0.95 : 0.91,
+      );
+    }
+
+    return null;
+  }
 }
