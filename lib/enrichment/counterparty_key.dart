@@ -74,17 +74,7 @@ class CounterpartyKeyParser {
       final localPart = parts[0].trim();
       final psp = parts[1].toLowerCase().trim();
 
-      // Check if local part is pure phone number (>= 10 digits)
-      if (RegExp(r'^\d{10,}$').hasMatch(localPart)) {
-        final phoneHash = hashPhone(localPart);
-        return CounterpartyIdentity(
-          identityKey: 'PERSON_PHONE_$phoneHash',
-          kind: CounterpartyKind.person,
-          pspFamily: psp,
-        );
-      }
-
-      // Check trailing digits: strip digit run >= 6 ONLY if remaining core is a known PSP token
+      // 1. Check trailing digits: strip digit run >= 6 ONLY if remaining core is a known PSP token
       var core = localPart.toLowerCase();
       final trailingDigitMatch = RegExp(r'^(.*?)(\d{6,})$').firstMatch(core);
       if (trailingDigitMatch != null) {
@@ -94,7 +84,7 @@ class CounterpartyKeyParser {
         }
       }
 
-      // Check aggregator QR prefix
+      // 2. Check aggregator QR prefix
       final upperCore = core.toUpperCase();
       final isQrMerchant = _qrPrefixes.any((prefix) => upperCore.startsWith(prefix));
       if (isQrMerchant) {
@@ -105,9 +95,30 @@ class CounterpartyKeyParser {
         );
       }
 
-      final kind = _knownPspTokens.contains(core) ? CounterpartyKind.merchant : CounterpartyKind.person;
+      // 3. Check if core is a known PSP token
+      if (_knownPspTokens.contains(core)) {
+        return CounterpartyIdentity(
+          identityKey: 'MERCHANT_${upperCore.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+          kind: CounterpartyKind.merchant,
+          pspFamily: psp,
+        );
+      }
+
+      // 4. Check if local part contains a phone number (>= 10 digits)
+      final phoneMatch = RegExp(r'\d{10,}').firstMatch(localPart);
+      if (phoneMatch != null || RegExp(r'^\d{10,}$').hasMatch(localPart)) {
+        final phoneHash = hashPhone(localPart);
+        return CounterpartyIdentity(
+          identityKey: 'PERSON_PHONE_$phoneHash',
+          kind: CounterpartyKind.person,
+          pspFamily: psp,
+        );
+      }
+
+      final isKnownMerchantToken = _knownPspTokens.contains(core);
+      final kind = isKnownMerchantToken ? CounterpartyKind.merchant : CounterpartyKind.unknown;
       return CounterpartyIdentity(
-        identityKey: '${kind == CounterpartyKind.person ? 'PERSON' : 'MERCHANT'}_${upperCore.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+        identityKey: '${isKnownMerchantToken ? 'MERCHANT' : 'VPA'}_${upperCore.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
         kind: kind,
         inferredName: localPart,
         pspFamily: psp,

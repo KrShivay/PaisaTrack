@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/repositories/rule_repository.dart';
+import 'counterparty_key.dart';
 import 'decision_policy.dart';
 import 'local_classifier.dart';
 import 'seed_category_map.dart';
@@ -96,6 +97,18 @@ class Categorizer {
         categoryId: seeded,
         confidence: seedConfidence,
         source: 'seed',
+      );
+    }
+
+    final counterparty = const CounterpartyKeyParser().parse(
+      vpa: record.counterpartyVpa,
+      merchantRaw: record.merchantRaw,
+    );
+    if (counterparty.kind == CounterpartyKind.person || counterparty.kind == CounterpartyKind.self) {
+      return const CategorizationResult(
+        categoryId: 'transfers',
+        confidence: 1.0,
+        source: 'p2p_default',
       );
     }
 
