@@ -1185,6 +1185,761 @@ class CounterpartiesCompanion extends UpdateCompanion<Counterparty> {
   }
 }
 
+class $ExpectedEventsTable extends ExpectedEvents
+    with TableInfo<$ExpectedEventsTable, ExpectedEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExpectedEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+      'source', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _originSmsIdMeta =
+      const VerificationMeta('originSmsId');
+  @override
+  late final GeneratedColumn<String> originSmsId = GeneratedColumn<String>(
+      'origin_sms_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _seriesIdMeta =
+      const VerificationMeta('seriesId');
+  @override
+  late final GeneratedColumn<String> seriesId = GeneratedColumn<String>(
+      'series_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _counterpartyIdMeta =
+      const VerificationMeta('counterpartyId');
+  @override
+  late final GeneratedColumn<String> counterpartyId = GeneratedColumn<String>(
+      'counterparty_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+      'label', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _expectedAmountPaiseMeta =
+      const VerificationMeta('expectedAmountPaise');
+  @override
+  late final GeneratedColumn<int> expectedAmountPaise = GeneratedColumn<int>(
+      'expected_amount_paise', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _amountLowPaiseMeta =
+      const VerificationMeta('amountLowPaise');
+  @override
+  late final GeneratedColumn<int> amountLowPaise = GeneratedColumn<int>(
+      'amount_low_paise', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _amountHighPaiseMeta =
+      const VerificationMeta('amountHighPaise');
+  @override
+  late final GeneratedColumn<int> amountHighPaise = GeneratedColumn<int>(
+      'amount_high_paise', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _expectedDateMeta =
+      const VerificationMeta('expectedDate');
+  @override
+  late final GeneratedColumn<DateTime> expectedDate = GeneratedColumn<DateTime>(
+      'expected_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _dateWindowDaysMeta =
+      const VerificationMeta('dateWindowDays');
+  @override
+  late final GeneratedColumn<int> dateWindowDays = GeneratedColumn<int>(
+      'date_window_days', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(3));
+  static const VerificationMeta _cadenceMeta =
+      const VerificationMeta('cadence');
+  @override
+  late final GeneratedColumn<String> cadence = GeneratedColumn<String>(
+      'cadence', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+      'state', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fulfilledTxnIdMeta =
+      const VerificationMeta('fulfilledTxnId');
+  @override
+  late final GeneratedColumn<String> fulfilledTxnId = GeneratedColumn<String>(
+      'fulfilled_txn_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _confidenceMeta =
+      const VerificationMeta('confidence');
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+      'confidence', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _dedupKeyMeta =
+      const VerificationMeta('dedupKey');
+  @override
+  late final GeneratedColumn<String> dedupKey = GeneratedColumn<String>(
+      'dedup_key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        source,
+        originSmsId,
+        seriesId,
+        counterpartyId,
+        label,
+        expectedAmountPaise,
+        amountLowPaise,
+        amountHighPaise,
+        expectedDate,
+        dateWindowDays,
+        cadence,
+        state,
+        fulfilledTxnId,
+        confidence,
+        dedupKey
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'expected_events';
+  @override
+  VerificationContext validateIntegrity(Insertable<ExpectedEvent> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta,
+          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('origin_sms_id')) {
+      context.handle(
+          _originSmsIdMeta,
+          originSmsId.isAcceptableOrUnknown(
+              data['origin_sms_id']!, _originSmsIdMeta));
+    }
+    if (data.containsKey('series_id')) {
+      context.handle(_seriesIdMeta,
+          seriesId.isAcceptableOrUnknown(data['series_id']!, _seriesIdMeta));
+    }
+    if (data.containsKey('counterparty_id')) {
+      context.handle(
+          _counterpartyIdMeta,
+          counterpartyId.isAcceptableOrUnknown(
+              data['counterparty_id']!, _counterpartyIdMeta));
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+          _labelMeta, label.isAcceptableOrUnknown(data['label']!, _labelMeta));
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('expected_amount_paise')) {
+      context.handle(
+          _expectedAmountPaiseMeta,
+          expectedAmountPaise.isAcceptableOrUnknown(
+              data['expected_amount_paise']!, _expectedAmountPaiseMeta));
+    } else if (isInserting) {
+      context.missing(_expectedAmountPaiseMeta);
+    }
+    if (data.containsKey('amount_low_paise')) {
+      context.handle(
+          _amountLowPaiseMeta,
+          amountLowPaise.isAcceptableOrUnknown(
+              data['amount_low_paise']!, _amountLowPaiseMeta));
+    }
+    if (data.containsKey('amount_high_paise')) {
+      context.handle(
+          _amountHighPaiseMeta,
+          amountHighPaise.isAcceptableOrUnknown(
+              data['amount_high_paise']!, _amountHighPaiseMeta));
+    }
+    if (data.containsKey('expected_date')) {
+      context.handle(
+          _expectedDateMeta,
+          expectedDate.isAcceptableOrUnknown(
+              data['expected_date']!, _expectedDateMeta));
+    } else if (isInserting) {
+      context.missing(_expectedDateMeta);
+    }
+    if (data.containsKey('date_window_days')) {
+      context.handle(
+          _dateWindowDaysMeta,
+          dateWindowDays.isAcceptableOrUnknown(
+              data['date_window_days']!, _dateWindowDaysMeta));
+    }
+    if (data.containsKey('cadence')) {
+      context.handle(_cadenceMeta,
+          cadence.isAcceptableOrUnknown(data['cadence']!, _cadenceMeta));
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+          _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+    } else if (isInserting) {
+      context.missing(_stateMeta);
+    }
+    if (data.containsKey('fulfilled_txn_id')) {
+      context.handle(
+          _fulfilledTxnIdMeta,
+          fulfilledTxnId.isAcceptableOrUnknown(
+              data['fulfilled_txn_id']!, _fulfilledTxnIdMeta));
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+          _confidenceMeta,
+          confidence.isAcceptableOrUnknown(
+              data['confidence']!, _confidenceMeta));
+    } else if (isInserting) {
+      context.missing(_confidenceMeta);
+    }
+    if (data.containsKey('dedup_key')) {
+      context.handle(_dedupKeyMeta,
+          dedupKey.isAcceptableOrUnknown(data['dedup_key']!, _dedupKeyMeta));
+    } else if (isInserting) {
+      context.missing(_dedupKeyMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ExpectedEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExpectedEvent(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      source: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      originSmsId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}origin_sms_id']),
+      seriesId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}series_id']),
+      counterpartyId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}counterparty_id']),
+      label: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}label'])!,
+      expectedAmountPaise: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}expected_amount_paise'])!,
+      amountLowPaise: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}amount_low_paise']),
+      amountHighPaise: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}amount_high_paise']),
+      expectedDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}expected_date'])!,
+      dateWindowDays: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}date_window_days'])!,
+      cadence: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}cadence']),
+      state: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}state'])!,
+      fulfilledTxnId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}fulfilled_txn_id']),
+      confidence: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}confidence'])!,
+      dedupKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}dedup_key'])!,
+    );
+  }
+
+  @override
+  $ExpectedEventsTable createAlias(String alias) {
+    return $ExpectedEventsTable(attachedDatabase, alias);
+  }
+}
+
+class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
+  final String id;
+  final String source;
+  final String? originSmsId;
+  final String? seriesId;
+  final String? counterpartyId;
+  final String label;
+  final int expectedAmountPaise;
+  final int? amountLowPaise;
+  final int? amountHighPaise;
+  final DateTime expectedDate;
+  final int dateWindowDays;
+  final String? cadence;
+  final String state;
+  final String? fulfilledTxnId;
+  final double confidence;
+  final String dedupKey;
+  const ExpectedEvent(
+      {required this.id,
+      required this.source,
+      this.originSmsId,
+      this.seriesId,
+      this.counterpartyId,
+      required this.label,
+      required this.expectedAmountPaise,
+      this.amountLowPaise,
+      this.amountHighPaise,
+      required this.expectedDate,
+      required this.dateWindowDays,
+      this.cadence,
+      required this.state,
+      this.fulfilledTxnId,
+      required this.confidence,
+      required this.dedupKey});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source'] = Variable<String>(source);
+    if (!nullToAbsent || originSmsId != null) {
+      map['origin_sms_id'] = Variable<String>(originSmsId);
+    }
+    if (!nullToAbsent || seriesId != null) {
+      map['series_id'] = Variable<String>(seriesId);
+    }
+    if (!nullToAbsent || counterpartyId != null) {
+      map['counterparty_id'] = Variable<String>(counterpartyId);
+    }
+    map['label'] = Variable<String>(label);
+    map['expected_amount_paise'] = Variable<int>(expectedAmountPaise);
+    if (!nullToAbsent || amountLowPaise != null) {
+      map['amount_low_paise'] = Variable<int>(amountLowPaise);
+    }
+    if (!nullToAbsent || amountHighPaise != null) {
+      map['amount_high_paise'] = Variable<int>(amountHighPaise);
+    }
+    map['expected_date'] = Variable<DateTime>(expectedDate);
+    map['date_window_days'] = Variable<int>(dateWindowDays);
+    if (!nullToAbsent || cadence != null) {
+      map['cadence'] = Variable<String>(cadence);
+    }
+    map['state'] = Variable<String>(state);
+    if (!nullToAbsent || fulfilledTxnId != null) {
+      map['fulfilled_txn_id'] = Variable<String>(fulfilledTxnId);
+    }
+    map['confidence'] = Variable<double>(confidence);
+    map['dedup_key'] = Variable<String>(dedupKey);
+    return map;
+  }
+
+  ExpectedEventsCompanion toCompanion(bool nullToAbsent) {
+    return ExpectedEventsCompanion(
+      id: Value(id),
+      source: Value(source),
+      originSmsId: originSmsId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originSmsId),
+      seriesId: seriesId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seriesId),
+      counterpartyId: counterpartyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(counterpartyId),
+      label: Value(label),
+      expectedAmountPaise: Value(expectedAmountPaise),
+      amountLowPaise: amountLowPaise == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amountLowPaise),
+      amountHighPaise: amountHighPaise == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amountHighPaise),
+      expectedDate: Value(expectedDate),
+      dateWindowDays: Value(dateWindowDays),
+      cadence: cadence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cadence),
+      state: Value(state),
+      fulfilledTxnId: fulfilledTxnId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fulfilledTxnId),
+      confidence: Value(confidence),
+      dedupKey: Value(dedupKey),
+    );
+  }
+
+  factory ExpectedEvent.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExpectedEvent(
+      id: serializer.fromJson<String>(json['id']),
+      source: serializer.fromJson<String>(json['source']),
+      originSmsId: serializer.fromJson<String?>(json['originSmsId']),
+      seriesId: serializer.fromJson<String?>(json['seriesId']),
+      counterpartyId: serializer.fromJson<String?>(json['counterpartyId']),
+      label: serializer.fromJson<String>(json['label']),
+      expectedAmountPaise:
+          serializer.fromJson<int>(json['expectedAmountPaise']),
+      amountLowPaise: serializer.fromJson<int?>(json['amountLowPaise']),
+      amountHighPaise: serializer.fromJson<int?>(json['amountHighPaise']),
+      expectedDate: serializer.fromJson<DateTime>(json['expectedDate']),
+      dateWindowDays: serializer.fromJson<int>(json['dateWindowDays']),
+      cadence: serializer.fromJson<String?>(json['cadence']),
+      state: serializer.fromJson<String>(json['state']),
+      fulfilledTxnId: serializer.fromJson<String?>(json['fulfilledTxnId']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      dedupKey: serializer.fromJson<String>(json['dedupKey']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'source': serializer.toJson<String>(source),
+      'originSmsId': serializer.toJson<String?>(originSmsId),
+      'seriesId': serializer.toJson<String?>(seriesId),
+      'counterpartyId': serializer.toJson<String?>(counterpartyId),
+      'label': serializer.toJson<String>(label),
+      'expectedAmountPaise': serializer.toJson<int>(expectedAmountPaise),
+      'amountLowPaise': serializer.toJson<int?>(amountLowPaise),
+      'amountHighPaise': serializer.toJson<int?>(amountHighPaise),
+      'expectedDate': serializer.toJson<DateTime>(expectedDate),
+      'dateWindowDays': serializer.toJson<int>(dateWindowDays),
+      'cadence': serializer.toJson<String?>(cadence),
+      'state': serializer.toJson<String>(state),
+      'fulfilledTxnId': serializer.toJson<String?>(fulfilledTxnId),
+      'confidence': serializer.toJson<double>(confidence),
+      'dedupKey': serializer.toJson<String>(dedupKey),
+    };
+  }
+
+  ExpectedEvent copyWith(
+          {String? id,
+          String? source,
+          Value<String?> originSmsId = const Value.absent(),
+          Value<String?> seriesId = const Value.absent(),
+          Value<String?> counterpartyId = const Value.absent(),
+          String? label,
+          int? expectedAmountPaise,
+          Value<int?> amountLowPaise = const Value.absent(),
+          Value<int?> amountHighPaise = const Value.absent(),
+          DateTime? expectedDate,
+          int? dateWindowDays,
+          Value<String?> cadence = const Value.absent(),
+          String? state,
+          Value<String?> fulfilledTxnId = const Value.absent(),
+          double? confidence,
+          String? dedupKey}) =>
+      ExpectedEvent(
+        id: id ?? this.id,
+        source: source ?? this.source,
+        originSmsId: originSmsId.present ? originSmsId.value : this.originSmsId,
+        seriesId: seriesId.present ? seriesId.value : this.seriesId,
+        counterpartyId:
+            counterpartyId.present ? counterpartyId.value : this.counterpartyId,
+        label: label ?? this.label,
+        expectedAmountPaise: expectedAmountPaise ?? this.expectedAmountPaise,
+        amountLowPaise:
+            amountLowPaise.present ? amountLowPaise.value : this.amountLowPaise,
+        amountHighPaise: amountHighPaise.present
+            ? amountHighPaise.value
+            : this.amountHighPaise,
+        expectedDate: expectedDate ?? this.expectedDate,
+        dateWindowDays: dateWindowDays ?? this.dateWindowDays,
+        cadence: cadence.present ? cadence.value : this.cadence,
+        state: state ?? this.state,
+        fulfilledTxnId:
+            fulfilledTxnId.present ? fulfilledTxnId.value : this.fulfilledTxnId,
+        confidence: confidence ?? this.confidence,
+        dedupKey: dedupKey ?? this.dedupKey,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('ExpectedEvent(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('originSmsId: $originSmsId, ')
+          ..write('seriesId: $seriesId, ')
+          ..write('counterpartyId: $counterpartyId, ')
+          ..write('label: $label, ')
+          ..write('expectedAmountPaise: $expectedAmountPaise, ')
+          ..write('amountLowPaise: $amountLowPaise, ')
+          ..write('amountHighPaise: $amountHighPaise, ')
+          ..write('expectedDate: $expectedDate, ')
+          ..write('dateWindowDays: $dateWindowDays, ')
+          ..write('cadence: $cadence, ')
+          ..write('state: $state, ')
+          ..write('fulfilledTxnId: $fulfilledTxnId, ')
+          ..write('confidence: $confidence, ')
+          ..write('dedupKey: $dedupKey')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      source,
+      originSmsId,
+      seriesId,
+      counterpartyId,
+      label,
+      expectedAmountPaise,
+      amountLowPaise,
+      amountHighPaise,
+      expectedDate,
+      dateWindowDays,
+      cadence,
+      state,
+      fulfilledTxnId,
+      confidence,
+      dedupKey);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExpectedEvent &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.originSmsId == this.originSmsId &&
+          other.seriesId == this.seriesId &&
+          other.counterpartyId == this.counterpartyId &&
+          other.label == this.label &&
+          other.expectedAmountPaise == this.expectedAmountPaise &&
+          other.amountLowPaise == this.amountLowPaise &&
+          other.amountHighPaise == this.amountHighPaise &&
+          other.expectedDate == this.expectedDate &&
+          other.dateWindowDays == this.dateWindowDays &&
+          other.cadence == this.cadence &&
+          other.state == this.state &&
+          other.fulfilledTxnId == this.fulfilledTxnId &&
+          other.confidence == this.confidence &&
+          other.dedupKey == this.dedupKey);
+}
+
+class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
+  final Value<String> id;
+  final Value<String> source;
+  final Value<String?> originSmsId;
+  final Value<String?> seriesId;
+  final Value<String?> counterpartyId;
+  final Value<String> label;
+  final Value<int> expectedAmountPaise;
+  final Value<int?> amountLowPaise;
+  final Value<int?> amountHighPaise;
+  final Value<DateTime> expectedDate;
+  final Value<int> dateWindowDays;
+  final Value<String?> cadence;
+  final Value<String> state;
+  final Value<String?> fulfilledTxnId;
+  final Value<double> confidence;
+  final Value<String> dedupKey;
+  final Value<int> rowid;
+  const ExpectedEventsCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.originSmsId = const Value.absent(),
+    this.seriesId = const Value.absent(),
+    this.counterpartyId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.expectedAmountPaise = const Value.absent(),
+    this.amountLowPaise = const Value.absent(),
+    this.amountHighPaise = const Value.absent(),
+    this.expectedDate = const Value.absent(),
+    this.dateWindowDays = const Value.absent(),
+    this.cadence = const Value.absent(),
+    this.state = const Value.absent(),
+    this.fulfilledTxnId = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.dedupKey = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExpectedEventsCompanion.insert({
+    required String id,
+    required String source,
+    this.originSmsId = const Value.absent(),
+    this.seriesId = const Value.absent(),
+    this.counterpartyId = const Value.absent(),
+    required String label,
+    required int expectedAmountPaise,
+    this.amountLowPaise = const Value.absent(),
+    this.amountHighPaise = const Value.absent(),
+    required DateTime expectedDate,
+    this.dateWindowDays = const Value.absent(),
+    this.cadence = const Value.absent(),
+    required String state,
+    this.fulfilledTxnId = const Value.absent(),
+    required double confidence,
+    required String dedupKey,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        source = Value(source),
+        label = Value(label),
+        expectedAmountPaise = Value(expectedAmountPaise),
+        expectedDate = Value(expectedDate),
+        state = Value(state),
+        confidence = Value(confidence),
+        dedupKey = Value(dedupKey);
+  static Insertable<ExpectedEvent> custom({
+    Expression<String>? id,
+    Expression<String>? source,
+    Expression<String>? originSmsId,
+    Expression<String>? seriesId,
+    Expression<String>? counterpartyId,
+    Expression<String>? label,
+    Expression<int>? expectedAmountPaise,
+    Expression<int>? amountLowPaise,
+    Expression<int>? amountHighPaise,
+    Expression<DateTime>? expectedDate,
+    Expression<int>? dateWindowDays,
+    Expression<String>? cadence,
+    Expression<String>? state,
+    Expression<String>? fulfilledTxnId,
+    Expression<double>? confidence,
+    Expression<String>? dedupKey,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (originSmsId != null) 'origin_sms_id': originSmsId,
+      if (seriesId != null) 'series_id': seriesId,
+      if (counterpartyId != null) 'counterparty_id': counterpartyId,
+      if (label != null) 'label': label,
+      if (expectedAmountPaise != null)
+        'expected_amount_paise': expectedAmountPaise,
+      if (amountLowPaise != null) 'amount_low_paise': amountLowPaise,
+      if (amountHighPaise != null) 'amount_high_paise': amountHighPaise,
+      if (expectedDate != null) 'expected_date': expectedDate,
+      if (dateWindowDays != null) 'date_window_days': dateWindowDays,
+      if (cadence != null) 'cadence': cadence,
+      if (state != null) 'state': state,
+      if (fulfilledTxnId != null) 'fulfilled_txn_id': fulfilledTxnId,
+      if (confidence != null) 'confidence': confidence,
+      if (dedupKey != null) 'dedup_key': dedupKey,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExpectedEventsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? source,
+      Value<String?>? originSmsId,
+      Value<String?>? seriesId,
+      Value<String?>? counterpartyId,
+      Value<String>? label,
+      Value<int>? expectedAmountPaise,
+      Value<int?>? amountLowPaise,
+      Value<int?>? amountHighPaise,
+      Value<DateTime>? expectedDate,
+      Value<int>? dateWindowDays,
+      Value<String?>? cadence,
+      Value<String>? state,
+      Value<String?>? fulfilledTxnId,
+      Value<double>? confidence,
+      Value<String>? dedupKey,
+      Value<int>? rowid}) {
+    return ExpectedEventsCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      originSmsId: originSmsId ?? this.originSmsId,
+      seriesId: seriesId ?? this.seriesId,
+      counterpartyId: counterpartyId ?? this.counterpartyId,
+      label: label ?? this.label,
+      expectedAmountPaise: expectedAmountPaise ?? this.expectedAmountPaise,
+      amountLowPaise: amountLowPaise ?? this.amountLowPaise,
+      amountHighPaise: amountHighPaise ?? this.amountHighPaise,
+      expectedDate: expectedDate ?? this.expectedDate,
+      dateWindowDays: dateWindowDays ?? this.dateWindowDays,
+      cadence: cadence ?? this.cadence,
+      state: state ?? this.state,
+      fulfilledTxnId: fulfilledTxnId ?? this.fulfilledTxnId,
+      confidence: confidence ?? this.confidence,
+      dedupKey: dedupKey ?? this.dedupKey,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (originSmsId.present) {
+      map['origin_sms_id'] = Variable<String>(originSmsId.value);
+    }
+    if (seriesId.present) {
+      map['series_id'] = Variable<String>(seriesId.value);
+    }
+    if (counterpartyId.present) {
+      map['counterparty_id'] = Variable<String>(counterpartyId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (expectedAmountPaise.present) {
+      map['expected_amount_paise'] = Variable<int>(expectedAmountPaise.value);
+    }
+    if (amountLowPaise.present) {
+      map['amount_low_paise'] = Variable<int>(amountLowPaise.value);
+    }
+    if (amountHighPaise.present) {
+      map['amount_high_paise'] = Variable<int>(amountHighPaise.value);
+    }
+    if (expectedDate.present) {
+      map['expected_date'] = Variable<DateTime>(expectedDate.value);
+    }
+    if (dateWindowDays.present) {
+      map['date_window_days'] = Variable<int>(dateWindowDays.value);
+    }
+    if (cadence.present) {
+      map['cadence'] = Variable<String>(cadence.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (fulfilledTxnId.present) {
+      map['fulfilled_txn_id'] = Variable<String>(fulfilledTxnId.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (dedupKey.present) {
+      map['dedup_key'] = Variable<String>(dedupKey.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExpectedEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('originSmsId: $originSmsId, ')
+          ..write('seriesId: $seriesId, ')
+          ..write('counterpartyId: $counterpartyId, ')
+          ..write('label: $label, ')
+          ..write('expectedAmountPaise: $expectedAmountPaise, ')
+          ..write('amountLowPaise: $amountLowPaise, ')
+          ..write('amountHighPaise: $amountHighPaise, ')
+          ..write('expectedDate: $expectedDate, ')
+          ..write('dateWindowDays: $dateWindowDays, ')
+          ..write('cadence: $cadence, ')
+          ..write('state: $state, ')
+          ..write('fulfilledTxnId: $fulfilledTxnId, ')
+          ..write('confidence: $confidence, ')
+          ..write('dedupKey: $dedupKey, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PaymentSourcesTable extends PaymentSources
     with TableInfo<$PaymentSourcesTable, PaymentSource> {
   @override
@@ -6867,6 +7622,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BaselinesTable baselines = $BaselinesTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $CounterpartiesTable counterparties = $CounterpartiesTable(this);
+  late final $ExpectedEventsTable expectedEvents = $ExpectedEventsTable(this);
   late final $PaymentSourcesTable paymentSources = $PaymentSourcesTable(this);
   late final $MerchantsTable merchants = $MerchantsTable(this);
   late final $RawSmsTable rawSms = $RawSmsTable(this);
@@ -6923,6 +7679,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         baselines,
         categories,
         counterparties,
+        expectedEvents,
         paymentSources,
         merchants,
         rawSms,
@@ -7524,6 +8281,326 @@ class $$CounterpartiesTableOrderingComposer
 
   ColumnOrderings<int> get txnCount => $state.composableBuilder(
       column: $state.table.txnCount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$ExpectedEventsTableInsertCompanionBuilder = ExpectedEventsCompanion
+    Function({
+  required String id,
+  required String source,
+  Value<String?> originSmsId,
+  Value<String?> seriesId,
+  Value<String?> counterpartyId,
+  required String label,
+  required int expectedAmountPaise,
+  Value<int?> amountLowPaise,
+  Value<int?> amountHighPaise,
+  required DateTime expectedDate,
+  Value<int> dateWindowDays,
+  Value<String?> cadence,
+  required String state,
+  Value<String?> fulfilledTxnId,
+  required double confidence,
+  required String dedupKey,
+  Value<int> rowid,
+});
+typedef $$ExpectedEventsTableUpdateCompanionBuilder = ExpectedEventsCompanion
+    Function({
+  Value<String> id,
+  Value<String> source,
+  Value<String?> originSmsId,
+  Value<String?> seriesId,
+  Value<String?> counterpartyId,
+  Value<String> label,
+  Value<int> expectedAmountPaise,
+  Value<int?> amountLowPaise,
+  Value<int?> amountHighPaise,
+  Value<DateTime> expectedDate,
+  Value<int> dateWindowDays,
+  Value<String?> cadence,
+  Value<String> state,
+  Value<String?> fulfilledTxnId,
+  Value<double> confidence,
+  Value<String> dedupKey,
+  Value<int> rowid,
+});
+
+class $$ExpectedEventsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ExpectedEventsTable,
+    ExpectedEvent,
+    $$ExpectedEventsTableFilterComposer,
+    $$ExpectedEventsTableOrderingComposer,
+    $$ExpectedEventsTableProcessedTableManager,
+    $$ExpectedEventsTableInsertCompanionBuilder,
+    $$ExpectedEventsTableUpdateCompanionBuilder> {
+  $$ExpectedEventsTableTableManager(
+      _$AppDatabase db, $ExpectedEventsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ExpectedEventsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ExpectedEventsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$ExpectedEventsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> source = const Value.absent(),
+            Value<String?> originSmsId = const Value.absent(),
+            Value<String?> seriesId = const Value.absent(),
+            Value<String?> counterpartyId = const Value.absent(),
+            Value<String> label = const Value.absent(),
+            Value<int> expectedAmountPaise = const Value.absent(),
+            Value<int?> amountLowPaise = const Value.absent(),
+            Value<int?> amountHighPaise = const Value.absent(),
+            Value<DateTime> expectedDate = const Value.absent(),
+            Value<int> dateWindowDays = const Value.absent(),
+            Value<String?> cadence = const Value.absent(),
+            Value<String> state = const Value.absent(),
+            Value<String?> fulfilledTxnId = const Value.absent(),
+            Value<double> confidence = const Value.absent(),
+            Value<String> dedupKey = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ExpectedEventsCompanion(
+            id: id,
+            source: source,
+            originSmsId: originSmsId,
+            seriesId: seriesId,
+            counterpartyId: counterpartyId,
+            label: label,
+            expectedAmountPaise: expectedAmountPaise,
+            amountLowPaise: amountLowPaise,
+            amountHighPaise: amountHighPaise,
+            expectedDate: expectedDate,
+            dateWindowDays: dateWindowDays,
+            cadence: cadence,
+            state: state,
+            fulfilledTxnId: fulfilledTxnId,
+            confidence: confidence,
+            dedupKey: dedupKey,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String source,
+            Value<String?> originSmsId = const Value.absent(),
+            Value<String?> seriesId = const Value.absent(),
+            Value<String?> counterpartyId = const Value.absent(),
+            required String label,
+            required int expectedAmountPaise,
+            Value<int?> amountLowPaise = const Value.absent(),
+            Value<int?> amountHighPaise = const Value.absent(),
+            required DateTime expectedDate,
+            Value<int> dateWindowDays = const Value.absent(),
+            Value<String?> cadence = const Value.absent(),
+            required String state,
+            Value<String?> fulfilledTxnId = const Value.absent(),
+            required double confidence,
+            required String dedupKey,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ExpectedEventsCompanion.insert(
+            id: id,
+            source: source,
+            originSmsId: originSmsId,
+            seriesId: seriesId,
+            counterpartyId: counterpartyId,
+            label: label,
+            expectedAmountPaise: expectedAmountPaise,
+            amountLowPaise: amountLowPaise,
+            amountHighPaise: amountHighPaise,
+            expectedDate: expectedDate,
+            dateWindowDays: dateWindowDays,
+            cadence: cadence,
+            state: state,
+            fulfilledTxnId: fulfilledTxnId,
+            confidence: confidence,
+            dedupKey: dedupKey,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ExpectedEventsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $ExpectedEventsTable,
+    ExpectedEvent,
+    $$ExpectedEventsTableFilterComposer,
+    $$ExpectedEventsTableOrderingComposer,
+    $$ExpectedEventsTableProcessedTableManager,
+    $$ExpectedEventsTableInsertCompanionBuilder,
+    $$ExpectedEventsTableUpdateCompanionBuilder> {
+  $$ExpectedEventsTableProcessedTableManager(super.$state);
+}
+
+class $$ExpectedEventsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $ExpectedEventsTable> {
+  $$ExpectedEventsTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get source => $state.composableBuilder(
+      column: $state.table.source,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get originSmsId => $state.composableBuilder(
+      column: $state.table.originSmsId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get seriesId => $state.composableBuilder(
+      column: $state.table.seriesId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get counterpartyId => $state.composableBuilder(
+      column: $state.table.counterpartyId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get label => $state.composableBuilder(
+      column: $state.table.label,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get expectedAmountPaise => $state.composableBuilder(
+      column: $state.table.expectedAmountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get amountLowPaise => $state.composableBuilder(
+      column: $state.table.amountLowPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get amountHighPaise => $state.composableBuilder(
+      column: $state.table.amountHighPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get expectedDate => $state.composableBuilder(
+      column: $state.table.expectedDate,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get dateWindowDays => $state.composableBuilder(
+      column: $state.table.dateWindowDays,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get cadence => $state.composableBuilder(
+      column: $state.table.cadence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get state => $state.composableBuilder(
+      column: $state.table.state,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get fulfilledTxnId => $state.composableBuilder(
+      column: $state.table.fulfilledTxnId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get dedupKey => $state.composableBuilder(
+      column: $state.table.dedupKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ExpectedEventsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $ExpectedEventsTable> {
+  $$ExpectedEventsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get source => $state.composableBuilder(
+      column: $state.table.source,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get originSmsId => $state.composableBuilder(
+      column: $state.table.originSmsId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get seriesId => $state.composableBuilder(
+      column: $state.table.seriesId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get counterpartyId => $state.composableBuilder(
+      column: $state.table.counterpartyId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get label => $state.composableBuilder(
+      column: $state.table.label,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get expectedAmountPaise => $state.composableBuilder(
+      column: $state.table.expectedAmountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get amountLowPaise => $state.composableBuilder(
+      column: $state.table.amountLowPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get amountHighPaise => $state.composableBuilder(
+      column: $state.table.amountHighPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get expectedDate => $state.composableBuilder(
+      column: $state.table.expectedDate,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get dateWindowDays => $state.composableBuilder(
+      column: $state.table.dateWindowDays,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get cadence => $state.composableBuilder(
+      column: $state.table.cadence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get state => $state.composableBuilder(
+      column: $state.table.state,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get fulfilledTxnId => $state.composableBuilder(
+      column: $state.table.fulfilledTxnId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get dedupKey => $state.composableBuilder(
+      column: $state.table.dedupKey,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
@@ -10335,6 +11412,8 @@ class _$AppDatabaseManager {
       $$CategoriesTableTableManager(_db, _db.categories);
   $$CounterpartiesTableTableManager get counterparties =>
       $$CounterpartiesTableTableManager(_db, _db.counterparties);
+  $$ExpectedEventsTableTableManager get expectedEvents =>
+      $$ExpectedEventsTableTableManager(_db, _db.expectedEvents);
   $$PaymentSourcesTableTableManager get paymentSources =>
       $$PaymentSourcesTableTableManager(_db, _db.paymentSources);
   $$MerchantsTableTableManager get merchants =>

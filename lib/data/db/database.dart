@@ -9,6 +9,7 @@ import '../dedup/duplicate_match_rule.dart';
 import 'tables/baselines_table.dart';
 import 'tables/categories_table.dart';
 import 'tables/counterparties_table.dart';
+import 'tables/expected_events_table.dart';
 import 'tables/feedback_table.dart';
 import 'tables/financial_events_table.dart';
 import 'tables/insights_table.dart';
@@ -33,6 +34,7 @@ part 'database.g.dart';
     Baselines,
     Categories,
     Counterparties,
+    ExpectedEvents,
     Feedback,
     FinancialEvents,
     Insights,
@@ -75,7 +77,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -158,6 +160,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 11) {
           await migrator.createTable(counterparties);
+        }
+        if (from < 12) {
+          await migrator.createTable(expectedEvents);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.
