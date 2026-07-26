@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
-import '../settings/app_settings.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transaction_detail_screen.dart';
+import 'dashboard_providers.dart';
 import 'dashboard_widgets.dart';
+import 'period_selection_sheet.dart';
+import 'streak_provider.dart';
 
 /// Post-onboarding Bloom Dashboard screen.
 ///
@@ -20,8 +22,10 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final settings = ref.watch(appSettingsControllerProvider).valueOrNull;
-    final streak = settings?.streak ?? 6;
+    final greeting = ref.watch(dashboardGreetingProvider);
+    final subline = ref.watch(dashboardStatusSublineProvider);
+    final streak = ref.watch(streakProvider);
+    final period = ref.watch(dashboardPeriodProvider);
 
     return Scaffold(
       backgroundColor:
@@ -45,7 +49,7 @@ class DashboardScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hey Shivay',
+                        greeting,
                         style: AppTheme.bloomDisplay(
                           15,
                           FontWeight.w600,
@@ -56,7 +60,7 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 1),
                       Text(
-                        'Lighter week than usual',
+                        subline,
                         style: AppTheme.bloomDisplay(
                           11,
                           FontWeight.w400,
@@ -69,41 +73,114 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 // Streak Chip / Settings icon
+                Tooltip(
+                  message: 'Settings & Streak',
+                  child: Semantics(
+                    button: true,
+                    label: 'Settings and $streak day streak',
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColorTokens.bloomGold.withValues(alpha: 0.16)
+                              : const Color(0xFFFFF0D6),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 14,
+                              color: AppColorTokens.bloomGold,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$streak day streak',
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w600,
+                                color: isDark
+                                    ? AppColorTokens.bloomGold
+                                    : const Color(0xFF8A5A00),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Period Selector Chip Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 GestureDetector(
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SettingsScreen(),
-                      ),
+                    showBloomModalSheet(
+                      context: context,
+                      builder: (context) => const BloomDatePeriodSheet(),
                     );
                   },
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? AppColorTokens.bloomGold.withValues(alpha: 0.16)
-                          : const Color(0xFFFFF0D6),
-                      borderRadius: BorderRadius.circular(16),
+                          ? AppColorTokens.bloomDarkTrack
+                          : AppColorTokens.bloomChip,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColorTokens.bloomDarkOutline
+                            : AppColorTokens.bloomHairline,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 14,
-                          color: AppColorTokens.bloomGold,
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 13,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextSecondary
+                              : AppColorTokens.inkSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Text(
-                          '$streak day streak',
+                          period.label,
                           style: AppTheme.bloomDisplay(
                             12,
                             FontWeight.w600,
                             color: isDark
-                                ? AppColorTokens.bloomGold
-                                : const Color(0xFF8A5A00),
+                                ? AppColorTokens.bloomDarkTextPrimary
+                                : AppColorTokens.ink,
                           ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 16,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextTertiary
+                              : AppColorTokens.inkTertiary,
                         ),
                       ],
                     ),
@@ -111,7 +188,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Hero Ring (230px)
             const BloomHeroRing(),
@@ -128,7 +205,7 @@ class DashboardScreen extends ConsumerWidget {
             // Where it went (Top 3 categories)
             BloomTopCategoriesSection(
               onViewAll: () {
-                // Navigate to Activity tab via default notification or pop
+                ref.read(homeTabControllerProvider.notifier).state = 1;
               },
             ),
             const SizedBox(height: 24),

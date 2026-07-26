@@ -31,6 +31,10 @@ abstract interface class SmsPermissionGate {
 
   /// Shows the system permission prompt and resolves with the outcome.
   Future<SmsPermissionStatus> request();
+
+  /// Opens the Android application details settings page so the user
+  /// can toggle permissions that the OS will no longer prompt for.
+  Future<void> openAppSettings();
 }
 
 /// Platform-channel implementation backed by the Android host.
@@ -59,4 +63,10 @@ class PlatformSmsPermissionGate implements SmsPermissionGate {
     final name = await _channel.invokeMethod<String>('request');
     return SmsPermissionStatus.fromName(name);
   }
+
+  @override
+  Future<void> openAppSettings() async {
+    await _channel.invokeMethod<void>('openAppSettings');
+  }
 }
+

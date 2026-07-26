@@ -69,16 +69,17 @@ class BloomSheetScaffold extends StatelessWidget {
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: NavigationToolbar(
-                leading: showBack
-                    ? IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed:
-                            onBack ?? () => Navigator.of(context).maybePop(),
-                      )
-                    : null,
-                middle: title != null
-                    ? Text(
+              child: Row(
+                children: [
+                  if (showBack)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed:
+                          onBack ?? () => Navigator.of(context).maybePop(),
+                    ),
+                  if (title != null)
+                    Expanded(
+                      child: Text(
                         title!,
                         style: AppTheme.bloomDisplay(
                           18,
@@ -87,20 +88,18 @@ class BloomSheetScaffold extends StatelessWidget {
                               ? AppColorTokens.bloomDarkTextPrimary
                               : AppColorTokens.ink,
                         ),
-                      )
-                    : null,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (actions != null) ...actions!,
-                    if (showClose)
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed:
-                            onClose ?? () => Navigator.of(context).maybePop(),
                       ),
-                  ],
-                ),
+                    )
+                  else
+                    const Spacer(),
+                  if (actions != null) ...actions!,
+                  if (showClose)
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed:
+                          onClose ?? () => Navigator.of(context).maybePop(),
+                    ),
+                ],
               ),
             ),
           ],

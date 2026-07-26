@@ -128,6 +128,19 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "status" -> result.success(currentSmsPermissionStatus())
                 "request" -> requestSmsPermissions(result)
+                "openAppSettings" -> {
+                    try {
+                        val intent = Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", packageName, null)
+                        )
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("intent_failed", e.message, null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -195,6 +208,31 @@ class MainActivity : FlutterActivity() {
                         ?: emptyList()
                     AskNowNotifications.ackPendingResponses(applicationContext, txnIds)
                     result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/reset",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "clearAllNativeState" -> {
+                    try {
+                        val prefs = getSharedPreferences("ask_now_notifications", Context.MODE_PRIVATE)
+                        prefs.edit().clear().apply()
+
+                        androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
+
+                        val modelDir = java.io.File(filesDir, "llm_models")
+                        if (modelDir.exists()) {
+                            modelDir.deleteRecursively()
+                        }
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("reset_failed", e.message, null)
+                    }
                 }
                 else -> result.notImplemented()
             }

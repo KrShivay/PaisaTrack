@@ -22,6 +22,18 @@ String formatInr(double amount) {
   return '$sign₹${groups.join(',')},$lastThree.$decimals';
 }
 
+/// Compact rupee format for charts and stats (e.g. ₹4.5k, ₹1.2L).
+String formatInrCompact(double amount) {
+  final absVal = amount.abs();
+  final sign = amount.isNegative ? '-' : '';
+  if (absVal >= 100000) {
+    return '$sign₹${(absVal / 100000).toStringAsFixed(1)}L';
+  } else if (absVal >= 1000) {
+    return '$sign₹${(absVal / 1000).toStringAsFixed(1)}k';
+  }
+  return '$sign₹${absVal.toStringAsFixed(0)}';
+}
+
 const _monthAbbrev = [
   'Jan',
   'Feb',

@@ -424,7 +424,7 @@ class _CtaButtons extends ConsumerWidget {
 
     if (status == SmsPermissionStatus.permanentlyDenied) {
       primaryLabel = 'Open settings';
-      onPrimaryTap = isBusy ? null : controller.request;
+      onPrimaryTap = isBusy ? null : controller.openSettings;
     } else if (status == SmsPermissionStatus.granted) {
       primaryLabel = 'Continue to PaisaTrack';
       onPrimaryTap = () {

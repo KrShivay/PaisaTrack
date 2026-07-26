@@ -60,14 +60,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           _messages.add(AssistantMessage(answer, fromUser: false));
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
+        // Sanitize error — never expose stack traces or internal details.
+        final userMessage = e is LlmUnavailable
+            ? 'The on-device AI model is not available. You can still search your transactions by keyword.'
+            : 'I could not calculate that from your data. Try asking about recent spend, budget, or categories.';
         setState(() {
           _messages.add(
-            const AssistantMessage(
-              'I could not calculate that from your data. Try asking about recent spend, budget, or categories.',
-              fromUser: false,
-            ),
+            AssistantMessage(userMessage, fromUser: false),
           );
         });
       }
@@ -100,14 +101,18 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
               pulseRing: false,
             ),
             const SizedBox(width: 8),
-            Text(
-              'Ask PaisaTrack',
-              style: AppTheme.bloomDisplay(
-                18,
-                FontWeight.w700,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextPrimary
-                    : AppColorTokens.ink,
+            Expanded(
+              child: Text(
+                'Ask PaisaTrack',
+                style: AppTheme.bloomDisplay(
+                  18,
+                  FontWeight.w700,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextPrimary
+                      : AppColorTokens.ink,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -140,6 +145,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                                 ? AppColorTokens.bloomDarkTextPrimary
                                 : AppColorTokens.ink,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'Natural language financial search',
@@ -150,6 +157,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                                 ? AppColorTokens.bloomDarkTextTertiary
                                 : AppColorTokens.inkTertiary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -157,6 +166,46 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 ],
               ),
             ),
+            // On-device privacy badge
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColorTokens.bloomEmerald.withValues(alpha: 0.15)
+                      : const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.shield_outlined,
+                      size: 14,
+                      color: AppColorTokens.bloomEmerald,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'On-device · no internet used',
+                        style: AppTheme.bloomDisplay(
+                          11,
+                          FontWeight.w500,
+                          color: AppColorTokens.bloomEmerald,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             const Divider(height: 1),
 
             // Message Thread / Presets

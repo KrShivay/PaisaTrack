@@ -83,8 +83,8 @@ void main() {
 
       await pumpRecurring(tester, items);
 
-      expect(find.text('Netflix'), findsOneWidget);
-      expect(find.text('Airtel Broadband'), findsOneWidget);
+      expect(find.text('Netflix'), findsAtLeast(1));
+      expect(find.text('Airtel Broadband'), findsAtLeast(1));
       expect(find.byType(BloomCategoryTile), findsWidgets);
       expect(find.byType(BloomAmount), findsWidgets);
     });

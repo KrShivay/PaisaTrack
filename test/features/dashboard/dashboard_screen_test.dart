@@ -70,7 +70,7 @@ void main() {
     await pumpDashboard(tester, const []);
 
     expect(find.byType(BloomHeroRing), findsOneWidget);
-    expect(find.text('Hey Shivay'), findsOneWidget);
+    expect(find.textContaining('Good '), findsOneWidget);
   });
 
   testWidgets('renders metric switcher pills', (tester) async {

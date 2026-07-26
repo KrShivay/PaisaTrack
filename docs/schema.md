@@ -13,8 +13,10 @@ The executable source of truth is the Drift schema under
 - `payment_sources`: masked accounts/cards/wallets, nicknames, institution,
   ownership, active state, and analytics inclusion.
 - `categories`, `rules`, `feedback`: taxonomy and learning inputs.
-- `recurring_series`, `baselines`, `insights`, `model_meta`: local intelligence
-  state.
+- `recurring_series`, `insights`, `model_meta`: local intelligence state.
+- `baselines`: anomaly/forecast state plus the current global monthly-budget and
+  merchant-cap prototype. This reuse is transitional; T-098 requires a
+  dedicated per-category/per-month budget model.
 
 The database is SQLCipher-encrypted. Android Keystore protects the generated
 database passphrase. Original merchant text, VPA, references, and source metadata
@@ -33,6 +35,10 @@ represent:
 
 Each migration must preserve existing rows, include upgrade tests from the
 previous version, and update encrypted backup/import coverage where relevant.
+
+Amounts and balances currently use Drift `real()`/Dart `double`. This is a
+known financial-integrity limitation; T-130 plans an additive migration to
+integer paise rather than extending floating-point use into new money tables.
 
 Schema v6 is a repair migration: it backfills NULLs and rescales millisecond
 datetimes in `payment_sources` rows created by early v5 builds (which crashed

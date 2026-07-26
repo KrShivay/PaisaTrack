@@ -1,15 +1,42 @@
+import 'dart:convert';
+import 'package:drift/drift.dart' show Expression, Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/widgets/bloom/bloom.dart';
+import '../../data/db/database.dart';
+import '../../data/db/database_provider.dart';
 import '../dashboard/dashboard_providers.dart';
+import '../dashboard/period_selection_sheet.dart';
 import '../recurring/recurring_screen.dart';
 
-/// Redesigned Bloom Trends (Insights) screen with 6-month bar chart, MoM comparison,
+/// Stream of non-dismissed precomputed insights for the current period.
+final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
+  final dbAsync = ref.watch(appDatabaseProvider);
+  final period = ref.watch(dashboardPeriodProvider);
+  final monthKey =
+      '${period.start.year}-${period.start.month.toString().padLeft(2, '0')}';
+
+  return dbAsync.when(
+    data: (db) => (db.select(db.insights)
+          ..where(
+            (i) => Expression.and([
+              i.period.equals(monthKey),
+              i.dismissed.equals(false),
+            ]),
+          ))
+        .watch(),
+    loading: () => const Stream<List<Insight>>.empty(),
+    error: (err, st) => Stream<List<Insight>>.error(err, st),
+  );
+});
+
+/// Redesigned Bloom Trends (Insights) screen with scoped period picker,
+/// narrative insight cards with dismissal, 6-month bar chart, MoM comparison,
 /// category share breakdown, and top merchants.
 class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
@@ -17,11 +44,14 @@ class InsightsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final period = ref.watch(dashboardPeriodProvider);
     final sixMonthTrend = ref.watch(sixMonthTrendProvider);
     final mom = ref.watch(monthOverMonthSpendProvider);
     final totals = ref.watch(monthDirectionTotalsProvider);
     final categories = ref.watch(categoryBreakdownProvider);
     final merchants = ref.watch(topMerchantsProvider);
+    final activeInsightsAsync = ref.watch(activeInsightsProvider);
+    final insights = activeInsightsAsync.valueOrNull ?? const [];
 
     return Scaffold(
       backgroundColor:
@@ -31,7 +61,7 @@ class InsightsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
-            // Top Header: Title + Recurring button
+            // Top Header: Title + Period Chip + Recurring button
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -67,6 +97,50 @@ class InsightsScreen extends ConsumerWidget {
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () {
+                    showBloomModalSheet(
+                      context: context,
+                      builder: (context) => const BloomDatePeriodSheet(),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomChip,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          size: 14,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextSecondary
+                              : AppColorTokens.inkSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          period.label,
+                          style: AppTheme.bloomDisplay(
+                            11,
+                            FontWeight.w600,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextSecondary
+                                : AppColorTokens.inkSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const RecurringScreen(),
@@ -74,8 +148,10 @@ class InsightsScreen extends ConsumerWidget {
                     );
                   },
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark
                           ? AppColorTokens.bloomDarkCard
@@ -87,7 +163,7 @@ class InsightsScreen extends ConsumerWidget {
                       children: [
                         Icon(
                           Icons.autorenew_rounded,
-                          size: 16,
+                          size: 14,
                           color: isDark
                               ? AppColorTokens.bloomDarkTextSecondary
                               : AppColorTokens.inkSecondary,
@@ -96,7 +172,7 @@ class InsightsScreen extends ConsumerWidget {
                         Text(
                           'Recurring',
                           style: AppTheme.bloomDisplay(
-                            12,
+                            11,
                             FontWeight.w600,
                             color: isDark
                                 ? AppColorTokens.bloomDarkTextSecondary
@@ -109,7 +185,25 @@ class InsightsScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+
+            // Narrative Insights Cards (if any non-dismissed)
+            if (insights.isNotEmpty) ...[
+              for (final insight in insights) ...[
+                _NarrativeInsightCard(
+                  insight: insight,
+                  isDark: isDark,
+                  onDismiss: () async {
+                    final db = await ref.read(appDatabaseProvider.future);
+                    await (db.update(db.insights)
+                          ..where((row) => row.id.equals(insight.id)))
+                        .write(const InsightsCompanion(dismissed: Value(true)));
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              const SizedBox(height: 12),
+            ],
 
             // 6-Month Spend Bar Chart Card
             _SixMonthBarChartCard(
@@ -146,6 +240,154 @@ class InsightsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _NarrativeInsightCard extends StatelessWidget {
+  const _NarrativeInsightCard({
+    required this.insight,
+    required this.isDark,
+    required this.onDismiss,
+  });
+
+  final Insight insight;
+  final bool isDark;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark
+        ? AppColorTokens.violetPrimary.withValues(alpha: 0.16)
+        : const Color(0xFFF3E8FF);
+    final border = isDark
+        ? AppColorTokens.violetPrimary.withValues(alpha: 0.3)
+        : const Color(0xFFE9D5FF);
+
+    final spec = _parseInsight(insight);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            spec.icon,
+            size: 20,
+            color: isDark ? const Color(0xFFC084FC) : const Color(0xFF7E22CE),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  spec.title,
+                  style: AppTheme.bloomDisplay(
+                    13,
+                    FontWeight.w600,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextPrimary
+                        : AppColorTokens.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  spec.body,
+                  style: AppTheme.bloomDisplay(
+                    12,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextTertiary
+                  : AppColorTokens.inkTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _InsightDisplaySpec _parseInsight(Insight insight) {
+    try {
+      final payload = jsonDecode(insight.payloadJson) as Map<String, dynamic>;
+      switch (insight.kind) {
+        case 'fees_total':
+          final total = (payload['total'] as num?)?.toDouble() ?? 0.0;
+          return _InsightDisplaySpec(
+            title: 'Fees & Charges Alert',
+            body:
+                'You spent ${formatInr(total)} in fees this month. Check subscription renewal details.',
+            icon: Icons.account_balance_wallet_outlined,
+          );
+        case 'category_delta':
+          final category = payload['category_name'] ?? 'category';
+          final delta = (payload['delta_fraction'] as num?)?.toDouble() ?? 0.0;
+          final pct = (delta.abs() * 100).toStringAsFixed(0);
+          final direction = delta > 0 ? 'increased' : 'decreased';
+          return _InsightDisplaySpec(
+            title: 'Category Shift',
+            body:
+                '$category spending $direction by $pct% compared to last month.',
+            icon: Icons.trending_up_rounded,
+          );
+        case 'duplicate_subscription':
+          final label = payload['label'] ?? 'Service';
+          return _InsightDisplaySpec(
+            title: 'Duplicate Subscription',
+            body: 'Multiple active subscriptions detected for $label.',
+            icon: Icons.copy_rounded,
+          );
+        case 'price_creep':
+          final label = payload['label'] ?? 'Service';
+          return _InsightDisplaySpec(
+            title: 'Price Creep Detected',
+            body: 'Amount for $label has increased in recent billing cycles.',
+            icon: Icons.show_chart_rounded,
+          );
+        default:
+          return const _InsightDisplaySpec(
+            title: 'Smart Insight',
+            body: 'Pattern detected in your transaction history.',
+            icon: Icons.lightbulb_outline_rounded,
+          );
+      }
+    } catch (_) {
+      return const _InsightDisplaySpec(
+        title: 'Smart Insight',
+        body: 'Pattern detected in your transaction history.',
+        icon: Icons.lightbulb_outline_rounded,
+      );
+    }
+  }
+}
+
+class _InsightDisplaySpec {
+  const _InsightDisplaySpec({
+    required this.title,
+    required this.body,
+    required this.icon,
+  });
+
+  final String title;
+  final String body;
+  final IconData icon;
 }
 
 class _SixMonthBarChartCard extends StatelessWidget {
@@ -222,34 +464,49 @@ class _BarColumn extends StatelessWidget {
   final double maxSpend;
   final bool isDark;
 
+  static const _monthAbbrev = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final fraction = (bucket.spend / maxSpend).clamp(0.06, 1.0);
-    final barHeight = 90.0 * fraction;
-
+    final heightFactor = (bucket.spend / maxSpend).clamp(0.06, 1.0);
     final activeColor =
         isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink;
-    final inactiveColor =
-        isDark ? const Color(0xFF292448) : const Color(0xFFE7E4F5);
+    final inactiveColor = isDark
+        ? AppColorTokens.bloomDarkTextTertiary.withValues(alpha: 0.3)
+        : AppColorTokens.bloomChip;
+
+    final monthLabel = _monthAbbrev[bucket.month.month - 1];
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (isCurrent && bucket.spend > 0)
-          Text(
-            _formatCompact(bucket.spend),
-            style: AppTheme.bloomMono(
-              10,
-              FontWeight.w600,
-              color: activeColor,
-            ),
-          )
-        else
-          const SizedBox(height: 14),
+        Text(
+          bucket.spend > 0 ? formatInrCompact(bucket.spend) : '',
+          style: AppTheme.bloomMono(
+            9,
+            FontWeight.w500,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
+          ),
+        ),
         const SizedBox(height: 4),
         Container(
-          width: 28,
-          height: barHeight,
+          width: 24,
+          height: 100 * heightFactor,
           decoration: BoxDecoration(
             color: isCurrent ? activeColor : inactiveColor,
             borderRadius: BorderRadius.circular(8),
@@ -257,10 +514,10 @@ class _BarColumn extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          _shortMonth(bucket.month.month),
+          monthLabel,
           style: AppTheme.bloomDisplay(
             11,
-            isCurrent ? FontWeight.w600 : FontWeight.w500,
+            isCurrent ? FontWeight.w700 : FontWeight.w500,
             color: isCurrent
                 ? (isDark
                     ? AppColorTokens.bloomDarkTextPrimary
@@ -272,28 +529,6 @@ class _BarColumn extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _shortMonth(int month) => const [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ][month - 1];
-
-  String _formatCompact(double val) {
-    if (val >= 1000) {
-      return '₹${(val / 1000).toStringAsFixed(1)}k';
-    }
-    return '₹${val.toStringAsFixed(0)}';
   }
 }
 
@@ -311,25 +546,27 @@ class _MoMComparisonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
-    final pct = mom.pctChange;
+    final pctChange = mom.pctChange ?? 0.0;
+    final isIncrease = pctChange > 0;
+    final isZero = pctChange == 0;
 
-    final isLowerSpend = pct != null && pct <= 0;
-    final chipBg = isLowerSpend
+    final badgeBg = isZero
+        ? (isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip)
+        : isIncrease
+            ? (isDark
+                ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
+                : const Color(0xFFFFF0D6))
+            : (isDark
+                ? AppColorTokens.bloomEmerald.withValues(alpha: 0.18)
+                : const Color(0xFFD3F2E4));
+
+    final badgeColor = isZero
         ? (isDark
-            ? AppColorTokens.bloomEmerald.withValues(alpha: 0.18)
-            : const Color(0xFFD3F2E4))
-        : (isDark
-            ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.18)
-            : const Color(0xFFFDE8E8));
-    final chipFg = isLowerSpend
-        ? (isDark ? AppColorTokens.bloomCreditDark : const Color(0xFF0E9F6E))
-        : (isDark
-            ? AppColorTokens.bloomDebitDark
-            : AppColorTokens.bloomDebitLight);
-
-    final chipText = pct != null
-        ? '${pct <= 0 ? "↓" : "↑"} ${pct.abs().toStringAsFixed(0)}% vs last month'
-        : 'First month tracked';
+            ? AppColorTokens.bloomDarkTextSecondary
+            : AppColorTokens.inkSecondary)
+        : isIncrease
+            ? AppColorTokens.bloomGold
+            : AppColorTokens.bloomEmerald;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -354,11 +591,11 @@ class _MoMComparisonCard extends StatelessWidget {
                         : AppColorTokens.inkTertiary,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  '${formatInr(currentSpend)} spent so far',
-                  style: AppTheme.bloomDisplay(
-                    15,
+                  formatInr(currentSpend),
+                  style: AppTheme.bloomMono(
+                    26,
                     FontWeight.w600,
                     color: isDark
                         ? AppColorTokens.bloomDarkTextPrimary
@@ -367,35 +604,45 @@ class _MoMComparisonCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'vs ${formatInr(mom.previous)} same time last month',
+                  '${formatInr(currentSpend)} spent so far vs ${formatInr(mom.previous)} last month',
                   style: AppTheme.bloomDisplay(
                     12,
                     FontWeight.w400,
                     color: isDark
-                        ? AppColorTokens.bloomDarkTextSecondary
-                        : AppColorTokens.inkSecondary,
+                        ? AppColorTokens.bloomDarkTextTertiary
+                        : AppColorTokens.inkTertiary,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: chipBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                chipText,
-                style: AppTheme.bloomDisplay(
-                  11,
-                  FontWeight.w600,
-                  color: chipFg,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isIncrease
+                      ? Icons.arrow_upward_rounded
+                      : isZero
+                          ? Icons.remove_rounded
+                          : Icons.arrow_downward_rounded,
+                  size: 14,
+                  color: badgeColor,
                 ),
-              ),
+                const SizedBox(width: 4),
+                Text(
+                  '${pctChange.abs().toStringAsFixed(1)}%',
+                  style: AppTheme.bloomMono(
+                    13,
+                    FontWeight.w600,
+                    color: badgeColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -415,104 +662,112 @@ class _CategoryBreakdownSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (categories.isEmpty) return const SizedBox.shrink();
-    final maxTotal = categories.first.total;
+    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Categories',
+          'SPENDING BY CATEGORY',
           style: AppTheme.bloomDisplay(
-            16,
+            11,
             FontWeight.w600,
+            letterSpacing: 0.1,
             color: isDark
-                ? AppColorTokens.bloomDarkTextPrimary
-                : AppColorTokens.ink,
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
           ),
         ),
         const SizedBox(height: 12),
-        for (final slice in categories) ...[
-          _CategoryItemRow(slice: slice, maxTotal: maxTotal, isDark: isDark),
-          if (slice != categories.last) const SizedBox(height: 10),
-        ],
-      ],
-    );
-  }
-}
-
-class _CategoryItemRow extends StatelessWidget {
-  const _CategoryItemRow({
-    required this.slice,
-    required this.maxTotal,
-    required this.isDark,
-  });
-
-  final CategorySlice slice;
-  final double maxTotal;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final barFraction =
-        maxTotal > 0 ? (slice.total / maxTotal).clamp(0.05, 1.0) : 0.0;
-    final color = CategoryVisuals.color(slice.categoryId);
-
-    return Row(
-      children: [
-        BloomCategoryTile(
-          categoryId: slice.categoryId,
-          size: 36,
-          borderRadius: 13,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    slice.name,
-                    style: AppTheme.bloomDisplay(
-                      13,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                  ),
-                  Text(
-                    formatInr(slice.total),
-                    style: AppTheme.bloomMono(
-                      13,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextSecondary
-                          : AppColorTokens.inkSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: Container(
-                  height: 6,
+        if (categories.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+            ),
+            child: Center(
+              child: Text(
+                'No category data for this period',
+                style: AppTheme.bloomDisplay(
+                  13,
+                  FontWeight.w400,
                   color: isDark
-                      ? AppColorTokens.bloomDarkTrack
-                      : AppColorTokens.bloomChip,
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: barFraction,
-                    child: Container(color: color),
-                  ),
+                      ? AppColorTokens.bloomDarkTextSecondary
+                      : AppColorTokens.inkSecondary,
                 ),
               ),
-            ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+            ),
+            child: Column(
+              children: [
+                for (final cat in categories) ...[
+                  Row(
+                    children: [
+                      BloomCategoryTile(
+                        categoryId: cat.categoryId,
+                        size: 32,
+                        borderRadius: 11,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  cat.name,
+                                  style: AppTheme.bloomDisplay(
+                                    13,
+                                    FontWeight.w500,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextPrimary
+                                        : AppColorTokens.ink,
+                                  ),
+                                ),
+                                Text(
+                                  formatInr(cat.total),
+                                  style: AppTheme.bloomMono(
+                                    13,
+                                    FontWeight.w500,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextPrimary
+                                        : AppColorTokens.ink,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: cat.share.clamp(0.0, 1.0),
+                              backgroundColor: isDark
+                                  ? AppColorTokens.bloomDarkOutline
+                                  : AppColorTokens.bloomChip,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                CategoryVisuals.color(cat.categoryId),
+                              ),
+                              minHeight: 4,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (cat != categories.last) const SizedBox(height: 14),
+                ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -529,92 +784,88 @@ class _TopMerchantsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (merchants.isEmpty) return const SizedBox.shrink();
+    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Top Merchants',
+          'TOP MERCHANTS',
           style: AppTheme.bloomDisplay(
-            16,
+            11,
             FontWeight.w600,
+            letterSpacing: 0.1,
             color: isDark
-                ? AppColorTokens.bloomDarkTextPrimary
-                : AppColorTokens.ink,
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
           ),
         ),
         const SizedBox(height: 12),
-        for (final item in merchants) ...[
+        if (merchants.isEmpty)
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark
-                  ? AppColorTokens.bloomDarkCard
-                  : AppColorTokens.bloomCard,
-              borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+              color: bg,
+              borderRadius: BorderRadius.circular(AppRadius.bloomCard),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColorTokens.bloomDarkTrack
-                        : AppColorTokens.bloomChip,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Center(
-                    child: Text(
-                      item.name.substring(0, 1).toUpperCase(),
-                      style: AppTheme.bloomDisplay(
-                        14,
-                        FontWeight.w700,
-                        color: AppColorTokens.violetPrimary,
-                      ),
-                    ),
-                  ),
+            child: Center(
+              child: Text(
+                'No merchant data for this period',
+                style: AppTheme.bloomDisplay(
+                  13,
+                  FontWeight.w400,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextSecondary
+                      : AppColorTokens.inkSecondary,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+            ),
+            child: Column(
+              children: [
+                for (final merchant in merchants) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Expanded(
+                        child: Text(
+                          merchant.name,
+                          style: AppTheme.bloomDisplay(
+                            13,
+                            FontWeight.w500,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextPrimary
+                                : AppColorTokens.ink,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Text(
-                        item.name,
-                        style: AppTheme.bloomDisplay(
-                          14,
+                        formatInr(merchant.total),
+                        style: AppTheme.bloomMono(
+                          13,
                           FontWeight.w500,
                           color: isDark
                               ? AppColorTokens.bloomDarkTextPrimary
                               : AppColorTokens.ink,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${item.count} payments',
-                        style: AppTheme.bloomDisplay(
-                          11,
-                          FontWeight.w400,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextTertiary
-                              : AppColorTokens.inkTertiary,
-                        ),
-                      ),
                     ],
                   ),
-                ),
-                BloomAmount(
-                  amount: -item.total,
-                  size: 15,
-                  weight: FontWeight.w500,
-                ),
+                  if (merchant != merchants.last) const SizedBox(height: 10),
+                ],
               ],
             ),
           ),
-          if (item != merchants.last) const SizedBox(height: 8),
-        ],
       ],
     );
   }

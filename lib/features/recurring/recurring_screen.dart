@@ -1,10 +1,10 @@
-import 'package:drift/drift.dart' show OrderingTerm;
+import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
@@ -36,11 +36,23 @@ class RecurringScreen extends ConsumerWidget {
     final seriesAsync = ref.watch(recurringSeriesProvider);
     final items = seriesAsync.valueOrNull ?? const [];
 
-    final activeItems = items.where((i) => i.status != 'inactive').toList();
+    final activeItems = items
+        .where((i) => i.status != 'inactive' && i.status != 'cancelled')
+        .toList();
     final totalCommitted = activeItems.fold<double>(
       0.0,
       (sum, item) => sum + (item.kind != 'income' ? item.expectedAmount : 0.0),
     );
+
+    final now = DateTime.now();
+    final fourteenDaysOut = now.add(const Duration(days: 14));
+
+    final upcoming14d = items.where((i) {
+      final date = i.nextExpectedDate.toLocal();
+      return i.status != 'inactive' &&
+          i.status != 'cancelled' &&
+          !date.isAfter(fourteenDaysOut);
+    }).toList();
 
     return Scaffold(
       backgroundColor:
@@ -74,10 +86,46 @@ class RecurringScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
+            // 14-Day Timeline Section (if any upcoming)
+            if (upcoming14d.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 18,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Next 14 Days Timeline',
+                    style: AppTheme.bloomDisplay(
+                      15,
+                      FontWeight.w600,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextPrimary
+                          : AppColorTokens.ink,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              for (final series in upcoming14d) ...[
+                _RecurringTileRow(
+                  series: series,
+                  isDark: isDark,
+                  onTap: () => _showSeriesOptions(context, ref, series),
+                ),
+                if (series != upcoming14d.last) const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 24),
+            ],
+
             Text(
-              'Active Subscriptions & EMIs',
+              'All Recurring Subscriptions & EMIs',
               style: AppTheme.bloomDisplay(
-                16,
+                15,
                 FontWeight.w600,
                 color: isDark
                     ? AppColorTokens.bloomDarkTextPrimary
@@ -135,15 +183,7 @@ class RecurringScreen extends ConsumerWidget {
                 _RecurringTileRow(
                   series: series,
                   isDark: isDark,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => TransactionsScreen(
-                          initialMerchant: series.label,
-                        ),
-                      ),
-                    );
-                  },
+                  onTap: () => _showSeriesOptions(context, ref, series),
                 ),
                 if (series != items.last) const SizedBox(height: 10),
               ],
@@ -152,6 +192,93 @@ class RecurringScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showSeriesOptions(
+    BuildContext context,
+    WidgetRef ref,
+    RecurringSery series,
+  ) {
+    showBloomModalSheet(
+      context: context,
+      builder: (sheetContext) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                series.label,
+                style: AppTheme.bloomDisplay(
+                  18,
+                  FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${series.period.toUpperCase()} · ${formatInr(series.expectedAmount)}',
+                style: AppTheme.bloomDisplay(
+                  13,
+                  FontWeight.w400,
+                  color: AppColorTokens.inkSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.list_alt_rounded),
+                title: const Text('View transactions'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TransactionsScreen(
+                        initialMerchant: series.label,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (series.status != 'cancelled')
+                ListTile(
+                  leading: const Icon(Icons.cancel_outlined, color: Colors.red),
+                  title: const Text('Mark as Cancelled'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    final db = await ref.read(appDatabaseProvider.future);
+                    await (db.update(db.recurringSeries)
+                          ..where((row) => row.id.equals(series.id)))
+                        .write(
+                      const RecurringSeriesCompanion(
+                        status: Value('cancelled'),
+                      ),
+                    );
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(
+                    Icons.check_circle_outline,
+                    color: AppColorTokens.bloomEmerald,
+                  ),
+                  title: const Text('Reactivate Series'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    final db = await ref.read(appDatabaseProvider.future);
+                    await (db.update(db.recurringSeries)
+                          ..where((row) => row.id.equals(series.id)))
+                        .write(
+                      const RecurringSeriesCompanion(
+                        status: Value('active'),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -262,9 +389,10 @@ class _RecurringTileRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
-
     final isIncome = series.kind == 'income';
     final formattedDate = _formatDate(series.nextExpectedDate);
+
+    final statusSpec = _statusSpec(series.status, isDark);
 
     return GestureDetector(
       onTap: onTap,
@@ -302,27 +430,26 @@ class _RecurringTileRow extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColorTokens.bloomEmerald
-                                  .withValues(alpha: 0.18)
-                              : const Color(0xFFD3F2E4),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Active',
-                          style: AppTheme.bloomDisplay(
-                            10,
-                            FontWeight.w600,
-                            color: isDark
-                                ? AppColorTokens.bloomCreditDark
-                                : const Color(0xFF0E9F6E),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusSpec.bg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            statusSpec.label,
+                            style: AppTheme.bloomDisplay(
+                              10,
+                              FontWeight.w600,
+                              color: statusSpec.textColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -356,6 +483,60 @@ class _RecurringTileRow extends StatelessWidget {
     );
   }
 
+  _StatusSpec _statusSpec(String status, bool isDark) {
+    switch (status) {
+      case 'expected':
+        return _StatusSpec(
+          label: 'Expected',
+          bg: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          textColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+        );
+      case 'missed':
+        return _StatusSpec(
+          label: 'Missed',
+          bg: isDark ? const Color(0xFF451A03) : const Color(0xFFFFEDD5),
+          textColor: isDark ? const Color(0xFFF97316) : const Color(0xFFC2410C),
+        );
+      case 'price_changed':
+        return _StatusSpec(
+          label: 'Price Changed',
+          bg: isDark
+              ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
+              : const Color(0xFFFFF0D6),
+          textColor:
+              isDark ? AppColorTokens.bloomGold : const Color(0xFF8A5A00),
+        );
+      case 'settled':
+        return _StatusSpec(
+          label: 'Settled',
+          bg: isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7),
+          textColor: isDark ? const Color(0xFF4ADE80) : const Color(0xFF15803D),
+        );
+      case 'inactive':
+        return _StatusSpec(
+          label: 'Inactive',
+          bg: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F5F9),
+          textColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+        );
+      case 'cancelled':
+        return _StatusSpec(
+          label: 'Cancelled',
+          bg: isDark ? const Color(0xFF3B0764) : const Color(0xFFF3E8FF),
+          textColor: isDark ? const Color(0xFFC084FC) : const Color(0xFF7E22CE),
+        );
+      case 'active':
+      default:
+        return _StatusSpec(
+          label: 'Active',
+          bg: isDark
+              ? AppColorTokens.bloomEmerald.withValues(alpha: 0.18)
+              : const Color(0xFFD3F2E4),
+          textColor:
+              isDark ? AppColorTokens.bloomCreditDark : const Color(0xFF0E9F6E),
+        );
+    }
+  }
+
   String _formatDate(DateTime date) {
     final local = date.toLocal();
     return '${_shortMonth(local.month)} ${local.day}';
@@ -375,4 +556,16 @@ class _RecurringTileRow extends StatelessWidget {
         'Nov',
         'Dec',
       ][month - 1];
+}
+
+class _StatusSpec {
+  const _StatusSpec({
+    required this.label,
+    required this.bg,
+    required this.textColor,
+  });
+
+  final String label;
+  final Color bg;
+  final Color textColor;
 }

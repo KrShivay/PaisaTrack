@@ -1,6 +1,7 @@
-# LiteRT-LM migration and Qwen3 evaluation plan
+# Archived — LiteRT-LM migration and Qwen3 evaluation plan
 
-Status: proposed  
+Status: superseded by ADR 0009 and the implemented LiteRT-LM bridge; remaining
+device/performance acceptance is tracked by T-115.  
 Date: 2026-07-26  
 Target: Android only  
 Primary runtime candidate: `com.google.ai.edge.litertlm:litertlm-android:0.14.0`  

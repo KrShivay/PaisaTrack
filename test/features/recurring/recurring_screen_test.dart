@@ -68,8 +68,8 @@ void main() {
       series(id: '2', label: 'Spotify'),
     ]);
 
-    expect(find.text('Netflix'), findsOneWidget);
-    expect(find.text('Spotify'), findsOneWidget);
+    expect(find.text('Netflix'), findsAtLeast(1));
+    expect(find.text('Spotify'), findsAtLeast(1));
     expect(find.byType(BloomCategoryTile), findsWidgets);
     expect(find.byType(BloomAmount), findsWidgets);
   });

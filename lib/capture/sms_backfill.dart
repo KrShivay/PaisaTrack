@@ -115,16 +115,28 @@ final smsInboxReaderProvider = Provider<SmsInboxReader>((ref) {
 });
 
 class SmsImportProgress {
-  const SmsImportProgress({required this.processed, required this.failed});
+  const SmsImportProgress({
+    required this.processed,
+    required this.failed,
+    this.transactionsFound = 0,
+    this.alreadyKnown = 0,
+    this.totalMessages,
+  });
 
   final int processed;
   final int failed;
+  final int transactionsFound;
+  final int alreadyKnown;
+  final int? totalMessages;
 }
 
 class SmsImportResult extends SmsImportProgress {
   const SmsImportResult({
     required super.processed,
     required super.failed,
+    super.transactionsFound = 0,
+    super.alreadyKnown = 0,
+    super.totalMessages,
     this.skipped = false,
   });
 

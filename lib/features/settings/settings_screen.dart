@@ -2,16 +2,18 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../capture/permissions/sms_permission.dart';
-import '../../capture/permissions/sms_permission_provider.dart';
-import '../../capture/sms_backfill.dart';
+import '../../core/format.dart';
 import '../../core/platform/system_document_gateway.dart';
-import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/bloom/bloom.dart';
+import '../../data/db/database_provider.dart';
+import '../../data/repositories/budget_repository.dart';
 import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
+import '../sms/sms_lookup_sheet.dart';
+import '../transactions/transactions_providers.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
 import 'category_manager_screen.dart';
@@ -21,7 +23,8 @@ import 'payment_sources_screen.dart';
 const minimumBackupPassphraseLength =
     EncryptedBackupService.minimumPassphraseLength;
 
-/// Redesigned Bloom Settings screen with banner, theme toggle, backup, categories, and data reset.
+/// Redesigned Bloom Settings screen with banner, theme toggle, show paise,
+/// monthly budget, backup, categories, and data reset.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -29,6 +32,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final settingsAsync = ref.watch(appSettingsControllerProvider);
+    final monthlyBudgetAsync = ref.watch(monthlyBudgetProvider);
+    final monthlyBudget = monthlyBudgetAsync.valueOrNull;
 
     return Scaffold(
       backgroundColor:
@@ -107,6 +112,59 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Show paise',
+                      style: AppTheme.bloomDisplay(
+                        14,
+                        FontWeight.w600,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextPrimary
+                            : AppColorTokens.ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Display exact decimals (e.g. ₹450.00)',
+                      style: AppTheme.bloomDisplay(
+                        12,
+                        FontWeight.w400,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                    value: settings.showPaise,
+                    activeThumbColor: AppColorTokens.violetPrimary,
+                    onChanged: (val) {
+                      ref
+                          .read(appSettingsControllerProvider.notifier)
+                          .setShowPaise(val);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Financial Preferences Section
+            _SettingsSection(
+              title: 'FINANCIAL PREFERENCES',
+              isDark: isDark,
+              child: Column(
+                children: [
+                  _TileRow(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Monthly budget',
+                    subtitle: monthlyBudget != null
+                        ? 'Current budget: ${formatInr(monthlyBudget)}'
+                        : 'Set target monthly budget',
+                    isDark: isDark,
+                    onTap: () =>
+                        _editMonthlyBudget(context, ref, monthlyBudget),
+                  ),
                 ],
               ),
             ),
@@ -167,7 +225,7 @@ class SettingsScreen extends ConsumerWidget {
                   _TileRow(
                     icon: Icons.upload_file_outlined,
                     title: 'Export backup',
-                    subtitle: 'Create encrypted backup of your transactions',
+                    subtitle: 'Create encrypted backup (.ptrack)',
                     isDark: isDark,
                     onTap: () => _exportBackup(context, ref),
                   ),
@@ -261,6 +319,58 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  static Future<void> _editMonthlyBudget(
+    BuildContext context,
+    WidgetRef ref,
+    double? currentBudget,
+  ) async {
+    final controller = TextEditingController(
+      text: currentBudget != null ? currentBudget.toStringAsFixed(0) : '',
+    );
+    final result = await showDialog<double?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Monthly Budget'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            hintText: 'Enter monthly budget (e.g. 50000)',
+            prefixText: '₹ ',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          if (currentBudget != null)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(-1), // Clear budget
+              child: const Text('Clear'),
+            ),
+          FilledButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text.trim());
+              Navigator.of(context).pop(val);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && context.mounted) {
+      final repo = await ref.read(budgetRepositoryProvider.future);
+      if (result < 0) {
+        await repo.setMonthlyBudget(null);
+      } else {
+        await repo.setMonthlyBudget(result);
+      }
+      ref.invalidate(monthlyBudgetProvider);
+    }
+  }
+
   static Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
     final passphrase = await _promptPassphrase(
       context: context,
@@ -274,8 +384,8 @@ class SettingsScreen extends ConsumerWidget {
       final bytes = await service.exportBytes(passphrase: passphrase);
       final gateway = ref.read(systemDocumentGatewayProvider);
       final success = await gateway.saveDocument(
-        suggestedName: 'PaisaTrack_backup.json',
-        mimeType: 'application/json',
+        suggestedName: 'paisatrack_backup.ptrack',
+        mimeType: 'application/octet-stream',
         bytes: bytes,
       );
       if (context.mounted && success) {
@@ -295,7 +405,8 @@ class SettingsScreen extends ConsumerWidget {
   static Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
     try {
       final gateway = ref.read(systemDocumentGatewayProvider);
-      final bytes = await gateway.openDocument(mimeType: 'application/json');
+      final bytes =
+          await gateway.openDocument(mimeType: 'application/octet-stream');
       if (bytes == null || !context.mounted) return;
 
       final passphrase = await _promptPassphrase(
@@ -307,6 +418,13 @@ class SettingsScreen extends ConsumerWidget {
 
       final service = await ref.read(encryptedBackupServiceProvider.future);
       await service.importBytes(bytes: bytes, passphrase: passphrase);
+
+      // Invalidate dependent providers upon restore success.
+      ref.invalidate(appDatabaseProvider);
+      ref.invalidate(transactionListProvider);
+      ref.invalidate(categoryListProvider);
+      ref.invalidate(monthlyBudgetProvider);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Backup imported successfully')),
@@ -326,29 +444,109 @@ class SettingsScreen extends ConsumerWidget {
     required String title,
     required String confirmLabel,
   }) {
-    final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter passphrase (min 12 chars)',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: Text(confirmLabel),
-          ),
-        ],
+      builder: (context) => _PassphraseDialog(
+        title: title,
+        confirmLabel: confirmLabel,
       ),
+    );
+  }
+}
+
+class _PassphraseDialog extends StatefulWidget {
+  const _PassphraseDialog({
+    required this.title,
+    required this.confirmLabel,
+  });
+
+  final String title;
+  final String confirmLabel;
+
+  @override
+  State<_PassphraseDialog> createState() => _PassphraseDialogState();
+}
+
+class _PassphraseDialogState extends State<_PassphraseDialog> {
+  final _passphraseController = TextEditingController();
+  final _confirmController = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _passphraseController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final pass = _passphraseController.text;
+    final confirm = _confirmController.text;
+
+    if (pass.length < minimumBackupPassphraseLength) {
+      setState(() {
+        _errorMessage =
+            'Passphrase must be at least $minimumBackupPassphraseLength characters';
+      });
+      return;
+    }
+
+    if (pass != confirm) {
+      setState(() {
+        _errorMessage = 'Passphrases do not match';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(pass);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _passphraseController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                hintText: 'Passphrase (min 12 characters)',
+                labelText: 'Passphrase',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirmController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                hintText: 'Confirm passphrase',
+                labelText: 'Confirm Passphrase',
+              ),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(widget.confirmLabel),
+        ),
+      ],
     );
   }
 }
@@ -552,137 +750,47 @@ class _LlmModelTile extends StatelessWidget {
   }
 }
 
-class _SmsImportTile extends ConsumerStatefulWidget {
+class _SmsImportTile extends StatelessWidget {
   const _SmsImportTile({required this.isDark});
 
   final bool isDark;
 
   @override
-  ConsumerState<_SmsImportTile> createState() => _SmsImportTileState();
-}
-
-class _SmsImportTileState extends ConsumerState<_SmsImportTile> {
-  bool _busy = false;
-  SmsImportProgress? _progress;
-
-  Future<void> _importHistory() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Re-import SMS history?'),
-        content: const Text(
-          'This rescans your SMS inbox for transactions. Existing edits will be preserved.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Re-import'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    var permission = ref.read(smsPermissionControllerProvider).valueOrNull ??
-        SmsPermissionStatus.unknown;
-    if (!permission.isGranted) {
-      await ref.read(smsPermissionControllerProvider.notifier).request();
-      permission = ref.read(smsPermissionControllerProvider).valueOrNull ??
-          SmsPermissionStatus.unknown;
-    }
-    if (!mounted) return;
-    if (!permission.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SMS permission is required to import history.'),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _busy = true;
-      _progress = const SmsImportProgress(processed: 0, failed: 0);
-    });
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final runner = await ref.read(smsHistoryImportRunnerProvider.future);
-      final result = await runner.run(
-        force: true,
-        onProgress: (p) {
-          if (mounted) setState(() => _progress = p);
-        },
-      );
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            result.failed == 0
-                ? 'SMS import complete: ${result.processed} processed.'
-                : 'SMS import finished: ${result.processed} processed, ${result.failed} failed.',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('SMS import failed: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final progress = _progress;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         Icons.sms_outlined,
-        color: widget.isDark
+        color: isDark
             ? AppColorTokens.bloomDarkTextSecondary
             : AppColorTokens.inkSecondary,
       ),
       title: Text(
-        'Re-import all SMS history',
+        'Find transactions from SMS',
         style: AppTheme.bloomDisplay(
           14,
           FontWeight.w600,
-          color: widget.isDark
-              ? AppColorTokens.bloomDarkTextPrimary
-              : AppColorTokens.ink,
+          color:
+              isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink,
         ),
       ),
       subtitle: Text(
-        _busy && progress != null
-            ? '${progress.processed} processed'
-                '${progress.failed == 0 ? '' : ' · ${progress.failed} failed'}'
-            : 'Rescan inbox without overwriting user edits',
+        'Scan inbox for financial payment alerts',
         style: AppTheme.bloomDisplay(
           12,
           FontWeight.w400,
-          color: widget.isDark
+          color: isDark
               ? AppColorTokens.bloomDarkTextTertiary
               : AppColorTokens.inkTertiary,
         ),
       ),
-      trailing: _busy
-          ? const SizedBox.square(
-              dimension: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Icon(
-              Icons.chevron_right,
-              color: widget.isDark
-                  ? AppColorTokens.bloomDarkTextTertiary
-                  : AppColorTokens.inkTertiary,
-            ),
-      onTap: _busy ? null : _importHistory,
+      onTap: () {
+        showBloomModalSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => const SmsLookupSheet(),
+        );
+      },
     );
   }
 }

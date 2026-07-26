@@ -1,4 +1,4 @@
-# Review Round 3 — `codex/t108-bank-capture-coverage`
+# Archived review round 3 — `codex/t108-bank-capture-coverage`
 
 **Scope:** verification of the round-2 blockers (B1–B6) plus the new Keystore work.
 

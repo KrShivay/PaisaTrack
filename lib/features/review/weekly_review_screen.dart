@@ -14,8 +14,11 @@ import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../settings/app_settings.dart';
 import '../transactions/transactions_providers.dart';
+import 'weekly_review_providers.dart';
 
-/// Redesigned Bloom Sort screen: Tinder-style card swipe review with Inbox Zero state.
+/// Redesigned Bloom Sort screen: Tinder-style card swipe review with
+/// Card/List toggle, Skip action, classifier info, error handling,
+/// and Inbox Zero state.
 class WeeklyReviewScreen extends ConsumerStatefulWidget {
   const WeeklyReviewScreen({super.key});
 
@@ -25,21 +28,59 @@ class WeeklyReviewScreen extends ConsumerStatefulWidget {
 
 class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   double _dragDx = 0.0;
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
+  final Set<String> _skippedIds = {};
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final queueAsync = ref.watch(reviewQueueProvider);
-    final items = queueAsync.valueOrNull ?? const [];
+    final viewState = ref.watch(reviewViewProvider);
 
-    if (items.isEmpty || _currentIndex >= items.length) {
-      return _InboxZeroView(isDark: isDark);
-    }
+    return queueAsync.when(
+      loading: () => Scaffold(
+        backgroundColor:
+            isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+        body: const Center(child: BloomSkeleton(width: 280, height: 160)),
+      ),
+      error: (error, _) => _ErrorView(
+        isDark: isDark,
+        error: error,
+        onRetry: () => ref.invalidate(reviewQueueProvider),
+      ),
+      data: (items) {
+        final activeItems =
+            items.where((i) => !_skippedIds.contains(i.id)).toList();
 
-    final item = items[_currentIndex];
-    final remainingCount = items.length - _currentIndex;
-    final totalCount = items.length;
+        if (activeItems.isEmpty) {
+          return _InboxZeroView(isDark: isDark);
+        }
+
+        final safeIndex = _currentIndex.clamp(0, activeItems.length - 1);
+
+        if (viewState.viewMode == ReviewViewMode.list) {
+          return _ListView(
+            items: activeItems,
+            isDark: isDark,
+            onConfirm: _confirmItem,
+            onRecategorize: _recategorizeItem,
+            onSkip: _skipItem,
+          );
+        }
+
+        return _buildCardView(activeItems, safeIndex, items.length, isDark);
+      },
+    );
+  }
+
+  Widget _buildCardView(
+    List<TransactionReviewItem> activeItems,
+    int index,
+    int totalCount,
+    bool isDark,
+  ) {
+    final item = activeItems[index];
+    final remainingCount = activeItems.length;
 
     return Scaffold(
       backgroundColor:
@@ -50,58 +91,68 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             children: [
-              // Header Row: Title + counter
+              // Header Row: Title + counter + view mode toggle
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sort',
-                        style: AppTheme.bloomDisplay(
-                          22,
-                          FontWeight.w700,
-                          letterSpacing: -0.03,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextPrimary
-                              : AppColorTokens.ink,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sort',
+                          style: AppTheme.bloomDisplay(
+                            22,
+                            FontWeight.w700,
+                            letterSpacing: -0.03,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextPrimary
+                                : AppColorTokens.ink,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        '$remainingCount left to sort today',
-                        style: AppTheme.bloomDisplay(
-                          12,
-                          FontWeight.w400,
+                        const SizedBox(height: 1),
+                        Text(
+                          '$remainingCount left to sort today',
+                          style: AppTheme.bloomDisplay(
+                            12,
+                            FontWeight.w400,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextTertiary
+                                : AppColorTokens.inkTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // View mode toggle
+                      _ViewModeToggle(isDark: isDark),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
                           color: isDark
-                              ? AppColorTokens.bloomDarkTextTertiary
-                              : AppColorTokens.inkTertiary,
+                              ? AppColorTokens.bloomDarkCard
+                              : AppColorTokens.bloomChip,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '${index + 1} of $remainingCount',
+                          style: AppTheme.bloomMono(
+                            12,
+                            FontWeight.w500,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextSecondary
+                                : AppColorTokens.inkSecondary,
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkCard
-                          : AppColorTokens.bloomChip,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '${_currentIndex + 1} of $totalCount',
-                      style: AppTheme.bloomMono(
-                        12,
-                        FontWeight.w500,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextSecondary
-                            : AppColorTokens.inkSecondary,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -138,54 +189,42 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Action Buttons Row (Change category / Keep)
+              // Action Buttons Row (Change category / Skip / Keep)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   // Change category button (Gold)
-                  GestureDetector(
+                  _ActionButton(
+                    icon: Icons.sell_outlined,
+                    color: AppColorTokens.bloomGold,
+                    bgColor: isDark
+                        ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
+                        : const Color(0xFFFFF0D6),
                     onTap: () => _recategorizeItem(item),
-                    child: Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark
-                            ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
-                            : const Color(0xFFFFF0D6),
-                        boxShadow: AppColorTokens.bloomSortCardShadow,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.sell_outlined,
-                          size: 24,
-                          color: AppColorTokens.bloomGold,
-                        ),
-                      ),
-                    ),
+                    isDark: isDark,
+                  ),
+                  // Skip button (Neutral)
+                  _ActionButton(
+                    icon: Icons.skip_next_rounded,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                    bgColor: isDark
+                        ? AppColorTokens.bloomDarkCard
+                        : AppColorTokens.bloomChip,
+                    onTap: () => _skipItem(item),
+                    isDark: isDark,
+                    size: 50,
                   ),
                   // Keep button (Emerald)
-                  GestureDetector(
+                  _ActionButton(
+                    icon: Icons.check_rounded,
+                    color: AppColorTokens.bloomEmerald,
+                    bgColor: isDark
+                        ? AppColorTokens.bloomEmerald.withValues(alpha: 0.18)
+                        : const Color(0xFFD3F2E4),
                     onTap: () => _confirmItem(item),
-                    child: Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark
-                            ? AppColorTokens.bloomEmerald
-                                .withValues(alpha: 0.18)
-                            : const Color(0xFFD3F2E4),
-                        boxShadow: AppColorTokens.bloomSortCardShadow,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.check_rounded,
-                          size: 26,
-                          color: AppColorTokens.bloomEmerald,
-                        ),
-                      ),
-                    ),
+                    isDark: isDark,
                   ),
                 ],
               ),
@@ -197,34 +236,63 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     );
   }
 
+  void _skipItem(TransactionReviewItem item) {
+    setState(() {
+      _skippedIds.add(item.id);
+    });
+  }
+
   Future<void> _confirmItem(TransactionReviewItem item) async {
-    setState(() => _currentIndex++);
+    setState(() {
+      _skippedIds.add(item.id);
+    });
+
     try {
-      final database = ref.read(appDatabaseProvider).valueOrNull ??
-          await ref.read(appDatabaseProvider.future);
-      if (database == null) return;
-      final repo = ref.read(transactionRepositoryProvider(database));
-      await repo.updateWithFeedback(
-        txnId: item.id,
-        status: const Value('confirmed'),
-        context: 'sort_confirm',
-      );
+      final dbAsync = ref.read(appDatabaseProvider);
+      final database = dbAsync.valueOrNull ??
+          (dbAsync.hasError ? null : await ref.read(appDatabaseProvider.future));
+      if (database != null) {
+        final repo = ref.read(transactionRepositoryProvider(database));
+        await repo.updateWithFeedback(
+          txnId: item.id,
+          status: const Value('confirmed'),
+          context: 'sort_confirm',
+        );
+      }
 
       ref.read(undoControllerProvider.notifier).pushUndo(
             UndoToken(
               id: 'sort_confirm_${item.id}',
               message: 'Marked confirmed',
               undoAction: () async {
-                await repo.updateWithFeedback(
-                  txnId: item.id,
-                  status: const Value('needs_review'),
-                  context: 'undo_sort',
-                );
-                if (mounted) setState(() => _currentIndex--);
+                if (mounted) {
+                  setState(() {
+                    _skippedIds.remove(item.id);
+                  });
+                }
+                if (database != null) {
+                  final repo = ref.read(transactionRepositoryProvider(database));
+                  await repo.updateWithFeedback(
+                    txnId: item.id,
+                    status: const Value('needs_review'),
+                    context: 'undo_sort',
+                  );
+                }
               },
             ),
           );
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _skippedIds.remove(item.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to confirm transaction: $e'),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _recategorizeItem(TransactionReviewItem item) async {
@@ -240,37 +308,138 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     );
     if (chosen == null || !mounted) return;
 
-    setState(() => _currentIndex++);
+    setState(() {
+      _skippedIds.add(item.id);
+    });
+
     try {
-      final database = ref.read(appDatabaseProvider).valueOrNull ??
-          await ref.read(appDatabaseProvider.future);
-      if (database == null) return;
-      final repo = ref.read(transactionRepositoryProvider(database));
+      final dbAsync = ref.read(appDatabaseProvider);
+      final database = dbAsync.valueOrNull ??
+          (dbAsync.hasError ? null : await ref.read(appDatabaseProvider.future));
       final prevCategory = item.categoryId;
 
-      await repo.updateWithFeedback(
-        txnId: item.id,
-        categoryId: Value(chosen.id),
-        context: 'sort_categorize',
-      );
+      if (database != null) {
+        final repo = ref.read(transactionRepositoryProvider(database));
+        await repo.updateWithFeedback(
+          txnId: item.id,
+          categoryId: Value(chosen.id),
+          context: 'sort_categorize',
+        );
+      }
 
       ref.read(undoControllerProvider.notifier).pushUndo(
             UndoToken(
               id: 'sort_cat_${item.id}',
               message: 'Filed under ${chosen.name}',
               undoAction: () async {
-                await repo.updateWithFeedback(
-                  txnId: item.id,
-                  categoryId: Value(prevCategory),
-                  context: 'undo_sort',
-                );
-                if (mounted) setState(() => _currentIndex--);
+                if (mounted) {
+                  setState(() {
+                    _skippedIds.remove(item.id);
+                  });
+                }
+                if (database != null) {
+                  final repo = ref.read(transactionRepositoryProvider(database));
+                  await repo.updateWithFeedback(
+                    txnId: item.id,
+                    categoryId: Value(prevCategory),
+                    context: 'undo_sort',
+                  );
+                }
               },
             ),
           );
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _skippedIds.remove(item.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update category: $e'),
+          ),
+        );
+      }
+    }
   }
 }
+
+// ── View Mode Toggle ──────────────────────────────────────────────────
+
+class _ViewModeToggle extends ConsumerWidget {
+  const _ViewModeToggle({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewState = ref.watch(reviewViewProvider);
+    final isCard = viewState.viewMode == ReviewViewMode.card;
+
+    return GestureDetector(
+      onTap: () {
+        ref.read(reviewViewProvider.notifier).setViewMode(
+              isCard ? ReviewViewMode.list : ReviewViewMode.card,
+            );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color:
+              isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(
+          isCard ? Icons.view_list_rounded : Icons.view_carousel_rounded,
+          size: 18,
+          color: isDark
+              ? AppColorTokens.bloomDarkTextSecondary
+              : AppColorTokens.inkSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Action Button ─────────────────────────────────────────────────────
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    required this.onTap,
+    required this.isDark,
+    this.size = 58,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final VoidCallback onTap;
+  final bool isDark;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: bgColor,
+          boxShadow: AppColorTokens.bloomSortCardShadow,
+        ),
+        child: Center(
+          child: Icon(icon, size: 24, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sort Card ─────────────────────────────────────────────────────────
 
 class _SortCard extends StatelessWidget {
   const _SortCard({
@@ -378,6 +547,31 @@ class _SortCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
 
+          // Low-trust parse indicator
+          if (item.isLowTrustParse)
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
+                    : const Color(0xFFFFF0D6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Low confidence parse — verify details',
+                style: AppTheme.bloomDisplay(
+                  11,
+                  FontWeight.w500,
+                  color: isDark
+                      ? AppColorTokens.bloomGold
+                      : const Color(0xFF8A5A00),
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 4),
+
           // Date / time
           Text(
             _formatTime(item.ts),
@@ -428,6 +622,286 @@ class _SortCard extends StatelessWidget {
         'Dec',
       ][month - 1];
 }
+
+// ── List View Mode ────────────────────────────────────────────────────
+
+class _ListView extends StatelessWidget {
+  const _ListView({
+    required this.items,
+    required this.isDark,
+    required this.onConfirm,
+    required this.onRecategorize,
+    required this.onSkip,
+  });
+
+  final List<TransactionReviewItem> items;
+  final bool isDark;
+  final ValueChanged<TransactionReviewItem> onConfirm;
+  final ValueChanged<TransactionReviewItem> onRecategorize;
+  final ValueChanged<TransactionReviewItem> onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sort',
+                        style: AppTheme.bloomDisplay(
+                          22,
+                          FontWeight.w700,
+                          letterSpacing: -0.03,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextPrimary
+                              : AppColorTokens.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '${items.length} transactions to review',
+                        style: AppTheme.bloomDisplay(
+                          12,
+                          FontWeight.w400,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextTertiary
+                              : AppColorTokens.inkTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  _ViewModeToggle(isDark: isDark),
+                ],
+              ),
+            ),
+
+            // List
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return _ReviewListRow(
+                    item: item,
+                    isDark: isDark,
+                    onConfirm: () => onConfirm(item),
+                    onRecategorize: () => onRecategorize(item),
+                    onSkip: () => onSkip(item),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewListRow extends StatelessWidget {
+  const _ReviewListRow({
+    required this.item,
+    required this.isDark,
+    required this.onConfirm,
+    required this.onRecategorize,
+    required this.onSkip,
+  });
+
+  final TransactionReviewItem item;
+  final bool isDark;
+  final VoidCallback onConfirm;
+  final VoidCallback onRecategorize;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
+
+    return Dismissible(
+      key: ValueKey('review_${item.id}'),
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        decoration: BoxDecoration(
+          color: AppColorTokens.bloomEmerald,
+          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        ),
+        child: const Icon(Icons.check, color: Colors.white),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: AppColorTokens.bloomGold,
+          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        ),
+        child: const Icon(Icons.sell_outlined, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          onConfirm();
+        } else {
+          onRecategorize();
+        }
+        return false;
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        ),
+        child: Row(
+          children: [
+            BloomCategoryTile(
+              categoryId: item.categoryId,
+              size: 36,
+              borderRadius: 13,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.displayName,
+                    style: AppTheme.bloomDisplay(
+                      14,
+                      FontWeight.w500,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextPrimary
+                          : AppColorTokens.ink,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        item.categoryName ?? 'Uncategorised',
+                        style: AppTheme.bloomDisplay(
+                          11,
+                          FontWeight.w400,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextTertiary
+                              : AppColorTokens.inkTertiary,
+                        ),
+                      ),
+                      if (item.isLowTrustParse) ...[
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 12,
+                          color: AppColorTokens.bloomGold,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            BloomAmount(
+              amount: item.direction == TransactionDirection.debit
+                  ? -item.amount
+                  : item.amount,
+              size: 15,
+              weight: FontWeight.w500,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Error View ────────────────────────────────────────────────────────
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({
+    required this.isDark,
+    required this.error,
+    required this.onRetry,
+  });
+
+  final bool isDark;
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextTertiary
+                      : AppColorTokens.inkTertiary,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Could not load review queue',
+                  style: AppTheme.bloomDisplay(
+                    15,
+                    FontWeight.w600,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextPrimary
+                        : AppColorTokens.ink,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Something went wrong loading your transactions.',
+                  style: AppTheme.bloomDisplay(
+                    12,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Retry'),
+                  onPressed: onRetry,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Inbox Zero View ───────────────────────────────────────────────────
 
 class _InboxZeroView extends ConsumerWidget {
   const _InboxZeroView({required this.isDark});

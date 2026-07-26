@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,11 +10,13 @@ import '../../core/widgets/category_picker_sheet.dart';
 import '../../core/undo/undo_controller.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
+import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
+import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
 
 /// Redesigned Bloom Transaction Detail sheet with hero amount, category editor,
-/// and technical SMS provenance disclosure.
+/// scope selector, and technical SMS provenance disclosure.
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   const TransactionDetailScreen({super.key, required this.txnId});
 
@@ -31,6 +34,8 @@ class _TransactionDetailScreenState
   String? _categoryId;
   String? _categoryName;
   bool _showTechnicalDetails = false;
+  bool _savingNote = false;
+  String? _noteError;
 
   @override
   void dispose() {
@@ -43,6 +48,37 @@ class _TransactionDetailScreenState
     _seeded = true;
     _categoryId = detail.txn.categoryId;
     _noteController.text = detail.txn.description ?? '';
+  }
+
+  Future<void> _saveNote() async {
+    setState(() {
+      _savingNote = true;
+      _noteError = null;
+    });
+
+    try {
+      final database = await ref.read(appDatabaseProvider.future);
+      final repo = ref.read(transactionRepositoryProvider(database));
+      await repo.updateWithFeedback(
+        txnId: widget.txnId,
+        description: Value(_noteController.text.trim()),
+        context: 'detail_note_edit',
+      );
+
+      if (mounted) {
+        setState(() => _savingNote = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Note saved.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _savingNote = false;
+          _noteError = 'Failed to save note: ${e.toString()}';
+        });
+      }
+    }
   }
 
   Future<void> _changeCategory() async {
@@ -58,6 +94,14 @@ class _TransactionDetailScreenState
     );
     if (chosen == null || !mounted) return;
 
+    final scope = await showBloomModalSheet<CorrectionScope>(
+      context: context,
+      builder: (context) => CategoryScopeSelectionSheet(
+        categoryName: chosen.name,
+      ),
+    );
+    if (scope == null || !mounted) return;
+
     final database = await ref.read(appDatabaseProvider.future);
     final repo = ref.read(transactionRepositoryProvider(database));
     final prevCategory = _categoryId;
@@ -67,9 +111,10 @@ class _TransactionDetailScreenState
       _categoryName = chosen.name;
     });
 
-    await repo.updateWithFeedback(
+    await repo.correctCategory(
       txnId: widget.txnId,
-      categoryId: Value(chosen.id),
+      categoryId: chosen.id,
+      scope: scope,
       context: 'detail_edit',
     );
 
@@ -256,7 +301,6 @@ class _TransactionDetailScreenState
                             padding: EdgeInsets.symmetric(vertical: 12),
                             child: Divider(height: 1),
                           ),
-                          // Account / Source Row
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -284,6 +328,194 @@ class _TransactionDetailScreenState
                           ),
                         ],
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Review Queue Banner (Confirm / Fix)
+                  if (txn.status == 'needs_review' ||
+                      detail.isLowTrustParse) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColorTokens.warningDark.withValues(alpha: 0.14)
+                            : const Color(0xFFFFF8E6),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColorTokens.warningDark
+                                  .withValues(alpha: 0.4)
+                              : const Color(0xFFFBE6B5),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.help_outline_rounded,
+                                color: AppColorTokens.warningDark,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  detail.isLowTrustParse
+                                      ? 'Low trust parse — please confirm details'
+                                      : 'Suggested Category: $categoryDisplayName',
+                                  style: AppTheme.bloomDisplay(
+                                    13,
+                                    FontWeight.w600,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextPrimary
+                                        : AppColorTokens.ink,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () async {
+                                    final database = await ref
+                                        .read(appDatabaseProvider.future);
+                                    final repo = ref.read(
+                                      transactionRepositoryProvider(
+                                        database,
+                                      ),
+                                    );
+                                    await repo.confirm(txnId: widget.txnId);
+                                  },
+                                  child: const Text('Confirm'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor:
+                                        AppColorTokens.violetPrimary,
+                                  ),
+                                  onPressed: () {
+                                    showBloomModalSheet<bool>(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      builder: (context) =>
+                                          TransactionCorrectionSheet(
+                                        txnId: widget.txnId,
+                                        initialAmount: txn.amount,
+                                        initialDirection: txn.direction,
+                                        initialMerchant: displayName,
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('Fix Details'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Note Editor & Save Action
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomCard,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'NOTE',
+                              style: AppTheme.bloomDisplay(
+                                10,
+                                FontWeight.w600,
+                                letterSpacing: 0.1,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextTertiary
+                                    : AppColorTokens.inkTertiary,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _savingNote ? null : _saveNote,
+                              child: _savingNote
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text('Save Note'),
+                            ),
+                          ],
+                        ),
+                        if (_noteError != null) ...[
+                          Text(
+                            _noteError!,
+                            style: AppTheme.bloomDisplay(
+                              11,
+                              FontWeight.w500,
+                              color: AppColorTokens.errorDark,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        TextField(
+                          controller: _noteController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            hintText: 'Add a personal note or tag...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColorTokens.bloomDarkBase
+                                : const Color(0xFFF6F4FE),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Action: Correct Parse Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: const Text(
+                        'Edit Parse Details (Amount/Direction/Payee)',
+                      ),
+                      onPressed: () {
+                        showBloomModalSheet<bool>(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (context) => TransactionCorrectionSheet(
+                            txnId: widget.txnId,
+                            initialAmount: txn.amount,
+                            initialDirection: txn.direction,
+                            initialMerchant: displayName,
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -392,15 +624,58 @@ class _TransactionDetailScreenState
                                   : AppColorTokens.inkSecondary,
                             ),
                           ),
+                          if (txn.refId != null && txn.refId!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ref ID: ${txn.refId}',
+                              style: AppTheme.bloomMono(12, FontWeight.w400),
+                            ),
+                          ],
+                          if (txn.counterpartyVpa != null &&
+                              txn.counterpartyVpa!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'VPA: ${txn.counterpartyVpa}',
+                              style: AppTheme.bloomMono(12, FontWeight.w400),
+                            ),
+                          ],
+                          if (txn.balanceAfter != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Balance After: ₹${txn.balanceAfter!.toStringAsFixed(2)}',
+                              style: AppTheme.bloomMono(12, FontWeight.w400),
+                            ),
+                          ],
                           if (detail.parseConfidence != null) ...[
                             const SizedBox(height: 10),
                             Text(
-                              'CONFIDENCE: ${(detail.parseConfidence! * 100).toStringAsFixed(0)}%',
+                              'CONFIDENCE: ${(detail.parseConfidence! * 100).toStringAsFixed(0)}% (${detail.isLowTrustParse ? "Low Trust" : "High Trust"})',
                               style: AppTheme.bloomMono(
                                 11,
                                 FontWeight.w600,
-                                color: AppColorTokens.violetPrimary,
+                                color: detail.isLowTrustParse
+                                    ? AppColorTokens.warningDark
+                                    : AppColorTokens.emerald,
                               ),
+                            ),
+                          ],
+
+                          // Debug Mode Boundary: Raw SMS Body & LLM Json strictly gated
+                          if (kDebugMode) ...[
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            Text(
+                              'DEBUG EVIDENCE (DEVELOPER ONLY)',
+                              style: AppTheme.bloomDisplay(
+                                10,
+                                FontWeight.w700,
+                                color: AppColorTokens.errorDark,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            SelectableText(
+                              'Confidence JSON: ${txn.confidenceJson}',
+                              style: AppTheme.bloomMono(10, FontWeight.w400),
                             ),
                           ],
                         ],

@@ -26,6 +26,34 @@ Every screen must define loading, empty, normal, error, and narrow/large-text
 states. Destructive actions require confirmation and a clear consequence.
 Swipe and long-press interactions must have visible alternatives.
 
+Do not convert `AsyncValue` loading or error into an empty collection for
+presentation. Loading, failure, true empty, and filter-empty are distinct user
+states.
+
+## Feature migration contract
+
+A visual redesign does not authorize removing an existing capability. Before a
+screen is replaced:
+
+- inventory its routes, controls, dialogs/sheets, states, repository mutations,
+  and behavioral tests;
+- map every capability to the new surface or record an explicit product
+  decision to retire it;
+- keep financial claims data-driven; production UI must not present sample
+  names, balances, budgets, merchant trends, streaks, or model status as live;
+- preserve privacy, atomic correction, feedback, rule-learning, pagination, and
+  recovery contracts even when the interaction changes;
+- replace removed behavioral tests with equivalent redesigned tests.
+
+The Bloom migration inventory and missing-surface specifications are:
+
+- `docs/archive/bloom/bloom-feature-migration-audit.md`
+- `docs/archive/bloom/bloom-feature-design-addendum.md`
+
+These documents extend the ten-screen Bloom handoff to SMS lookup, advanced
+Activity/Sort workflows, transaction correction, Settings/model/backup flows,
+and the legacy secondary screens.
+
 ## Future feature UX
 
 ### Payee labels

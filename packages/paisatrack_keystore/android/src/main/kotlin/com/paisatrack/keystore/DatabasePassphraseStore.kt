@@ -25,22 +25,28 @@ internal class DatabasePassphraseStore internal constructor(
         cipher = AndroidKeyStorePassphraseCipher(context.applicationContext),
     )
 
-    fun getOrCreate(): String {
+    fun getOrCreate(): String = synchronized(lock) {
         val encrypted = storage.read()
         if (encrypted != null) {
             return cipher.decrypt(encrypted)
         }
 
         val passphrase = generatePassphrase()
-        storage.write(cipher.encrypt(passphrase))
-        return passphrase
+        val encryptedPassphrase = cipher.encrypt(passphrase)
+        storage.write(encryptedPassphrase)
+
+        val reread = storage.read()
+            ?: throw IllegalStateException("Passphrase storage read failed immediately after write")
+        val verifiedPassphrase = cipher.decrypt(reread)
+        check(verifiedPassphrase == passphrase) { "Passphrase verification mismatch after write" }
+        return verifiedPassphrase
     }
 
     fun clearForTests() {
         clear()
     }
 
-    fun clear() {
+    fun clear() = synchronized(lock) {
         storage.clear()
         cipher.clear()
     }
@@ -49,6 +55,10 @@ internal class DatabasePassphraseStore internal constructor(
         val bytes = ByteArray(PassphraseByteLength)
         SecureRandom().nextBytes(bytes)
         return Base64.getEncoder().encodeToString(bytes)
+    }
+
+    companion object {
+        private val lock = Any()
     }
 }
 
@@ -84,14 +94,17 @@ internal class SharedPreferencesPassphraseStorage(
     }
 
     override fun write(passphrase: EncryptedPassphrase) {
-        prefs.edit()
+        val success = prefs.edit()
             .putString(PassphraseKey, passphrase.ciphertext)
             .putString(IvKey, passphrase.initializationVector)
-            .apply()
+            .commit()
+        if (!success) {
+            throw IllegalStateException("Failed to commit database passphrase to SharedPreferences")
+        }
     }
 
     override fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit().clear().commit()
     }
 }
 

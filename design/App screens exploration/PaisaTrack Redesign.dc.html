@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#1B1830"/><circle cx="100" cy="100" r="60" fill="none" stroke="#34D399" stroke-width="10"/><text x="100" y="112" font-size="42" fill="#fff" text-anchor="middle" font-family="sans-serif" font-weight="700">P</text></svg></template>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin:0; background:#EFEDFA; font-family:'Space Grotesk',system-ui,sans-serif; }
+  a { color:#6D5AE6; text-decoration:none; }
+  a:hover { color:#4F3FC4; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  @keyframes pulseRing { 0%{transform:scale(1);opacity:.55} 70%{transform:scale(1.4);opacity:0} 100%{transform:scale(1.4);opacity:0} }
+</style>
+</helmet>
+
+<div style="padding:56px 48px 96px;background:#EFEDFA;min-height:100vh;box-sizing:border-box">
+
+  <div style="max-width:1240px;margin:0 auto 40px;display:flex;flex-direction:column;gap:14px">
+    <div style="align-self:flex-start;height:32px;padding:0 14px;border-radius:16px;background:#1B1830;color:#fff;font-size:12px;font-weight:600;letter-spacing:0.04em;display:flex;align-items:center">PAISATRACK · REDESIGN · BLOOM + PULSE</div>
+    <div style="font-size:46px;font-weight:700;letter-spacing:-0.035em;line-height:1.02;color:#3A3555;max-width:760px;text-wrap:pretty">Fewer numbers shouting. One clear answer, then the detail if you ask for it.</div>
+    <div style="font-size:16px;color:#5B5580;max-width:660px;line-height:1.5;text-wrap:pretty">Bloom's ring, mascot and streaks carrying Pulse's glowing hero card, budget bar and category bars. Swipe to sort instead of tapping, sheets instead of dead ends, and every figure paired with one plain sentence.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:12px;color:#5B5580">
+      <div style="padding:7px 12px;border-radius:14px;background:#fff">Space Grotesk + IBM Plex Mono</div>
+      <div style="padding:7px 12px;border-radius:14px;background:#fff">Violet #6D5AE6 · Emerald #34D399 · Gold #E8B54D</div>
+      <div style="padding:7px 12px;border-radius:14px;background:#fff">Category hues kept from the app</div>
+      <div style="padding:7px 12px;border-radius:14px;background:#fff">Light + dark · iPhone 402 × 874</div>
+    </div>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto 44px;padding:24px;border-radius:28px;background:#fff;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+    <div><div style="font-size:13px;font-weight:700;color:#3A3555">Navigation that holds still</div><div style="font-size:13px;color:#5B5580;margin-top:6px;line-height:1.5;text-wrap:pretty">Four tabs never move. Swipe sideways to change tab, down to dismiss a sheet. Nothing opens a page you can't back out of.</div></div>
+    <div><div style="font-size:13px;font-weight:700;color:#3A3555">One gesture, not four taps</div><div style="font-size:13px;color:#5B5580;margin-top:6px;line-height:1.5;text-wrap:pretty">Categorising is a swipe. Filters are chips. Deletes undo from the toast instead of a confirm dialog.</div></div>
+    <div><div style="font-size:13px;font-weight:700;color:#3A3555">Numbers carry a sentence</div><div style="font-size:13px;color:#5B5580;margin-top:6px;line-height:1.5;text-wrap:pretty">Each figure gets one human line. Charts are the explanation, not decoration.</div></div>
+    <div><div style="font-size:13px;font-weight:700;color:#3A3555">Small wins land</div><div style="font-size:13px;color:#5B5580;margin-top:6px;line-height:1.5;text-wrap:pretty">Streaks, an inbox that reaches zero, and a companion that celebrates once then gets out of the way.</div></div>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:56px 48px">
+
+    <div data-screen-label="01 Onboarding" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">01</div><div style="font-size:17px;font-weight:600;color:#3A3555">Onboarding</div><div style="font-size:13px;color:#7A7596">Ask once, explain why</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding:54px 24px 34px;background:linear-gradient(172deg,#6D5AE6 0%,#8B6FF0 44%,#FBFAFF 44.1%,#FBFAFF 100%);color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding-top:18px;display:flex;flex-direction:column;align-items:center;gap:18px;color:#fff">
+            <div style="position:relative;width:92px;height:92px;border-radius:34px;background:rgba(255,255,255,0.18);display:grid;place-items:center;animation:bob 3.4s ease-in-out infinite">
+              <div style="position:absolute;inset:0;border-radius:34px;border:2px solid rgba(255,255,255,0.45);animation:pulseRing 3s ease-out infinite"></div>
+              <div style="display:flex;gap:9px"><div style="width:9px;height:9px;border-radius:50%;background:#fff"></div><div style="width:9px;height:9px;border-radius:50%;background:#fff"></div></div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:27px;font-weight:700;letter-spacing:-0.03em;line-height:1.15">I can read your bank<br />texts so you don't</div>
+              <div style="font-size:14px;color:#E2DCFF;margin-top:10px;max-width:272px;line-height:1.5;text-wrap:pretty">Everything stays on this phone. No account, no upload, no ads.</div>
+            </div>
+          </div>
+          <div style="flex:1;margin-top:32px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:22px;background:#F6F4FE">
+              <div style="width:34px;height:34px;border-radius:12px;background:#E4DEFF;color:#4F3FC4;display:grid;place-items:center;font-size:15px">◍</div>
+              <div><div style="font-size:14px;font-weight:600">Reads only money texts</div><div style="font-size:12px;color:#7A7596;margin-top:2px;text-wrap:pretty">OTPs and personal messages are skipped entirely.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:22px;background:#F1FBF6">
+              <div style="width:34px;height:34px;border-radius:12px;background:#D3F2E4;color:#0E7A56;display:grid;place-items:center;font-size:15px">◎</div>
+              <div><div style="font-size:14px;font-weight:600">Works offline, forever</div><div style="font-size:12px;color:#5C7E71;margin-top:2px;text-wrap:pretty">Parsing and answers run on-device.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:22px;background:#FFF7E4">
+              <div style="width:34px;height:34px;border-radius:12px;background:#F7E5BE;color:#8A5A00;display:grid;place-items:center;font-size:15px">✦</div>
+              <div><div style="font-size:14px;font-weight:600">Ready in about 20 seconds</div><div style="font-size:12px;color:#7E6A45;margin-top:2px;text-wrap:pretty">We'll read the last 6 months so today has context.</div></div>
+            </div>
+            <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:18px;background:#F6F4FE">
+              <div style="flex:1;height:6px;border-radius:3px;background:#E4DEFF;overflow:hidden"><div style="width:34%;height:100%;background:linear-gradient(90deg,#6D5AE6,#A78BFA)"></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7A7596">1 of 3</div>
+            </div>
+          </div>
+          <div style="flex:none;display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:14px">
+            <div style="width:100%;height:54px;border-radius:27px;background:#1B1830;color:#fff;display:grid;place-items:center;font-size:15px;font-weight:600">Allow SMS access</div>
+            <div style="font-size:13px;color:#7A7596;padding:8px">I'll add things myself</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="02 Home" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">02</div><div style="font-size:17px;font-weight:600;color:#3A3555">Home</div><div style="font-size:13px;color:#7A7596">Ring, budget bar, one insight</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#FBFAFF;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 20px 10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(150deg,#6D5AE6,#A78BFA);display:grid;place-items:center;animation:bob 3s ease-in-out infinite">
+                <div style="display:flex;gap:4px"><div style="width:4px;height:4px;border-radius:50%;background:#fff"></div><div style="width:4px;height:4px;border-radius:50%;background:#fff"></div></div>
+              </div>
+              <div><div style="font-size:15px;font-weight:600;letter-spacing:-0.01em">Hey Shivay</div><div style="font-size:11px;color:#7A7596">Lighter week than usual</div></div>
+            </div>
+            <div style="height:32px;padding:0 12px;border-radius:16px;background:#FFF0D6;color:#8A5A00;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px">6 day streak<span style="opacity:0.6;font-size:11px">⚙</span></div>
+          </div>
+          <div style="flex:none;padding:0 20px 10px">
+            <div style="display:inline-flex;height:30px;padding:0 12px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;align-items:center;gap:6px">This month ▾</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:8px 20px 20px;display:flex;flex-direction:column;gap:20px">
+            <div style="flex:none;display:flex;flex-direction:column;align-items:center">
+              <div style="position:relative;width:230px;height:230px;border-radius:50%;background:conic-gradient(#F97316 0deg 108deg,#38BDF8 108deg 170deg,#E879F9 170deg 218deg,#A78BFA 218deg 250deg,#E7E4F5 250deg 360deg);display:grid;place-items:center">
+                <div style="width:180px;height:180px;border-radius:50%;background:#FBFAFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+                  <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#7A7596;font-weight:600">Safe today</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:42px;font-weight:600;letter-spacing:-0.04em;line-height:1.1">₹1,240</div>
+                  <div style="font-size:12px;color:#12A46C;font-weight:600">₹310 more than yesterday</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:14px">
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#1B1830;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center">Safe today</div>
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Net flow</div>
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Burn</div>
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Runway</div>
+              </div>
+            </div>
+
+            <div style="flex:none;border-radius:24px;padding:18px;background:linear-gradient(165deg,#123227 0%,#0C1F19 60%,#0A1815 100%);color:#ECF4F1;position:relative;overflow:hidden">
+              <div style="position:absolute;top:-70px;right:-50px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(52,211,153,0.30),transparent 70%)"></div>
+              <div style="position:relative;display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#7FD9B6;font-weight:600">July budget</div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9DB2AB;background:rgba(255,255,255,0.07);padding:4px 8px;border-radius:8px">8 days left</div><span style="color:#7FD9B6;font-size:13px">›</span></div>
+              </div>
+              <div style="position:relative;display:flex;align-items:flex-end;gap:8px;margin-top:12px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;letter-spacing:-0.04em;line-height:1">₹28,410</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#9DB2AB;padding-bottom:3px">of ₹48,000</div>
+              </div>
+              <div style="position:relative;margin-top:14px;height:10px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;display:flex">
+                <div style="width:58%;background:linear-gradient(90deg,#34D399,#7FE8C4)"></div>
+                <div style="width:9%;background:#E8B54D"></div>
+              </div>
+              <div style="position:relative;font-size:12px;color:#A9C4BB;margin-top:10px;text-wrap:pretty">₹4,180 of that is already committed to rent and EMIs — the gold slice.</div>
+            </div>
+
+            <div style="flex:none">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+                <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em">Where it went</div>
+                <div style="font-size:12px;color:#6D5AE6">All →</div>
+              </div>
+              <div style="font-size:11px;color:#7A7596;margin-bottom:8px">Tap a category to see every transaction</div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#FFE7D3;display:grid;place-items:center;color:#C2410C;font-size:15px">◍</div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                    <div style="display:flex;justify-content:space-between;font-size:13px"><span>Food &amp; dining</span><span style="font-family:'IBM Plex Mono',monospace;color:#5B5580">₹8,940</span></div>
+                    <div style="height:6px;border-radius:4px;background:#F1EFFB"><div style="width:76%;height:100%;border-radius:4px;background:#F97316"></div></div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#D9EFFC;display:grid;place-items:center;color:#0369A1;font-size:15px">◍</div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                    <div style="display:flex;justify-content:space-between;font-size:13px"><span>Transport</span><span style="font-family:'IBM Plex Mono',monospace;color:#5B5580">₹5,120</span></div>
+                    <div style="height:6px;border-radius:4px;background:#F1EFFB"><div style="width:44%;height:100%;border-radius:4px;background:#38BDF8"></div></div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#FBE3FE;display:grid;place-items:center;color:#A21CAF;font-size:15px">◍</div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                    <div style="display:flex;justify-content:space-between;font-size:13px"><span>Shopping</span><span style="font-family:'IBM Plex Mono',monospace;color:#5B5580">₹3,880</span></div>
+                    <div style="height:6px;border-radius:4px;background:#F1EFFB"><div style="width:33%;height:100%;border-radius:4px;background:#E879F9"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="flex:none;border-radius:22px;padding:16px;background:linear-gradient(150deg,#FFF3D8,#FFFBF0);border:1px solid #F3D9A0;display:flex;gap:12px;align-items:center">
+              <div style="width:36px;height:36px;border-radius:13px;background:#1B1830;color:#E8B54D;display:grid;place-items:center;font-size:15px">✦</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#3D2E06">Blinkit is up 62% this month</div><div style="font-size:12px;color:#7E6A45;margin-top:2px;text-wrap:pretty">Nine orders already. Cap it at ₹2,000 a week?</div></div>
+              <div style="height:32px;padding:0 12px;border-radius:16px;background:#1B1830;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center">Sure</div>
+            </div>
+
+            <div style="flex:none">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em">Today</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#7A7596">−₹742</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#FFE7D3;display:grid;place-items:center;color:#C2410C">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Swiggy</div><div style="font-size:11px;color:#7A7596">7:12 PM · HDFC ••4821</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500">−486</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#D9EFFC;display:grid;place-items:center;color:#0369A1">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Uber</div><div style="font-size:11px;color:#7A7596">2:38 PM · GPay UPI</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500">−256</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#FFF7E4;border:1.5px solid #F3D9A0">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#F7E5BE;display:grid;place-items:center;color:#8A5A00">?</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">PAYTM-4429JK</div><div style="font-size:11px;color:#8A5A00">Swipe to sort · 3 left today</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500">−1,100</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:none;padding:0 20px 30px">
+            <div style="display:flex;align-items:center;height:64px;padding:0 8px 0 18px;border-radius:32px;background:#1B1830;color:#fff;box-shadow:0 12px 28px rgba(27,24,48,0.28)">
+              <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding-right:18px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#fff"><div style="font-size:17px">⌂</div><div style="font-size:9px">Home</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">≡</div><div style="font-size:9px">Activity</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">◱</div><div style="font-size:9px">Sort</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">◔</div><div style="font-size:9px">Trends</div></div>
+              </div>
+              <div style="position:relative;width:48px;height:48px;border-radius:24px;background:linear-gradient(150deg,#34D399,#0E9F6E);color:#04231A;display:grid;place-items:center;font-size:19px;font-weight:700;flex:none">
+                <div style="position:absolute;inset:0;border-radius:24px;border:2px solid rgba(52,211,153,0.55);animation:pulseRing 2.6s ease-out infinite"></div>✳
+              </div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="03 Activity" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">03</div><div style="font-size:17px;font-weight:600;color:#3A3555">Activity</div><div style="font-size:13px;color:#7A7596">Chips, not filter sheets</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#FBFAFF;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:6px 20px 12px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:24px;font-weight:700;letter-spacing:-0.03em">Activity</div>
+              <div style="display:flex;gap:8px">
+                <div style="width:34px;height:34px;border-radius:17px;background:#F1EFFB;display:grid;place-items:center;font-size:14px;color:#5B5580">⌕</div>
+                <div style="width:34px;height:34px;border-radius:17px;background:#F1EFFB;display:grid;place-items:center;font-size:14px;color:#5B5580">☐</div>
+                <div style="width:34px;height:34px;border-radius:17px;background:#F1EFFB;display:grid;place-items:center;font-size:14px;color:#5B5580">↧</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">
+              <div style="height:32px;padding:0 13px;border-radius:16px;background:#1B1830;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap">This month</div>
+              <div style="height:32px;padding:0 13px;border-radius:16px;background:#EEE9FF;color:#4F3FC4;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap">Spends ✕</div>
+              <div style="height:32px;padding:0 13px;border-radius:16px;background:#FFF0D6;color:#8A5A00;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap">Unsorted 3</div>
+              <div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center;white-space:nowrap">Category</div>
+              <div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center;white-space:nowrap">Account</div>
+              <div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center;gap:5px;white-space:nowrap">⚙ Advanced</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:16px;background:#F6F4FE">
+              <div style="font-size:12px;color:#7A7596">148 spends · 12 credits</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600">−₹28,410</div>
+            </div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 20px 16px;display:flex;flex-direction:column;gap:16px">
+            <div style="flex:none">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">TODAY</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7A7596">−742</div></div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:stretch;gap:0;border-radius:20px;overflow:hidden;background:#F6F4FE">
+                  <div style="flex:1;display:flex;align-items:center;gap:12px;padding:12px;transform:translateX(-72px)">
+                    <div style="width:36px;height:36px;border-radius:13px;background:#FFE7D3;display:grid;place-items:center;color:#C2410C">◍</div>
+                    <div style="flex:1"><div style="font-size:14px;font-weight:500">Swiggy</div><div style="font-size:11px;color:#7A7596">Food · 7:12 PM</div></div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:15px">−486</div>
+                  </div>
+                  <div style="width:72px;background:#6D5AE6;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;margin-left:-72px"><div style="font-size:16px">◍</div>Recategorise</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#D9EFFC;display:grid;place-items:center;color:#0369A1">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Uber</div><div style="font-size:11px;color:#7A7596">Transport · 2:38 PM</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px">−256</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#FFF7E4;border:1.5px solid #F3D9A0">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#F7E5BE;display:grid;place-items:center;color:#8A5A00">?</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">PAYTM-4429JK</div><div style="font-size:11px;color:#8A5A00">Needs a category</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px">−1,100</div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:none">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">YESTERDAY</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7A7596">−1,318</div></div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#E9F7D6;display:grid;place-items:center;color:#4D7C0F">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Blinkit</div><div style="font-size:11px;color:#7A7596">Groceries · 9:04 PM</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px">−624</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#EDE7FF;display:grid;place-items:center;color:#6D5AE6">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Netflix</div><div style="font-size:11px;color:#7A7596">Subscription · recurring</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px">−649</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#F1FBF6">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#D3F2E4;display:grid;place-items:center;color:#0E7A56">↓</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Cashback · HDFC</div><div style="font-size:11px;color:#5C7E71">Income · 11:20 AM</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:#0E7A56">+45</div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:none;padding:6px 0 4px;text-align:center;font-size:12px;color:#6D5AE6;font-weight:600">Load older transactions</div>
+          </div>
+          <div style="flex:none;padding:0 20px 30px">
+            <div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 8px 0 16px;border-radius:28px;background:#1B1830;color:#fff">
+              <div style="flex:1;font-size:13px">2 selected</div>
+              <div style="height:38px;padding:0 14px;border-radius:19px;background:rgba(255,255,255,0.14);font-size:12px;display:flex;align-items:center">Categorise</div>
+              <div style="height:38px;padding:0 14px;border-radius:19px;background:#34D399;color:#04231A;font-size:12px;font-weight:600;display:flex;align-items:center">Apply to all</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="04 Sort" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">04</div><div style="font-size:17px;font-weight:600;color:#3A3555">Sort</div><div style="font-size:13px;color:#7A7596">Swipe the queue to zero</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#F3F1FC;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:8px 20px 14px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div style="font-size:22px;font-weight:700;letter-spacing:-0.03em">Sort the strays</div><div style="font-size:12px;color:#7A7596;margin-top:2px">9 left · about a minute</div></div>
+              <div style="height:32px;padding:0 12px;border-radius:16px;background:#fff;color:#5B5580;font-size:12px;display:flex;align-items:center">List view</div>
+            </div>
+            <div style="display:flex;gap:4px">
+              <div style="flex:1;height:5px;border-radius:3px;background:#6D5AE6"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#6D5AE6"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#6D5AE6"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#6D5AE6"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#DED8F5"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#DED8F5"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#DED8F5"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#DED8F5"></div>
+              <div style="flex:1;height:5px;border-radius:3px;background:#DED8F5"></div>
+            </div>
+          </div>
+          <div style="flex:1;padding:0 20px;display:flex;flex-direction:column;justify-content:center">
+            <div style="position:relative;padding-bottom:18px">
+              <div style="position:absolute;left:16px;right:16px;top:16px;height:100%;border-radius:26px;background:#E4DEF7"></div>
+              <div style="position:absolute;left:8px;right:8px;top:8px;height:100%;border-radius:26px;background:#EDE9FA"></div>
+              <div style="position:relative;border-radius:26px;background:#fff;padding:22px;box-shadow:0 18px 40px rgba(27,24,48,0.12);transform:rotate(-1.2deg)">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="height:26px;padding:0 10px;border-radius:13px;background:#FFF0D6;color:#8A5A00;font-size:11px;font-weight:600;display:flex;align-items:center">Unsorted</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7A7596">23 Jul · 6:12 PM</div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:600;letter-spacing:-0.045em;margin-top:16px">−₹1,100</div>
+                <div style="font-size:16px;font-weight:600;margin-top:4px">PAYTM-4429JK</div>
+                <div style="font-size:12px;color:#7A7596;margin-top:3px">HDFC ••4821 · UPI · from SMS</div>
+                <div style="margin-top:18px;padding:14px;border-radius:18px;background:#F6F4FE">
+                  <div style="font-size:11px;color:#7A7596;letter-spacing:0.06em">MY BEST GUESS</div>
+                  <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                    <div style="width:34px;height:34px;border-radius:12px;background:#FFE7D3;display:grid;place-items:center;color:#C2410C">◍</div>
+                    <div style="flex:1"><div style="font-size:14px;font-weight:600">Food &amp; dining</div><div style="font-size:11px;color:#7A7596">You filed 4 similar ones here</div></div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6D5AE6">78%</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+                  <div style="height:30px;padding:0 12px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Groceries</div>
+                  <div style="height:30px;padding:0 12px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Transfers</div>
+                  <div style="height:30px;padding:0 12px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Bills</div>
+                  <div style="height:30px;padding:0 12px;border-radius:15px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Something else</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:22px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="width:56px;height:56px;border-radius:28px;background:#fff;border:1.5px solid #E4DEF7;display:grid;place-items:center;font-size:18px;color:#7A7596">↺</div>
+                <div style="font-size:11px;color:#7A7596">Skip</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="width:76px;height:76px;border-radius:38px;background:#1B1830;color:#34D399;display:grid;place-items:center;font-size:26px;box-shadow:0 14px 30px rgba(27,24,48,0.3)">✓</div>
+                <div style="font-size:11px;color:#5B5580;font-weight:600">Accept guess</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="width:56px;height:56px;border-radius:28px;background:#fff;border:1.5px solid #E4DEF7;display:grid;place-items:center;font-size:18px;color:#7A7596">◍</div>
+                <div style="font-size:11px;color:#7A7596">Choose</div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;margin:0 20px 30px;padding:13px 16px;border-radius:20px;background:#E7F8F0;display:flex;align-items:center;gap:10px">
+            <div style="width:28px;height:28px;border-radius:10px;background:#34D399;color:#04231A;display:grid;place-items:center;font-size:13px">✦</div>
+            <div style="flex:1;font-size:12px;color:#0E5B41;text-wrap:pretty">Filing this also teaches the next 6 Paytm texts. No repeat work.</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="05 Trends" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">05</div><div style="font-size:17px;font-weight:600;color:#3A3555">Trends</div><div style="font-size:13px;color:#7A7596">Six months, plain English</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#FBFAFF;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:6px 20px 12px;display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:24px;font-weight:700;letter-spacing:-0.03em">Trends</div>
+            <div style="height:32px;padding:0 12px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center;gap:6px">July 2026 ▾</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:18px">
+            <div style="flex:none;border-radius:26px;padding:20px;background:linear-gradient(160deg,#6D5AE6,#8B6FF0 55%,#5B49D6);color:#fff;position:relative;overflow:hidden">
+              <div style="position:absolute;top:-60px;right:-40px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.22),transparent 70%)"></div>
+              <div style="position:relative;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#DDD6FF;font-weight:600">You kept</div>
+              <div style="position:relative;display:flex;align-items:flex-end;gap:10px;margin-top:10px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:38px;font-weight:600;letter-spacing:-0.045em;line-height:1">₹19,590</div>
+                <div style="font-size:13px;color:#CFC6FF;padding-bottom:4px">of ₹48,000 in</div>
+              </div>
+              <div style="position:relative;font-size:13px;color:#E4DEFF;margin-top:10px;text-wrap:pretty">Best month since March. Food is down ₹2,100 and no late fees at all.</div>
+              <svg viewBox="0 0 300 70" style="position:relative;width:100%;height:70px;margin-top:12px"><defs><linearGradient id="tf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"></stop><stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop></linearGradient></defs><path d="M0 52 C40 52 52 30 82 36 C112 42 128 14 162 22 C196 30 214 46 246 26 C268 12 284 18 300 10 L300 70 L0 70 Z" fill="url(#tf)"></path><path d="M0 52 C40 52 52 30 82 36 C112 42 128 14 162 22 C196 30 214 46 246 26 C268 12 284 18 300 10" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"></path><circle cx="300" cy="10" r="4.5" fill="#E8B54D"></circle></svg>
+              <div style="position:relative;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#CFC6FF">
+                <span>FEB</span><span>MAR</span><span>APR</span><span>MAY</span><span>JUN</span><span>JUL</span>
+              </div>
+            </div>
+            <div style="flex:none;display:flex;flex-direction:column;gap:10px">
+              <div style="padding:16px;border-radius:22px;background:#FFF7E4;border:1px solid #F3D9A0;display:flex;gap:12px;align-items:flex-start">
+                <div style="width:34px;height:34px;border-radius:12px;background:#1B1830;color:#E8B54D;display:grid;place-items:center;font-size:14px">✦</div>
+                <div><div style="font-size:13px;font-weight:700;color:#3D2E06">Quick commerce is your growth story</div><div style="font-size:12px;color:#7E6A45;margin-top:3px;text-wrap:pretty">Blinkit + Zepto = ₹6,240 this month, up from ₹3,850. Mostly after 9 PM.</div></div>
+              </div>
+              <div style="padding:16px;border-radius:22px;background:#F1FBF6;border:1px solid #C9EEDD;display:flex;gap:12px;align-items:flex-start">
+                <div style="width:34px;height:34px;border-radius:12px;background:#0E7A56;color:#fff;display:grid;place-items:center;font-size:14px">◎</div>
+                <div><div style="font-size:13px;font-weight:700;color:#0B4C37">Rent-day dip is gone</div><div style="font-size:12px;color:#4E7A69;margin-top:3px;text-wrap:pretty">You stayed above ₹10,000 through the 1st for the first time in five months.</div></div>
+              </div>
+              <div style="padding:16px;border-radius:22px;background:#FDF2F3;border:1px solid #F4D2D4;display:flex;gap:12px;align-items:flex-start">
+                <div style="width:34px;height:34px;border-radius:12px;background:#B4322F;color:#fff;display:grid;place-items:center;font-size:14px">!</div>
+                <div><div style="font-size:13px;font-weight:700;color:#7A211F">Two price creeps</div><div style="font-size:12px;color:#8A5A58;margin-top:3px;text-wrap:pretty">Spotify ₹119 → ₹149 and Jio ₹299 → ₹349. Together ₹60 a month more.</div></div>
+              </div>
+            </div>
+            <div style="flex:none">
+              <div style="font-size:16px;font-weight:600;margin-bottom:10px">Top merchants</div>
+              <div style="display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #EFECFA">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8E88AD;width:18px">01</div>
+                  <div style="flex:1;font-size:14px">Swiggy</div><div style="font-size:11px;color:#7A7596">14 orders</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;width:60px;text-align:right">₹5,180</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #EFECFA">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8E88AD;width:18px">02</div>
+                  <div style="flex:1;font-size:14px">Blinkit</div><div style="font-size:11px;color:#7A7596">9 orders</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;width:60px;text-align:right">₹3,940</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 0">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8E88AD;width:18px">03</div>
+                  <div style="flex:1;font-size:14px">Uber</div><div style="font-size:11px;color:#7A7596">22 rides</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;width:60px;text-align:right">₹3,120</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;padding:0 20px 30px">
+            <div style="display:flex;align-items:center;height:64px;padding:0 8px 0 18px;border-radius:32px;background:#1B1830;color:#fff;box-shadow:0 12px 28px rgba(27,24,48,0.28)">
+              <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding-right:18px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">⌂</div><div style="font-size:9px">Home</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">≡</div><div style="font-size:9px">Activity</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">◱</div><div style="font-size:9px">Sort</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#fff"><div style="font-size:17px">◔</div><div style="font-size:9px">Trends</div></div>
+              </div>
+              <div style="width:48px;height:48px;border-radius:24px;background:linear-gradient(150deg,#34D399,#0E9F6E);color:#04231A;display:grid;place-items:center;font-size:19px;font-weight:700;flex:none">✳</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="06 Recurring" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">06</div><div style="font-size:17px;font-weight:600;color:#3A3555">Recurring</div><div style="font-size:13px;color:#7A7596">What's already spoken for</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#FBFAFF;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:6px 20px 14px;display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:16px;background:#F1EFFB;display:grid;place-items:center;font-size:15px;color:#5B5580">←</div>
+            <div style="font-size:22px;font-weight:700;letter-spacing:-0.03em">Recurring</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:18px">
+            <div style="flex:none;border-radius:24px;padding:18px;background:#1B1830;color:#fff">
+              <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#A9A2CC;font-weight:600">Committed each month</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-0.045em;margin-top:8px">₹24,860</div>
+              <div style="font-size:12px;color:#B8B2D6;margin-top:6px;text-wrap:pretty">52% of your usual income. Next out the door: rent on the 1st.</div>
+              <div style="display:flex;gap:2px;margin-top:14px;height:8px;border-radius:4px;overflow:hidden">
+                <div style="width:62%;background:#2DD4BF"></div><div style="width:14%;background:#FB7185"></div><div style="width:12%;background:#A78BFA"></div><div style="width:12%;background:#FACC15"></div>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:#B8B2D6">
+                <span>Rent</span><span>EMI</span><span>Subs</span><span>Bills</span>
+              </div>
+            </div>
+            <div style="flex:none">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:10px">NEXT 14 DAYS</div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:44px;text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">28</div><div style="font-size:10px;color:#7A7596">JUL</div></div>
+                  <div style="width:1px;height:32px;background:#E4DEF7"></div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Jio postpaid</div><div style="font-size:11px;color:#7A7596">Bill · every 28th · price changed</div></div>
+                  <div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:14px">₹349</div><div style="font-size:10px;color:#B4322F">↑ ₹50</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#FDF2F3;border:1px solid #F4D2D4">
+                  <div style="width:44px;text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:#B4322F">22</div><div style="font-size:10px;color:#B4322F">JUL</div></div>
+                  <div style="width:1px;height:32px;background:#F4D2D4"></div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Gym membership</div><div style="font-size:11px;color:#B4322F">Missed · no debit seen</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#B4322F">₹999</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:44px;text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">01</div><div style="font-size:10px;color:#7A7596">AUG</div></div>
+                  <div style="width:1px;height:32px;background:#E4DEF7"></div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Rent · Mr. Sharma</div><div style="font-size:11px;color:#7A7596">Housing · every 1st</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px">₹18,000</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#F6F4FE">
+                  <div style="width:44px;text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600">05</div><div style="font-size:10px;color:#7A7596">AUG</div></div>
+                  <div style="width:1px;height:32px;background:#E4DEF7"></div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Bike loan EMI</div><div style="font-size:11px;color:#7A7596">EMI · 14 of 24 paid</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px">₹3,412</div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:none">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">SUBSCRIPTIONS · 6</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#7A7596">₹1,846/mo</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#fff;border:1px solid #EFECFA">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#EDE7FF;display:grid;place-items:center;color:#6D5AE6">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Netflix</div><div style="font-size:11px;color:#7A7596">Used 11 times in July</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px">₹649</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#FFF7E4;border:1.5px solid #F3D9A0">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#F7E5BE;display:grid;place-items:center;color:#8A5A00">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Spotify</div><div style="font-size:11px;color:#8A5A00">Price up ₹30 · no plays since May</div></div>
+                  <div style="text-align:right"><div style="font-family:'IBM Plex Mono',monospace;font-size:14px">₹149</div><div style="font-size:11px;color:#6D5AE6;font-weight:600">Cancel?</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#fff;border:1px solid #EFECFA">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#E4DEFF;display:grid;place-items:center;color:#4F3FC4">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Claude Pro</div><div style="font-size:11px;color:#7A7596">Renews 12 Aug</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px">₹1,048</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:#F6F4FE;opacity:0.6">
+                  <div style="width:36px;height:36px;border-radius:13px;background:#E4E1F0;display:grid;place-items:center;color:#8E88AD">◍</div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:500">Hotstar</div><div style="font-size:11px;color:#7A7596">Cancelled · inactive since Jun</div></div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-decoration:line-through;color:#8E88AD">₹299</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;padding:14px 20px 30px;border-top:1px solid #EFECFA;background:#FBFAFF;display:flex;align-items:center;gap:10px">
+            <div style="flex:1;font-size:12px;color:#7A7596;text-wrap:pretty">Committed money is held out of "safe to spend" automatically.</div>
+            <div style="height:38px;padding:0 14px;border-radius:19px;background:#F1EFFB;color:#4F3FC4;font-size:12px;font-weight:600;display:flex;align-items:center">Adjust</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="07 Ask" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">07</div><div style="font-size:17px;font-weight:600;color:#3A3555">Ask PaisaTrack
+</div><div style="font-size:13px;color:#7A7596">On-device, and it answers first</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#0E0C1A;color:#ECEAF6;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;display:flex;align-items:center;gap:10px;padding:6px 20px 12px;border-bottom:1px solid #1E1B33">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,#6D5AE6,#A78BFA);display:grid;place-items:center;animation:bob 3s ease-in-out infinite">
+              <div style="display:flex;gap:4px"><div style="width:4px;height:4px;border-radius:50%;background:#fff"></div><div style="width:4px;height:4px;border-radius:50%;background:#fff"></div></div>
+            </div>
+            <div style="flex:1"><div style="font-size:15px;font-weight:600">Ask PaisaTrack</div><div style="font-size:11px;color:#34D399">On-device · no internet used</div></div>
+            <div style="font-size:16px;color:#8E88AD">✕</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="flex:none;align-self:flex-end;max-width:78%;padding:12px 15px;border-radius:20px 20px 6px 20px;background:#6D5AE6;color:#fff;font-size:14px">How much did I spend on food this month?</div>
+            <div style="flex:none;align-self:flex-start;max-width:88%;display:flex;flex-direction:column;gap:10px">
+              <div style="padding:14px 16px;border-radius:20px 20px 20px 6px;background:#191630;border:1px solid #262244">
+                <div style="font-size:14px;line-height:1.5;text-wrap:pretty">₹8,940 across 31 orders — about a third of everything you spent.</div>
+                <div style="margin-top:12px;display:flex;align-items:flex-end;gap:4px;height:52px">
+                  <div style="flex:1;height:38%;background:#3A3462;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:56%;background:#3A3462;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:44%;background:#3A3462;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:82%;background:#F97316;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:64%;background:#3A3462;border-radius:3px 3px 0 0"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8E88AD"><span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>NOW</span></div>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #262244;font-size:12px;color:#A9A2CC;text-wrap:pretty">Week 4 was your heaviest — ₹2,880, mostly Swiggy after 9 PM.</div>
+              </div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap">
+                <div style="height:32px;padding:0 12px;border-radius:16px;background:#191630;border:1px solid #2E2A4E;color:#C6C0E8;font-size:12px;display:flex;align-items:center">Show the orders</div>
+                <div style="height:32px;padding:0 12px;border-radius:16px;background:#191630;border:1px solid #2E2A4E;color:#C6C0E8;font-size:12px;display:flex;align-items:center">Compare to June</div>
+                <div style="height:32px;padding:0 12px;border-radius:16px;background:#122B22;border:1px solid #1F5142;color:#7FE8C4;font-size:12px;display:flex;align-items:center">Set a food cap</div>
+              </div>
+              <div style="font-size:11px;color:#6F6A92;margin-top:2px">Model: Gemma 2B · on-device · answers from your data only</div>
+            </div>
+            <div style="flex:none;align-self:flex-end;max-width:78%;padding:12px 15px;border-radius:20px 20px 6px 20px;background:#6D5AE6;color:#fff;font-size:14px">Can I afford a ₹6,000 trip next weekend?</div>
+            <div style="flex:none;align-self:flex-start;max-width:88%;padding:14px 16px;border-radius:20px 20px 20px 6px;background:#191630;border:1px solid #262244">
+              <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#7FE8C4">Yes — with ₹3,100 to spare</div>
+              <div style="font-size:13px;color:#B8B2D6;margin-top:6px;line-height:1.5;text-wrap:pretty">Rent and EMIs are already set aside. Keep the daily pace under ₹950 and you land at ₹9,100 free on the 31st.</div>
+            </div>
+          </div>
+          <div style="flex:none;padding:12px 20px 30px;background:#0E0C1A;border-top:1px solid #1E1B33;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:7px;overflow-x:auto">
+              <div style="height:30px;padding:0 12px;border-radius:15px;background:#191630;color:#A9A2CC;font-size:12px;display:flex;align-items:center;white-space:nowrap">Biggest waste?</div>
+              <div style="height:30px;padding:0 12px;border-radius:15px;background:#191630;color:#A9A2CC;font-size:12px;display:flex;align-items:center;white-space:nowrap">Subscriptions I forgot</div>
+              <div style="height:30px;padding:0 12px;border-radius:15px;background:#191630;color:#A9A2CC;font-size:12px;display:flex;align-items:center;white-space:nowrap">Rent vs last year</div>
+              <div style="height:30px;padding:0 12px;border-radius:15px;background:transparent;color:#7FE8C4;font-size:12px;font-weight:600;display:flex;align-items:center;white-space:nowrap">Browse questions →</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;height:52px;padding:0 6px 0 18px;border-radius:26px;background:#191630;border:1px solid #2E2A4E">
+              <div style="flex:1;font-size:14px;color:#6F6A92">Ask anything about your money…</div>
+              <div style="width:40px;height:40px;border-radius:20px;background:linear-gradient(150deg,#34D399,#0E9F6E);color:#04231A;display:grid;place-items:center;font-size:16px;font-weight:700">↑</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="08 Detail" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">08</div><div style="font-size:17px;font-weight:600;color:#3A3555">Transaction detail</div><div style="font-size:13px;color:#7A7596">A sheet you swipe away</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#1B1830;color:#1B1830;display:flex;flex-direction:column;justify-content:flex-end;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:14px 20px 0;opacity:0.35">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="height:56px;border-radius:20px;background:#F6F4FE"></div>
+              <div style="height:56px;border-radius:20px;background:#F6F4FE"></div>
+            </div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="flex:none;border-radius:30px 30px 0 0;background:#FBFAFF;padding:12px 20px 30px;display:flex;flex-direction:column;gap:16px;max-height:700px;overflow-y:auto">
+            <div style="align-self:center;width:44px;height:5px;border-radius:3px;background:#DED8F5"></div>
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:52px;height:52px;border-radius:18px;background:#FFE7D3;display:grid;place-items:center;color:#C2410C;font-size:21px">◍</div>
+              <div style="flex:1">
+                <div style="font-size:19px;font-weight:600;letter-spacing:-0.02em">Swiggy</div>
+                <div style="font-size:12px;color:#7A7596;margin-top:3px">23 Jul 2026 · 7:12 PM · HDFC ••4821</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;letter-spacing:-0.04em">−₹486</div>
+                <div style="font-size:11px;color:#7A7596">UPI</div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">CATEGORY</div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap">
+                <div style="height:34px;padding:0 13px;border-radius:17px;background:#F97316;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">◍ Food &amp; dining</div>
+                <div style="height:34px;padding:0 13px;border-radius:17px;background:#F1EFFB;color:#5B5580;font-size:13px;display:flex;align-items:center">Groceries</div>
+                <div style="height:34px;padding:0 13px;border-radius:17px;background:#F1EFFB;color:#5B5580;font-size:13px;display:flex;align-items:center">Entertainment</div>
+                <div style="height:34px;padding:0 13px;border-radius:17px;background:#F1EFFB;color:#5B5580;font-size:13px;display:flex;align-items:center">More…</div>
+              </div>
+            </div>
+            <div style="padding:14px;border-radius:20px;background:#F6F4FE;display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">APPLY THIS TO</div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:20px;height:20px;border-radius:10px;background:#6D5AE6;color:#fff;display:grid;place-items:center;font-size:11px">✓</div>
+                <div style="flex:1;font-size:13px">Just this one</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:20px;height:20px;border-radius:10px;border:1.5px solid #C9C2E8"></div>
+                <div style="flex:1;font-size:13px">All 14 Swiggy spends<span style="color:#7A7596"> · past &amp; future</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">WHERE THIS CAME FROM</div>
+              <div style="padding:14px;border-radius:18px;background:#F1FBF6;border:1px solid #C9EEDD">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4E7A69;line-height:1.6">HDFC: Rs.486.00 debited from a/c XX4821 on 23-07-26 to SWIGGY via UPI 5540xxxx. Not you? Call 18002586161.</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+                  <div style="height:24px;padding:0 9px;border-radius:12px;background:#0E7A56;color:#fff;font-size:10px;display:flex;align-items:center">Parsed locally</div>
+                  <div style="font-size:11px;color:#4E7A69">Template match · 99%</div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:12px 14px;border-radius:18px;background:#F6F4FE;display:flex;align-items:center;gap:10px">
+              <span style="font-size:14px;color:#B8B2D6">✎</span>
+              <div style="flex:1;font-size:13px;color:#7A7596">Dinner with the team — add a note</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div style="flex:1;height:48px;border-radius:24px;background:#F1EFFB;color:#5B5580;font-size:14px;font-weight:600;display:grid;place-items:center">Cancel</div>
+              <div style="flex:1;height:48px;border-radius:24px;background:#1B1830;color:#fff;font-size:14px;font-weight:600;display:grid;place-items:center">Save</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="09 Settings" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">09</div><div style="font-size:17px;font-weight:600;color:#3A3555">Settings</div><div style="font-size:13px;color:#7A7596">Plain words, no jargon</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#F3F1FC;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:6px 20px 12px;display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:16px;background:#fff;display:grid;place-items:center;font-size:15px;color:#5B5580">←</div>
+            <div style="font-size:22px;font-weight:700;letter-spacing:-0.03em">Settings</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="flex:none;padding:16px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:14px">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">LOOK</div>
+              <div style="display:flex;gap:6px;padding:4px;border-radius:16px;background:#F3F1FC">
+                <div style="flex:1;height:36px;border-radius:12px;background:#1B1830;color:#fff;font-size:12px;font-weight:600;display:grid;place-items:center">Auto</div>
+                <div style="flex:1;height:36px;border-radius:12px;color:#5B5580;font-size:12px;display:grid;place-items:center">Light</div>
+                <div style="flex:1;height:36px;border-radius:12px;color:#5B5580;font-size:12px;display:grid;place-items:center">Dark</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Show paise</div><div style="font-size:11px;color:#7A7596">Off keeps the big numbers cleaner</div></div>
+                <div style="width:46px;height:28px;border-radius:14px;background:#DED8F5;padding:3px;box-sizing:border-box"><div style="width:22px;height:22px;border-radius:11px;background:#fff"></div></div>
+              </div>
+            </div>
+            <div style="flex:none;padding:16px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:14px">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">YOUR MONEY</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Monthly budget</div><div style="font-size:11px;color:#7A7596">Drives "safe to spend"</div></div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#4F3FC4;font-weight:600">₹48,000</div>
+              </div>
+              <div style="height:1px;background:#F3F1FC"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Categories</div><div style="font-size:11px;color:#7A7596">18 in use · 3 you made</div></div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+              <div style="height:1px;background:#F3F1FC"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Accounts &amp; cards</div><div style="font-size:11px;color:#7A7596">HDFC ••4821, ICICI ••9930</div></div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+              <div style="height:1px;background:#F3F1FC"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Payee labels</div><div style="font-size:11px;color:#7A7596">Rename who a payment is from</div></div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+            </div>
+            <div style="flex:none;padding:16px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:14px">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">DATA</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:34px;height:34px;border-radius:12px;background:#E4DEFF;color:#4F3FC4;display:grid;place-items:center;font-size:14px">✉</div>
+                <div style="flex:1"><div style="font-size:14px">Find transactions from SMS</div><div style="font-size:11px;color:#7A7596">Last scanned this morning · 38 found</div></div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+            </div>
+            <div style="flex:none;padding:16px;border-radius:24px;background:linear-gradient(160deg,#123227,#0C1F19);color:#ECF4F1;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7FD9B6">THE BRAIN</div>
+                <div style="height:24px;padding:0 9px;border-radius:12px;background:rgba(52,211,153,0.18);color:#7FE8C4;font-size:10px;display:flex;align-items:center">On-device</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Gemma 2B · quantised</div><div style="font-size:11px;color:#9DB2AB">1.4 GB · answers in ~0.8s</div></div>
+                <div style="height:32px;padding:0 12px;border-radius:16px;background:rgba(255,255,255,0.1);font-size:12px;display:flex;align-items:center">Change</div>
+              </div>
+              <div style="height:1px;background:rgba(255,255,255,0.08)"></div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:6px;height:6px;border-radius:50%;background:#34D399"></div>
+                <div style="flex:1;font-size:12px;color:#9DB2AB">Installed · runs on CPU</div>
+                <div style="font-size:12px;color:#F48A8A">Delete</div>
+              </div>
+              <div style="font-size:12px;color:#A9C4BB;text-wrap:pretty">Nothing about your money ever leaves the phone — even when you ask questions.</div>
+            </div>
+            <div style="flex:none;padding:16px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:14px">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">SAFETY NET</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px">Encrypted backup</div><div style="font-size:11px;color:#7A7596">Last saved 2 days ago · needs a 12+ char passphrase</div></div>
+                <div style="height:32px;padding:0 12px;border-radius:16px;background:#F1EFFB;color:#4F3FC4;font-size:12px;font-weight:600;display:flex;align-items:center">Back up</div>
+              </div>
+              <div style="height:1px;background:#F3F1FC"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="flex:1"><div style="font-size:14px;color:#B4322F">Erase everything</div><div style="font-size:11px;color:#7A7596">Undoable for 10 seconds after</div></div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="10 Dark home" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">10</div><div style="font-size:17px;font-weight:600;color:#3A3555">Home · dark</div><div style="font-size:13px;color:#7A7596">Same layout, night surfaces</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#0E0C1A;color:#ECEAF6;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 20px 10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(150deg,#6D5AE6,#A78BFA);display:grid;place-items:center;animation:bob 3s ease-in-out infinite">
+                <div style="display:flex;gap:4px"><div style="width:4px;height:4px;border-radius:50%;background:#fff"></div><div style="width:4px;height:4px;border-radius:50%;background:#fff"></div></div>
+              </div>
+              <div><div style="font-size:15px;font-weight:600">Evening, Shivay</div><div style="font-size:11px;color:#8E88AD">Two texts came in while you were out</div></div>
+            </div>
+            <div style="height:32px;padding:0 12px;border-radius:16px;background:rgba(232,181,77,0.16);color:#E8B54D;font-size:12px;font-weight:600;display:flex;align-items:center">6 days</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:8px 20px 20px;display:flex;flex-direction:column;gap:20px">
+            <div style="flex:none;display:flex;flex-direction:column;align-items:center">
+              <div style="position:relative;width:230px;height:230px;border-radius:50%;background:conic-gradient(#F97316 0deg 108deg,#38BDF8 108deg 170deg,#E879F9 170deg 218deg,#A78BFA 218deg 250deg,#241F3E 250deg 360deg);display:grid;place-items:center">
+                <div style="width:180px;height:180px;border-radius:50%;background:#0E0C1A;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+                  <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8E88AD;font-weight:600">Safe today</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:42px;font-weight:600;letter-spacing:-0.04em;line-height:1.1;color:#F7F5FF">₹1,240</div>
+                  <div style="font-size:12px;color:#34D399;font-weight:600">₹310 more than yesterday</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:14px">
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#6D5AE6;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center">Safe today</div>
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#191630;color:#A9A2CC;font-size:12px;display:flex;align-items:center">Net flow</div>
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#191630;color:#A9A2CC;font-size:12px;display:flex;align-items:center">Burn</div>
+                <div style="height:30px;padding:0 14px;border-radius:15px;background:#191630;color:#A9A2CC;font-size:12px;display:flex;align-items:center">Runway</div>
+              </div>
+            </div>
+            <div style="flex:none;border-radius:24px;padding:18px;background:linear-gradient(165deg,#123227 0%,#0C1F19 60%,#0A1815 100%);position:relative;overflow:hidden">
+              <div style="position:absolute;top:-70px;right:-50px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(52,211,153,0.30),transparent 70%)"></div>
+              <div style="position:relative;display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#7FD9B6;font-weight:600">July budget</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9DB2AB;background:rgba(255,255,255,0.07);padding:4px 8px;border-radius:8px">8 days left</div>
+              </div>
+              <div style="position:relative;display:flex;align-items:flex-end;gap:8px;margin-top:12px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;letter-spacing:-0.04em;line-height:1;color:#ECF4F1">₹28,410</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#9DB2AB;padding-bottom:3px">of ₹48,000</div>
+              </div>
+              <div style="position:relative;margin-top:14px;height:10px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;display:flex">
+                <div style="width:58%;background:linear-gradient(90deg,#34D399,#7FE8C4)"></div>
+                <div style="width:9%;background:#E8B54D"></div>
+              </div>
+              <div style="position:relative;font-size:12px;color:#A9C4BB;margin-top:10px;text-wrap:pretty">₹4,180 is already committed to rent and EMIs — the gold slice.</div>
+            </div>
+            <div style="flex:none">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+                <div style="font-size:16px;font-weight:600">Where it went</div><div style="font-size:12px;color:#A78BFA">All →</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:36px;height:36px;border-radius:13px;background:rgba(249,115,22,0.18);display:grid;place-items:center;color:#F97316;font-size:15px">◍</div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                    <div style="display:flex;justify-content:space-between;font-size:13px"><span>Food &amp; dining</span><span style="font-family:'IBM Plex Mono',monospace;color:#B8B2D6">₹8,940</span></div>
+                    <div style="height:6px;border-radius:4px;background:#241F3E"><div style="width:76%;height:100%;border-radius:4px;background:#F97316"></div></div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:36px;height:36px;border-radius:13px;background:rgba(56,189,248,0.18);display:grid;place-items:center;color:#38BDF8;font-size:15px">◍</div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                    <div style="display:flex;justify-content:space-between;font-size:13px"><span>Transport</span><span style="font-family:'IBM Plex Mono',monospace;color:#B8B2D6">₹5,120</span></div>
+                    <div style="height:6px;border-radius:4px;background:#241F3E"><div style="width:44%;height:100%;border-radius:4px;background:#38BDF8"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:none;border-radius:22px;padding:16px;background:linear-gradient(150deg,rgba(232,181,77,0.16),rgba(232,181,77,0.05));border:1px solid rgba(232,181,77,0.3);display:flex;gap:12px;align-items:center">
+              <div style="width:36px;height:36px;border-radius:13px;background:rgba(232,181,77,0.22);color:#E8B54D;display:grid;place-items:center;font-size:15px">✦</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#F3DFB4">Blinkit is up 62% this month</div><div style="font-size:12px;color:#C9BFA3;margin-top:2px;text-wrap:pretty">Nine orders already. Cap it at ₹2,000 a week?</div></div>
+            </div>
+          </div>
+          <div style="flex:none;padding:0 20px 30px">
+            <div style="display:flex;align-items:center;height:64px;padding:0 8px 0 18px;border-radius:32px;background:#191630;border:1px solid #2E2A4E;color:#fff">
+              <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding-right:18px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#fff"><div style="font-size:17px">⌂</div><div style="font-size:9px">Home</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">≡</div><div style="font-size:9px">Activity</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">◱</div><div style="font-size:9px">Sort</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#8E88AD"><div style="font-size:17px">◔</div><div style="font-size:9px">Trends</div></div>
+              </div>
+              <div style="position:relative;width:48px;height:48px;border-radius:24px;background:linear-gradient(150deg,#34D399,#0E9F6E);color:#04231A;display:grid;place-items:center;font-size:19px;font-weight:700;flex:none">
+                <div style="position:absolute;inset:0;border-radius:24px;border:2px solid rgba(52,211,153,0.55);animation:pulseRing 2.6s ease-out infinite"></div>✳
+              </div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+    <div data-screen-label="11 SMS lookup" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">11</div><div style="font-size:17px;font-weight:600;color:#3A3555">Find transactions from SMS</div><div style="font-size:13px;color:#7A7596">Scan sheet · reachable from Home, Activity, Settings</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#1B1830;color:#1B1830;display:flex;flex-direction:column;justify-content:flex-end;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:1"></div>
+          <div style="flex:none;border-radius:30px 30px 0 0;background:#FBFAFF;padding:12px 20px 30px;display:flex;flex-direction:column;gap:16px">
+            <div style="align-self:center;width:44px;height:5px;border-radius:3px;background:#DED8F5"></div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:40px;height:40px;border-radius:14px;background:#E4DEFF;color:#4F3FC4;display:grid;place-items:center;font-size:17px">✉</div>
+              <div style="flex:1"><div style="font-size:17px;font-weight:600;letter-spacing:-0.02em">Find transactions from SMS</div><div style="font-size:11px;color:#0E7A56;margin-top:2px">Scanned on this phone · personal messages stay private</div></div>
+            </div>
+            <div style="padding:16px;border-radius:22px;background:#F1FBF6;border:1px solid #C9EEDD;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700;color:#0B4C37">38 transactions found</div><div style="width:26px;height:26px;border-radius:13px;background:#0E7A56;color:#fff;display:grid;place-items:center;font-size:13px">✓</div></div>
+              <div style="font-size:12px;color:#4E7A69">1,240 checked · 27 already known · 0 failed</div>
+              <div style="height:6px;border-radius:3px;background:#D3F2E4;overflow:hidden"><div style="width:100%;height:100%;background:#0E9F6E"></div></div>
+            </div>
+            <div style="padding:14px;border-radius:18px;background:#F6F4FE;font-size:12px;color:#5B5580;line-height:1.5;text-wrap:pretty">Re-scanning never overwrites your edits, confirmations, or deletes — it only looks for new messages.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="height:52px;border-radius:26px;background:#1B1830;color:#fff;font-size:15px;font-weight:600;display:grid;place-items:center">View Activity</div>
+              <div style="height:44px;border-radius:22px;color:#7A7596;font-size:13px;display:grid;place-items:center">Done</div>
+            </div>
+            <div style="height:1px;background:#EFECFA"></div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596">OTHER STATES THIS SHEET HANDLES</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#FFF7E4"><span style="font-size:13px">🔒</span><div style="flex:1;font-size:12px;color:#8A5A00">Permission off → "Allow SMS access" / "Open Android settings" if permanently denied</div></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#F1EFFB"><span style="font-size:13px">↻</span><div style="flex:1;font-size:12px;color:#5B5580">Scanning → live mono counter "412 of 1,240 messages checked", survives navigating away</div></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#FDF2F3"><span style="font-size:13px">!</span><div style="flex:1;font-size:12px;color:#7A211F">Partial failure (gold) → "2 could not be read" + Retry failed messages</div></div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="12 Advanced filters" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">12</div><div style="font-size:17px;font-weight:600;color:#3A3555">Advanced filters</div><div style="font-size:13px;color:#7A7596">Opened from Activity's ⚙ Advanced chip</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#1B1830;color:#1B1830;display:flex;flex-direction:column;justify-content:flex-end;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:1"></div>
+          <div style="flex:none;border-radius:30px 30px 0 0;background:#FBFAFF;padding:12px 20px 30px;display:flex;flex-direction:column;gap:16px;max-height:760px;overflow-y:auto">
+            <div style="align-self:center;width:44px;height:5px;border-radius:3px;background:#DED8F5"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:19px;font-weight:600;letter-spacing:-0.02em">Advanced filters</div><div style="font-size:13px;color:#6D5AE6;font-weight:600">Reset</div></div>
+            <div><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">DATE RANGE</div>
+              <div style="display:flex;gap:8px"><div style="flex:1;height:44px;border-radius:16px;background:#F6F4FE;display:flex;align-items:center;padding:0 12px;font-size:13px">1 Jul 2026</div><div style="flex:1;height:44px;border-radius:16px;background:#F6F4FE;display:flex;align-items:center;padding:0 12px;font-size:13px">23 Jul 2026</div></div>
+            </div>
+            <div><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">AMOUNT</div>
+              <div style="display:flex;gap:8px"><div style="flex:1;height:44px;border-radius:16px;background:#F6F4FE;display:flex;align-items:center;padding:0 12px;font-size:13px;color:#7A7596">Min ₹</div><div style="flex:1;height:44px;border-radius:16px;background:#F6F4FE;display:flex;align-items:center;padding:0 12px;font-size:13px;color:#7A7596">Max ₹</div></div>
+            </div>
+            <div><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">CHANNEL</div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap"><div style="height:32px;padding:0 13px;border-radius:16px;background:#1B1830;color:#fff;font-size:12px;display:flex;align-items:center">UPI</div><div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Card</div><div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Netbanking</div><div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Cash</div></div>
+            </div>
+            <div><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">STATUS</div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap"><div style="height:32px;padding:0 13px;border-radius:16px;background:#FFF0D6;color:#8A5A00;font-size:12px;display:flex;align-items:center">Needs review</div><div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Recurring</div><div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Manual entry</div><div style="height:32px;padding:0 13px;border-radius:16px;background:#F1EFFB;color:#5B5580;font-size:12px;display:flex;align-items:center">Unusual amount</div></div>
+            </div>
+            <div><div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">MERCHANT OR ACCOUNT</div>
+              <div style="height:44px;border-radius:16px;background:#F6F4FE;display:flex;align-items:center;padding:0 12px;font-size:13px;color:#7A7596">Search merchant, account…</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <div style="flex:1;height:50px;border-radius:25px;background:#F1EFFB;color:#5B5580;font-size:14px;font-weight:600;display:grid;place-items:center">Cancel</div>
+              <div style="flex:2;height:50px;border-radius:25px;background:#1B1830;color:#fff;font-size:14px;font-weight:600;display:grid;place-items:center">Show 46 results</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <div data-screen-label="13 Budget editor" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">13</div><div style="font-size:17px;font-weight:600;color:#3A3555">Monthly budget</div><div style="font-size:13px;color:#7A7596">Opened from Home's budget card or Settings</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#1B1830;color:#1B1830;display:flex;flex-direction:column;justify-content:flex-end;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:1"></div>
+          <div style="flex:none;border-radius:30px 30px 0 0;background:#FBFAFF;padding:12px 20px 30px;display:flex;flex-direction:column;gap:18px">
+            <div style="align-self:center;width:44px;height:5px;border-radius:3px;background:#DED8F5"></div>
+            <div style="font-size:19px;font-weight:600;letter-spacing:-0.02em">Monthly budget</div>
+            <div style="text-align:center;padding:20px 0;border-radius:22px;background:#F6F4FE">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:600;letter-spacing:-0.04em">₹48,000</div>
+              <div style="font-size:12px;color:#7A7596;margin-top:4px">for August 2026</div>
+            </div>
+            <div style="font-size:12px;color:#5B5580;line-height:1.5;text-wrap:pretty">Used for "safe to spend" and month-end projection. Change it any time — past months keep their own budget.</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:18px;background:#F6F4FE">
+              <div style="font-size:13px">Effective month</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#4F3FC4;font-weight:600">August 2026 ▾</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div style="flex:1;height:50px;border-radius:25px;background:#F1EFFB;color:#B4322F;font-size:14px;font-weight:600;display:grid;place-items:center">Clear budget</div>
+              <div style="flex:2;height:50px;border-radius:25px;background:#1B1830;color:#fff;font-size:14px;font-weight:600;display:grid;place-items:center">Save</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+    <div data-screen-label="14 Profile" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8E88AD">14</div><div style="font-size:17px;font-weight:600;color:#3A3555">Profile</div><div style="font-size:13px;color:#7A7596">Opened by tapping the avatar on Home</div></div>
+      <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+        <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#F3F1FC;color:#3A3555;display:flex;flex-direction:column;font-family:'Space Grotesk',system-ui,sans-serif">
+          <div style="flex:none;padding:6px 20px 12px;display:flex;align-items:center;justify-content:space-between">
+            <div style="width:32px;height:32px;border-radius:16px;background:#fff;display:grid;place-items:center;font-size:15px;color:#5B5580">←</div>
+            <div style="font-size:15px;font-weight:600">Profile</div>
+            <div style="font-size:13px;color:#6D5AE6;font-weight:600">Edit</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:4px 20px 20px;display:flex;flex-direction:column;gap:16px">
+
+            <div style="flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 4px">
+              <div style="position:relative;width:88px;height:88px;border-radius:50%;background:linear-gradient(150deg,#6D5AE6,#A78BFA);display:grid;place-items:center;font-size:32px;font-weight:700;color:#fff">
+                SM
+                <div style="position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:13px;background:#1B1830;color:#E8B54D;display:grid;place-items:center;font-size:12px;border:3px solid #F3F1FC">✦</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Shivay Mehta</div>
+                <div style="font-size:12px;color:#7A7596;margin-top:2px">On PaisaTrack since Mar 2025</div>
+              </div>
+            </div>
+
+            <div style="flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+              <div style="padding:14px 10px;border-radius:20px;background:#fff;text-align:center">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:#8A5A00">6</div>
+                <div style="font-size:10.5px;color:#7A7596;margin-top:3px">day streak</div>
+              </div>
+              <div style="padding:14px 10px;border-radius:20px;background:#fff;text-align:center">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:#4F3FC4">17</div>
+                <div style="font-size:10.5px;color:#7A7596;margin-top:3px">months tracked</div>
+              </div>
+              <div style="padding:14px 10px;border-radius:20px;background:#fff;text-align:center">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:#0E7A56">1,842</div>
+                <div style="font-size:10.5px;color:#7A7596;margin-top:3px">sorted by hand</div>
+              </div>
+            </div>
+
+            <div style="flex:none;border-radius:24px;padding:18px;background:linear-gradient(160deg,#123227,#0C1F19);color:#ECF4F1">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#7FD9B6;font-weight:600">Lifetime kept</div>
+                <div style="height:24px;padding:0 9px;border-radius:12px;background:rgba(52,211,153,0.18);color:#7FE8C4;font-size:10px;display:flex;align-items:center">17 months</div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;letter-spacing:-0.04em;margin-top:8px">₹2,84,600</div>
+              <div style="font-size:12px;color:#A9C4BB;margin-top:6px;text-wrap:pretty">Best streak was 23 days straight in November.</div>
+            </div>
+
+            <div style="flex:none">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.04em;color:#7A7596;margin-bottom:8px">BADGES</div>
+              <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:2px">
+                <div style="flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <div style="width:56px;height:56px;border-radius:18px;background:#FFF0D6;color:#8A5A00;display:grid;place-items:center;font-size:22px">✦</div>
+                  <div style="font-size:10px;color:#5B5580;text-align:center;line-height:1.3">7‑day streak</div>
+                </div>
+                <div style="flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <div style="width:56px;height:56px;border-radius:18px;background:#F1FBF6;color:#0E7A56;display:grid;place-items:center;font-size:22px">◎</div>
+                  <div style="font-size:10px;color:#5B5580;text-align:center;line-height:1.3">Inbox zero ×10</div>
+                </div>
+                <div style="flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <div style="width:56px;height:56px;border-radius:18px;background:#EEE9FF;color:#4F3FC4;display:grid;place-items:center;font-size:22px">◍</div>
+                  <div style="font-size:10px;color:#5B5580;text-align:center;line-height:1.3">Under budget ×3</div>
+                </div>
+                <div style="flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0.4">
+                  <div style="width:56px;height:56px;border-radius:18px;background:#F1EFFB;color:#8E88AD;display:grid;place-items:center;font-size:22px">?</div>
+                  <div style="font-size:10px;color:#8E88AD;text-align:center;line-height:1.3">Locked</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="flex:none;border-radius:24px;background:#fff;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #F3F1FC">
+                <div style="width:34px;height:34px;border-radius:12px;background:#EEE9FF;color:#4F3FC4;display:grid;place-items:center;font-size:14px">◔</div>
+                <div style="flex:1;font-size:14px">Recurring &amp; subscriptions</div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #F3F1FC">
+                <div style="width:34px;height:34px;border-radius:12px;background:#D9EFFC;color:#0369A1;display:grid;place-items:center;font-size:14px">◱</div>
+                <div style="flex:1;font-size:14px">Accounts &amp; cards</div>
+                <div style="font-size:11px;color:#7A7596">2 linked</div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #F3F1FC">
+                <div style="width:34px;height:34px;border-radius:12px;background:#FBE3FE;color:#A21CAF;display:grid;place-items:center;font-size:14px">◍</div>
+                <div style="flex:1;font-size:14px">Categories</div>
+                <div style="font-size:11px;color:#7A7596">18 in use</div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px">
+                <div style="width:34px;height:34px;border-radius:12px;background:#F1EFFB;color:#5B5580;display:grid;place-items:center;font-size:14px">⚙</div>
+                <div style="flex:1;font-size:14px">Settings</div>
+                <div style="font-size:15px;color:#B8B2D6">›</div>
+              </div>
+            </div>
+
+            <div style="flex:none;padding:14px 16px;border-radius:18px;background:#F1FBF6;border:1px solid #C9EEDD;display:flex;gap:10px;align-items:center">
+              <div style="width:28px;height:28px;border-radius:10px;background:#0E7A56;color:#fff;display:grid;place-items:center;font-size:13px">◎</div>
+              <div style="flex:1;font-size:12px;color:#0E5B41;text-wrap:pretty">Your profile lives only on this phone. Nothing here is uploaded or shared.</div>
+            </div>
+
+            <div style="flex:none;text-align:center;padding:6px 0 4px;font-size:13px;color:#B4322F;font-weight:600">Sign out</div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+  </div>
+</div></x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1100}}"></script>
+</body>
+</html>

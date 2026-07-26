@@ -15,7 +15,12 @@ on-device. No cloud inference path exists.
   SQL-aggregated dashboard analytics, and a grounded local assistant.
 - User labels for merchant/VPA aliases and masked payment-source management,
   including owned-transfer and analytics-exclusion rules.
-- Encrypted backup/import and complete local-data deletion.
+- Encrypted backup/import and database/key reset.
+
+The current Bloom worktree is not production-ready. Release blockers and the
+verified feature matrix are tracked in
+[Product status](docs/product-status.md); notably, native notification/model
+state is not yet covered by Delete everything.
 
 ## Future development
 
@@ -36,11 +41,13 @@ Git history is the archive.
 ## Project documentation
 
 - [Architecture](docs/architecture.md)
+- [Product status](docs/product-status.md)
 - [Schema](docs/schema.md)
 - [Privacy](docs/privacy.md)
 - [Design system](docs/design-system.md)
 - [Development rules](docs/development.md)
 - [Durable decisions](docs/decisions/)
+- [Active work](TASKS.md)
 
 ## Local setup
 

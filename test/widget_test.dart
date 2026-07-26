@@ -124,4 +124,7 @@ class _DelayedSmsPermissionGate implements SmsPermissionGate {
 
   @override
   Future<SmsPermissionStatus> request() async => SmsPermissionStatus.denied;
+
+  @override
+  Future<void> openAppSettings() async {}
 }

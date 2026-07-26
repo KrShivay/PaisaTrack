@@ -1,64 +1,54 @@
 # Current Handoff
 
-This is a rolling handoff, not an append-only project history. Keep only the
-latest three development entries; Git history retains older evidence.
+This is a rolling handoff, not a project history. Current product state is in
+`docs/product-status.md`; unfinished work is in `TASKS.md`.
 
-## 2026-07-17 — Device-test blocker fixes (@claude)
+## 2026-07-26 — Full product/code/documentation audit
 
-- S0/S1 payment_sources crash: bumped schema to v6 with a non-destructive
-  repair (`_repairPaymentSourcesV6`) that backfills NULLs, rescales millisecond
-  datetimes, and drops/recreates the source trigger; the v5 backfill and
-  trigger now write seconds and `is_active`. Regression fixture added
-  (`app_database_v6_payment_source_repair_test.dart`). Fixes the unusable
-  Transactions and Accounts screens without clearing data.
-- S1 assistant: `_matchCategory` resolves single distinctive tokens ("food" →
-  "Food & Dining") and fails closed on shared tokens; test added.
-- S1 lockout: `continueWithoutSmsProvider` routes a declining user into
-  HomeShell with a persistent dashboard permission banner; onboarding gained a
-  "Continue without SMS access" action; tests added.
-- S2/S3: Categories FAB tooltip; large-text stat cards wrap labels and scale
-  amounts; Accounts screen logs the raw error and shows a safe retry.
-- Filed fixes as T-111..T-114 (In Review, need device QA) and remaining
-  follow-ups T-115..T-120 (profiling, review/label scaling, recurring
-  diagnostics, menu backdrop, large-text tests).
-- Not runnable here: the bundled Flutter SDK is macOS-only, so `flutter
-  analyze`/tests and device QA must run on the developer machine.
+- Audited actual Flutter, Android, Keystore, capture, data, intelligence, and UI
+  behavior with GitNexus plus parallel product, architecture/docs, and
+  data/security reviews.
+- Highest-risk gaps: fabricated/mixed-period dashboard guidance, failure-as-empty
+  state, broken permanent SMS permission recovery, false/optimistic Sort
+  completion, generic-error destructive recovery, incomplete erasure,
+  asynchronous/racy DB-key persistence, and debug-signed releases.
+- Created `docs/product-status.md` as the current-state source of truth.
+- Rebuilt `TASKS.md` with one machine-readable workflow structure, removed
+  completed T-109/T-110 work, narrowed T-108 to its actual residual scope, and
+  mapped every active gap to module/dependency/priority/next action.
+- Archived superseded reviews and migration plans after extracting unfinished
+  work.
 
-## 2026-07-16 — Independent code review of the full application (@claude)
+## 2026-07-26 — Bloom capability restoration
 
-- Reviewed all of lib/ and the Android capture/keystore code. Core verdict:
-  architecture, privacy handling, and test discipline are sound; defects are
-  concentrated in the new incremental catch-up, decision policy, and unbounded
-  query patterns.
-- Filed groomed fixes as T-105..T-110 in `TASKS.md`. T-104 device QA now
-  depends on T-105 (catch-up StateError on empty/single-page inboxes,
-  dead-process SMS drop); T-103 depends on T-107 (bounded queries).
-- Deleted `PROJECT_STATUS_REPORT.md` (unreferenced; duplicated README and
-  TASKS.md content).
+- Restored period selection, SMS lookup, transaction correction/notes/evidence,
+  Review list scaffolding, settings budget/show-paise/backup controls, recurring
+  statuses, HDFC/ICICI templates, correction matching, and backup v3 coverage.
+- Remaining gaps are not cosmetic: several demo values still write real state,
+  primary lists are bounded client-side, and accessibility/error semantics are
+  incomplete. See T-121..T-130.
 
-## 2026-07-16 — T-105, T-106, and T-107 correctness/scale fixes
+## 2026-07-17 — Database/onboarding repair work
 
-- Incremental catch-up now handles null terminal cursors and scans a bounded
-  overlap beyond the first known SMS to recover recent live-ingest gaps.
-- Seen VPA counterparties can auto-classify through the normal confidence
-  policy; unseen VPAs still fail closed, and generic parsing no longer extracts
-  ordinary email addresses as VPAs.
-- Imports commit once per inbox page; known-id reads select identifiers only;
-  ask/familiarity counts and dashboard aggregates run in SQL; transaction feeds
-  page in 100-row increments with a six-row dashboard query.
+- Added non-destructive payment-source v6/v7 repair migrations, single-token
+  assistant category matching, continue-without-SMS, and selected
+  accessibility/error fixes.
+- Host tests now cover the migrations and paths; physical-device acceptance for
+  payment-source upgrade, permission recovery, SMS capture, and accessibility
+  remains open.
 
 ## Verification
 
-- 2026-07-16 (pre-device): `flutter analyze --no-pub` clean; full suite
-  357/357; focused T-105..T-107 suite 52/52; `git diff --check` clean.
-- 2026-07-17 device-test fixes: NOT verified in-session — the bundled Flutter
-  SDK is macOS-only and cannot run in this Linux workspace. Before commit, run
-  on the developer machine: `flutter analyze --no-pub`; the new
-  `app_database_v6_payment_source_repair_test.dart`, assistant classifier, and
-  onboarding tests; the full suite; and re-run device QA for T-111..T-114.
+- `rtk proxy ./.tooling/flutter/bin/flutter test --no-pub --concurrency=1`:
+  490/490 passed.
+- `./gradlew :app:testDebugUnitTest
+  :paisatrack_keystore:testDebugUnitTest`: passed.
+- `rtk proxy ./.tooling/flutter/bin/flutter analyze --no-pub`: one lint at
+  `test/features/insights/insights_recurring_test.dart:102`.
+- GitNexus taint enumeration unavailable because the current index has no PDG
+  layer; do not treat this as a clean security result.
 
 ## Next action
 
-Verify and QA T-111..T-114 on device (payment_sources repair, assistant
-category, denied-permission routing, accessibility). Then resume T-108 and the
-T-115..T-120 follow-ups.
+Implement T-121 (dashboard truthfulness), then T-122/T-123/T-124/T-125.
+Physical-device QA for T-111/T-113/T-114 remains independent and required.

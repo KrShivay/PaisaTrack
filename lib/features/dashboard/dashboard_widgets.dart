@@ -7,10 +7,11 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/widgets/bloom/bloom.dart';
-import '../../core/undo/undo_controller.dart';
+import '../../data/db/database.dart' show Insight;
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/budget_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../insights/insights_screen.dart';
 import '../settings/app_settings.dart';
 import 'dashboard_providers.dart';
 
@@ -515,51 +516,108 @@ class BloomBudgetCard extends ConsumerWidget {
 class _SetBudgetCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColorTokens.bloomCard,
-        borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 28,
-            color: AppColorTokens.violetPrimary,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Set monthly budget',
-                  style: AppTheme.bloomDisplay(14, FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Unlocks safe-today calculation and progress ring.',
-                  style: AppTheme.bloomDisplay(
-                    12,
-                    FontWeight.w400,
-                    color: AppColorTokens.inkTertiary,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => _showBudgetInput(context, ref),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColorTokens.bloomCard,
+          borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.account_balance_wallet_outlined,
+              size: 28,
+              color: AppColorTokens.violetPrimary,
             ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final repo = await ref.read(budgetRepositoryProvider.future);
-              await repo.setMonthlyBudget(48000.0);
-              ref.invalidate(monthlyBudgetProvider);
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Set monthly budget',
+                    style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Unlocks safe-today calculation and progress ring.',
+                    style: AppTheme.bloomDisplay(
+                      12,
+                      FontWeight.w400,
+                      color: AppColorTokens.inkTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColorTokens.inkTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showBudgetInput(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set Monthly Budget'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: const InputDecoration(
+              prefixText: '₹ ',
+              hintText: 'Enter amount',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Enter an amount';
+              }
+              final parsed = double.tryParse(value.trim());
+              if (parsed == null || parsed <= 0) {
+                return 'Enter a positive number';
+              }
+              if (parsed > 10000000) {
+                return 'Maximum ₹1 crore';
+              }
+              return null;
             },
-            child: const Text('Set ₹48k'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(context)
+                    .pop(double.parse(controller.text.trim()));
+              }
+            },
+            child: const Text('Save'),
           ),
         ],
       ),
     );
+
+    if (amount == null) return;
+    final repo = await ref.read(budgetRepositoryProvider.future);
+    await repo.setMonthlyBudget(amount);
+    ref.invalidate(monthlyBudgetProvider);
   }
 }
 
@@ -695,44 +753,25 @@ class _CategoryRow extends StatelessWidget {
   }
 }
 
-/// Gold insight card with 1-tap cap action.
-class BloomInsightCard extends ConsumerStatefulWidget {
+/// Data-driven insight card that renders only persisted, evidence-backed insights.
+///
+/// Shows nothing when there are no active insights. Never displays fabricated
+/// merchant names, amounts, or percentages.
+class BloomInsightCard extends ConsumerWidget {
   const BloomInsightCard({super.key});
 
   @override
-  ConsumerState<BloomInsightCard> createState() => _BloomInsightCardState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final insightsAsync = ref.watch(activeInsightsProvider);
+    final insights = insightsAsync.valueOrNull ?? const [];
+    if (insights.isEmpty) return const SizedBox.shrink();
 
-class _BloomInsightCardState extends ConsumerState<BloomInsightCard> {
-  bool _dismissedOrApplied = false;
-
-  @override
-  Widget build(BuildContext context) {
-    if (_dismissedOrApplied) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomGold.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              size: 18,
-              color: AppColorTokens.bloomGold,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Cap set · ₹2,000/week',
-              style: AppTheme.bloomDisplay(12, FontWeight.w600),
-            ),
-          ],
-        ),
-      );
-    }
-
+    final insight = insights.first;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final title = _insightTitle(insight);
+    final subtitle = _insightSubtitle(insight);
+
+    if (title == null) return const SizedBox.shrink();
 
     final bg = isDark
         ? AppColorTokens.bloomGold.withValues(alpha: 0.14)
@@ -772,7 +811,7 @@ class _BloomInsightCardState extends ConsumerState<BloomInsightCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Blinkit is up 62% this month',
+                  title,
                   style: AppTheme.bloomDisplay(
                     13,
                     FontWeight.w700,
@@ -781,64 +820,49 @@ class _BloomInsightCardState extends ConsumerState<BloomInsightCard> {
                         : const Color(0xFF3D2E06),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Nine orders already. Cap it at ₹2,000 a week?',
-                  style: AppTheme.bloomDisplay(
-                    12,
-                    FontWeight.w400,
-                    color: isDark
-                        ? AppColorTokens.bloomDarkTextSecondary
-                        : const Color(0xFF7E6A45),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () async {
-                    setState(() {
-                      _dismissedOrApplied = true;
-                    });
-                    final repo =
-                        await ref.read(budgetRepositoryProvider.future);
-                    await repo.setMerchantCap('Blinkit', 2000.0);
-                    ref.read(undoControllerProvider.notifier).pushUndo(
-                          UndoToken(
-                            id: 'cap_blinkit',
-                            message: 'Blinkit cap set at ₹2,000/week',
-                            undoAction: () async {
-                              await repo.removeMerchantCap('Blinkit');
-                              if (mounted) {
-                                setState(() {
-                                  _dismissedOrApplied = false;
-                                });
-                              }
-                            },
-                          ),
-                        );
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColorTokens.ink,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Sure',
-                      style: AppTheme.bloomDisplay(
-                        12,
-                        FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTheme.bloomDisplay(
+                      12,
+                      FontWeight.w400,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : const Color(0xFF7E6A45),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String? _insightTitle(Insight insight) {
+    switch (insight.kind) {
+      case 'fees_total':
+        return 'Fees & Charges Alert';
+      case 'spike':
+        return 'Spending Spike Detected';
+      case 'trend_up':
+        return 'Spending Trending Up';
+      case 'trend_down':
+        return 'Spending Trending Down';
+      default:
+        return null;
+    }
+  }
+
+  String? _insightSubtitle(Insight insight) {
+    switch (insight.kind) {
+      case 'fees_total':
+        return 'Review your fees for ${insight.period}';
+      default:
+        return 'Check your ${insight.period} spending patterns';
+    }
   }
 }
 

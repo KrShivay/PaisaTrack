@@ -1,5 +1,17 @@
 # SMS Templates
 
+## Implemented registries
+
+Bundled deterministic templates currently include SBI, Axis, Central Bank,
+Kotak, HDFC, ICICI, IndusInd, and Paytm sender families. HDFC and ICICI have
+sanitized fixture coverage under `test/fixtures/sms/hdfcbk/` and
+`test/fixtures/sms/icicib/`.
+
+Sender recognition is still incomplete: Android filters unknown senders before
+Dart sees them, and no release-safe unknown-sender counter exists yet. T-108's
+remaining scope is diagnostics and additional evidence-backed bank coverage,
+not the already-landed HDFC/ICICI templates.
+
 Templates live in `assets/templates/*.json`. Do not invent formats; add only
 sanitized, real fixture-backed variants (`test/fixtures/sms/<bank>/`).
 

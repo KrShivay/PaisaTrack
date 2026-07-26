@@ -1,4 +1,4 @@
-# Code Review — `codex/t108-bank-capture-coverage`
+# Archived code review — `codex/t108-bank-capture-coverage`
 
 **Reviewed:** 12 tasks, 31 files, +1315/−151 (`8d5f352..e1cf456`)
 **Verdict:** **Request Changes** — 3 CRITICAL, 20 MAJOR

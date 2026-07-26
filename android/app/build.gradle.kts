@@ -5,6 +5,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = java.util.Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.paisatrack"
     compileSdk = flutter.compileSdkVersion
@@ -26,11 +32,37 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = keystoreProperties.getProperty("storeFile") ?: System.getenv("KEYSTORE_STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = keystoreProperties.getProperty("storePassword") ?: System.getenv("KEYSTORE_STORE_PASSWORD")
+                keyAlias = keystoreProperties.getProperty("keyAlias") ?: System.getenv("KEYSTORE_KEY_ALIAS")
+                keyPassword = keystoreProperties.getProperty("keyPassword") ?: System.getenv("KEYSTORE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            val hasReleaseStore = keystoreProperties.getProperty("storeFile") != null || System.getenv("KEYSTORE_STORE_FILE") != null
+            val isReleaseBuildRequested = gradle.startParameter.taskNames.any {
+                it.contains("Release", ignoreCase = true) || it.contains("bundle", ignoreCase = true)
+            }
+
+            if (hasReleaseStore) {
+                signingConfig = signingConfigs.getByName("release")
+            } else if (isReleaseBuildRequested) {
+                throw GradleException(
+                    "Production release signing is not configured. " +
+                    "Please set up keystore.properties (see android/keystore.properties.example) " +
+                    "or supply KEYSTORE_* environment variables. See docs/release-signing.md for details."
+                )
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+
             isMinifyEnabled = true
             isShrinkResources = true
 

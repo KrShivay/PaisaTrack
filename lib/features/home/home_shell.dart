@@ -10,6 +10,8 @@ import '../insights/insights_screen.dart';
 import '../review/weekly_review_screen.dart';
 import '../transactions/transactions_screen.dart';
 
+import '../dashboard/dashboard_providers.dart';
+
 /// Post-onboarding Bloom app shell with 4 fixed destinations and floating nav pill.
 ///
 /// Destinations:
@@ -120,6 +122,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    ref.listen<int>(homeTabControllerProvider, (previous, next) {
+      if (next != _currentIndex && next >= 0 && next < _tabs.length) {
+        _onTabTapped(next);
+      }
+    });
 
     return PopScope(
       canPop: false,

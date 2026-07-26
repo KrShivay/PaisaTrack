@@ -40,7 +40,7 @@ void main() {
       final database = AppDatabase(NativeDatabase.memory());
       await pumpDashboard(tester, database);
 
-      expect(find.text('Hey Shivay'), findsOneWidget);
+      expect(find.textContaining('Good '), findsOneWidget);
       expect(find.textContaining('streak'), findsOneWidget);
       expect(find.byType(BloomMascot), findsOneWidget);
 
@@ -82,20 +82,15 @@ void main() {
       await database.close();
     });
 
-    testWidgets('insight card 1-tap Sure sets cap and pushes undo token',
+    testWidgets('insight card renders nothing when no insights exist',
         (tester) async {
       final database = AppDatabase(NativeDatabase.memory());
       await pumpDashboard(tester, database);
 
-      final sureButton = find.text('Sure');
-      expect(sureButton, findsOneWidget);
-
-      await tester.ensureVisible(sureButton);
-      await tester.tap(sureButton);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.textContaining('Cap set · ₹2,000/week'), findsWidgets);
+      // No fabricated insight strings
+      expect(find.textContaining('Blinkit'), findsNothing);
+      expect(find.text('Sure'), findsNothing);
+      expect(find.textContaining('Cap set'), findsNothing);
 
       await database.close();
     });

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/app.dart';
 import 'package:paisatrack/core/crypto/database_cipher.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/features/recovery/database_error_screen.dart';
 import 'package:paisatrack/features/recovery/key_loss_screen.dart';
 import 'package:paisatrack/features/settings/app_data_reset_service.dart';
 
@@ -67,7 +68,7 @@ void main() {
     expect(fakeReset.deleteCalls, 1);
   });
 
-  testWidgets('app routes to KeyLossScreen on generic database error',
+  testWidgets('app routes to DatabaseErrorScreen on generic database error',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -83,6 +84,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(KeyLossScreen), findsOneWidget);
+    expect(find.byType(DatabaseErrorScreen), findsOneWidget);
+    expect(find.byType(KeyLossScreen), findsNothing);
   });
 }

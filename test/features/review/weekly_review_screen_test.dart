@@ -66,6 +66,7 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 200));
   }
 
   testWidgets('shows Inbox Zero when review queue is empty', (tester) async {

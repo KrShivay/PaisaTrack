@@ -11,6 +11,7 @@ import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../sms/sms_lookup_sheet.dart';
 import 'manual_entry_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'transactions_providers.dart';
@@ -80,7 +81,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         final name = item.displayName.toLowerCase();
         final note = (item.note ?? '').toLowerCase();
         final amt = item.amount.toString();
-        if (!name.contains(q) && !note.contains(q) && !amt.contains(q)) {
+        final channel = item.channel.toLowerCase();
+        final ref = (item.reference ?? '').toLowerCase();
+        final status = item.status.toLowerCase();
+        final account = (item.accountHint ?? '').toLowerCase();
+        final category = (item.categoryName ?? '').toLowerCase();
+        final source = (item.paymentSourceName ?? '').toLowerCase();
+        final merchant = (item.merchantRaw ?? '').toLowerCase();
+        if (!name.contains(q) &&
+            !note.contains(q) &&
+            !amt.contains(q) &&
+            !channel.contains(q) &&
+            !ref.contains(q) &&
+            !status.contains(q) &&
+            !account.contains(q) &&
+            !category.contains(q) &&
+            !source.contains(q) &&
+            !merchant.contains(q)) {
           return false;
         }
       }
@@ -320,7 +337,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               child: rawListAsync.isLoading && filtered.isEmpty
                   ? const Center(child: BloomSkeleton(width: 280, height: 160))
                   : filtered.isEmpty
-                      ? _EmptyState(isDark: isDark, query: _query)
+                      ? _EmptyState(
+                          isDark: isDark,
+                          query: _query,
+                          onClearFilters: () {
+                            setState(() {
+                              _query = '';
+                              _searchController.clear();
+                              _activeFilter = ActivityFilterChoice.all;
+                            });
+                          },
+                        )
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
                           itemCount: grouped.length,
@@ -655,13 +682,20 @@ class _DismissibleTransactionRow extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.isDark, required this.query});
+  const _EmptyState({
+    required this.isDark,
+    required this.query,
+    this.onClearFilters,
+  });
 
   final bool isDark;
   final String query;
+  final VoidCallback? onClearFilters;
 
   @override
   Widget build(BuildContext context) {
+    final isFiltered = query.isNotEmpty;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -669,7 +703,9 @@ class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.search_off_rounded,
+              isFiltered
+                  ? Icons.search_off_rounded
+                  : Icons.receipt_long_outlined,
               size: 48,
               color: isDark
                   ? AppColorTokens.bloomDarkTextTertiary
@@ -677,18 +713,76 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              query.isNotEmpty
+              isFiltered
                   ? 'No transactions matching "$query"'
                   : 'No transactions found',
               style: AppTheme.bloomDisplay(
-                14,
-                FontWeight.w500,
+                15,
+                FontWeight.w600,
+                color: isDark
+                    ? AppColorTokens.bloomDarkTextPrimary
+                    : AppColorTokens.ink,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isFiltered
+                  ? 'Try clearing your search or filter keywords'
+                  : 'Scan your SMS inbox for payment alerts or add a transaction manually.',
+              style: AppTheme.bloomDisplay(
+                12,
+                FontWeight.w400,
                 color: isDark
                     ? AppColorTokens.bloomDarkTextSecondary
                     : AppColorTokens.inkSecondary,
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 20),
+            if (isFiltered)
+              OutlinedButton(
+                onPressed: onClearFilters,
+                child: const Text('Clear filters'),
+              )
+            else
+              Column(
+                children: [
+                  FilledButton.icon(
+                    icon: const Icon(Icons.sms_rounded, size: 18),
+                    label: const Text('Find transactions from SMS'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColorTokens.violetPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                    ),
+                    onPressed: () {
+                      showBloomModalSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => const SmsLookupSheet(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Add one manually'),
+                    onPressed: () {
+                      showBloomModalSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => const FractionallySizedBox(
+                          heightFactor: 0.88,
+                          child: ManualEntryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
           ],
         ),
       ),

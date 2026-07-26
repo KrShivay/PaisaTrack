@@ -14,6 +14,10 @@ access, intelligence, and UI state.
 5. Riverpod providers expose transactions, review queues, analytics, recurring
    series, insights, settings, and assistant results.
 
+The presentation layer is a four-tab Bloom shell (Home, Activity, Sort, Trends)
+with an Ask sheet and secondary task sheets/pages. `docs/product-status.md`
+records which Bloom paths are complete and which remain unsafe or partial.
+
 ## Capture
 
 - `SmsReceiver` handles live messages.
@@ -78,6 +82,20 @@ merges without replacing raw source fields.
 - Anomaly, forecast, and insight engines are deterministic.
 - Nightly work purges expired raw SMS, refreshes recurring/baseline/classifier
   state, and recomputes insights with checkpoints.
+
+Current boundaries that must be preserved while fixing the UI:
+
+- SQL aggregates are the only valid source for full-period totals. A loading or
+  failed aggregate must not fall back to the bounded 100-row Activity feed.
+- Current-month budget guidance is not valid for a historical/custom period.
+- Empty financial state is shown only after a successful empty query; loading
+  and failure remain distinct states.
+- The global monthly-budget/merchant-cap implementation is a prototype stored
+  in `baselines`, not the planned category-budget domain.
+
+Known scale limits are the 100-row Activity and Review windows, client-side
+payee aggregation, quadratic owned-transfer reconciliation, and whole-archive
+backup materialization. Their fixes are mapped in `TASKS.md`.
 
 Refund links, source inclusion rules, and statement reconciliation must feed a
 single explained spending-total contract before budgets consume those totals.

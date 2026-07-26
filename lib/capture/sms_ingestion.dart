@@ -116,9 +116,15 @@ class SmsBatchIngestResult {
   const SmsBatchIngestResult({
     required this.succeededIds,
     required this.failed,
+    this.createdTxnIds = const {},
+    this.alreadyKnownIds = const {},
+    this.failedIds = const {},
   });
 
   final Set<String> succeededIds;
+  final Set<String> createdTxnIds;
+  final Set<String> alreadyKnownIds;
+  final Set<String> failedIds;
   final int failed;
 }
 
