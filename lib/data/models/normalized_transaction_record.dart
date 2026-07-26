@@ -22,6 +22,7 @@ class NormalizedTransactionRecord {
   });
 
   final double amount;
+  int get amountPaise => (amount * 100).round();
   final TransactionDirection direction;
   final TransactionChannel channel;
   final String? merchantRaw;
