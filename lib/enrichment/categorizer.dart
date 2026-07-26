@@ -37,16 +37,51 @@ class CategorizationResult {
 ///
 /// The classifier (step 2) and on-device LLM (step 4) are later phases and
 /// slot between these without changing the contract.
+typedef MerchantMemoryResolver = Future<CategorizationResult?> Function({
+  String? merchantRaw,
+  String? counterpartyVpa,
+});
+
+/// Computes Laplace-smoothed agreement across confirmed categories for a merchant (T-140a).
+CategorizationResult? computeMerchantMemoryHit({
+  required Map<String, int> confirmedCategoryCounts,
+}) {
+  final n = confirmedCategoryCounts.values.fold<int>(0, (sum, c) => sum + c);
+  if (n < 2) return null;
+
+  final K = confirmedCategoryCounts.length;
+  var winningCategory = '';
+  var maxCount = 0;
+  for (final entry in confirmedCategoryCounts.entries) {
+    if (entry.value > maxCount) {
+      maxCount = entry.value;
+      winningCategory = entry.key;
+    }
+  }
+
+  final k = maxCount;
+  final agreement = (k + 1) / (n + K);
+  final confidence = 0.95 * agreement;
+
+  return CategorizationResult(
+    categoryId: winningCategory,
+    confidence: confidence,
+    source: 'merchant_memory',
+  );
+}
+
 class Categorizer {
   const Categorizer({
     required RuleRepository rules,
     required SeedCategoryMap seedMap,
     LocalClassifier? classifier,
     Future<double> Function(String categoryId)? classifierThreshold,
+    MerchantMemoryResolver? merchantMemory,
   })  : _rules = rules,
         _seedMap = seedMap,
         _classifier = classifier,
-        _classifierThreshold = classifierThreshold;
+        _classifierThreshold = classifierThreshold,
+        _merchantMemory = merchantMemory;
 
   static const seedConfidence = 0.8;
   static const fallbackConfidence = 0.3;
@@ -56,6 +91,7 @@ class Categorizer {
   final SeedCategoryMap _seedMap;
   final LocalClassifier? _classifier;
   final Future<double> Function(String categoryId)? _classifierThreshold;
+  final MerchantMemoryResolver? _merchantMemory;
 
   /// Runs the ladder for one parsed record. Rules always win.
   Future<CategorizationResult> categorize(
@@ -73,6 +109,16 @@ class Categorizer {
         source: 'rule',
         ruleId: rule.id,
       );
+    }
+
+    if (_merchantMemory != null) {
+      final memoryHit = await _merchantMemory(
+        merchantRaw: record.merchantRaw,
+        counterpartyVpa: record.counterpartyVpa,
+      );
+      if (memoryHit != null && memoryHit.confidence >= 0.70) {
+        return memoryHit;
+      }
     }
 
     final prediction = await _classifier?.predict(
