@@ -69,6 +69,20 @@ class CounterpartyKeyParser {
     String? vpa,
     String? merchantRaw,
   }) {
+    if (merchantRaw != null && merchantRaw.isNotEmpty) {
+      // Card descriptor: strip trailing store numbers & city names
+      var normalized = merchantRaw.toUpperCase().trim();
+      normalized = normalized.replaceAll(RegExp(r'\s+\d{3,}\b'), ''); // Strip trailing store numbers (e.g. 4471)
+      normalized = normalized.replaceAll(RegExp(r'\s+(BANGALORE|MUMBAI|DELHI|GURGAON|HYDERABAD|CHENNAI|KOLKATA|PUNE)\b'), ''); // Strip trailing city
+      final cleanKey = normalized.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
+      return CounterpartyIdentity(
+        identityKey: 'MERCHANT_$cleanKey',
+        kind: CounterpartyKind.merchant,
+        displayName: merchantRaw.trim(),
+      );
+    }
+
     if (vpa != null && vpa.contains('@')) {
       final parts = vpa.split('@');
       final localPart = parts[0].trim();
@@ -122,20 +136,6 @@ class CounterpartyKeyParser {
         kind: kind,
         inferredName: localPart,
         pspFamily: psp,
-      );
-    }
-
-    if (merchantRaw != null && merchantRaw.isNotEmpty) {
-      // Card descriptor: strip trailing store numbers & city names
-      var normalized = merchantRaw.toUpperCase().trim();
-      normalized = normalized.replaceAll(RegExp(r'\s+\d{3,}\b'), ''); // Strip trailing store numbers (e.g. 4471)
-      normalized = normalized.replaceAll(RegExp(r'\s+(BANGALORE|MUMBAI|DELHI|GURGAON|HYDERABAD|CHENNAI|KOLKATA|PUNE)\b'), ''); // Strip trailing city
-      final cleanKey = normalized.replaceAll(RegExp(r'[^A-Z0-9]'), '');
-
-      return CounterpartyIdentity(
-        identityKey: 'MERCHANT_$cleanKey',
-        kind: CounterpartyKind.merchant,
-        displayName: merchantRaw.trim(),
       );
     }
 

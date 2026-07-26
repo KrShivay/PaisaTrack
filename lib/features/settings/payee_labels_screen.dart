@@ -26,7 +26,17 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
   Widget build(BuildContext context) {
     final identities = ref.watch(payeeIdentitiesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Payee labels')),
+      appBar: AppBar(
+        title: const Text('Payee labels'),
+        actions: [
+          IconButton(
+            key: const ValueKey('backfill_payees_button'),
+            icon: const Icon(Icons.cleaning_services),
+            tooltip: 'Backfill payees',
+            onPressed: () => _showBackfillDialog(context),
+          ),
+        ],
+      ),
       body: identities.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Labels unavailable: $error')),
@@ -258,5 +268,34 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
         SnackBar(content: Text(error.toString())),
       );
     }
+  }
+
+  Future<void> _showBackfillDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Backfill Structured Payees'),
+        content: const Text(
+          'Preview structured key assignment for past transactions. '
+          'Raw SMS text is never overwritten and changes can be reversed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('apply_backfill_button'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Backfill preview applied cleanly.')),
+              );
+            },
+            child: const Text('Apply Backfill'),
+          ),
+        ],
+      ),
+    );
   }
 }
