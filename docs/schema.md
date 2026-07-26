@@ -58,3 +58,8 @@ to store verifying span evidence (`FieldEvidence`) linking extracted amounts,
 directions, and timestamps back to verbatim source text. Existing rows read back
 with null evidence. Regression fixture:
 `test/data/db/app_database_v8_migration_test.dart`.
+
+Schema v9 adds `lifecycle_state` (default `'settled'`), `lifecycle_reason`, and `message_kind`
+columns to `transactions` table (T-132a) and creates an index `idx_transactions_lifecycle_state`.
+Existing rows backfill `lifecycle_state` to `'settled'`. Regression fixture:
+`test/data/db/app_database_v9_migration_test.dart`.

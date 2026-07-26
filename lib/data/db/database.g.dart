@@ -2105,6 +2105,26 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> evidenceJson = GeneratedColumn<String>(
       'evidence_json', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _lifecycleStateMeta =
+      const VerificationMeta('lifecycleState');
+  @override
+  late final GeneratedColumn<String> lifecycleState = GeneratedColumn<String>(
+      'lifecycle_state', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('settled'));
+  static const VerificationMeta _lifecycleReasonMeta =
+      const VerificationMeta('lifecycleReason');
+  @override
+  late final GeneratedColumn<String> lifecycleReason = GeneratedColumn<String>(
+      'lifecycle_reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _messageKindMeta =
+      const VerificationMeta('messageKind');
+  @override
+  late final GeneratedColumn<String> messageKind = GeneratedColumn<String>(
+      'message_kind', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -2142,6 +2162,9 @@ class $TransactionsTable extends Transactions
         ownedTransferId,
         isAnalyticsExcluded,
         evidenceJson,
+        lifecycleState,
+        lifecycleReason,
+        messageKind,
         createdAt,
         updatedAt
       ];
@@ -2289,6 +2312,24 @@ class $TransactionsTable extends Transactions
           evidenceJson.isAcceptableOrUnknown(
               data['evidence_json']!, _evidenceJsonMeta));
     }
+    if (data.containsKey('lifecycle_state')) {
+      context.handle(
+          _lifecycleStateMeta,
+          lifecycleState.isAcceptableOrUnknown(
+              data['lifecycle_state']!, _lifecycleStateMeta));
+    }
+    if (data.containsKey('lifecycle_reason')) {
+      context.handle(
+          _lifecycleReasonMeta,
+          lifecycleReason.isAcceptableOrUnknown(
+              data['lifecycle_reason']!, _lifecycleReasonMeta));
+    }
+    if (data.containsKey('message_kind')) {
+      context.handle(
+          _messageKindMeta,
+          messageKind.isAcceptableOrUnknown(
+              data['message_kind']!, _messageKindMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -2356,6 +2397,12 @@ class $TransactionsTable extends Transactions
           DriftSqlType.bool, data['${effectivePrefix}is_analytics_excluded'])!,
       evidenceJson: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}evidence_json']),
+      lifecycleState: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}lifecycle_state'])!,
+      lifecycleReason: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}lifecycle_reason']),
+      messageKind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}message_kind']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -2393,6 +2440,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? ownedTransferId;
   final bool isAnalyticsExcluded;
   final String? evidenceJson;
+  final String lifecycleState;
+  final String? lifecycleReason;
+  final String? messageKind;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction(
@@ -2419,6 +2469,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.ownedTransferId,
       required this.isAnalyticsExcluded,
       this.evidenceJson,
+      required this.lifecycleState,
+      this.lifecycleReason,
+      this.messageKind,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -2472,6 +2525,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['is_analytics_excluded'] = Variable<bool>(isAnalyticsExcluded);
     if (!nullToAbsent || evidenceJson != null) {
       map['evidence_json'] = Variable<String>(evidenceJson);
+    }
+    map['lifecycle_state'] = Variable<String>(lifecycleState);
+    if (!nullToAbsent || lifecycleReason != null) {
+      map['lifecycle_reason'] = Variable<String>(lifecycleReason);
+    }
+    if (!nullToAbsent || messageKind != null) {
+      map['message_kind'] = Variable<String>(messageKind);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2527,6 +2587,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       evidenceJson: evidenceJson == null && nullToAbsent
           ? const Value.absent()
           : Value(evidenceJson),
+      lifecycleState: Value(lifecycleState),
+      lifecycleReason: lifecycleReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lifecycleReason),
+      messageKind: messageKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(messageKind),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2560,6 +2627,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       isAnalyticsExcluded:
           serializer.fromJson<bool>(json['isAnalyticsExcluded']),
       evidenceJson: serializer.fromJson<String?>(json['evidenceJson']),
+      lifecycleState: serializer.fromJson<String>(json['lifecycleState']),
+      lifecycleReason: serializer.fromJson<String?>(json['lifecycleReason']),
+      messageKind: serializer.fromJson<String?>(json['messageKind']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2591,6 +2661,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'ownedTransferId': serializer.toJson<String?>(ownedTransferId),
       'isAnalyticsExcluded': serializer.toJson<bool>(isAnalyticsExcluded),
       'evidenceJson': serializer.toJson<String?>(evidenceJson),
+      'lifecycleState': serializer.toJson<String>(lifecycleState),
+      'lifecycleReason': serializer.toJson<String?>(lifecycleReason),
+      'messageKind': serializer.toJson<String?>(messageKind),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2620,6 +2693,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> ownedTransferId = const Value.absent(),
           bool? isAnalyticsExcluded,
           Value<String?> evidenceJson = const Value.absent(),
+          String? lifecycleState,
+          Value<String?> lifecycleReason = const Value.absent(),
+          Value<String?> messageKind = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Transaction(
@@ -2656,6 +2732,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
         evidenceJson:
             evidenceJson.present ? evidenceJson.value : this.evidenceJson,
+        lifecycleState: lifecycleState ?? this.lifecycleState,
+        lifecycleReason: lifecycleReason.present
+            ? lifecycleReason.value
+            : this.lifecycleReason,
+        messageKind: messageKind.present ? messageKind.value : this.messageKind,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -2685,6 +2766,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('ownedTransferId: $ownedTransferId, ')
           ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
           ..write('evidenceJson: $evidenceJson, ')
+          ..write('lifecycleState: $lifecycleState, ')
+          ..write('lifecycleReason: $lifecycleReason, ')
+          ..write('messageKind: $messageKind, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2716,6 +2800,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         ownedTransferId,
         isAnalyticsExcluded,
         evidenceJson,
+        lifecycleState,
+        lifecycleReason,
+        messageKind,
         createdAt,
         updatedAt
       ]);
@@ -2746,6 +2833,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.ownedTransferId == this.ownedTransferId &&
           other.isAnalyticsExcluded == this.isAnalyticsExcluded &&
           other.evidenceJson == this.evidenceJson &&
+          other.lifecycleState == this.lifecycleState &&
+          other.lifecycleReason == this.lifecycleReason &&
+          other.messageKind == this.messageKind &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2774,6 +2864,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> ownedTransferId;
   final Value<bool> isAnalyticsExcluded;
   final Value<String?> evidenceJson;
+  final Value<String> lifecycleState;
+  final Value<String?> lifecycleReason;
+  final Value<String?> messageKind;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -2801,6 +2894,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.ownedTransferId = const Value.absent(),
     this.isAnalyticsExcluded = const Value.absent(),
     this.evidenceJson = const Value.absent(),
+    this.lifecycleState = const Value.absent(),
+    this.lifecycleReason = const Value.absent(),
+    this.messageKind = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2829,6 +2925,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.ownedTransferId = const Value.absent(),
     this.isAnalyticsExcluded = const Value.absent(),
     this.evidenceJson = const Value.absent(),
+    this.lifecycleState = const Value.absent(),
+    this.lifecycleReason = const Value.absent(),
+    this.messageKind = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -2866,6 +2965,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? ownedTransferId,
     Expression<bool>? isAnalyticsExcluded,
     Expression<String>? evidenceJson,
+    Expression<String>? lifecycleState,
+    Expression<String>? lifecycleReason,
+    Expression<String>? messageKind,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -2895,6 +2997,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (isAnalyticsExcluded != null)
         'is_analytics_excluded': isAnalyticsExcluded,
       if (evidenceJson != null) 'evidence_json': evidenceJson,
+      if (lifecycleState != null) 'lifecycle_state': lifecycleState,
+      if (lifecycleReason != null) 'lifecycle_reason': lifecycleReason,
+      if (messageKind != null) 'message_kind': messageKind,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -2925,6 +3030,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? ownedTransferId,
       Value<bool>? isAnalyticsExcluded,
       Value<String?>? evidenceJson,
+      Value<String>? lifecycleState,
+      Value<String?>? lifecycleReason,
+      Value<String?>? messageKind,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -2952,6 +3060,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       ownedTransferId: ownedTransferId ?? this.ownedTransferId,
       isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
       evidenceJson: evidenceJson ?? this.evidenceJson,
+      lifecycleState: lifecycleState ?? this.lifecycleState,
+      lifecycleReason: lifecycleReason ?? this.lifecycleReason,
+      messageKind: messageKind ?? this.messageKind,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3030,6 +3141,15 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (evidenceJson.present) {
       map['evidence_json'] = Variable<String>(evidenceJson.value);
     }
+    if (lifecycleState.present) {
+      map['lifecycle_state'] = Variable<String>(lifecycleState.value);
+    }
+    if (lifecycleReason.present) {
+      map['lifecycle_reason'] = Variable<String>(lifecycleReason.value);
+    }
+    if (messageKind.present) {
+      map['message_kind'] = Variable<String>(messageKind.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3068,6 +3188,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('ownedTransferId: $ownedTransferId, ')
           ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
           ..write('evidenceJson: $evidenceJson, ')
+          ..write('lifecycleState: $lifecycleState, ')
+          ..write('lifecycleReason: $lifecycleReason, ')
+          ..write('messageKind: $messageKind, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -6416,6 +6539,9 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   Value<String?> ownedTransferId,
   Value<bool> isAnalyticsExcluded,
   Value<String?> evidenceJson,
+  Value<String> lifecycleState,
+  Value<String?> lifecycleReason,
+  Value<String?> messageKind,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -6445,6 +6571,9 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> ownedTransferId,
   Value<bool> isAnalyticsExcluded,
   Value<String?> evidenceJson,
+  Value<String> lifecycleState,
+  Value<String?> lifecycleReason,
+  Value<String?> messageKind,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -6493,6 +6622,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> ownedTransferId = const Value.absent(),
             Value<bool> isAnalyticsExcluded = const Value.absent(),
             Value<String?> evidenceJson = const Value.absent(),
+            Value<String> lifecycleState = const Value.absent(),
+            Value<String?> lifecycleReason = const Value.absent(),
+            Value<String?> messageKind = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -6521,6 +6653,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             ownedTransferId: ownedTransferId,
             isAnalyticsExcluded: isAnalyticsExcluded,
             evidenceJson: evidenceJson,
+            lifecycleState: lifecycleState,
+            lifecycleReason: lifecycleReason,
+            messageKind: messageKind,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -6549,6 +6684,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> ownedTransferId = const Value.absent(),
             Value<bool> isAnalyticsExcluded = const Value.absent(),
             Value<String?> evidenceJson = const Value.absent(),
+            Value<String> lifecycleState = const Value.absent(),
+            Value<String?> lifecycleReason = const Value.absent(),
+            Value<String?> messageKind = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -6577,6 +6715,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             ownedTransferId: ownedTransferId,
             isAnalyticsExcluded: isAnalyticsExcluded,
             evidenceJson: evidenceJson,
+            lifecycleState: lifecycleState,
+            lifecycleReason: lifecycleReason,
+            messageKind: messageKind,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -6686,6 +6827,21 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get evidenceJson => $state.composableBuilder(
       column: $state.table.evidenceJson,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get lifecycleState => $state.composableBuilder(
+      column: $state.table.lifecycleState,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get lifecycleReason => $state.composableBuilder(
+      column: $state.table.lifecycleReason,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get messageKind => $state.composableBuilder(
+      column: $state.table.messageKind,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -6876,6 +7032,21 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<String> get evidenceJson => $state.composableBuilder(
       column: $state.table.evidenceJson,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get lifecycleState => $state.composableBuilder(
+      column: $state.table.lifecycleState,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get lifecycleReason => $state.composableBuilder(
+      column: $state.table.lifecycleReason,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get messageKind => $state.composableBuilder(
+      column: $state.table.messageKind,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
