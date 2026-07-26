@@ -31,4 +31,63 @@ void main() {
       'parse_confidence': 0.97,
     });
   });
+
+  test('FieldEvidence serializes and deserializes cleanly', () {
+    const evidence = FieldEvidence(
+      field: 'amount',
+      start: 10,
+      end: 15,
+      verbatim: '449.00',
+      extractor: 'regex_template',
+    );
+
+    final json = evidence.toJson();
+    expect(json, {
+      'field': 'amount',
+      'start': 10,
+      'end': 15,
+      'verbatim': '449.00',
+      'extractor': 'regex_template',
+    });
+
+    final reconstructed = FieldEvidence.fromJson(json);
+    expect(reconstructed, equals(evidence));
+  });
+
+  test('NormalizedTransactionRecord includes evidence in toJson when present', () {
+    const evidenceList = [
+      FieldEvidence(
+        field: 'amount',
+        start: 5,
+        end: 11,
+        verbatim: '150.00',
+        extractor: 'template',
+      ),
+    ];
+    final record = NormalizedTransactionRecord(
+      amount: 150,
+      direction: TransactionDirection.debit,
+      channel: TransactionChannel.upi,
+      merchantRaw: 'ZOMATO',
+      counterpartyVpa: null,
+      accountHint: 'xx1234',
+      balanceAfter: null,
+      refId: null,
+      ts: DateTime.fromMillisecondsSinceEpoch(1751702400000, isUtc: true),
+      parseSource: ParseSource.template,
+      parseConfidence: 1.0,
+      evidence: evidenceList,
+    );
+
+    final json = record.toJson();
+    expect(json['evidence'], [
+      {
+        'field': 'amount',
+        'start': 5,
+        'end': 11,
+        'verbatim': '150.00',
+        'extractor': 'template',
+      },
+    ]);
+  });
 }

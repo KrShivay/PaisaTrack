@@ -18,6 +18,7 @@ class NormalizedTransactionRecord {
     required this.parseConfidence,
     this.templateId,
     this.templateProvenance,
+    this.evidence,
   });
 
   final double amount;
@@ -41,6 +42,9 @@ class NormalizedTransactionRecord {
   /// Fixture evidence tier associated with [templateId], when present.
   final String? templateProvenance;
 
+  /// Verifying span evidence linking record values back to raw source text.
+  final List<FieldEvidence>? evidence;
+
   /// Returns this record with a different parser confidence.
   NormalizedTransactionRecord withParseConfidence(double confidence) {
     return NormalizedTransactionRecord(
@@ -57,6 +61,7 @@ class NormalizedTransactionRecord {
       parseConfidence: confidence,
       templateId: templateId,
       templateProvenance: templateProvenance,
+      evidence: evidence,
     );
   }
 
@@ -74,8 +79,61 @@ class NormalizedTransactionRecord {
       'ts': ts.millisecondsSinceEpoch,
       'parse_source': parseSource.wireName,
       'parse_confidence': parseConfidence,
+      if (evidence != null)
+        'evidence': evidence!.map((e) => e.toJson()).toList(),
     };
   }
+}
+
+/// Verifying span evidence linking a record value back to raw source text.
+class FieldEvidence {
+  const FieldEvidence({
+    required this.field,
+    required this.start,
+    required this.end,
+    required this.verbatim,
+    required this.extractor,
+  });
+
+  final String field;
+  final int start;
+  final int end;
+  final String verbatim;
+  final String extractor;
+
+  Map<String, Object?> toJson() {
+    return {
+      'field': field,
+      'start': start,
+      'end': end,
+      'verbatim': verbatim,
+      'extractor': extractor,
+    };
+  }
+
+  factory FieldEvidence.fromJson(Map<String, Object?> json) {
+    return FieldEvidence(
+      field: json['field']! as String,
+      start: (json['start']! as num).toInt(),
+      end: (json['end']! as num).toInt(),
+      verbatim: json['verbatim']! as String,
+      extractor: json['extractor']! as String,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FieldEvidence &&
+          runtimeType == other.runtimeType &&
+          field == other.field &&
+          start == other.start &&
+          end == other.end &&
+          verbatim == other.verbatim &&
+          extractor == other.extractor;
+
+  @override
+  int get hashCode => Object.hash(field, start, end, verbatim, extractor);
 }
 
 /// Direction of money movement from the user's perspective.
