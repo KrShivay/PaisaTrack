@@ -1,314 +1,207 @@
-import 'dart:convert';
-
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../core/theme/paisa_colors.dart';
-import '../../core/widgets/app_state_views.dart';
-import '../../data/db/database.dart';
-import '../../data/db/database_provider.dart';
-import '../assistant/assistant_screen.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/category_visuals.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../dashboard/dashboard_providers.dart';
 import '../recurring/recurring_screen.dart';
-import '../settings/settings_screen.dart';
 
-/// Non-dismissed insights for the current UTC reporting month.
-final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
-  final now = DateTime.now().toUtc();
-  final period = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-  final databaseAsync = ref.watch(appDatabaseProvider);
-  return databaseAsync.when(
-    data: (database) => (database.select(database.insights)
-          ..where(
-            (row) => row.dismissed.equals(false) & row.period.like('$period%'),
-          )
-          ..orderBy([
-            (row) => OrderingTerm.desc(row.period),
-            (row) => OrderingTerm.asc(row.kind),
-          ]))
-        .watch(),
-    loading: () => const Stream<List<Insight>>.empty(),
-    error: (error, stackTrace) =>
-        Stream<List<Insight>>.error(error, stackTrace),
-  );
-});
-
-/// Monthly report rendered only from deterministic aggregate insight payloads.
+/// Redesigned Bloom Trends (Insights) screen with 6-month bar chart, MoM comparison,
+/// category share breakdown, and top merchants.
 class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final insights = ref.watch(activeInsightsProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Insights'),
-        actions: [
-          IconButton(
-            tooltip: 'Recurring',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RecurringScreen(),
-              ),
-            ),
-            icon: const Icon(Icons.autorenew_outlined),
-          ),
-          IconButton(
-            tooltip: 'Ask PaisaTrack',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const AssistantScreen(),
-              ),
-            ),
-            icon: const Icon(Icons.auto_awesome_outlined),
-          ),
-          IconButton(
-            tooltip: 'Settings',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const SettingsScreen(),
-              ),
-            ),
-            icon: const Icon(Icons.settings_outlined),
-          ),
-        ],
-      ),
-      body: _InsightsOverview(
-        insights: insights,
-        onDismiss: (id) => _dismiss(context, ref, id),
-        onOpenRecurring: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const RecurringScreen()),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _dismiss(
-    BuildContext context,
-    WidgetRef ref,
-    String id,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final database = await ref.read(appDatabaseProvider.future);
-      await (database.update(database.insights)
-            ..where((row) => row.id.equals(id)))
-          .write(const InsightsCompanion(dismissed: Value(true)));
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Insight dismissed')),
-      );
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not dismiss insight')),
-      );
-    }
-  }
-}
-
-class _InsightsOverview extends ConsumerWidget {
-  const _InsightsOverview({
-    required this.insights,
-    required this.onDismiss,
-    required this.onOpenRecurring,
-  });
-
-  final AsyncValue<List<Insight>> insights;
-  final ValueChanged<String> onDismiss;
-  final VoidCallback onOpenRecurring;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sixMonthTrend = ref.watch(sixMonthTrendProvider);
+    final mom = ref.watch(monthOverMonthSpendProvider);
     final totals = ref.watch(monthDirectionTotalsProvider);
-    final comparison = ref.watch(monthOverMonthSpendProvider);
     final categories = ref.watch(categoryBreakdownProvider);
     final merchants = ref.watch(topMerchantsProvider);
-    final hasTransactions = totals.debitTotal > 0 || totals.creditTotal > 0;
-    final generated = insights.valueOrNull ?? const <Insight>[];
-    final theme = Theme.of(context);
-    final now = DateTime.now();
-    final month = MaterialLocalizations.of(context).formatMonthYear(now);
 
-    return ListView(
-      padding: AppSpacing.screen,
-      children: [
-        Text('$month overview', style: theme.textTheme.headlineSmall),
-        const SizedBox(height: AppSpacing.md),
-        if (hasTransactions) ...[
-          _BaselineSummary(
-            spent: totals.debitTotal,
-            received: totals.creditTotal,
-            comparison: comparison,
-          ),
-          if (categories.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text('Spending by category', style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.sm),
-            for (final category in categories.take(5))
-              _BaselineRow(
-                label: category.name,
-                value: formatInr(category.total),
-                supporting:
-                    '${(category.share * 100).toStringAsFixed(0)}% of spending',
-              ),
-          ],
-          if (merchants.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text('Top merchants', style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.sm),
-            for (final merchant in merchants.take(3))
-              _BaselineRow(
-                label: merchant.name,
-                value: formatInr(merchant.total),
-                supporting:
-                    '${merchant.count} transaction${merchant.count == 1 ? '' : 's'}',
-              ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.autorenew_outlined),
-            title: const Text('Recurring activity'),
-            subtitle: const Text('Subscriptions, bills, EMIs and income'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: onOpenRecurring,
-          ),
-        ] else if (generated.isEmpty)
-          const EmptyStateView(
-            illustration: AppIllustrations.spendAnalysis,
-            title: 'Insights start with your transactions',
-            message:
-                'Monthly summaries and comparisons will appear after financial messages or manual transactions are added.',
-          ),
-        const SizedBox(height: AppSpacing.lg),
-        Text('Changes to know about', style: theme.textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        if (insights.isLoading)
-          const SizedBox(height: 180, child: ListLoadingSkeleton(rows: 2))
-        else if (insights.hasError)
-          const ErrorStateView(
-            message:
-                'Some generated insights could not load. Your saved transactions remain safe.',
-          )
-        else if (generated.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          children: [
+            // Top Header: Title + Recurring button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('No unusual changes detected'),
-                SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Your spending is currently consistent with the available history. More detailed insights will appear as PaisaTrack learns your patterns.',
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Trends',
+                        style: AppTheme.bloomDisplay(
+                          22,
+                          FontWeight.w700,
+                          letterSpacing: -0.03,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextPrimary
+                              : AppColorTokens.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Spending patterns & analytics',
+                        style: AppTheme.bloomDisplay(
+                          12,
+                          FontWeight.w400,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextTertiary
+                              : AppColorTokens.inkTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const RecurringScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomChip,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.autorenew_rounded,
+                          size: 16,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextSecondary
+                              : AppColorTokens.inkSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Recurring',
+                          style: AppTheme.bloomDisplay(
+                            12,
+                            FontWeight.w600,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextSecondary
+                                : AppColorTokens.inkSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-          )
-        else
-          for (final insight in generated) ...[
-            _InsightCard(
-              insight: insight,
-              onDismiss: () => onDismiss(insight.id),
+            const SizedBox(height: 24),
+
+            // 6-Month Spend Bar Chart Card
+            _SixMonthBarChartCard(
+              trend: sixMonthTrend,
+              isDark: isDark,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: 20),
+
+            // Month-over-Month Comparison Card
+            _MoMComparisonCard(
+              mom: mom,
+              currentSpend: totals.debitTotal,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 24),
+
+            // Category Breakdown Section
+            _CategoryBreakdownSection(
+              categories: categories,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 24),
+
+            // Top Merchants Section
+            _TopMerchantsSection(
+              merchants: merchants,
+              isDark: isDark,
+            ),
+
+            // Bottom clearance for floating nav pill
+            const SizedBox(height: 110),
           ],
-      ],
+        ),
+      ),
     );
   }
 }
 
-class _BaselineSummary extends StatelessWidget {
-  const _BaselineSummary({
-    required this.spent,
-    required this.received,
-    required this.comparison,
+class _SixMonthBarChartCard extends StatelessWidget {
+  const _SixMonthBarChartCard({
+    required this.trend,
+    required this.isDark,
   });
 
-  final double spent;
-  final double received;
-  final MonthOverMonthSpend comparison;
+  final List<MonthPoint> trend;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final paisa = PaisaColors.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final change = comparison.pctChange;
+    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
+    final maxSpend = trend.fold<double>(
+      1.0,
+      (max, b) => b.spend > max ? b.spend : max,
+    );
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        gradient: isDark
-            ? AppColorTokens.darkHeroGradient
-            : AppColorTokens.lightHeroGradient,
-        border: Border.all(
-          color: (isDark
-                  ? AppColorTokens.emeraldBright
-                  : AppColorTokens.emerald)
-              .withValues(alpha: isDark ? 0.2 : 0.15),
-        ),
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.bloomCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Monthly spending',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+            'SPEND TREND (LAST 6 MONTHS)',
+            style: AppTheme.bloomDisplay(
+              11,
+              FontWeight.w600,
+              letterSpacing: 0.1,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextTertiary
+                  : AppColorTokens.inkTertiary,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            formatInr(spent),
-            style: theme.textTheme.headlineLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              fontFeatures: AppTheme.tabularFigures,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: paisa.credit.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Text(
-                  'Received ${formatInr(received)}',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: paisa.credit,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: AppTheme.tabularFigures,
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 140,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (int i = 0; i < trend.length; i++) ...[
+                  _BarColumn(
+                    bucket: trend[i],
+                    isCurrent: i == trend.length - 1,
+                    maxSpend: maxSpend,
+                    isDark: isDark,
                   ),
-                ),
-              ),
-              if (change != null) ...[
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    '${change.abs() * 100 < 0.5 ? 'About the same as' : '${(change.abs() * 100).toStringAsFixed(0)}% ${change < 0 ? 'lower' : 'higher'} than'} last month',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),
@@ -316,221 +209,413 @@ class _BaselineSummary extends StatelessWidget {
   }
 }
 
-class _BaselineRow extends StatelessWidget {
-  const _BaselineRow({
-    required this.label,
-    required this.value,
-    required this.supporting,
+class _BarColumn extends StatelessWidget {
+  const _BarColumn({
+    required this.bucket,
+    required this.isCurrent,
+    required this.maxSpend,
+    required this.isDark,
   });
 
-  final String label;
-  final String value;
-  final String supporting;
+  final MonthPoint bucket;
+  final bool isCurrent;
+  final double maxSpend;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      subtitle: Text(supporting),
-      trailing: Text(
-        value,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontFeatures: AppTheme.tabularFigures,
+    final fraction = (bucket.spend / maxSpend).clamp(0.06, 1.0);
+    final barHeight = 90.0 * fraction;
+
+    final activeColor =
+        isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink;
+    final inactiveColor =
+        isDark ? const Color(0xFF292448) : const Color(0xFFE7E4F5);
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (isCurrent && bucket.spend > 0)
+          Text(
+            _formatCompact(bucket.spend),
+            style: AppTheme.bloomMono(
+              10,
+              FontWeight.w600,
+              color: activeColor,
             ),
+          )
+        else
+          const SizedBox(height: 14),
+        const SizedBox(height: 4),
+        Container(
+          width: 28,
+          height: barHeight,
+          decoration: BoxDecoration(
+            color: isCurrent ? activeColor : inactiveColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _shortMonth(bucket.month.month),
+          style: AppTheme.bloomDisplay(
+            11,
+            isCurrent ? FontWeight.w600 : FontWeight.w500,
+            color: isCurrent
+                ? (isDark
+                    ? AppColorTokens.bloomDarkTextPrimary
+                    : AppColorTokens.ink)
+                : (isDark
+                    ? AppColorTokens.bloomDarkTextTertiary
+                    : AppColorTokens.inkTertiary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _shortMonth(int month) => const [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
+
+  String _formatCompact(double val) {
+    if (val >= 1000) {
+      return '₹${(val / 1000).toStringAsFixed(1)}k';
+    }
+    return '₹${val.toStringAsFixed(0)}';
+  }
+}
+
+class _MoMComparisonCard extends StatelessWidget {
+  const _MoMComparisonCard({
+    required this.mom,
+    required this.currentSpend,
+    required this.isDark,
+  });
+
+  final MonthOverMonthSpend mom;
+  final double currentSpend;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
+    final pct = mom.pctChange;
+
+    final isLowerSpend = pct != null && pct <= 0;
+    final chipBg = isLowerSpend
+        ? (isDark
+            ? AppColorTokens.bloomEmerald.withValues(alpha: 0.18)
+            : const Color(0xFFD3F2E4))
+        : (isDark
+            ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.18)
+            : const Color(0xFFFDE8E8));
+    final chipFg = isLowerSpend
+        ? (isDark ? AppColorTokens.bloomCreditDark : const Color(0xFF0E9F6E))
+        : (isDark
+            ? AppColorTokens.bloomDebitDark
+            : AppColorTokens.bloomDebitLight);
+
+    final chipText = pct != null
+        ? '${pct <= 0 ? "↓" : "↑"} ${pct.abs().toStringAsFixed(0)}% vs last month'
+        : 'First month tracked';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MONTH OVER MONTH',
+                  style: AppTheme.bloomDisplay(
+                    11,
+                    FontWeight.w600,
+                    letterSpacing: 0.1,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextTertiary
+                        : AppColorTokens.inkTertiary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${formatInr(currentSpend)} spent so far',
+                  style: AppTheme.bloomDisplay(
+                    15,
+                    FontWeight.w600,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextPrimary
+                        : AppColorTokens.ink,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'vs ${formatInr(mom.previous)} same time last month',
+                  style: AppTheme.bloomDisplay(
+                    12,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: chipBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                chipText,
+                style: AppTheme.bloomDisplay(
+                  11,
+                  FontWeight.w600,
+                  color: chipFg,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _InsightCard extends StatelessWidget {
-  const _InsightCard({required this.insight, required this.onDismiss});
+class _CategoryBreakdownSection extends StatelessWidget {
+  const _CategoryBreakdownSection({
+    required this.categories,
+    required this.isDark,
+  });
 
-  final Insight insight;
-  final VoidCallback onDismiss;
+  final List<CategorySlice> categories;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final presentation = _presentation(insight);
-    final theme = Theme.of(context);
-    final color = presentation.warning
-        ? PaisaColors.of(context).warning
-        : theme.colorScheme.primary;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.14),
-                border: Border.all(
-                  color: color.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: Icon(presentation.icon, color: color, size: 22),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    if (categories.isEmpty) return const SizedBox.shrink();
+    final maxTotal = categories.first.total;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Categories',
+          style: AppTheme.bloomDisplay(
+            16,
+            FontWeight.w600,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextPrimary
+                : AppColorTokens.ink,
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final slice in categories) ...[
+          _CategoryItemRow(slice: slice, maxTotal: maxTotal, isDark: isDark),
+          if (slice != categories.last) const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+}
+
+class _CategoryItemRow extends StatelessWidget {
+  const _CategoryItemRow({
+    required this.slice,
+    required this.maxTotal,
+    required this.isDark,
+  });
+
+  final CategorySlice slice;
+  final double maxTotal;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final barFraction =
+        maxTotal > 0 ? (slice.total / maxTotal).clamp(0.05, 1.0) : 0.0;
+    final color = CategoryVisuals.color(slice.categoryId);
+
+    return Row(
+      children: [
+        BloomCategoryTile(
+          categoryId: slice.categoryId,
+          size: 36,
+          borderRadius: 13,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    presentation.title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    slice.name,
+                    style: AppTheme.bloomDisplay(
+                      13,
+                      FontWeight.w500,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextPrimary
+                          : AppColorTokens.ink,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
                   Text(
-                    presentation.body,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    formatInr(slice.total),
+                    style: AppTheme.bloomMono(
+                      13,
+                      FontWeight.w500,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : AppColorTokens.inkSecondary,
                     ),
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              tooltip: 'Dismiss ${presentation.title}',
-              onPressed: onDismiss,
-              icon: const Icon(Icons.close),
-            ),
-          ],
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: Container(
+                  height: 6,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTrack
+                      : AppColorTokens.bloomChip,
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: barFraction,
+                    child: Container(color: color),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
 
-class _Presentation {
-  const _Presentation({
-    required this.title,
-    required this.body,
-    required this.icon,
-    this.warning = false,
+class _TopMerchantsSection extends StatelessWidget {
+  const _TopMerchantsSection({
+    required this.merchants,
+    required this.isDark,
   });
 
-  final String title;
-  final String body;
-  final IconData icon;
-  final bool warning;
-}
+  final List<MerchantStat> merchants;
+  final bool isDark;
 
-_Presentation _presentation(Insight insight) {
-  final payload = _payload(insight.payloadJson);
-  return switch (insight.kind) {
-    'narrative' => _Presentation(
-        title: 'Monthly summary',
-        body: _text(payload, 'body'),
-        icon: Icons.auto_awesome_outlined,
-      ),
-    'forecast' => _Presentation(
-        title: 'Month-end forecast',
-        body:
-            'Projected spend is ${_money(payload, 'projected_spend')}, ${_percent(payload, 'deviation_fraction')} versus your recent monthly average.',
-        icon: Icons.query_stats,
-      ),
-    'anomaly' => _Presentation(
-        title: 'Unusual spending detected',
-        body:
-            '${_money(payload, 'aggregate')} was recorded, above the usual ${_money(payload, 'threshold')} threshold.',
-        icon: Icons.warning_amber_outlined,
-        warning: true,
-      ),
-    'duplicate_subscription' => _Presentation(
-        title: 'Possible duplicate subscription',
-        body:
-            '${_text(payload, 'label', fallback: 'One merchant')} has multiple active plans totalling about ${_money(payload, 'monthly_total')} per month.',
-        icon: Icons.content_copy_outlined,
-        warning: true,
-      ),
-    'fees_total' => _Presentation(
-        title: 'Fees and penalties',
-        body:
-            '${_money(payload, 'total')} across ${_number(payload, 'count').round()} charges this month.',
-        icon: Icons.request_quote_outlined,
-        warning: true,
-      ),
-    'price_creep' => _Presentation(
-        title: 'Recurring price increased',
-        body:
-            '${_text(payload, 'label')} is now ${_money(payload, 'last_amount')}; expected amount was ${_money(payload, 'expected_amount')}.',
-        icon: Icons.trending_up,
-        warning: true,
-      ),
-    'category_delta' => _Presentation(
-        title: '${_text(payload, 'category_name')} changed',
-        body:
-            'Spending is ${_percent(payload, 'delta_fraction')} versus last month (${_money(payload, 'current_total')} now).',
-        icon: Icons.compare_arrows,
-      ),
-    'missed_autopay' => _Presentation(
-        title: 'Possible missed payment',
-        body:
-            '${_text(payload, 'label')} was expected on ${_date(payload, 'next_expected_date')}.',
-        icon: Icons.event_busy_outlined,
-        warning: true,
-      ),
-    _ => const _Presentation(
-        title: 'Financial insight',
-        body: 'A new aggregate pattern was detected in your local data.',
-        icon: Icons.lightbulb_outline,
-      ),
-  };
-}
+  @override
+  Widget build(BuildContext context) {
+    if (merchants.isEmpty) return const SizedBox.shrink();
 
-Map<String, Object?> _payload(String source) {
-  try {
-    final decoded = jsonDecode(source);
-    return decoded is Map<String, Object?> ? decoded : const {};
-  } on FormatException {
-    return const {};
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Top Merchants',
+          style: AppTheme.bloomDisplay(
+            16,
+            FontWeight.w600,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextPrimary
+                : AppColorTokens.ink,
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final item in merchants) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColorTokens.bloomDarkCard
+                  : AppColorTokens.bloomCard,
+              borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTrack
+                        : AppColorTokens.bloomChip,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Center(
+                    child: Text(
+                      item.name.substring(0, 1).toUpperCase(),
+                      style: AppTheme.bloomDisplay(
+                        14,
+                        FontWeight.w700,
+                        color: AppColorTokens.violetPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: AppTheme.bloomDisplay(
+                          14,
+                          FontWeight.w500,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextPrimary
+                              : AppColorTokens.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${item.count} payments',
+                        style: AppTheme.bloomDisplay(
+                          11,
+                          FontWeight.w400,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextTertiary
+                              : AppColorTokens.inkTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                BloomAmount(
+                  amount: -item.total,
+                  size: 15,
+                  weight: FontWeight.w500,
+                ),
+              ],
+            ),
+          ),
+          if (item != merchants.last) const SizedBox(height: 8),
+        ],
+      ],
+    );
   }
-}
-
-num _number(Map<String, Object?> payload, String key) =>
-    payload[key] is num ? payload[key]! as num : 0;
-
-String _money(Map<String, Object?> payload, String key) =>
-    formatInr(_number(payload, key).toDouble());
-
-String _percent(Map<String, Object?> payload, String key) {
-  final value = _number(payload, key).toDouble() * 100;
-  final sign = value > 0 ? '+' : '';
-  return '$sign${value.toStringAsFixed(0)}%';
-}
-
-String _text(
-  Map<String, Object?> payload,
-  String key, {
-  String fallback = 'This item',
-}) =>
-    payload[key] is String && (payload[key]! as String).trim().isNotEmpty
-        ? payload[key]! as String
-        : fallback;
-
-String _date(Map<String, Object?> payload, String key) {
-  final parsed = DateTime.tryParse(_text(payload, key, fallback: ''));
-  if (parsed == null) return 'the expected date';
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${parsed.day} ${months[parsed.month - 1]}';
 }
