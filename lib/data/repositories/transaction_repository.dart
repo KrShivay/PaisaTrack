@@ -741,6 +741,11 @@ WHERE t.status = 'needs_review'
   double? _parseConfidenceOf(Transaction txn) =>
       parseConfidenceFromJson(txn.confidenceJson);
 
+  /// Extracts verifying span evidence from `evidence_json`, or null when no
+  /// evidence is stored.
+  List<FieldEvidence>? parseEvidenceOf(Transaction txn) =>
+      parseEvidenceFromJson(txn.evidenceJson);
+
   /// Low-trust records require a user parse verdict under ADR 0005: generic
   /// parses, plus public-provenance templates that are capped below auto.
   bool _isLowTrustParse(Transaction txn) {

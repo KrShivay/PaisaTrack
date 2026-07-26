@@ -52,3 +52,9 @@ Schema v7 repairs another legacy v5/v6 table shape that omitted newer
 expected non-key column defensively, keeps existing account rows, reruns the v6
 value/timestamp normalization, and recreates the trigger. Regression fixture:
 `test/data/db/app_database_v7_payment_source_shape_repair_test.dart`.
+
+Schema v8 adds an optional `evidence_json` column to `transactions` table (T-131a)
+to store verifying span evidence (`FieldEvidence`) linking extracted amounts,
+directions, and timestamps back to verbatim source text. Existing rows read back
+with null evidence. Regression fixture:
+`test/data/db/app_database_v8_migration_test.dart`.

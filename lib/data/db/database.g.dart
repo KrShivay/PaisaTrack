@@ -2099,6 +2099,12 @@ class $TransactionsTable extends Transactions
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("is_analytics_excluded" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _evidenceJsonMeta =
+      const VerificationMeta('evidenceJson');
+  @override
+  late final GeneratedColumn<String> evidenceJson = GeneratedColumn<String>(
+      'evidence_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -2135,6 +2141,7 @@ class $TransactionsTable extends Transactions
         duplicateOfTxnId,
         ownedTransferId,
         isAnalyticsExcluded,
+        evidenceJson,
         createdAt,
         updatedAt
       ];
@@ -2276,6 +2283,12 @@ class $TransactionsTable extends Transactions
           isAnalyticsExcluded.isAcceptableOrUnknown(
               data['is_analytics_excluded']!, _isAnalyticsExcludedMeta));
     }
+    if (data.containsKey('evidence_json')) {
+      context.handle(
+          _evidenceJsonMeta,
+          evidenceJson.isAcceptableOrUnknown(
+              data['evidence_json']!, _evidenceJsonMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -2341,6 +2354,8 @@ class $TransactionsTable extends Transactions
           DriftSqlType.string, data['${effectivePrefix}owned_transfer_id']),
       isAnalyticsExcluded: attachedDatabase.typeMapping.read(
           DriftSqlType.bool, data['${effectivePrefix}is_analytics_excluded'])!,
+      evidenceJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}evidence_json']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -2377,6 +2392,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? duplicateOfTxnId;
   final String? ownedTransferId;
   final bool isAnalyticsExcluded;
+  final String? evidenceJson;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction(
@@ -2402,6 +2418,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.duplicateOfTxnId,
       this.ownedTransferId,
       required this.isAnalyticsExcluded,
+      this.evidenceJson,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -2453,6 +2470,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       map['owned_transfer_id'] = Variable<String>(ownedTransferId);
     }
     map['is_analytics_excluded'] = Variable<bool>(isAnalyticsExcluded);
+    if (!nullToAbsent || evidenceJson != null) {
+      map['evidence_json'] = Variable<String>(evidenceJson);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2504,6 +2524,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? const Value.absent()
           : Value(ownedTransferId),
       isAnalyticsExcluded: Value(isAnalyticsExcluded),
+      evidenceJson: evidenceJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(evidenceJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2536,6 +2559,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       ownedTransferId: serializer.fromJson<String?>(json['ownedTransferId']),
       isAnalyticsExcluded:
           serializer.fromJson<bool>(json['isAnalyticsExcluded']),
+      evidenceJson: serializer.fromJson<String?>(json['evidenceJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2566,6 +2590,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'duplicateOfTxnId': serializer.toJson<String?>(duplicateOfTxnId),
       'ownedTransferId': serializer.toJson<String?>(ownedTransferId),
       'isAnalyticsExcluded': serializer.toJson<bool>(isAnalyticsExcluded),
+      'evidenceJson': serializer.toJson<String?>(evidenceJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2594,6 +2619,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> duplicateOfTxnId = const Value.absent(),
           Value<String?> ownedTransferId = const Value.absent(),
           bool? isAnalyticsExcluded,
+          Value<String?> evidenceJson = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Transaction(
@@ -2628,6 +2654,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             ? ownedTransferId.value
             : this.ownedTransferId,
         isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
+        evidenceJson:
+            evidenceJson.present ? evidenceJson.value : this.evidenceJson,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -2656,6 +2684,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
           ..write('ownedTransferId: $ownedTransferId, ')
           ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
+          ..write('evidenceJson: $evidenceJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2686,6 +2715,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         duplicateOfTxnId,
         ownedTransferId,
         isAnalyticsExcluded,
+        evidenceJson,
         createdAt,
         updatedAt
       ]);
@@ -2715,6 +2745,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.duplicateOfTxnId == this.duplicateOfTxnId &&
           other.ownedTransferId == this.ownedTransferId &&
           other.isAnalyticsExcluded == this.isAnalyticsExcluded &&
+          other.evidenceJson == this.evidenceJson &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2742,6 +2773,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> duplicateOfTxnId;
   final Value<String?> ownedTransferId;
   final Value<bool> isAnalyticsExcluded;
+  final Value<String?> evidenceJson;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -2768,6 +2800,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.duplicateOfTxnId = const Value.absent(),
     this.ownedTransferId = const Value.absent(),
     this.isAnalyticsExcluded = const Value.absent(),
+    this.evidenceJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2795,6 +2828,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.duplicateOfTxnId = const Value.absent(),
     this.ownedTransferId = const Value.absent(),
     this.isAnalyticsExcluded = const Value.absent(),
+    this.evidenceJson = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -2831,6 +2865,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? duplicateOfTxnId,
     Expression<String>? ownedTransferId,
     Expression<bool>? isAnalyticsExcluded,
+    Expression<String>? evidenceJson,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -2859,6 +2894,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (ownedTransferId != null) 'owned_transfer_id': ownedTransferId,
       if (isAnalyticsExcluded != null)
         'is_analytics_excluded': isAnalyticsExcluded,
+      if (evidenceJson != null) 'evidence_json': evidenceJson,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -2888,6 +2924,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? duplicateOfTxnId,
       Value<String?>? ownedTransferId,
       Value<bool>? isAnalyticsExcluded,
+      Value<String?>? evidenceJson,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -2914,6 +2951,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       duplicateOfTxnId: duplicateOfTxnId ?? this.duplicateOfTxnId,
       ownedTransferId: ownedTransferId ?? this.ownedTransferId,
       isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
+      evidenceJson: evidenceJson ?? this.evidenceJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -2989,6 +3027,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (isAnalyticsExcluded.present) {
       map['is_analytics_excluded'] = Variable<bool>(isAnalyticsExcluded.value);
     }
+    if (evidenceJson.present) {
+      map['evidence_json'] = Variable<String>(evidenceJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3026,6 +3067,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
           ..write('ownedTransferId: $ownedTransferId, ')
           ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
+          ..write('evidenceJson: $evidenceJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -6373,6 +6415,7 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   Value<String?> duplicateOfTxnId,
   Value<String?> ownedTransferId,
   Value<bool> isAnalyticsExcluded,
+  Value<String?> evidenceJson,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -6401,6 +6444,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> duplicateOfTxnId,
   Value<String?> ownedTransferId,
   Value<bool> isAnalyticsExcluded,
+  Value<String?> evidenceJson,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -6448,6 +6492,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> duplicateOfTxnId = const Value.absent(),
             Value<String?> ownedTransferId = const Value.absent(),
             Value<bool> isAnalyticsExcluded = const Value.absent(),
+            Value<String?> evidenceJson = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -6475,6 +6520,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             duplicateOfTxnId: duplicateOfTxnId,
             ownedTransferId: ownedTransferId,
             isAnalyticsExcluded: isAnalyticsExcluded,
+            evidenceJson: evidenceJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -6502,6 +6548,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> duplicateOfTxnId = const Value.absent(),
             Value<String?> ownedTransferId = const Value.absent(),
             Value<bool> isAnalyticsExcluded = const Value.absent(),
+            Value<String?> evidenceJson = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -6529,6 +6576,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             duplicateOfTxnId: duplicateOfTxnId,
             ownedTransferId: ownedTransferId,
             isAnalyticsExcluded: isAnalyticsExcluded,
+            evidenceJson: evidenceJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -6633,6 +6681,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isAnalyticsExcluded => $state.composableBuilder(
       column: $state.table.isAnalyticsExcluded,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get evidenceJson => $state.composableBuilder(
+      column: $state.table.evidenceJson,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -6818,6 +6871,11 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<bool> get isAnalyticsExcluded => $state.composableBuilder(
       column: $state.table.isAnalyticsExcluded,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get evidenceJson => $state.composableBuilder(
+      column: $state.table.evidenceJson,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

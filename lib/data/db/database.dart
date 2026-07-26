@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -129,6 +129,9 @@ class AppDatabase extends _$AppDatabase {
           // institution entirely. Repair the table shape and rows in place —
           // never by clearing app data — then recreate the corrected trigger.
           await _repairPaymentSourcesV6();
+        }
+        if (from < 8) {
+          await migrator.addColumn(transactions, transactions.evidenceJson);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

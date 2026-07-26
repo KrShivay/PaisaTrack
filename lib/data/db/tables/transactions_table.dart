@@ -60,6 +60,7 @@ class Transactions extends Table {
   // Materialized source policy keeps all analytics engines consistent.
   BoolColumn get isAnalyticsExcluded =>
       boolean().withDefault(const Constant(false))();
+  TextColumn get evidenceJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

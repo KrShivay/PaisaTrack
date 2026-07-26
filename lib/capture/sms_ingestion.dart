@@ -459,6 +459,11 @@ class SmsIngestor {
       }),
       status: status.wireName,
       duplicateOfTxnId: Value(duplicateOfTxnId),
+      evidenceJson: Value(
+        record.evidence != null
+            ? jsonEncode(record.evidence!.map((e) => e.toJson()).toList())
+            : null,
+      ),
       createdAt: timestamp,
       updatedAt: timestamp,
     );
