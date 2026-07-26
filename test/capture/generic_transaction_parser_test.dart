@@ -14,11 +14,11 @@ void main() {
 
   group('rejectionReason maps each guard to its reason', () {
     test('hard-reject term short-circuits before other checks', () {
-      // Has direction + amount + account, but the hard-reject term wins because
-      // it is the first guard.
+      // Has direction + amount + account, but the hard-reject OTP term wins
+      // because it is the first guard.
       expect(
         parser.rejectionReason(
-          sms('Rs. 500 will be debited from A/c XX1234 tomorrow'),
+          sms('Your OTP is 482910 for Rs. 500 debited from A/c XX1234'),
         ),
         GenericParseRejection.hardRejectTerm,
       );
