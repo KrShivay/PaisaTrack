@@ -21,7 +21,7 @@ void main() {
     expect(txn.messageKind, isNull);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data['user_version'], 9);
+    expect(version.data['user_version'], greaterThanOrEqualTo(9));
 
     final indexResult = await database.customSelect(
       "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_transactions_lifecycle_state'",

@@ -63,3 +63,6 @@ Schema v9 adds `lifecycle_state` (default `'settled'`), `lifecycle_reason`, and 
 columns to `transactions` table (T-132a) and creates an index `idx_transactions_lifecycle_state`.
 Existing rows backfill `lifecycle_state` to `'settled'`. Regression fixture:
 `test/data/db/app_database_v9_migration_test.dart`.
+
+Schema v10 adds `financial_events` (id, event_key unique, key_basis, kind, net_amount_paise, currency, opened_at, closed_at, state, confidence) and `transaction_links` (id, from_txn_id, to_txn_id, link_type, confidence, basis, created_by, created_at) tables (T-134a). Monetary amounts in new tables use integer paise. Regression fixture:
+`test/data/db/app_database_v10_migration_test.dart`.
