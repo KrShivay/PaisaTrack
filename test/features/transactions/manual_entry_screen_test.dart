@@ -213,7 +213,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.text('Add'));
     await tester.pumpAndSettle();
     await drainCategories(tester, find.byType(ManualEntryScreen));
 

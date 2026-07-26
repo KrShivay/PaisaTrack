@@ -315,6 +315,7 @@ WHERE t.status = 'needs_review'
     Value<double> amount = const Value.absent(),
     Value<String> direction = const Value.absent(),
     Value<String?> merchantRaw = const Value.absent(),
+    Value<String> status = const Value.absent(),
     String context = 'detail_edit',
     bool recordParseCorrections = false,
     DateTime Function() clock = DateTime.now,
@@ -406,6 +407,9 @@ WHERE t.status = 'needs_review'
       );
       if (merchantRaw.present && merchantRaw.value != row.merchantRaw) {
         companion = companion.copyWith(merchantRaw: merchantRaw);
+      }
+      if (status.present && status.value != row.status) {
+        companion = companion.copyWith(status: status);
       }
 
       if (recordParseCorrections) {
