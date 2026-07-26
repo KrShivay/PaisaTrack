@@ -20,6 +20,7 @@ import '../intelligence/llm/llm_runtime.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
 import 'llm_field_locator.dart';
+import 'message_kind_classifier.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
@@ -143,6 +144,7 @@ class SmsIngestor {
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
+    MessageKindClassifier? messageKindClassifier,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
@@ -152,6 +154,7 @@ class SmsIngestor {
         _knownTransactionIds = knownTransactionIds,
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
+        _messageKindClassifier = messageKindClassifier,
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
@@ -170,6 +173,7 @@ class SmsIngestor {
   final Set<String>? _knownTransactionIds;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
+  final MessageKindClassifier? _messageKindClassifier;
   final DateTime Function() _now;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
@@ -200,6 +204,21 @@ class SmsIngestor {
               ),
             ),
           );
+
+      final kind = _messageKindClassifier?.classify(sms.body) ?? MessageKind.settledDebit;
+
+      if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
+        await _markRawSmsProcessed(sms.id, processed: true);
+        return;
+      }
+
+      final (lifecycleState, lifecycleReason) = switch (kind) {
+        MessageKind.settledDebit || MessageKind.settledCredit => ('settled', null),
+        MessageKind.pendingAuth => ('pending', 'authorized'),
+        MessageKind.failed => ('failed', 'declined'),
+        MessageKind.reversal => ('reversed', 'refund_or_reversal'),
+        _ => ('settled', null),
+      };
 
       final parseResult = await _parser.parse(sms);
       switch (parseResult) {
@@ -232,6 +251,9 @@ class SmsIngestor {
                   categorization: categorization,
                   merchant: merchant,
                   status: status,
+                  messageKind: kind,
+                  lifecycleState: lifecycleState,
+                  lifecycleReason: lifecycleReason,
                 ),
               );
           if (categorization?.ruleId != null) {
@@ -420,6 +442,9 @@ class SmsIngestor {
     required NormalizedTransactionRecord record,
     required String? duplicateOfTxnId,
     required DecisionStatus status,
+    required MessageKind messageKind,
+    required String lifecycleState,
+    String? lifecycleReason,
     CategorizationResult? categorization,
     MerchantResolution? merchant,
   }) {
@@ -468,6 +493,9 @@ class SmsIngestor {
             ? jsonEncode(record.evidence!.map((e) => e.toJson()).toList())
             : null,
       ),
+      lifecycleState: Value(lifecycleState),
+      lifecycleReason: Value(lifecycleReason),
+      messageKind: Value(messageKind.wireName),
       createdAt: timestamp,
       updatedAt: timestamp,
     );

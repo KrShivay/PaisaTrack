@@ -1,7 +1,19 @@
 {
-  "sender": "AD-PAYTMB",
+  "sender": "VM-PAYTMB",
   "received_at": 1783319461708,
   "expected": {
-    "err": "unparsed"
+    "ok": {
+      "amount": 910.0,
+      "direction": "credit",
+      "channel": "upi",
+      "merchant_raw": "your Paytm Payments bank a/c 91XX0007",
+      "counterparty_vpa": null,
+      "account_hint": "xx0007",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1783319461708,
+      "parse_source": "generic",
+      "parse_confidence": 0.6
+    }
   }
 }

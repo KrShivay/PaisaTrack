@@ -2,6 +2,18 @@
   "sender": "VM-INDUSB",
   "received_at": 1688265508584,
   "expected": {
-    "err": "unparsed"
+    "ok": {
+      "amount": 1.0,
+      "direction": "credit",
+      "channel": "unknown",
+      "merchant_raw": null,
+      "counterparty_vpa": null,
+      "account_hint": "xx100",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1688265508584,
+      "parse_source": "generic",
+      "parse_confidence": 0.5
+    }
   }
 }

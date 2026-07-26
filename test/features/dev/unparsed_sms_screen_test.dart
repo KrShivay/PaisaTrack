@@ -82,7 +82,7 @@ void main() {
       UnparsedSms(
         id: 'reject_otp',
         sender: 'AX-OTP',
-        body: 'Rs. 500 will be debited from A/c XX1234 tomorrow',
+        body: 'Your OTP is 482910 for Rs. 500 debited from A/c XX1234',
         receivedAt: now,
       ),
       UnparsedSms(

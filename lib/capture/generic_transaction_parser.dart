@@ -55,7 +55,7 @@ class GenericTransactionParser {
     caseSensitive: false,
   );
   static final RegExp _hardReject = RegExp(
-    r'\b(?:otp|will be debited|will be credited|is due|due on|requested|declined|failed|unsuccessful|cashback|interest credit|against reversal|received from account|statement)\b',
+    r'\b(?:otp|one time password|verification code|cashback offer|pre-approved|apply now|discount coupon|limited period offer|is due|due on|payment due|bill due|minimum amount due|statement|statement.*generated|e-statement|monthly statement|account statement|available balance|bal in a/c|clear balance|current balance|ac bal)\b',
     caseSensitive: false,
   );
 
@@ -163,34 +163,39 @@ class GenericTransactionParser {
   }
 
   ({TransactionDirection value, int index, int start, int end, String verbatim})? _direction(String body) {
+    ({TransactionDirection value, int index, int start, int end, String verbatim})? earliest;
+
     for (final entry in <({TransactionDirection value, RegExp pattern})>[
       (
         value: TransactionDirection.debit,
         pattern: RegExp(
-          r'\bdebited\b|\bspent\b|\bwithdrawn\b|\bpaid\b|\bsent\b|\bdr\b|\bpurchase of\b|\btxn of\b.*\bat\b',
+          r'\bdebited\b|\bspent\b|\bwithdrawn\b|\bpaid\b|\bsent\b|\bdr\b|\bpurchase of\b|\bdeclined\b|\bfailed\b|\btxn of\b.*\bat\b',
           caseSensitive: false,
         ),
       ),
       (
         value: TransactionDirection.credit,
         pattern: RegExp(
-          r'\bcredited\b|\breceived\b|\bdeposited\b|\brefund\b|\breversal\b|\bcr\b',
+          r'\bcredited\b|\breceived\b|\bdeposited\b|\brefund\b|\breversal\b|\badded back\b|\bcr\b',
           caseSensitive: false,
         ),
       ),
     ]) {
       final match = entry.pattern.firstMatch(body);
       if (match != null) {
-        return (
-          value: entry.value,
-          index: match.start,
-          start: match.start,
-          end: match.end,
-          verbatim: body.substring(match.start, match.end),
-        );
+        if (earliest == null || match.start < earliest.start) {
+          earliest = (
+            value: entry.value,
+            index: match.start,
+            start: match.start,
+            end: match.end,
+            verbatim: body.substring(match.start, match.end),
+          );
+        }
       }
     }
-    return null;
+
+    return earliest;
   }
 
   RegExpMatch _nearest(List<RegExpMatch> matches, int index) {
