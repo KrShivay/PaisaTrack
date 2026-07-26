@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin:0; background:#0A0A0B; font-family:'IBM Plex Mono',monospace; }
+  a { color:#4CC9F0; text-decoration:none; }
+  a:hover { color:#8AE0FF; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+</style>
+</helmet>
+<div style="display:flex;justify-content:center;padding:40px 24px;background:#0A0A0B;min-height:100vh;box-sizing:border-box">
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+  <div style="height:874px;box-sizing:border-box;padding-top:54px;overflow:hidden;background:#0A0A0B;color:#E6E9EA;display:flex;flex-direction:column;font-family:'IBM Plex Mono',monospace">
+
+    <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 18px 12px;border-bottom:1px solid #1C1F22">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:7px;height:7px;border-radius:50%;background:#4CC9F0;animation:blink 2s infinite"></div>
+        <div style="font-size:11px;letter-spacing:0.18em;color:#7D868C">JUL · DAY 23/31</div>
+      </div>
+      <div style="display:flex;gap:14px;font-size:12px;color:#7D868C">
+        <span>SYNC 2m</span><span style="color:#E6E9EA">≡</span>
+      </div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:16px 18px 20px;display:flex;flex-direction:column;gap:18px">
+
+      <div style="flex:none">
+        <div style="font-size:10px;letter-spacing:0.2em;color:#7D868C">SAFE TO SPEND / TODAY</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px">
+          <div style="font-size:58px;font-weight:600;letter-spacing:-0.06em;line-height:0.85;color:#F4F7F8">1240<span style="font-size:20px;color:#4CC9F0;letter-spacing:0">₹</span></div>
+          <div style="text-align:right">
+            <div style="font-size:13px;color:#3DDC97">+310</div>
+            <div style="font-size:10px;color:#7D868C;letter-spacing:0.1em">VS YDAY</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:1px;margin-top:14px;height:4px">
+          <div style="flex:58;background:#4CC9F0"></div>
+          <div style="flex:9;background:#E8B54D"></div>
+          <div style="flex:33;background:#202427"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:#7D868C;letter-spacing:0.08em">
+          <span>28,410 SPENT</span><span>4,180 LOCKED</span><span>48,000 CAP</span>
+        </div>
+      </div>
+
+      <div style="flex:none;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #1C1F22">
+        <div style="padding:11px 12px;border-right:1px solid #1C1F22">
+          <div style="font-size:9px;letter-spacing:0.14em;color:#7D868C">NET FLOW</div>
+          <div style="font-size:17px;font-weight:600;margin-top:5px;color:#3DDC97;letter-spacing:-0.03em">+19.6k</div>
+        </div>
+        <div style="padding:11px 12px;border-right:1px solid #1C1F22">
+          <div style="font-size:9px;letter-spacing:0.14em;color:#7D868C">BURN/DAY</div>
+          <div style="font-size:17px;font-weight:600;margin-top:5px;color:#FF7A7A;letter-spacing:-0.03em">1,014</div>
+        </div>
+        <div style="padding:11px 12px">
+          <div style="font-size:9px;letter-spacing:0.14em;color:#7D868C">RUNWAY</div>
+          <div style="font-size:17px;font-weight:600;margin-top:5px;color:#E8B54D;letter-spacing:-0.03em">31 d</div>
+        </div>
+      </div>
+
+      <div style="flex:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:10px;letter-spacing:0.2em;color:#7D868C">SPEND MAP · 31 DAYS</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:9px;color:#7D868C">
+            <span>LOW</span>
+            <div style="width:9px;height:9px;background:#16221F"></div>
+            <div style="width:9px;height:9px;background:#1E4A3C"></div>
+            <div style="width:9px;height:9px;background:#2C7A5E"></div>
+            <div style="width:9px;height:9px;background:#4CC9F0"></div>
+            <span>HIGH</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#2C7A5E;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#4CC9F0;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#2C7A5E;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#2C7A5E;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#4CC9F0;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#2C7A5E;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#2C7A5E;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#2C7A5E;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#4CC9F0;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#1E4A3C;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#16221F;border-radius:3px;outline:1.5px solid #E8B54D;outline-offset:1px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+          <div style="aspect-ratio:1;background:#0F1112;border:1px dashed #202427;border-radius:3px"></div>
+        </div>
+      </div>
+
+      <div style="flex:none">
+        <div style="font-size:10px;letter-spacing:0.2em;color:#7D868C;margin-bottom:10px">TOP CATEGORIES</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #1C1F22">
+            <div style="width:22px;font-size:10px;color:#7D868C">01</div>
+            <div style="flex:1;font-family:'Space Grotesk',sans-serif;font-size:14px">Food &amp; dining</div>
+            <div style="width:66px;height:5px;background:#20242F;position:relative"><div style="position:absolute;inset:0;width:76%;background:#F97316"></div></div>
+            <div style="width:58px;text-align:right;font-size:13px">8,940</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #1C1F22">
+            <div style="width:22px;font-size:10px;color:#7D868C">02</div>
+            <div style="flex:1;font-family:'Space Grotesk',sans-serif;font-size:14px">Transport</div>
+            <div style="width:66px;height:5px;background:#20242F;position:relative"><div style="position:absolute;inset:0;width:44%;background:#38BDF8"></div></div>
+            <div style="width:58px;text-align:right;font-size:13px">5,120</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #1C1F22;border-bottom:1px solid #1C1F22">
+            <div style="width:22px;font-size:10px;color:#7D868C">03</div>
+            <div style="flex:1;font-family:'Space Grotesk',sans-serif;font-size:14px">Shopping</div>
+            <div style="width:66px;height:5px;background:#20242F;position:relative"><div style="position:absolute;inset:0;width:33%;background:#E879F9"></div></div>
+            <div style="width:58px;text-align:right;font-size:13px">3,880</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:none;border:1px solid #24401F;background:#0E1A0F;padding:13px;display:flex;gap:11px;align-items:flex-start">
+        <div style="font-size:12px;color:#3DDC97;letter-spacing:0.1em">→</div>
+        <div style="flex:1">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:#B9F5D8">Blinkit up 62% — 9 orders this month</div>
+          <div style="font-size:11px;color:#7D868C;margin-top:4px">SET WEEKLY CAP · MUTE · SEE ALL</div>
+        </div>
+      </div>
+
+      <div style="flex:none">
+        <div style="display:flex;justify-content:space-between;font-size:10px;letter-spacing:0.2em;color:#7D868C;margin-bottom:6px">
+          <span>TODAY</span><span>−742</span>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #1C1F22">
+            <div style="width:3px;height:28px;background:#F97316"></div>
+            <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif;font-size:14px">Swiggy</div><div style="font-size:10px;color:#7D868C">19:12 · HDFC 4821</div></div>
+            <div style="font-size:14px;color:#FF7A7A">−486</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #1C1F22">
+            <div style="width:3px;height:28px;background:#38BDF8"></div>
+            <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif;font-size:14px">Uber</div><div style="font-size:10px;color:#7D868C">14:38 · GPAY UPI</div></div>
+            <div style="font-size:14px;color:#FF7A7A">−256</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #1C1F22">
+            <div style="width:3px;height:28px;background:#E8B54D"></div>
+            <div style="flex:1"><div style="font-family:'Space Grotesk',sans-serif;font-size:14px">PAYTM-4429JK</div><div style="font-size:10px;color:#E8B54D">UNFILED · TAP TO ASSIGN</div></div>
+            <div style="font-size:14px;color:#FF7A7A">−1,100</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:none;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid #1C1F22;background:#0A0A0B;padding-bottom:26px">
+      <div style="padding:12px 0;text-align:center;color:#4CC9F0;border-top:2px solid #4CC9F0;margin-top:-1px"><div style="font-size:16px">⌂</div><div style="font-size:9px;letter-spacing:0.1em;margin-top:2px">HOME</div></div>
+      <div style="padding:12px 0;text-align:center;color:#7D868C"><div style="font-size:16px">≡</div><div style="font-size:9px;letter-spacing:0.1em;margin-top:2px">LEDGER</div></div>
+      <div style="padding:12px 0;text-align:center;color:#7D868C"><div style="font-size:16px">✳</div><div style="font-size:9px;letter-spacing:0.1em;margin-top:2px">ASK</div></div>
+      <div style="padding:12px 0;text-align:center;color:#7D868C"><div style="font-size:16px">◱</div><div style="font-size:9px;letter-spacing:0.1em;margin-top:2px">REVIEW</div></div>
+      <div style="padding:12px 0;text-align:center;color:#7D868C"><div style="font-size:16px">◔</div><div style="font-size:9px;letter-spacing:0.1em;margin-top:2px">TRENDS</div></div>
+    </div>
+  </div>
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:980}}"></script>
+</body>
+</html>

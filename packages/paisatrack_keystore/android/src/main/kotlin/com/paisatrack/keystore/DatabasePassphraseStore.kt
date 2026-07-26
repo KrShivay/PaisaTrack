@@ -1,4 +1,4 @@
-package com.paisatrack
+package com.paisatrack.keystore
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -69,7 +69,7 @@ internal interface PassphraseCipher {
     fun clear()
 }
 
-private class SharedPreferencesPassphraseStorage(
+internal class SharedPreferencesPassphraseStorage(
     private val prefs: SharedPreferences,
 ) : PassphraseStorage {
     override fun read(): EncryptedPassphrase? {
@@ -95,7 +95,7 @@ private class SharedPreferencesPassphraseStorage(
     }
 }
 
-private class AndroidKeyStorePassphraseCipher(
+internal class AndroidKeyStorePassphraseCipher(
     private val appContext: Context,
 ) : PassphraseCipher {
     private val keyStore = KeyStore.getInstance(AndroidKeyStore).apply { load(null) }

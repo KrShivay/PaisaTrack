@@ -6,9 +6,11 @@ import 'capture/permissions/sms_permission_provider.dart';
 import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
 import 'core/theme/app_theme.dart';
+import 'data/db/database_provider.dart';
 import 'features/home/home_shell.dart';
 import 'features/notifications/ask_now_notifications.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/recovery/key_loss_screen.dart';
 import 'features/settings/app_settings.dart';
 
 /// Root widget for the PaisaTrack Flutter application.
@@ -28,26 +30,29 @@ class PaisaTrackApp extends ConsumerWidget {
     ref.watch(smsBackfillProvider);
     ref.watch(askNowNotificationControllerProvider);
 
+    final dbAsync = ref.watch(appDatabaseProvider);
     final permission = ref.watch(smsPermissionControllerProvider);
-    // Granted permission unlocks the shell. A user who declines can still enter
-    // the shell via "continue without SMS access" (continueWithoutSmsProvider);
-    // manual entry, Settings, and a persistent permission banner live there, so
-    // a denied permission no longer traps the user on onboarding.
     final continueWithoutSms = ref.watch(continueWithoutSmsProvider);
     final settings = ref.watch(appSettingsControllerProvider);
+
+    final Widget homeWidget = switch (dbAsync) {
+      AsyncData() => switch (permission) {
+          AsyncData(:final value) when value == SmsPermissionStatus.granted =>
+            const HomeShell(),
+          AsyncLoading() => const _StartupScreen(),
+          _ when continueWithoutSms => const HomeShell(),
+          _ => const OnboardingScreen(),
+        },
+      AsyncError() => const KeyLossScreen(),
+      _ => const _StartupScreen(),
+    };
 
     return MaterialApp(
       title: 'PaisaTrack',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: settings.valueOrNull?.themeChoice.themeMode ?? ThemeMode.dark,
-      home: switch (permission) {
-        AsyncData(:final value) when value == SmsPermissionStatus.granted =>
-          const HomeShell(),
-        AsyncLoading() => const _StartupScreen(),
-        _ when continueWithoutSms => const HomeShell(),
-        _ => const OnboardingScreen(),
-      },
+      home: homeWidget,
     );
   }
 }

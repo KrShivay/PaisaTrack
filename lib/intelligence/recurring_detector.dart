@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
 
 import '../data/db/database.dart';
+import 'models/embedder.dart';
 
 const _foregroundScanCheckpointKey = 'recurring_foreground_scan_checkpoint_v2';
 
@@ -39,13 +41,17 @@ class RecurringDetection {
 
 /// Nightly deterministic recurring-series scanner (PLAN §7.6).
 class RecurringDetector {
-  const RecurringDetector(this._database);
+  const RecurringDetector(
+    this._database, {
+    Embedder embedder = const NoopEmbedder(),
+  }) : _embedder = embedder;
 
   static const amountTolerancePct = 0.05;
   static const maxGapCoefficientOfVariation = 0.25;
   static const missedGraceFraction = 0.20;
 
   final AppDatabase _database;
+  final Embedder _embedder;
 
   /// Detects and upserts every qualifying merchant/amount stream atomically.
   Future<List<RecurringDetection>> run({DateTime? today}) async {
@@ -66,6 +72,11 @@ class RecurringDetector {
       for (final merchant in await _database.select(_database.merchants).get())
         merchant.id: merchant,
     };
+    final categories = {
+      for (final category in await _database.select(_database.categories).get())
+        category.id: category,
+    };
+    final semanticKinds = await _semanticKindVectors();
     final knownMerchantIds = merchants.keys.toSet();
     final grouped = <String, List<_TransactionPoint>>{};
     final fallbackLabels = <String, String>{};
@@ -84,6 +95,7 @@ class RecurringDetector {
               merchantId: merchantId,
               direction: txn.direction,
               amount: txn.amount,
+              categoryId: txn.categoryId,
               timestamp: DateTime.fromMillisecondsSinceEpoch(
                 txn.ts,
                 isUtc: true,
@@ -102,14 +114,23 @@ class RecurringDetector {
     }
 
     for (final points in grouped.values) {
+      final merchantId = points.first.merchantId;
+      final label = merchants[merchantId]?.userLabel ??
+          merchants[merchantId]?.canonicalName ??
+          fallbackLabels[merchantId] ??
+          merchantId;
+      final kind = await _kindFor(
+        points,
+        label: label,
+        categories: categories,
+        semanticKinds: semanticKinds,
+      );
       var detectedStableAmountCluster = false;
       for (final cluster in _amountClusters(points)) {
         final detection = _detectCluster(
           cluster,
-          label: merchants[cluster.first.merchantId]?.userLabel ??
-              merchants[cluster.first.merchantId]?.canonicalName ??
-              fallbackLabels[cluster.first.merchantId] ??
-              cluster.first.merchantId,
+          label: label,
+          kind: kind,
           today: scanDate,
         );
         if (detection == null) continue;
@@ -120,14 +141,13 @@ class RecurringDetector {
       // makes the amount vary. Keep the narrow amount clusters first to
       // separate multiple subscriptions at one merchant, then fall back to
       // cadence-only detection when none of those clusters qualify.
-      if (!detectedStableAmountCluster && points.length >= 3) {
-        final merchantId = points.first.merchantId;
+      if (!detectedStableAmountCluster &&
+          points.length >= 3 &&
+          _supportsVariableAmounts(kind)) {
         final detection = _detectCluster(
           points,
-          label: merchants[merchantId]?.userLabel ??
-              merchants[merchantId]?.canonicalName ??
-              fallbackLabels[merchantId] ??
-              merchantId,
+          label: label,
+          kind: kind,
           today: scanDate,
         );
         if (detection != null) stage(detection, points);
@@ -221,6 +241,7 @@ class RecurringDetector {
   RecurringDetection? _detectCluster(
     List<_TransactionPoint> points, {
     required String label,
+    required String kind,
     required DateTime today,
   }) {
     if (points.length < 3) return null;
@@ -267,11 +288,11 @@ class RecurringDetector {
       amountTrend: rising ? 'rising' : 'flat',
       occurrences: ordered.length,
       status: today.isAfter(nextExpected.add(grace)) ? 'missed' : 'active',
-      kind: _kind(label, last.direction),
+      kind: kind,
     );
   }
 
-  String _kind(String label, String direction) {
+  String? _kind(String label, String direction) {
     if (direction == 'credit') return 'income';
     final normalized = label.toLowerCase();
     if (normalized.contains('emi') ||
@@ -301,7 +322,101 @@ class RecurringDetector {
         normalized.contains('investment')) {
       return 'investment';
     }
+    return null;
+  }
+
+  Future<String> _kindFor(
+    List<_TransactionPoint> points, {
+    required String label,
+    required Map<String, Category> categories,
+    required Map<String, Float32List> semanticKinds,
+  }) async {
+    final direction = points.first.direction;
+    if (direction == 'credit') return 'income';
+    final categoryKind = _kindFromCategories(points, categories);
+    if (categoryKind != null) return categoryKind;
+    final labelKind = _kind(label, direction);
+    if (labelKind != null) return labelKind;
+    if (semanticKinds.isNotEmpty) {
+      final labelVector = await _embedder.embed(label);
+      if (labelVector != null) {
+        String? bestKind;
+        var bestScore = double.negativeInfinity;
+        for (final entry in semanticKinds.entries) {
+          final score = _cosineSimilarity(labelVector, entry.value);
+          if (score > bestScore) {
+            bestKind = entry.key;
+            bestScore = score;
+          }
+        }
+        if (bestKind != null && bestScore >= 0.45) return bestKind;
+      }
+    }
     return 'subscription';
+  }
+
+  String? _kindFromCategories(
+    List<_TransactionPoint> points,
+    Map<String, Category> categories,
+  ) {
+    final counts = <String, int>{};
+    for (final point in points) {
+      final category = categories[point.categoryId];
+      if (category == null) continue;
+      final rootId = category.parentId ?? category.id;
+      final kind = switch (rootId) {
+        'emi_loans' => 'emi',
+        'bills_utilities' when category.id == 'bills_mobile_recharge' =>
+          'recharge',
+        'bills_utilities' when category.id == 'bills_broadband_wifi' =>
+          'recharge',
+        'bills_utilities' when category.id == 'bills_dth_tv' => 'recharge',
+        'bills_utilities' => 'bill',
+        'subscriptions' => 'subscription',
+        'investments' => 'investment',
+        'income' => 'income',
+        'rent_housing' => 'bill',
+        _ => null,
+      };
+      if (kind != null) counts[kind] = (counts[kind] ?? 0) + 1;
+    }
+    if (counts.isEmpty) return null;
+    return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  Future<Map<String, Float32List>> _semanticKindVectors() async {
+    if (!await _embedder.isModelAvailable()) return const {};
+    const prompts = <String, String>{
+      'emi': 'loan EMI mortgage repayment',
+      'bill': 'monthly household utility rent insurance bill',
+      'recharge': 'mobile broadband DTH prepaid recharge',
+      'investment': 'SIP mutual fund NPS investment contribution',
+      'subscription': 'recurring software streaming membership subscription',
+    };
+    final vectors = <String, Float32List>{};
+    for (final entry in prompts.entries) {
+      final vector = await _embedder.embed(entry.value);
+      if (vector != null) vectors[entry.key] = vector;
+    }
+    return vectors;
+  }
+
+  bool _supportsVariableAmounts(String kind) {
+    return kind == 'bill' || kind == 'recharge' || kind == 'investment';
+  }
+
+  double _cosineSimilarity(Float32List a, Float32List b) {
+    if (a.isEmpty || a.length != b.length) return -1;
+    var dot = 0.0;
+    var aNorm = 0.0;
+    var bNorm = 0.0;
+    for (var i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      aNorm += a[i] * a[i];
+      bNorm += b[i] * b[i];
+    }
+    if (aNorm == 0 || bNorm == 0) return -1;
+    return dot / (math.sqrt(aNorm) * math.sqrt(bNorm));
   }
 
   String? _periodBand(double days) {
@@ -337,9 +452,13 @@ class RecurringDetector {
 /// checkpoint makes correctness independent of Android background scheduling
 /// without adding a full-table scan to every app resume.
 class ForegroundRecurringScanner {
-  const ForegroundRecurringScanner(this._database);
+  const ForegroundRecurringScanner(
+    this._database, {
+    Embedder embedder = const NoopEmbedder(),
+  }) : _embedder = embedder;
 
   final AppDatabase _database;
+  final Embedder _embedder;
 
   Future<bool> runIfStale({DateTime? now}) async {
     final startedAt = (now ?? DateTime.now()).toUtc();
@@ -355,7 +474,10 @@ class ForegroundRecurringScanner {
       if (changed == null) return false;
     }
 
-    await RecurringDetector(_database).run(today: startedAt);
+    await RecurringDetector(
+      _database,
+      embedder: _embedder,
+    ).run(today: startedAt);
     await _database.into(_database.modelMeta).insertOnConflictUpdate(
           ModelMetaCompanion.insert(
             key: _foregroundScanCheckpointKey,
@@ -372,6 +494,7 @@ class _TransactionPoint {
     required this.merchantId,
     required this.direction,
     required this.amount,
+    this.categoryId,
     required this.timestamp,
   });
 
@@ -379,6 +502,7 @@ class _TransactionPoint {
   final String merchantId;
   final String direction;
   final double amount;
+  final String? categoryId;
   final DateTime timestamp;
 }
 

@@ -60,14 +60,28 @@ class SmsTemplate {
   /// Evidence tier for this template's fixture source (ADR 0005).
   final TemplateProvenance provenance;
 
+  static const _supportedDateFormats = {
+    'ddMMMyy',
+    'dd-MM-yy',
+    'dd/MM/yy',
+    'dd-MM-yyyy',
+    'dd/MM/yyyy',
+    'dd-MMM-yy',
+    'dd/MMM/yy',
+  };
+
   /// Parses one template entry from registry JSON.
   static SmsTemplate fromJson(Map<String, Object?> json) {
+    final dateFormat = json['date_format'] as String?;
+    if (dateFormat != null && !_supportedDateFormats.contains(dateFormat)) {
+      throw FormatException('Unsupported date_format: $dateFormat');
+    }
     return SmsTemplate(
       id: json['id']! as String,
       regex: RegExp(json['regex']! as String, caseSensitive: false),
       direction: json['direction']! as String,
       channel: json['channel']! as String,
-      dateFormat: json['date_format'] as String?,
+      dateFormat: dateFormat,
       provenance: TemplateProvenance.fromJson(json['provenance'] as String?),
     );
   }

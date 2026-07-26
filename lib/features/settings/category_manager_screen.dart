@@ -47,9 +47,13 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       body: categories.when(
         data: (rows) {
           final query = _searchController.text.trim().toLowerCase();
-          final visible = rows.where((category) {
+          final byId = {for (final category in rows) category.id: category};
+          final visible = _hierarchicalRows(rows).where((category) {
+            final parentName =
+                byId[category.parentId]?.name.toLowerCase() ?? '';
             if (query.isNotEmpty &&
-                !category.name.toLowerCase().contains(query)) {
+                !category.name.toLowerCase().contains(query) &&
+                !parentName.contains(query)) {
               return false;
             }
             return switch (_filter) {
@@ -101,7 +105,11 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
                 );
               }
               final category = visible[index - 1];
+              final parent = byId[category.parentId];
               return ListTile(
+                contentPadding: EdgeInsets.only(
+                  left: parent == null ? 0 : AppSpacing.lg,
+                ),
                 leading: CircleAvatar(
                   backgroundColor: CategoryVisuals.color(category.id)
                       .withValues(alpha: 0.15),
@@ -112,9 +120,13 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
                 ),
                 title: Text(category.name),
                 subtitle: Text(
-                  category.isUserCreated
-                      ? 'Created by you · ${category.isSpending ? 'Spending' : 'Excluded'}'
-                      : 'Default category · ${category.isSpending ? 'Spending' : 'Excluded'}',
+                  [
+                    if (parent != null) 'Subcategory of ${parent.name}',
+                    category.isUserCreated
+                        ? 'Created by you'
+                        : 'Default category',
+                    category.isSpending ? 'Spending' : 'Excluded',
+                  ].join(' · '),
                 ),
                 onTap: () => _renameCategory(context, ref, category, rows),
                 trailing: PopupMenuButton<_CategoryAction>(
@@ -157,12 +169,34 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
     return ref.read(categoryRepositoryProvider(database));
   }
 
+  List<Category> _hierarchicalRows(List<Category> categories) {
+    final ids = categories.map((category) => category.id).toSet();
+    final children = <String, List<Category>>{};
+    final roots = <Category>[];
+    for (final category in categories) {
+      final parentId = category.parentId;
+      if (parentId == null || !ids.contains(parentId)) {
+        roots.add(category);
+      } else {
+        children.putIfAbsent(parentId, () => []).add(category);
+      }
+    }
+    return [
+      for (final root in roots) ...[
+        root,
+        ...?children[root.id],
+      ],
+    ];
+  }
+
   Future<void> _addCategory(BuildContext context, WidgetRef ref) async {
     final categories = await ref.read(categoryManagerListProvider.future);
     if (!context.mounted) return;
     final input = await _askCategory(
       context,
       title: 'Create category',
+      parentCategories:
+          categories.where((category) => category.parentId == null).toList(),
       existingNames: categories.map((category) => category.name).toSet(),
     );
     if (input == null) return;
@@ -170,6 +204,7 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       name: input.name,
       icon: input.icon,
       isSpending: input.type == CategoryType.spending,
+      parentId: input.parentId,
     );
   }
 
@@ -185,6 +220,14 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       initialValue: category.name,
       initialIcon: category.icon,
       allowIconSelection: category.isUserCreated,
+      allowParentSelection: category.isUserCreated,
+      initialParentId: category.parentId,
+      parentCategories: categories
+          .where(
+            (candidate) =>
+                candidate.parentId == null && candidate.id != category.id,
+          )
+          .toList(),
       initialType:
           category.isSpending ? CategoryType.spending : CategoryType.transfer,
       existingNames: categories
@@ -199,6 +242,8 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       icon: category.isUserCreated ? input.icon : null,
       isSpending:
           category.isUserCreated ? input.type == CategoryType.spending : null,
+      parentId: input.parentId,
+      updateParent: category.isUserCreated,
     );
   }
 
@@ -225,7 +270,30 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
         ],
       ),
     );
-    if (target == null) return;
+    if (target == null || !context.mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Merge ${source.name} into ${target.name}?'),
+        content: Text(
+          'All historical transactions, subcategories, and rules assigned to "${source.name}" '
+          'will be re-parented and moved to "${target.name}".\n\n"${source.name}" will be deleted. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Merge'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
 
     await (await _repository(ref)).mergeCategory(
       sourceCategoryId: source.id,
@@ -239,6 +307,9 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
     String initialValue = '',
     String initialIcon = 'category',
     bool allowIconSelection = true,
+    bool allowParentSelection = true,
+    String? initialParentId,
+    List<Category> parentCategories = const [],
     CategoryType initialType = CategoryType.spending,
     Set<String> existingNames = const {},
   }) {
@@ -251,6 +322,9 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
         initialValue: initialValue,
         initialIcon: initialIcon,
         allowIconSelection: allowIconSelection,
+        allowParentSelection: allowParentSelection,
+        initialParentId: initialParentId,
+        parentCategories: parentCategories,
         initialType: initialType,
         existingNames: existingNames,
       ),
@@ -267,11 +341,13 @@ class CategoryEditorResult {
     this.name,
     this.icon, {
     this.type = CategoryType.spending,
+    this.parentId,
   });
 
   final String name;
   final String icon;
   final CategoryType type;
+  final String? parentId;
 }
 
 class CategoryEditorDialog extends StatefulWidget {
@@ -281,6 +357,9 @@ class CategoryEditorDialog extends StatefulWidget {
     this.initialValue = '',
     this.initialIcon = 'category',
     this.allowIconSelection = true,
+    this.allowParentSelection = true,
+    this.initialParentId,
+    this.parentCategories = const [],
     this.initialType = CategoryType.spending,
     this.existingNames = const {},
     this.onSave,
@@ -290,6 +369,9 @@ class CategoryEditorDialog extends StatefulWidget {
   final String initialValue;
   final String initialIcon;
   final bool allowIconSelection;
+  final bool allowParentSelection;
+  final String? initialParentId;
+  final List<Category> parentCategories;
   final CategoryType initialType;
   final Set<String> existingNames;
   final ValueChanged<CategoryEditorResult>? onSave;
@@ -306,6 +388,7 @@ class _CategoryEditorDialogState extends State<CategoryEditorDialog> {
   late String _selectedIcon = widget.initialIcon;
   late bool _manuallySelected = widget.initialValue.isNotEmpty;
   late CategoryType _type = widget.initialType;
+  late String? _parentId = widget.initialParentId;
   String? _errorText;
 
   @override
@@ -328,7 +411,12 @@ class _CategoryEditorDialogState extends State<CategoryEditorDialog> {
       setState(() => _errorText = 'A category with this name already exists');
       return;
     }
-    final result = CategoryEditorResult(name, _selectedIcon, type: _type);
+    final result = CategoryEditorResult(
+      name,
+      _selectedIcon,
+      type: _type,
+      parentId: _parentId,
+    );
     if (widget.onSave case final onSave?) {
       onSave(result);
     } else {
@@ -393,6 +481,32 @@ class _CategoryEditorDialogState extends State<CategoryEditorDialog> {
                 },
                 onSubmitted: (_) => _save(),
               ),
+              if (widget.allowParentSelection &&
+                  widget.parentCategories.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                DropdownButtonFormField<String>(
+                  initialValue: _parentId ?? '',
+                  decoration: const InputDecoration(
+                    labelText: 'Subcategory of',
+                    helperText: 'Optional — leave as Top-level category',
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Top-level category'),
+                    ),
+                    for (final category in widget.parentCategories)
+                      DropdownMenuItem(
+                        value: category.id,
+                        child: Text(category.name),
+                      ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _parentId =
+                        value == null || value.isEmpty ? null : value,
+                  ),
+                ),
+              ],
               if (widget.allowIconSelection) ...[
                 const SizedBox(height: AppSpacing.lg),
                 Text('Choose icon', style: theme.textTheme.titleMedium),

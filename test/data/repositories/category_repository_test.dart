@@ -24,6 +24,7 @@ void main() {
   test('add, rename, and merge retro-apply transactions and rules', () async {
     final sourceId = await repository.addUserCategory(
       name: 'Coffee Runs',
+      parentId: 'food_dining',
       clock: () => DateTime.utc(2026, 7, 8),
     );
     await repository.renameCategory(
@@ -37,6 +38,7 @@ void main() {
         .getSingle();
     expect(renamed.icon, 'local_cafe');
     expect(renamed.isSpending, isFalse);
+    expect(renamed.parentId, 'food_dining');
 
     final now = DateTime.utc(2026, 7, 8, 9);
     await database.into(database.transactions).insert(

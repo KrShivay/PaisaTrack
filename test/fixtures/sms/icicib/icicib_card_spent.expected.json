@@ -1,0 +1,19 @@
+{
+  "sender": "VM-ICICIB",
+  "received_at": 1784073600000,
+  "expected": {
+    "ok": {
+      "amount": 1250.0,
+      "direction": "debit",
+      "channel": "card",
+      "merchant_raw": "SWIGGY",
+      "counterparty_vpa": null,
+      "account_hint": "xx8765",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1784073600000,
+      "parse_source": "template",
+      "parse_confidence": 0.85
+    }
+  }
+}

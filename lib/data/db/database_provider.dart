@@ -30,10 +30,26 @@ final databaseDirectoryProvider = FutureProvider<Directory>((ref) async {
 final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
   final directory = await ref.watch(databaseDirectoryProvider.future);
   final passphraseProvider = ref.watch(databasePassphraseProvider);
-  final passphrase = await passphraseProvider.getPassphrase();
+  final dbFile = File(p.join(directory.path, appDatabaseFileName));
+  final dbExists = dbFile.existsSync();
+
+  DatabasePassphrase passphrase;
+  try {
+    passphrase = await passphraseProvider.getPassphrase();
+  } on Exception catch (e) {
+    if (dbExists) {
+      throw DatabaseKeyLostError(
+        'Database passphrase decryption failed against an existing database file',
+        e,
+      );
+    }
+    await passphraseProvider.clearStoredPassphrase();
+    passphrase = await passphraseProvider.getPassphrase();
+  }
+
   final database = AppDatabase(
     openEncryptedDatabase(
-      file: File(p.join(directory.path, appDatabaseFileName)),
+      file: dbFile,
       passphrase: passphrase,
     ),
   );
@@ -42,11 +58,22 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
     closeAppDatabase(database);
   });
 
-  // T-039 regression fix: the categorizer stamps `category_id` on every parsed
-  // transaction and `PRAGMA foreign_keys = ON` enforces the reference, so the
-  // bundled defaults MUST exist before any ingest runs. Idempotent
-  // (insertOrIgnore) and preserves user-edited rows.
-  await database.seedDefaultCategories();
+  try {
+    // T-039 regression fix: the categorizer stamps `category_id` on every parsed
+    // transaction and `PRAGMA foreign_keys = ON` enforces the reference, so the
+    // bundled defaults MUST exist before any ingest runs. Idempotent
+    // (insertOrIgnore) and preserves user-edited rows.
+    await database.seedDefaultCategories();
+  } on Object catch (e) {
+    await closeAppDatabase(database);
+    if (dbExists) {
+      throw DatabaseKeyLostError(
+        'Database passphrase decryption or initialization failed against an existing database file',
+        e,
+      );
+    }
+    rethrow;
+  }
 
   return database;
 });

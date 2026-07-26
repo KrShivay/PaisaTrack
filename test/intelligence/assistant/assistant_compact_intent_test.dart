@@ -4,7 +4,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 
-class _CompactIntentRuntime implements LlmRuntime {
+class _CompactIntentRuntime extends NoopLlmRuntime {
   _CompactIntentRuntime(this.intent);
 
   final Map<String, Object?> intent;

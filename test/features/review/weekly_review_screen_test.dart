@@ -217,16 +217,25 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('All'));
-    await tester.pump();
-    await tester.scrollUntilVisible(find.text('Load 2 more'), 200);
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.text('Load 2 more'),
+      find.byType(ListView).first,
+      const Offset(0, -200),
+    );
 
     await tester.tap(find.text('Load 2 more'));
-    await tester.pump();
-    await tester.pump();
-    await tester.scrollUntilVisible(find.text('Payee 3'), 200);
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.text('Payee 3'),
+      find.byType(ListView).first,
+      const Offset(0, -200),
+    );
 
     expect(find.text('Payee 3'), findsOneWidget);
     expect(find.textContaining('Load '), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets(
@@ -420,6 +429,137 @@ void main() {
       rows.singleWhere((row) => row.id == 'txn_group_other').status,
       'needs_review',
     );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('filters review list by search query', (tester) async {
+    final items = [
+      reviewItem(
+        id: 'txn_swiggy',
+        displayName: 'Swiggy Instamart',
+        counterpartyKey: 'raw:swiggy instamart',
+      ),
+      reviewItem(
+        id: 'txn_zomato',
+        displayName: 'Zomato Food',
+        counterpartyKey: 'raw:zomato food',
+      ),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+        ],
+        child: const MaterialApp(home: WeeklyReviewScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Swiggy Instamart'), findsOneWidget);
+    expect(find.text('Zomato Food'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('review_search_field')),
+      'Swiggy',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Swiggy Instamart'), findsOneWidget);
+    expect(find.text('Zomato Food'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('select all only selects search-filtered items', (tester) async {
+    final items = [
+      reviewItem(
+        id: 'txn_swiggy',
+        displayName: 'Swiggy Instamart',
+        counterpartyKey: 'raw:swiggy instamart',
+      ),
+      reviewItem(
+        id: 'txn_zomato_1',
+        displayName: 'Zomato Food 1',
+        counterpartyKey: 'raw:zomato food 1',
+      ),
+      reviewItem(
+        id: 'txn_zomato_2',
+        displayName: 'Zomato Food 2',
+        counterpartyKey: 'raw:zomato food 2',
+      ),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+        ],
+        child: const MaterialApp(home: WeeklyReviewScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('review_search_field')),
+      'Swiggy',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('select_all_review')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirm (1)'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('clearing search query via clear icon resets text field and filter', (tester) async {
+    final items = [
+      reviewItem(
+        id: 'txn_swiggy',
+        displayName: 'Swiggy Food',
+        counterpartyKey: 'raw:swiggy food',
+      ),
+      reviewItem(
+        id: 'txn_zomato',
+        displayName: 'Zomato Food',
+        counterpartyKey: 'raw:zomato food',
+      ),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+        ],
+        child: const MaterialApp(home: WeeklyReviewScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('review_search_field')),
+      'Zomato',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Swiggy Food'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.clear));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Zomato'), findsNothing);
+    expect(find.text('Swiggy Food'), findsOneWidget);
+
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });

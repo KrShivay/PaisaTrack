@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/intelligence/models/embedder.dart';
 import 'package:paisatrack/intelligence/recurring_detector.dart';
 
 void main() {
@@ -30,6 +33,7 @@ void main() {
     String? merchantId,
     String? merchantRaw,
     String? counterpartyVpa,
+    String? categoryId,
     required DateTime date,
     required double amount,
     String direction = 'debit',
@@ -44,6 +48,7 @@ void main() {
             merchantId: Value(merchantId),
             merchantRaw: Value(merchantRaw),
             counterpartyVpa: Value(counterpartyVpa),
+            categoryId: Value(categoryId),
             parseSource: 'template',
             confidenceJson: '{}',
             status: 'auto',
@@ -213,6 +218,79 @@ void main() {
     expect(rows.map((row) => row.kind), everyElement('investment'));
   });
 
+  test('uses parent and subcategory data for variable recurring bills',
+      () async {
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'bills_utilities',
+            name: 'Bills & Utilities',
+            icon: 'receipt_long',
+            isSpending: true,
+            sortOrder: 1,
+            isUserCreated: false,
+          ),
+        );
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'bills_society_maintenance',
+            name: 'Society Maintenance',
+            parentId: const Value('bills_utilities'),
+            icon: 'apartment',
+            isSpending: true,
+            sortOrder: 2,
+            isUserCreated: false,
+          ),
+        );
+    await merchant('society', 'Green Residency');
+    for (final entry in [
+      ('m1', DateTime.utc(2026, 1, 5), 2100.0),
+      ('m2', DateTime.utc(2026, 2, 4), 3100.0),
+      ('m3', DateTime.utc(2026, 3, 6), 2450.0),
+    ]) {
+      await txn(
+        id: entry.$1,
+        merchantId: 'society',
+        categoryId: 'bills_society_maintenance',
+        date: entry.$2,
+        amount: entry.$3,
+      );
+    }
+
+    await RecurringDetector(database).run(today: DateTime.utc(2026, 3, 10));
+
+    expect(
+      (await database.select(database.recurringSeries).getSingle()).kind,
+      'bill',
+    );
+  });
+
+  test('uses the available on-device model for semantic recurring kind',
+      () async {
+    await merchant('wealth', 'Wealth Builder');
+    for (final entry in [
+      ('w1', DateTime.utc(2026, 1, 5), 2000.0),
+      ('w2', DateTime.utc(2026, 2, 4), 3500.0),
+      ('w3', DateTime.utc(2026, 3, 6), 2500.0),
+    ]) {
+      await txn(
+        id: entry.$1,
+        merchantId: 'wealth',
+        date: entry.$2,
+        amount: entry.$3,
+      );
+    }
+
+    await RecurringDetector(
+      database,
+      embedder: const _RecurringKindEmbedder(),
+    ).run(today: DateTime.utc(2026, 3, 10));
+
+    expect(
+      (await database.select(database.recurringSeries).getSingle()).kind,
+      'investment',
+    );
+  });
+
   test('foreground scanner runs once and reruns after transaction changes',
       () async {
     await merchant('mobile', 'Mobile Recharge');
@@ -310,4 +388,24 @@ void main() {
     expect(detections, isEmpty);
     expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
   });
+}
+
+class _RecurringKindEmbedder implements Embedder {
+  const _RecurringKindEmbedder();
+
+  @override
+  Future<Float32List?> embed(String text) async {
+    final investment = text.contains('Wealth Builder') ||
+        text.contains('SIP mutual fund NPS investment');
+    return Float32List.fromList(investment ? [1, 0] : [0, 1]);
+  }
+
+  @override
+  Future<bool> isModelAvailable() async => true;
+
+  @override
+  Future<bool> downloadModel() async => true;
+
+  @override
+  Future<bool> deleteModel() async => true;
 }

@@ -20,10 +20,14 @@ import 'support/fake_captured_sms_source.dart';
 void main() {
   testWidgets('renders startup progress before permission lookup completes',
       (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
     final gate = _DelayedSmsPermissionGate();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [smsPermissionGateProvider.overrideWithValue(gate)],
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          smsPermissionGateProvider.overrideWithValue(gate),
+        ],
         child: const PaisaTrackApp(),
       ),
     );
@@ -34,12 +38,16 @@ void main() {
     gate.complete(SmsPermissionStatus.denied);
     await tester.pumpAndSettle();
     expect(find.text('Read bank SMS on this device'), findsOneWidget);
+
+    await database.close();
   });
 
   testWidgets('renders the app shell', (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
           ),
@@ -64,6 +72,8 @@ void main() {
     expect(find.text('Transactions'), findsWidgets);
     expect(find.text('Review'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
+
+    await database.close();
   });
 
   testWidgets('boots with an in-memory app database override', (tester) async {

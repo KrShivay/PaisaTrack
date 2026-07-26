@@ -554,5 +554,25 @@ void main() {
 
       await unmount(tester);
     });
+
+    testWidgets('shows raw SMS sender, body and confidence evidence under technical details',
+        (tester) async {
+      await pumpDetail(tester);
+      await tester.scrollUntilVisible(
+        find.text('Technical details'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Technical details'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('VM-HDFCBK'), findsOneWidget);
+      expect(
+        find.textContaining('Rs.449 debited via UPI to amazon@ybl'),
+        findsOneWidget,
+      );
+
+      await unmount(tester);
+    });
   });
 }

@@ -68,6 +68,19 @@ void main() {
     );
   });
 
+  test('SmsBackfillStatusNotifier updates progress state and stage', () {
+    final notifier = SmsBackfillStatusNotifier();
+    expect(notifier.state.stage, SmsBackfillStage.idle);
+
+    notifier.updateProgress(processed: 100, failed: 2);
+    expect(notifier.state.stage, SmsBackfillStage.running);
+    expect(notifier.state.processed, 100);
+    expect(notifier.state.failed, 2);
+
+    notifier.markCompleted(processed: 100, failed: 2);
+    expect(notifier.state.stage, SmsBackfillStage.completed);
+  });
+
   test('continues after a page containing no filter-approved messages',
       () async {
     const cursor = SmsInboxCursor(beforeEpochMillis: 900, beforeId: 9);

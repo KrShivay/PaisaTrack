@@ -77,6 +77,14 @@ class AppDatabase extends _$AppDatabase {
     return MigrationStrategy(
       onCreate: (migrator) async {
         await migrator.createAll();
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_merchant_raw_lower '
+          'ON transactions (lower(merchant_raw));',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_counterparty_vpa_lower '
+          'ON transactions (lower(counterparty_vpa));',
+        );
       },
       onUpgrade: (migrator, from, to) async {
         if (from < 2) {
@@ -128,6 +136,19 @@ class AppDatabase extends _$AppDatabase {
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
+        try {
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_merchant_raw_lower '
+            'ON transactions (lower(merchant_raw));',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_counterparty_vpa_lower '
+            'ON transactions (lower(counterparty_vpa));',
+          );
+        } on Exception catch (_) {
+          // Ignore index creation errors during migration from pre-v2 schemas where
+          // merchant_raw / counterparty_vpa columns are not yet present.
+        }
         await _ensurePaymentSourceTrigger();
       },
     );

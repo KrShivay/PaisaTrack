@@ -54,7 +54,7 @@ Android unit tests:
 
 ```sh
 cd android
-./gradlew :app:testDebugUnitTest
+./gradlew :app:testDebugUnitTest :paisatrack_keystore:testDebugUnitTest
 ```
 
 Do not commit raw SMS, statements, account identifiers, or unsanitized exports.

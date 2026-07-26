@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
@@ -17,6 +18,7 @@ import 'anomaly_detector.dart';
 import 'burn_rate_forecaster.dart';
 import 'insights_engine.dart';
 import 'llm/llm_runtime.dart';
+import 'models/embedder.dart';
 import 'narrative_insight_generator.dart';
 import 'recurring_detector.dart';
 
@@ -56,7 +58,10 @@ class NightlyPipeline {
         _actions = actions,
         _clock = clock ?? DateTime.now;
 
-  factory NightlyPipeline.production(AppDatabase database) {
+  factory NightlyPipeline.production(
+    AppDatabase database, {
+    Embedder recurringEmbedder = const NoopEmbedder(),
+  }) {
     return NightlyPipeline(
       database: database,
       actions: {
@@ -81,7 +86,10 @@ class NightlyPipeline {
           });
         },
         NightlyStage.recurringScan: (now) async {
-          await RecurringDetector(database).run(today: now);
+          await RecurringDetector(
+            database,
+            embedder: recurringEmbedder,
+          ).run(today: now);
         },
         NightlyStage.baselines: (now) async {
           await AnomalyDetector(database).run(today: now);
@@ -109,7 +117,12 @@ class NightlyPipeline {
   final Duration timeLimit;
   final DateTime Function() _clock;
 
-  Future<NightlyRunResult> run({DateTime? now}) async {
+  Future<NightlyRunResult> run({DateTime? now}) => runStages(now: now);
+
+  Future<NightlyRunResult> runStages({
+    Set<NightlyStage>? only,
+    DateTime? now,
+  }) async {
     final startedAt = _clock();
     final runAt = (now ?? startedAt).toUtc();
     final runDay = _dayKey(runAt);
@@ -118,11 +131,15 @@ class NightlyPipeline {
     final stagesRun = <NightlyStage>[];
 
     while (nextIndex < NightlyStage.values.length) {
+      final stage = NightlyStage.values[nextIndex];
+      if (only != null && !only.contains(stage)) {
+        nextIndex++;
+        continue;
+      }
       final remaining = timeLimit - _clock().difference(startedAt);
       if (remaining <= Duration.zero) {
         return NightlyRunResult(completed: false, stagesRun: stagesRun);
       }
-      final stage = NightlyStage.values[nextIndex];
       final action = _actions[stage];
       if (action == null) {
         throw StateError('Missing nightly action for ${stage.name}');
@@ -173,9 +190,13 @@ void nightlyCallbackDispatcher() {
   Workmanager().executeTask((task, _) async {
     if (task != nightlyTaskName) return true;
     WidgetsFlutterBinding.ensureInitialized();
+    DartPluginRegistrant.ensureInitialized();
     final database = await _openWorkerDatabase();
     try {
-      final result = await NightlyPipeline.production(database).run();
+      final result = await NightlyPipeline.production(
+        database,
+        recurringEmbedder: const PlatformEmbedder(),
+      ).run();
       return result.completed;
     } finally {
       await closeAppDatabase(database);

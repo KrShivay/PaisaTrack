@@ -20,10 +20,22 @@ void main() {
     await database.seedDefaultCategories();
 
     final seeded = await database.select(database.categories).get();
-    expect(seeded, hasLength(18));
+    expect(seeded, hasLength(87));
     expect(
       seeded.map((category) => category.id),
-      containsAll(const ['food_dining', 'cash_withdrawal', 'other']),
+      containsAll(const [
+        'food_dining',
+        'cash_withdrawal',
+        'food_tea_cigarette',
+        'subscriptions_claude',
+        'subscriptions_codex',
+      ]),
+    );
+    expect(
+      seeded
+          .singleWhere((category) => category.id == 'subscriptions_claude')
+          .parentId,
+      'subscriptions',
     );
 
     await (database.update(database.categories)
@@ -38,7 +50,7 @@ void main() {
     await database.seedDefaultCategories();
 
     final reseeded = await database.select(database.categories).get();
-    expect(reseeded, hasLength(18));
+    expect(reseeded, hasLength(87));
 
     final food = await (database.select(database.categories)
           ..where((category) => category.id.equals('food_dining')))

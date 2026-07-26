@@ -1,6 +1,9 @@
 # ADR 0008 — Pinned on-device LLM artifact (T-075)
 
-Status: accepted (@human approved via @claude session, 2026-07-11)
+Status: superseded by ADR 0009 (2026-07-26)
+
+The implementation now uses LiteRT-LM and Qwen3 0.6B mixed INT4. See
+[ADR 0009](0009-litert-lm-runtime-and-qwen3.md) for the current contract.
 
 ## Context
 

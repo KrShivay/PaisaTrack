@@ -1,0 +1,19 @@
+{
+  "sender": "AD-HDFCBK",
+  "received_at": 1784073600000,
+  "expected": {
+    "ok": {
+      "amount": 2499.0,
+      "direction": "debit",
+      "channel": "card",
+      "merchant_raw": "AMAZON INDIA",
+      "counterparty_vpa": null,
+      "account_hint": "xx4321",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1784073600000,
+      "parse_source": "template",
+      "parse_confidence": 0.85
+    }
+  }
+}

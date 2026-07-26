@@ -14,11 +14,20 @@ void main() {
       isUserCreated: false,
     ),
     Category(
+      id: 'food_delivery',
+      name: 'Food Delivery',
+      parentId: 'food',
+      icon: 'delivery_dining',
+      isSpending: true,
+      sortOrder: 2,
+      isUserCreated: false,
+    ),
+    Category(
       id: 'transport',
       name: 'Transport',
       icon: 'directions_car',
       isSpending: true,
-      sortOrder: 2,
+      sortOrder: 3,
       isUserCreated: false,
     ),
     Category(
@@ -26,7 +35,7 @@ void main() {
       name: 'Transfers',
       icon: 'swap_horiz',
       isSpending: false,
-      sortOrder: 3,
+      sortOrder: 4,
       isUserCreated: false,
     ),
   ];
@@ -66,6 +75,7 @@ void main() {
     expect(find.text('Choose category'), findsOneWidget);
     expect(find.text('SUGGESTED'), findsOneWidget);
     expect(find.text('Previously used for this merchant'), findsOneWidget);
+    expect(find.text('Subcategory of Food & Dining'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'trans');

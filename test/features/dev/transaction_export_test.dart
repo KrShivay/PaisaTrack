@@ -98,4 +98,38 @@ void main() {
     expect(decoded, hasLength(1));
     expect((decoded.single as Map<String, dynamic>)['amount'], 75.0);
   });
+
+  test('TransactionCsvExporter serializes rows into CSV format with header',
+      () async {
+    await insertTxn(
+      id: 'txn_1',
+      amount: 499.0,
+      direction: 'debit',
+      refId: '223047328116',
+    );
+
+    final csvStr = await TransactionCsvExporter(database).serializeCsv();
+
+    expect(
+      csvStr,
+      contains(
+        'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status',
+      ),
+    );
+    expect(csvStr, contains('499.00,debit,upi'));
+    expect(csvStr, contains('223047328116'));
+  });
+
+  test('TransactionCsvExporter neutralizes spreadsheet formula characters',
+      () async {
+    await insertTxn(
+      id: 'txn_formula',
+      amount: 100.0,
+      direction: 'debit',
+      refId: '=HYPERLINK("http://attacker.com")',
+    );
+
+    final csvStr = await TransactionCsvExporter(database).serializeCsv();
+    expect(csvStr, contains("'=HYPERLINK"));
+  });
 }

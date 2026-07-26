@@ -1,0 +1,21 @@
+name: paisatrack_keystore
+description: Android Keystore database passphrase provider plugin for PaisaTrack.
+version: 0.0.1
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.paisatrack.keystore
+        pluginClass: AndroidKeystorePlugin

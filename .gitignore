@@ -8,6 +8,7 @@ build/
 BankStatement/
 
 android/.gradle/
+packages/**/.gradle/
 android/local.properties
 
 # Personal data and local artifacts — never commit

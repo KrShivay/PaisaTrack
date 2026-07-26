@@ -13,6 +13,7 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/theme/paisa_colors.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../intelligence/llm/llm_runtime.dart';
+import '../../intelligence/llm/llm_model_status.dart';
 import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
@@ -22,7 +23,8 @@ import 'category_manager_screen.dart';
 import 'payee_labels_screen.dart';
 import 'payment_sources_screen.dart';
 
-const minimumBackupPassphraseLength = 12;
+const minimumBackupPassphraseLength =
+    EncryptedBackupService.minimumPassphraseLength;
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -338,6 +340,7 @@ class SettingsScreen extends ConsumerWidget {
       context,
       title: 'Import encrypted backup',
       action: 'Import',
+      minimumLength: minimumBackupPassphraseLength,
     );
     if (passphrase == null || !context.mounted) return;
 
@@ -641,8 +644,7 @@ class _LlmModelTile extends ConsumerStatefulWidget {
 }
 
 class _LlmModelTileState extends ConsumerState<_LlmModelTile> {
-  bool? _available;
-  bool? _supported;
+  LlmModelStatus? _status;
   bool _busy = false;
 
   @override
@@ -652,75 +654,166 @@ class _LlmModelTileState extends ConsumerState<_LlmModelTile> {
   }
 
   Future<void> _refresh() async {
-    final runtime = ref.read(llmRuntimeProvider);
-    final results = await Future.wait([
-      runtime.isModelAvailable(),
-      runtime.isDeviceSupported(),
-    ]);
+    final status = await ref.read(llmRuntimeProvider).modelStatus();
     if (!mounted) return;
-    setState(() {
-      _available = results[0];
-      _supported = results[1];
-    });
+    setState(() => _status = status);
   }
 
   Future<void> _download() async {
-    setState(() => _busy = true);
-    final succeeded = await ref.read(llmRuntimeProvider).downloadModel();
+    final runtime = ref.read(llmRuntimeProvider);
+    final status = await runtime.modelStatus();
     if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _available = succeeded;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          succeeded ? 'AI model downloaded' : 'Model download paused or failed',
-        ),
+    if (!status.downloadSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_supportMessage(status.supportReason))),
+      );
+      return;
+    }
+
+    setState(() => _busy = true);
+    final operation = await runtime.downloadModelResult();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await _refresh();
+    if (!mounted) return;
+    if (!operation.success) {
+      _showDownloadFailureDialog(operation.code);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI model downloaded')),
+      );
+    }
+  }
+
+  void _showDownloadFailureDialog(String code) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Model download failed'),
+        content: Text(_operationMessage(code)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _download();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
 
+  Future<void> _cancelDownload() async {
+    await ref.read(llmRuntimeProvider).cancelModelDownload();
+  }
+
   Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete AI model?'),
+        content: const Text(
+          'You can download it again later. Your financial data is not affected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
     setState(() => _busy = true);
     final succeeded = await ref.read(llmRuntimeProvider).deleteModel();
     if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _available = !succeeded;
-    });
+    setState(() => _busy = false);
+    await _refresh();
+    if (!mounted || succeeded) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not delete the AI model')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final status = switch ((_supported, _available)) {
-      (false, _) => 'Unsupported on this device (requires at least 3 GB RAM)',
-      (_, true) => 'Downloaded · app-private storage',
-      (true, false) => 'Not downloaded',
-      _ => 'Checking device…',
+    final model = _status;
+    final status = switch (model) {
+      null => 'Checking device…',
+      LlmModelStatus(installed: true) =>
+        'Downloaded · ${model.runtime} · ${model.backend}',
+      LlmModelStatus(supported: false) => _supportMessage(model.supportReason),
+      _ => 'Not downloaded',
     };
+    final modelName = model?.displayName ?? 'AI model';
+    final size = model == null || model.sizeBytes <= 0
+        ? ''
+        : ' · ${_formatBytes(model.sizeBytes)}';
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: const Text('Qwen2.5 0.5B · 547 MB'),
+      title: Text('$modelName$size'),
       subtitle: Text('$status\nPrompts and inference stay on this device.'),
       isThreeLine: true,
       trailing: _busy
-          ? const SizedBox.square(
-              dimension: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
+          ? IconButton(
+              tooltip: 'Cancel AI model download',
+              onPressed: _cancelDownload,
+              icon: const Icon(Icons.stop_circle_outlined),
             )
-          : _available == true
+          : model?.installed == true
               ? IconButton(
                   tooltip: 'Delete AI model',
                   onPressed: _delete,
                   icon: const Icon(Icons.delete_outline),
                 )
               : FilledButton(
-                  onPressed: _supported == true ? _download : null,
+                  onPressed:
+                      model?.downloadSupported == true ? _download : null,
                   child: const Text('Download'),
                 ),
     );
   }
+
+  static String _formatBytes(int bytes) {
+    final mib = bytes / (1024 * 1024);
+    return '${mib.toStringAsFixed(mib >= 100 ? 0 : 1)} MB';
+  }
+
+  static String _supportMessage(LlmSupportReason reason) => switch (reason) {
+        LlmSupportReason.lowRamDevice ||
+        LlmSupportReason.insufficientTotalMemory ||
+        LlmSupportReason.insufficientAvailableMemory =>
+          'Not enough available memory for this AI model',
+        LlmSupportReason.insufficientStorage =>
+          'Not enough free storage for this AI model',
+        LlmSupportReason.backendUnavailable ||
+        LlmSupportReason.initializationFailed =>
+          'The on-device AI runtime is unavailable',
+        LlmSupportReason.supported => 'Supported',
+        _ => 'This device does not support the AI model',
+      };
+
+  static String _operationMessage(String code) => switch (code) {
+        'insufficient_storage' =>
+          'Free some device storage, then try the download again.',
+        'download_cancelled' => 'The download was cancelled.',
+        'unsupported_device' ||
+        'low_ram_device' ||
+        'insufficient_total_memory' ||
+        'insufficient_available_memory' =>
+          'This device does not have enough memory for the AI model.',
+        _ =>
+          'The download was interrupted or failed. Check your connection and try again.',
+      };
 }
 
 class _Section extends StatelessWidget {

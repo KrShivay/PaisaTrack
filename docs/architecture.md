@@ -85,8 +85,9 @@ single explained spending-total contract before budgets consume those totals.
 ## On-device models
 
 - The text embedder supports merchant resolution.
-- The optional Qwen model is shared by unmatched-SMS extraction, qualitative
-  aggregate narratives, and assistant intent fallback.
+- The optional Qwen3 0.6B mixed-INT4 model runs through LiteRT-LM and is shared
+  by unmatched-SMS extraction, qualitative aggregate narratives, and assistant
+  intent fallback (ADR 0009).
 - Model files are explicitly downloaded, integrity-checked, app-private, and
   deletable.
 - Missing/unsupported models return typed unavailable results; deterministic

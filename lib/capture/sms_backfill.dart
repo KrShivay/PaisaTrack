@@ -12,6 +12,8 @@ import '../data/models/raw_sms.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
 import '../features/settings/app_settings.dart';
+import '../intelligence/nightly_job.dart';
+import '../intelligence/models/embedder.dart';
 import '../intelligence/recurring_detector.dart';
 import 'captured_sms_source.dart';
 import 'parser_cascade.dart';
@@ -406,7 +408,13 @@ Future<void> _runCatchUpSafely(
 ) async {
   try {
     await catchUp.run();
-    await ForegroundRecurringScanner(database).runIfStale();
+    await ForegroundRecurringScanner(
+      database,
+      embedder: const PlatformEmbedder(),
+    ).runIfStale();
+    await NightlyPipeline.production(database).runStages(
+      only: {NightlyStage.purgeExpiredRawSms},
+    );
   } catch (error, stackTrace) {
     developer.log(
       'Incremental SMS catch-up failed',
@@ -428,6 +436,77 @@ class _SmsCatchUpLifecycleObserver with WidgetsBindingObserver {
   }
 }
 
+enum SmsBackfillStage { idle, running, completed, failed }
+
+class SmsBackfillStatusState {
+  const SmsBackfillStatusState({
+    this.stage = SmsBackfillStage.idle,
+    this.processed = 0,
+    this.failed = 0,
+  });
+
+  final SmsBackfillStage stage;
+  final int processed;
+  final int failed;
+
+  SmsBackfillStatusState copyWith({
+    SmsBackfillStage? stage,
+    int? processed,
+    int? failed,
+  }) {
+    return SmsBackfillStatusState(
+      stage: stage ?? this.stage,
+      processed: processed ?? this.processed,
+      failed: failed ?? this.failed,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SmsBackfillStatusState &&
+          runtimeType == other.runtimeType &&
+          stage == other.stage &&
+          processed == other.processed &&
+          failed == other.failed;
+
+  @override
+  int get hashCode => Object.hash(stage, processed, failed);
+}
+
+class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
+  SmsBackfillStatusNotifier() : super(const SmsBackfillStatusState());
+
+  void markRunning() {
+    state = const SmsBackfillStatusState(stage: SmsBackfillStage.running);
+  }
+
+  void updateProgress({required int processed, required int failed}) {
+    state = state.copyWith(
+      stage: SmsBackfillStage.running,
+      processed: processed,
+      failed: failed,
+    );
+  }
+
+  void markCompleted({required int processed, required int failed}) {
+    state = state.copyWith(
+      stage: SmsBackfillStage.completed,
+      processed: processed,
+      failed: failed,
+    );
+  }
+
+  void markFailed() {
+    state = state.copyWith(stage: SmsBackfillStage.failed);
+  }
+}
+
+final smsBackfillStatusProvider =
+    StateNotifierProvider<SmsBackfillStatusNotifier, SmsBackfillStatusState>(
+  (ref) => SmsBackfillStatusNotifier(),
+);
+
 /// Runs the newest full-history import version once permission and DB are ready.
 final smsBackfillProvider = FutureProvider<int>((ref) async {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
@@ -436,10 +515,28 @@ final smsBackfillProvider = FutureProvider<int>((ref) async {
   // incremental path is page-bounded, so an arbitrary wall-clock delay is no
   // longer needed and would leave timers behind when widget tests dispose.
   await WidgetsBinding.instance.endOfFrame;
+  final notifier = ref.read(smsBackfillStatusProvider.notifier);
+  // Reset before awaiting: this provider re-runs on permission changes and
+  // would otherwise render the previous run's completed count as live.
+  notifier.markRunning();
   try {
     final runner = await ref.watch(smsHistoryImportRunnerProvider.future);
-    return (await runner.run(force: false)).processed;
+    final result = await runner.run(
+      force: false,
+      onProgress: (progress) {
+        notifier.updateProgress(
+          processed: progress.processed,
+          failed: progress.failed,
+        );
+      },
+    );
+    notifier.markCompleted(
+      processed: result.processed,
+      failed: result.failed,
+    );
+    return result.processed;
   } catch (error, stackTrace) {
+    notifier.markFailed();
     // Keep diagnostics content-free: platform/query errors are actionable,
     // while SMS sender/body data must never enter logs.
     developer.log(

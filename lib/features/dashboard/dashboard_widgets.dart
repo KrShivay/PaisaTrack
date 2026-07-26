@@ -333,6 +333,7 @@ class HeroFinancialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final paisa = PaisaColors.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final netIsPositive = net >= 0;
     final comparison = monthComparison.pctChange;
     final comparisonText = comparison == null
@@ -341,55 +342,109 @@ class HeroFinancialCard extends StatelessWidget {
             '${comparison <= 0 ? 'lower' : 'higher'} than '
             '$comparisonPeriodLabel';
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Net cash flow',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+        gradient: isDark
+            ? AppColorTokens.darkHeroGradient
+            : AppColorTokens.lightHeroGradient,
+        border: Border.all(
+          color:
+              (isDark ? AppColorTokens.emeraldBright : AppColorTokens.emerald)
+                  .withValues(alpha: isDark ? 0.25 : 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? Colors.black : AppColorTokens.emerald)
+                .withValues(alpha: isDark ? 0.4 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Net cash flow',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(child: NetFlowChip(net: net)),
+                  ],
                 ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                '${netIsPositive ? '+' : '−'}${formatInr(net.abs())}',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: netIsPositive ? paisa.credit : paisa.debit,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: AppTheme.tabularFigures,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Wrap(
-                spacing: AppSpacing.lg,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  _InlineAmount(
-                    label: 'Spent',
-                    amount: spent,
-                    color: paisa.debit,
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  '${netIsPositive ? '+' : '−'}${formatInr(net.abs())}',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: netIsPositive ? paisa.credit : paisa.debit,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    fontFeatures: AppTheme.tabularFigures,
                   ),
-                  _InlineAmount(
-                    label: 'Received',
-                    amount: received,
-                    color: paisa.credit,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                comparisonText,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.lg),
+                Wrap(
+                  spacing: AppSpacing.lg,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    _InlineAmount(
+                      label: 'Spent',
+                      amount: spent,
+                      color: paisa.debit,
+                    ),
+                    _InlineAmount(
+                      label: 'Received',
+                      amount: received,
+                      color: paisa.credit,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Icon(
+                      comparison == null
+                          ? Icons.info_outline
+                          : (comparison <= 0
+                              ? Icons.trending_down
+                              : Icons.trending_up),
+                      size: 16,
+                      color: comparison == null
+                          ? theme.colorScheme.onSurfaceVariant
+                          : (comparison <= 0 ? paisa.credit : paisa.debit),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        comparisonText,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -905,50 +960,71 @@ class _SparklinePainter extends CustomPainter {
     final dx = size.width / (points.length - 1);
 
     double yFor(double spend) {
-      // Leave a small top/bottom margin so the peak/trough aren't clipped.
-      const margin = 6.0;
+      const margin = 8.0;
       final usable = size.height - margin * 2;
       return margin + usable * (1 - spend / range);
     }
 
-    final path = Path();
     final offsets = <Offset>[];
     for (var i = 0; i < points.length; i++) {
-      final o = Offset(dx * i, yFor(points[i].spend));
-      offsets.add(o);
-      if (i == 0) {
-        path.moveTo(o.dx, o.dy);
-      } else {
-        path.lineTo(o.dx, o.dy);
-      }
+      offsets.add(Offset(dx * i, yFor(points[i].spend)));
     }
 
-    // Soft fill under the line.
+    final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
+
+    for (var i = 0; i < offsets.length - 1; i++) {
+      final p0 = offsets[i];
+      final p1 = offsets[i + 1];
+      final controlX = (p0.dx + p1.dx) / 2;
+      path.cubicTo(controlX, p0.dy, controlX, p1.dy, p1.dx, p1.dy);
+    }
+
+    // Soft gradient fill under the smooth curve.
     final fillPath = Path.from(path)
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();
+
+    final fillGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        lineColor.withValues(alpha: 0.28),
+        lineColor.withValues(alpha: 0.0),
+      ],
+    );
+
     canvas.drawPath(
       fillPath,
       Paint()
         ..style = PaintingStyle.fill
-        ..color = lineColor.withValues(alpha: 0.12),
+        ..shader = fillGradient.createShader(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+        ),
     );
 
+    // Glowing stroke path
     canvas.drawPath(
       path,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
+        ..strokeWidth = 2.5
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..color = lineColor,
     );
 
-    // Emphasise the latest month with a dot.
+    // Outer glow for final point
     canvas.drawCircle(
       offsets.last,
-      3,
+      6,
+      Paint()
+        ..color = lineColor.withValues(alpha: 0.25)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      offsets.last,
+      3.5,
       Paint()..color = lineColor,
     );
   }

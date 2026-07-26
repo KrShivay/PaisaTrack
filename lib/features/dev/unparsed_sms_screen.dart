@@ -34,6 +34,8 @@ class UnparsedSmsScreen extends ConsumerWidget {
       body: Column(
         children: [
           if (trustAlerts.isNotEmpty) _TemplateTrustAlert(entries: trustAlerts),
+          const _UnrecognizedSendersSummary(),
+          const _UnparsedReasonSummary(),
           Expanded(
             child: switch (unparsed) {
               AsyncData(:final value) when value.isEmpty =>
@@ -220,3 +222,96 @@ class _UnparsedListView extends StatelessWidget {
     };
   }
 }
+
+class _UnrecognizedSendersSummary extends ConsumerWidget {
+  const _UnrecognizedSendersSummary();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final senderCountsAsync = ref.watch(unrecognizedSenderCountsProvider);
+    return senderCountsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Sender stats unavailable: $err',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+      data: (senderCounts) {
+        if (senderCounts.isEmpty) return const SizedBox.shrink();
+        final topSenders =
+            senderCounts.take(5).map((e) => '${e.key}: ${e.value}').join(', ');
+        return Card(
+          margin: const EdgeInsets.all(8.0),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Unrecognized Senders (${senderCounts.length} distinct)',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4.0),
+                Text(
+                  topSenders,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _UnparsedReasonSummary extends ConsumerWidget {
+  const _UnparsedReasonSummary();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reasonCountsAsync = ref.watch(unparsedReasonCountsProvider);
+    return reasonCountsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Reason stats unavailable: $err',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+      data: (reasonCounts) {
+        if (reasonCounts.isEmpty) return const SizedBox.shrink();
+        final topReasons =
+            reasonCounts.map((e) => '${e.key.label}: ${e.value}').join(' · ');
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rejection reasons:',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4.0),
+                Text(
+                  topReasons,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+

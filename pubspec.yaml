@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  paisatrack_keystore:
+    path: packages/paisatrack_keystore
   flutter_riverpod: ^2.5.1
   drift: 2.18.0
   sqlite3: ^2.4.0

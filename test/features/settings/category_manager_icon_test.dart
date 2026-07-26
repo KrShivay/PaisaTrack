@@ -26,26 +26,34 @@ void main() {
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(
-      find.widgetWithText(FilledButton, 'Create category'),
-    );
+    tester
+        .widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Create category'),
+        )
+        .onPressed!();
     expect(saved?.name, 'Cigarette');
     expect(saved?.icon, 'smoking_rooms');
 
-    await tester.scrollUntilVisible(
+    await tester.enterText(find.byType(TextField).last, 'Tea');
+    await tester.pump();
+    await tester.ensureVisible(
       find.byKey(const ValueKey('category_icon_local_cafe')),
-      -120,
-      scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.byKey(const ValueKey('category_icon_local_cafe')));
+    tester
+        .widget<InkWell>(
+          find.byKey(const ValueKey('category_icon_local_cafe')),
+        )
+        .onTap!();
     await tester.scrollUntilVisible(
       find.widgetWithText(FilledButton, 'Create category'),
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(
-      find.widgetWithText(FilledButton, 'Create category'),
-    );
+    tester
+        .widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Create category'),
+        )
+        .onPressed!();
     expect(saved?.icon, 'local_cafe');
   });
 
@@ -68,7 +76,11 @@ void main() {
       120,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.widgetWithText(FilledButton, 'Create category'));
+    tester
+        .widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Create category'),
+        )
+        .onPressed!();
     await tester.pump();
 
     expect(
@@ -76,6 +88,48 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Transfer / excluded'), findsOneWidget);
+  });
+
+  testWidgets('can create a visible subcategory under a parent',
+      (tester) async {
+    CategoryEditorResult? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CategoryEditorDialog(
+            title: 'Create category',
+            parentCategories: const [
+              Category(
+                id: 'bills_utilities',
+                name: 'Bills & Utilities',
+                icon: 'receipt_long',
+                isSpending: true,
+                sortOrder: 1,
+                isUserCreated: false,
+              ),
+            ],
+            onSave: (value) => saved = value,
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'Society internet');
+    await tester.tap(find.text('Top-level category'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bills & Utilities').last);
+    await tester.scrollUntilVisible(
+      find.widgetWithText(FilledButton, 'Create category'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    tester
+        .widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Create category'),
+        )
+        .onPressed!();
+
+    expect(saved?.parentId, 'bills_utilities');
   });
 
   testWidgets('manager searches categories and uses one overflow per row',
@@ -90,11 +144,20 @@ void main() {
         isUserCreated: false,
       ),
       Category(
+        id: 'delivery',
+        name: 'Food Delivery',
+        parentId: 'food',
+        icon: 'delivery_dining',
+        isSpending: true,
+        sortOrder: 2,
+        isUserCreated: false,
+      ),
+      Category(
         id: 'custom',
         name: 'Coffee Runs',
         icon: 'local_cafe',
         isSpending: true,
-        sortOrder: 2,
+        sortOrder: 3,
         isUserCreated: true,
       ),
     ];
@@ -110,7 +173,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byIcon(Icons.more_vert), findsNWidgets(2));
+    expect(find.byIcon(Icons.more_vert), findsNWidgets(3));
+    expect(find.textContaining('Subcategory of Food & Dining'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'coffee');
     await tester.pump();
 
