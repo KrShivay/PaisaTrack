@@ -256,6 +256,18 @@ class SmsIngestor {
                   lifecycleReason: lifecycleReason,
                 ),
               );
+          if (duplicateOfTxnId != null) {
+            await _database.into(_database.transactionLinks).insertOnConflictUpdate(
+                  TransactionLinksCompanion.insert(
+                    id: 'link_${sms.id}_$duplicateOfTxnId',
+                    fromTxnId: 'txn_${sms.id}',
+                    toTxnId: duplicateOfTxnId,
+                    linkType: 'echo',
+                    basis: 'duplicate_suppressor',
+                    createdAt: DateTime.now().toUtc().millisecondsSinceEpoch,
+                  ),
+                );
+          }
           if (categorization?.ruleId != null) {
             await RuleRepository(_database)
                 .incrementHitCount(categorization!.ruleId!);
