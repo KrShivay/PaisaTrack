@@ -32,11 +32,14 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
         error: (error, _) => Center(child: Text('Labels unavailable: $error')),
         data: (items) {
           if (items.isEmpty) {
-            return const Center(child: Text('No merchants or UPI IDs found yet.'));
+            return const Center(
+              child: Text('No merchants or UPI IDs found yet.'),
+            );
           }
 
           final filtered = items.where((item) {
-            if (_unlabeledOnly && (item.userLabel?.trim().isNotEmpty ?? false)) {
+            if (_unlabeledOnly &&
+                (item.userLabel?.trim().isNotEmpty ?? false)) {
               return false;
             }
             if (_searchQuery.isEmpty) return true;
