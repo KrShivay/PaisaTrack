@@ -19,7 +19,7 @@ import '../features/settings/app_settings.dart';
 import '../intelligence/llm/llm_runtime.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
-import 'llm_extractor.dart';
+import 'llm_field_locator.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
@@ -57,7 +57,7 @@ final templateMatcherProvider = FutureProvider<TemplateMatcher>((ref) async {
 final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
   return ParserCascade(
     templateMatcher: await ref.watch(templateMatcherProvider.future),
-    llmExtractor: LlmExtractor(ref.watch(llmRuntimeProvider)),
+    llmFieldLocator: LlmFieldLocator(ref.watch(llmRuntimeProvider)),
   );
 });
 
