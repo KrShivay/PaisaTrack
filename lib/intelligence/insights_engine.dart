@@ -187,13 +187,16 @@ class InsightsEngine {
     String period,
     List<RecurringSery> recurring,
   ) sync* {
-    for (final series
-        in recurring.where((row) => row.amountTrend == 'rising')) {
-      yield _InsightSpec(
-        id: 'price_creep:$period:${series.id}',
-        kind: 'price_creep',
-        payload: _seriesPayload(series),
-      );
+    for (final series in recurring) {
+      final diff = (series.lastAmount - series.expectedAmount).abs();
+      final relChange = series.expectedAmount > 0 ? diff / series.expectedAmount : 0.0;
+      if (series.amountTrend == 'rising' || relChange > 0.05) {
+        yield _InsightSpec(
+          id: 'price_creep:$period:${series.id}',
+          kind: 'price_creep',
+          payload: _seriesPayload(series),
+        );
+      }
     }
   }
 
@@ -257,6 +260,7 @@ class InsightsEngine {
         'label': series.label,
         'expected_amount': series.expectedAmount,
         'last_amount': series.lastAmount,
+        'summary': '${series.label} ₹${series.expectedAmount.round()} → ₹${series.lastAmount.round()}',
         'next_expected_date': series.nextExpectedDate.toIso8601String(),
         'kind': series.kind,
       };
