@@ -443,21 +443,25 @@ class SmsBackfillStatusState {
     this.stage = SmsBackfillStage.idle,
     this.processed = 0,
     this.failed = 0,
+    this.total,
   });
 
   final SmsBackfillStage stage;
   final int processed;
   final int failed;
+  final int? total;
 
   SmsBackfillStatusState copyWith({
     SmsBackfillStage? stage,
     int? processed,
     int? failed,
+    int? total,
   }) {
     return SmsBackfillStatusState(
       stage: stage ?? this.stage,
       processed: processed ?? this.processed,
       failed: failed ?? this.failed,
+      total: total ?? this.total,
     );
   }
 
@@ -468,10 +472,11 @@ class SmsBackfillStatusState {
           runtimeType == other.runtimeType &&
           stage == other.stage &&
           processed == other.processed &&
-          failed == other.failed;
+          failed == other.failed &&
+          total == other.total;
 
   @override
-  int get hashCode => Object.hash(stage, processed, failed);
+  int get hashCode => Object.hash(stage, processed, failed, total);
 }
 
 class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
@@ -481,19 +486,29 @@ class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
     state = const SmsBackfillStatusState(stage: SmsBackfillStage.running);
   }
 
-  void updateProgress({required int processed, required int failed}) {
+  void updateProgress({
+    required int processed,
+    required int failed,
+    int? total,
+  }) {
     state = state.copyWith(
       stage: SmsBackfillStage.running,
       processed: processed,
       failed: failed,
+      total: total,
     );
   }
 
-  void markCompleted({required int processed, required int failed}) {
+  void markCompleted({
+    required int processed,
+    required int failed,
+    int? total,
+  }) {
     state = state.copyWith(
       stage: SmsBackfillStage.completed,
       processed: processed,
       failed: failed,
+      total: total,
     );
   }
 
