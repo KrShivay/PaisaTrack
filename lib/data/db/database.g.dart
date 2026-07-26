@@ -682,6 +682,509 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   }
 }
 
+class $CounterpartiesTable extends Counterparties
+    with TableInfo<$CounterpartiesTable, Counterparty> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CounterpartiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _identityKeyMeta =
+      const VerificationMeta('identityKey');
+  @override
+  late final GeneratedColumn<String> identityKey = GeneratedColumn<String>(
+      'identity_key', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _displayNameMeta =
+      const VerificationMeta('displayName');
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+      'display_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _inferredNameMeta =
+      const VerificationMeta('inferredName');
+  @override
+  late final GeneratedColumn<String> inferredName = GeneratedColumn<String>(
+      'inferred_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pspFamilyMeta =
+      const VerificationMeta('pspFamily');
+  @override
+  late final GeneratedColumn<String> pspFamily = GeneratedColumn<String>(
+      'psp_family', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _merchantIdMeta =
+      const VerificationMeta('merchantId');
+  @override
+  late final GeneratedColumn<String> merchantId = GeneratedColumn<String>(
+      'merchant_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _firstSeenMeta =
+      const VerificationMeta('firstSeen');
+  @override
+  late final GeneratedColumn<DateTime> firstSeen = GeneratedColumn<DateTime>(
+      'first_seen', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _lastSeenMeta =
+      const VerificationMeta('lastSeen');
+  @override
+  late final GeneratedColumn<DateTime> lastSeen = GeneratedColumn<DateTime>(
+      'last_seen', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _txnCountMeta =
+      const VerificationMeta('txnCount');
+  @override
+  late final GeneratedColumn<int> txnCount = GeneratedColumn<int>(
+      'txn_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        kind,
+        identityKey,
+        displayName,
+        inferredName,
+        pspFamily,
+        merchantId,
+        firstSeen,
+        lastSeen,
+        txnCount
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'counterparties';
+  @override
+  VerificationContext validateIntegrity(Insertable<Counterparty> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('identity_key')) {
+      context.handle(
+          _identityKeyMeta,
+          identityKey.isAcceptableOrUnknown(
+              data['identity_key']!, _identityKeyMeta));
+    } else if (isInserting) {
+      context.missing(_identityKeyMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+          _displayNameMeta,
+          displayName.isAcceptableOrUnknown(
+              data['display_name']!, _displayNameMeta));
+    }
+    if (data.containsKey('inferred_name')) {
+      context.handle(
+          _inferredNameMeta,
+          inferredName.isAcceptableOrUnknown(
+              data['inferred_name']!, _inferredNameMeta));
+    }
+    if (data.containsKey('psp_family')) {
+      context.handle(_pspFamilyMeta,
+          pspFamily.isAcceptableOrUnknown(data['psp_family']!, _pspFamilyMeta));
+    }
+    if (data.containsKey('merchant_id')) {
+      context.handle(
+          _merchantIdMeta,
+          merchantId.isAcceptableOrUnknown(
+              data['merchant_id']!, _merchantIdMeta));
+    }
+    if (data.containsKey('first_seen')) {
+      context.handle(_firstSeenMeta,
+          firstSeen.isAcceptableOrUnknown(data['first_seen']!, _firstSeenMeta));
+    } else if (isInserting) {
+      context.missing(_firstSeenMeta);
+    }
+    if (data.containsKey('last_seen')) {
+      context.handle(_lastSeenMeta,
+          lastSeen.isAcceptableOrUnknown(data['last_seen']!, _lastSeenMeta));
+    } else if (isInserting) {
+      context.missing(_lastSeenMeta);
+    }
+    if (data.containsKey('txn_count')) {
+      context.handle(_txnCountMeta,
+          txnCount.isAcceptableOrUnknown(data['txn_count']!, _txnCountMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Counterparty map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Counterparty(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      identityKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}identity_key'])!,
+      displayName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}display_name']),
+      inferredName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}inferred_name']),
+      pspFamily: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}psp_family']),
+      merchantId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}merchant_id']),
+      firstSeen: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}first_seen'])!,
+      lastSeen: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_seen'])!,
+      txnCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}txn_count'])!,
+    );
+  }
+
+  @override
+  $CounterpartiesTable createAlias(String alias) {
+    return $CounterpartiesTable(attachedDatabase, alias);
+  }
+}
+
+class Counterparty extends DataClass implements Insertable<Counterparty> {
+  final String id;
+  final String kind;
+  final String identityKey;
+  final String? displayName;
+  final String? inferredName;
+  final String? pspFamily;
+  final String? merchantId;
+  final DateTime firstSeen;
+  final DateTime lastSeen;
+  final int txnCount;
+  const Counterparty(
+      {required this.id,
+      required this.kind,
+      required this.identityKey,
+      this.displayName,
+      this.inferredName,
+      this.pspFamily,
+      this.merchantId,
+      required this.firstSeen,
+      required this.lastSeen,
+      required this.txnCount});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['kind'] = Variable<String>(kind);
+    map['identity_key'] = Variable<String>(identityKey);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || inferredName != null) {
+      map['inferred_name'] = Variable<String>(inferredName);
+    }
+    if (!nullToAbsent || pspFamily != null) {
+      map['psp_family'] = Variable<String>(pspFamily);
+    }
+    if (!nullToAbsent || merchantId != null) {
+      map['merchant_id'] = Variable<String>(merchantId);
+    }
+    map['first_seen'] = Variable<DateTime>(firstSeen);
+    map['last_seen'] = Variable<DateTime>(lastSeen);
+    map['txn_count'] = Variable<int>(txnCount);
+    return map;
+  }
+
+  CounterpartiesCompanion toCompanion(bool nullToAbsent) {
+    return CounterpartiesCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      identityKey: Value(identityKey),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      inferredName: inferredName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inferredName),
+      pspFamily: pspFamily == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pspFamily),
+      merchantId: merchantId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(merchantId),
+      firstSeen: Value(firstSeen),
+      lastSeen: Value(lastSeen),
+      txnCount: Value(txnCount),
+    );
+  }
+
+  factory Counterparty.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Counterparty(
+      id: serializer.fromJson<String>(json['id']),
+      kind: serializer.fromJson<String>(json['kind']),
+      identityKey: serializer.fromJson<String>(json['identityKey']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      inferredName: serializer.fromJson<String?>(json['inferredName']),
+      pspFamily: serializer.fromJson<String?>(json['pspFamily']),
+      merchantId: serializer.fromJson<String?>(json['merchantId']),
+      firstSeen: serializer.fromJson<DateTime>(json['firstSeen']),
+      lastSeen: serializer.fromJson<DateTime>(json['lastSeen']),
+      txnCount: serializer.fromJson<int>(json['txnCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(kind),
+      'identityKey': serializer.toJson<String>(identityKey),
+      'displayName': serializer.toJson<String?>(displayName),
+      'inferredName': serializer.toJson<String?>(inferredName),
+      'pspFamily': serializer.toJson<String?>(pspFamily),
+      'merchantId': serializer.toJson<String?>(merchantId),
+      'firstSeen': serializer.toJson<DateTime>(firstSeen),
+      'lastSeen': serializer.toJson<DateTime>(lastSeen),
+      'txnCount': serializer.toJson<int>(txnCount),
+    };
+  }
+
+  Counterparty copyWith(
+          {String? id,
+          String? kind,
+          String? identityKey,
+          Value<String?> displayName = const Value.absent(),
+          Value<String?> inferredName = const Value.absent(),
+          Value<String?> pspFamily = const Value.absent(),
+          Value<String?> merchantId = const Value.absent(),
+          DateTime? firstSeen,
+          DateTime? lastSeen,
+          int? txnCount}) =>
+      Counterparty(
+        id: id ?? this.id,
+        kind: kind ?? this.kind,
+        identityKey: identityKey ?? this.identityKey,
+        displayName: displayName.present ? displayName.value : this.displayName,
+        inferredName:
+            inferredName.present ? inferredName.value : this.inferredName,
+        pspFamily: pspFamily.present ? pspFamily.value : this.pspFamily,
+        merchantId: merchantId.present ? merchantId.value : this.merchantId,
+        firstSeen: firstSeen ?? this.firstSeen,
+        lastSeen: lastSeen ?? this.lastSeen,
+        txnCount: txnCount ?? this.txnCount,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Counterparty(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('identityKey: $identityKey, ')
+          ..write('displayName: $displayName, ')
+          ..write('inferredName: $inferredName, ')
+          ..write('pspFamily: $pspFamily, ')
+          ..write('merchantId: $merchantId, ')
+          ..write('firstSeen: $firstSeen, ')
+          ..write('lastSeen: $lastSeen, ')
+          ..write('txnCount: $txnCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, kind, identityKey, displayName,
+      inferredName, pspFamily, merchantId, firstSeen, lastSeen, txnCount);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Counterparty &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.identityKey == this.identityKey &&
+          other.displayName == this.displayName &&
+          other.inferredName == this.inferredName &&
+          other.pspFamily == this.pspFamily &&
+          other.merchantId == this.merchantId &&
+          other.firstSeen == this.firstSeen &&
+          other.lastSeen == this.lastSeen &&
+          other.txnCount == this.txnCount);
+}
+
+class CounterpartiesCompanion extends UpdateCompanion<Counterparty> {
+  final Value<String> id;
+  final Value<String> kind;
+  final Value<String> identityKey;
+  final Value<String?> displayName;
+  final Value<String?> inferredName;
+  final Value<String?> pspFamily;
+  final Value<String?> merchantId;
+  final Value<DateTime> firstSeen;
+  final Value<DateTime> lastSeen;
+  final Value<int> txnCount;
+  final Value<int> rowid;
+  const CounterpartiesCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.identityKey = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.inferredName = const Value.absent(),
+    this.pspFamily = const Value.absent(),
+    this.merchantId = const Value.absent(),
+    this.firstSeen = const Value.absent(),
+    this.lastSeen = const Value.absent(),
+    this.txnCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CounterpartiesCompanion.insert({
+    required String id,
+    required String kind,
+    required String identityKey,
+    this.displayName = const Value.absent(),
+    this.inferredName = const Value.absent(),
+    this.pspFamily = const Value.absent(),
+    this.merchantId = const Value.absent(),
+    required DateTime firstSeen,
+    required DateTime lastSeen,
+    this.txnCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        kind = Value(kind),
+        identityKey = Value(identityKey),
+        firstSeen = Value(firstSeen),
+        lastSeen = Value(lastSeen);
+  static Insertable<Counterparty> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? identityKey,
+    Expression<String>? displayName,
+    Expression<String>? inferredName,
+    Expression<String>? pspFamily,
+    Expression<String>? merchantId,
+    Expression<DateTime>? firstSeen,
+    Expression<DateTime>? lastSeen,
+    Expression<int>? txnCount,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (identityKey != null) 'identity_key': identityKey,
+      if (displayName != null) 'display_name': displayName,
+      if (inferredName != null) 'inferred_name': inferredName,
+      if (pspFamily != null) 'psp_family': pspFamily,
+      if (merchantId != null) 'merchant_id': merchantId,
+      if (firstSeen != null) 'first_seen': firstSeen,
+      if (lastSeen != null) 'last_seen': lastSeen,
+      if (txnCount != null) 'txn_count': txnCount,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CounterpartiesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? kind,
+      Value<String>? identityKey,
+      Value<String?>? displayName,
+      Value<String?>? inferredName,
+      Value<String?>? pspFamily,
+      Value<String?>? merchantId,
+      Value<DateTime>? firstSeen,
+      Value<DateTime>? lastSeen,
+      Value<int>? txnCount,
+      Value<int>? rowid}) {
+    return CounterpartiesCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      identityKey: identityKey ?? this.identityKey,
+      displayName: displayName ?? this.displayName,
+      inferredName: inferredName ?? this.inferredName,
+      pspFamily: pspFamily ?? this.pspFamily,
+      merchantId: merchantId ?? this.merchantId,
+      firstSeen: firstSeen ?? this.firstSeen,
+      lastSeen: lastSeen ?? this.lastSeen,
+      txnCount: txnCount ?? this.txnCount,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (identityKey.present) {
+      map['identity_key'] = Variable<String>(identityKey.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (inferredName.present) {
+      map['inferred_name'] = Variable<String>(inferredName.value);
+    }
+    if (pspFamily.present) {
+      map['psp_family'] = Variable<String>(pspFamily.value);
+    }
+    if (merchantId.present) {
+      map['merchant_id'] = Variable<String>(merchantId.value);
+    }
+    if (firstSeen.present) {
+      map['first_seen'] = Variable<DateTime>(firstSeen.value);
+    }
+    if (lastSeen.present) {
+      map['last_seen'] = Variable<DateTime>(lastSeen.value);
+    }
+    if (txnCount.present) {
+      map['txn_count'] = Variable<int>(txnCount.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CounterpartiesCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('identityKey: $identityKey, ')
+          ..write('displayName: $displayName, ')
+          ..write('inferredName: $inferredName, ')
+          ..write('pspFamily: $pspFamily, ')
+          ..write('merchantId: $merchantId, ')
+          ..write('firstSeen: $firstSeen, ')
+          ..write('lastSeen: $lastSeen, ')
+          ..write('txnCount: $txnCount, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PaymentSourcesTable extends PaymentSources
     with TableInfo<$PaymentSourcesTable, PaymentSource> {
   @override
@@ -6363,6 +6866,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabaseManager get managers => _$AppDatabaseManager(this);
   late final $BaselinesTable baselines = $BaselinesTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
+  late final $CounterpartiesTable counterparties = $CounterpartiesTable(this);
   late final $PaymentSourcesTable paymentSources = $PaymentSourcesTable(this);
   late final $MerchantsTable merchants = $MerchantsTable(this);
   late final $RawSmsTable rawSms = $RawSmsTable(this);
@@ -6418,6 +6922,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
         baselines,
         categories,
+        counterparties,
         paymentSources,
         merchants,
         rawSms,
@@ -6797,6 +7302,230 @@ class $$CategoriesTableOrderingComposer
                 $state.db.categories, joinBuilder, parentComposers)));
     return composer;
   }
+}
+
+typedef $$CounterpartiesTableInsertCompanionBuilder = CounterpartiesCompanion
+    Function({
+  required String id,
+  required String kind,
+  required String identityKey,
+  Value<String?> displayName,
+  Value<String?> inferredName,
+  Value<String?> pspFamily,
+  Value<String?> merchantId,
+  required DateTime firstSeen,
+  required DateTime lastSeen,
+  Value<int> txnCount,
+  Value<int> rowid,
+});
+typedef $$CounterpartiesTableUpdateCompanionBuilder = CounterpartiesCompanion
+    Function({
+  Value<String> id,
+  Value<String> kind,
+  Value<String> identityKey,
+  Value<String?> displayName,
+  Value<String?> inferredName,
+  Value<String?> pspFamily,
+  Value<String?> merchantId,
+  Value<DateTime> firstSeen,
+  Value<DateTime> lastSeen,
+  Value<int> txnCount,
+  Value<int> rowid,
+});
+
+class $$CounterpartiesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CounterpartiesTable,
+    Counterparty,
+    $$CounterpartiesTableFilterComposer,
+    $$CounterpartiesTableOrderingComposer,
+    $$CounterpartiesTableProcessedTableManager,
+    $$CounterpartiesTableInsertCompanionBuilder,
+    $$CounterpartiesTableUpdateCompanionBuilder> {
+  $$CounterpartiesTableTableManager(
+      _$AppDatabase db, $CounterpartiesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$CounterpartiesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$CounterpartiesTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$CounterpartiesTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> identityKey = const Value.absent(),
+            Value<String?> displayName = const Value.absent(),
+            Value<String?> inferredName = const Value.absent(),
+            Value<String?> pspFamily = const Value.absent(),
+            Value<String?> merchantId = const Value.absent(),
+            Value<DateTime> firstSeen = const Value.absent(),
+            Value<DateTime> lastSeen = const Value.absent(),
+            Value<int> txnCount = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CounterpartiesCompanion(
+            id: id,
+            kind: kind,
+            identityKey: identityKey,
+            displayName: displayName,
+            inferredName: inferredName,
+            pspFamily: pspFamily,
+            merchantId: merchantId,
+            firstSeen: firstSeen,
+            lastSeen: lastSeen,
+            txnCount: txnCount,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String kind,
+            required String identityKey,
+            Value<String?> displayName = const Value.absent(),
+            Value<String?> inferredName = const Value.absent(),
+            Value<String?> pspFamily = const Value.absent(),
+            Value<String?> merchantId = const Value.absent(),
+            required DateTime firstSeen,
+            required DateTime lastSeen,
+            Value<int> txnCount = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CounterpartiesCompanion.insert(
+            id: id,
+            kind: kind,
+            identityKey: identityKey,
+            displayName: displayName,
+            inferredName: inferredName,
+            pspFamily: pspFamily,
+            merchantId: merchantId,
+            firstSeen: firstSeen,
+            lastSeen: lastSeen,
+            txnCount: txnCount,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$CounterpartiesTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $CounterpartiesTable,
+    Counterparty,
+    $$CounterpartiesTableFilterComposer,
+    $$CounterpartiesTableOrderingComposer,
+    $$CounterpartiesTableProcessedTableManager,
+    $$CounterpartiesTableInsertCompanionBuilder,
+    $$CounterpartiesTableUpdateCompanionBuilder> {
+  $$CounterpartiesTableProcessedTableManager(super.$state);
+}
+
+class $$CounterpartiesTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $CounterpartiesTable> {
+  $$CounterpartiesTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get identityKey => $state.composableBuilder(
+      column: $state.table.identityKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get displayName => $state.composableBuilder(
+      column: $state.table.displayName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get inferredName => $state.composableBuilder(
+      column: $state.table.inferredName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get pspFamily => $state.composableBuilder(
+      column: $state.table.pspFamily,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get merchantId => $state.composableBuilder(
+      column: $state.table.merchantId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get firstSeen => $state.composableBuilder(
+      column: $state.table.firstSeen,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get lastSeen => $state.composableBuilder(
+      column: $state.table.lastSeen,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get txnCount => $state.composableBuilder(
+      column: $state.table.txnCount,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$CounterpartiesTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $CounterpartiesTable> {
+  $$CounterpartiesTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get identityKey => $state.composableBuilder(
+      column: $state.table.identityKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get displayName => $state.composableBuilder(
+      column: $state.table.displayName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get inferredName => $state.composableBuilder(
+      column: $state.table.inferredName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get pspFamily => $state.composableBuilder(
+      column: $state.table.pspFamily,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get merchantId => $state.composableBuilder(
+      column: $state.table.merchantId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get firstSeen => $state.composableBuilder(
+      column: $state.table.firstSeen,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get lastSeen => $state.composableBuilder(
+      column: $state.table.lastSeen,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get txnCount => $state.composableBuilder(
+      column: $state.table.txnCount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
 typedef $$PaymentSourcesTableInsertCompanionBuilder = PaymentSourcesCompanion
@@ -9604,6 +10333,8 @@ class _$AppDatabaseManager {
       $$BaselinesTableTableManager(_db, _db.baselines);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
+  $$CounterpartiesTableTableManager get counterparties =>
+      $$CounterpartiesTableTableManager(_db, _db.counterparties);
   $$PaymentSourcesTableTableManager get paymentSources =>
       $$PaymentSourcesTableTableManager(_db, _db.paymentSources);
   $$MerchantsTableTableManager get merchants =>
