@@ -270,65 +270,69 @@ class _PresetQuestions extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Center(
-            child: BloomMascot(
-              size: 54,
-              bob: true,
-              pulseRing: true,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'What would you like to know?',
-            style: AppTheme.bloomDisplay(
-              16,
-              FontWeight.w600,
-              color: isDark
-                  ? AppColorTokens.bloomDarkTextPrimary
-                  : AppColorTokens.ink,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          for (final q in presets) ...[
-            GestureDetector(
-              onTap: () => onSelect(q),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomDarkCard
-                      : AppColorTokens.bloomCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark
-                        ? AppColorTokens.bloomDarkOutline
-                        : AppColorTokens.bloomChip,
-                  ),
-                ),
-                child: Text(
-                  q,
-                  style: AppTheme.bloomDisplay(
-                    13,
-                    FontWeight.w500,
-                    color: isDark
-                        ? AppColorTokens.bloomDarkTextSecondary
-                        : AppColorTokens.inkSecondary,
-                  ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(
+                child: BloomMascot(
+                  size: 54,
+                  bob: true,
+                  pulseRing: true,
                 ),
               ),
-            ),
-            if (q != presets.last) const SizedBox(height: 10),
-          ],
-        ],
+              const SizedBox(height: 16),
+              Text(
+                'What would you like to know?',
+                style: AppTheme.bloomDisplay(
+                  16,
+                  FontWeight.w600,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextPrimary
+                      : AppColorTokens.ink,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              for (final q in presets) ...[
+                GestureDetector(
+                  onTap: () => onSelect(q),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomCard,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColorTokens.bloomDarkOutline
+                            : AppColorTokens.bloomChip,
+                      ),
+                    ),
+                    child: Text(
+                      q,
+                      style: AppTheme.bloomDisplay(
+                        13,
+                        FontWeight.w500,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextSecondary
+                            : AppColorTokens.inkSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+                if (q != presets.last) const SizedBox(height: 10),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

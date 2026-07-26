@@ -7,9 +7,7 @@ import '../../theme/app_tokens.dart';
 /// Animations larger than opacity/color transitions should check this and
 /// fall back to static states.
 bool useReduceMotion(BuildContext context) {
-  final bindingName = WidgetsBinding.instance.runtimeType.toString();
-  return MediaQuery.of(context).disableAnimations ||
-      bindingName.contains('Test');
+  return MediaQuery.of(context).disableAnimations;
 }
 
 /// 3s ease-in-out bob: translateY 0 → -4px, infinite.

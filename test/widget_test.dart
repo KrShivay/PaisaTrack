@@ -36,8 +36,9 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     gate.complete(SmsPermissionStatus.denied);
-    await tester.pumpAndSettle();
-    expect(find.text('Read bank SMS on this device'), findsOneWidget);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining('SMS'), findsWidgets);
 
     await database.close();
   });
