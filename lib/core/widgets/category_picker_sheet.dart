@@ -39,13 +39,18 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final insets = MediaQuery.viewInsetsOf(context);
-    final filtered = widget.categories.where((category) {
-      final q = _query.trim().toLowerCase();
-      return q.isEmpty || category.name.toLowerCase().contains(q);
-    }).toList(growable: false);
     final byId = {
       for (final category in widget.categories) category.id: category,
     };
+    final q = _query.trim().toLowerCase();
+    final filtered = _hierarchicalCategories(widget.categories).where((
+      category,
+    ) {
+      final parentName = byId[category.parentId]?.name.toLowerCase();
+      return q.isEmpty ||
+          category.name.toLowerCase().contains(q) ||
+          (parentName?.contains(q) ?? false);
+    }).toList(growable: false);
     final suggested = _idsToCategories(widget.suggestedCategoryIds, byId);
     final recent = _idsToCategories(widget.recentCategoryIds, byId);
 
@@ -100,6 +105,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                           for (final category in suggested)
                             _CategoryChip(
                               category: category,
+                              parentName: byId[category.parentId]?.name,
                               selected: category.id == widget.currentCategoryId,
                               onTap: () => Navigator.of(context).pop(category),
                             ),
@@ -112,6 +118,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                       for (final category in recent)
                         _CategoryRow(
                           category: category,
+                          parentName: byId[category.parentId]?.name,
                           selected: category.id == widget.currentCategoryId,
                           explanation: widget.explanations[category.id],
                         ),
@@ -134,6 +141,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                       for (final category in filtered)
                         _CategoryRow(
                           category: category,
+                          parentName: byId[category.parentId]?.name,
                           selected: category.id == widget.currentCategoryId,
                           explanation: widget.explanations[category.id],
                         ),
@@ -155,6 +163,26 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     return [
       for (final id in ids)
         if (seen.add(id) && byId[id] != null) byId[id]!,
+    ];
+  }
+
+  List<Category> _hierarchicalCategories(List<Category> categories) {
+    final ids = categories.map((category) => category.id).toSet();
+    final children = <String, List<Category>>{};
+    final roots = <Category>[];
+    for (final category in categories) {
+      final parentId = category.parentId;
+      if (parentId == null || !ids.contains(parentId)) {
+        roots.add(category);
+      } else {
+        children.putIfAbsent(parentId, () => []).add(category);
+      }
+    }
+    return [
+      for (final root in roots) ...[
+        root,
+        ...?children[root.id],
+      ],
     ];
   }
 }
@@ -179,11 +207,13 @@ class _SectionLabel extends StatelessWidget {
 class _CategoryChip extends StatelessWidget {
   const _CategoryChip({
     required this.category,
+    this.parentName,
     required this.selected,
     required this.onTap,
   });
 
   final Category category;
+  final String? parentName;
   final bool selected;
   final VoidCallback onTap;
 
@@ -192,7 +222,9 @@ class _CategoryChip extends StatelessWidget {
     return FilterChip(
       selected: selected,
       avatar: Icon(CategoryVisuals.icon(category.icon), size: 18),
-      label: Text(category.name),
+      label: Text(
+        parentName == null ? category.name : '$parentName › ${category.name}',
+      ),
       onSelected: (_) => onTap(),
     );
   }
@@ -201,20 +233,26 @@ class _CategoryChip extends StatelessWidget {
 class _CategoryRow extends StatelessWidget {
   const _CategoryRow({
     required this.category,
+    this.parentName,
     required this.selected,
     this.explanation,
   });
 
   final Category category;
+  final String? parentName;
   final bool selected;
   final String? explanation;
 
   @override
   Widget build(BuildContext context) {
     final color = CategoryVisuals.color(category.id);
+    final subtitle = [
+      if (parentName case final parent?) 'Subcategory of $parent',
+      if (explanation case final detail?) detail,
+    ].join(' · ');
     return ListTile(
       minVerticalPadding: AppSpacing.sm,
-      contentPadding: EdgeInsets.zero,
+      contentPadding: EdgeInsets.only(left: parentName == null ? 0 : 20),
       leading: Container(
         width: 40,
         height: 40,
@@ -229,7 +267,7 @@ class _CategoryRow extends StatelessWidget {
         ),
       ),
       title: Text(category.name),
-      subtitle: explanation == null ? null : Text(explanation!),
+      subtitle: subtitle.isEmpty ? null : Text(subtitle),
       trailing: selected ? const Icon(Icons.check_circle) : null,
       onTap: () => Navigator.of(context).pop(category),
     );

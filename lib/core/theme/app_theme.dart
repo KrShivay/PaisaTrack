@@ -88,7 +88,9 @@ abstract final class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          side: BorderSide(color: scheme.outlineVariant),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: isDark ? 0.6 : 0.8),
+          ),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -106,7 +108,10 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
             isDark ? AppColorTokens.darkSurface : AppColorTokens.lightSurface,
-        indicatorColor: scheme.primary.withValues(alpha: isDark ? 0.18 : 0.14),
+        indicatorColor: scheme.primary.withValues(alpha: isDark ? 0.22 : 0.16),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
         elevation: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),

@@ -5,9 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
-
-const llmJsonSchemaPlaceholder = '{{JSON_SCHEMA}}';
-const llmJsonValidationOnlyPlaceholder = '{{VALIDATE_JSON_ONLY}}';
+import 'llm_model_status.dart';
+import 'llm_request.dart';
 
 enum LlmUnavailableReason {
   featureDisabled,
@@ -40,10 +39,56 @@ abstract class LlmRuntime {
     Map<String, Object?> schema,
   );
 
+  Future<LlmResult<String>> completeRequest(LlmRequest request) =>
+      complete(request.userMessage);
+
+  Future<LlmResult<Map<String, Object?>>> extractJsonRequest(
+    LlmRequest request,
+    Map<String, Object?> schema,
+  ) =>
+      extractJson(
+        '${request.systemInstruction}\n${request.userMessage}',
+        schema,
+      );
+
   Future<bool> isModelAvailable();
   Future<bool> isDeviceSupported();
   Future<bool> downloadModel();
   Future<bool> deleteModel();
+
+  Future<LlmModelStatus> modelStatus() async {
+    final results = await Future.wait([
+      isModelAvailable(),
+      isDeviceSupported(),
+    ]);
+    return LlmModelStatus(
+      modelId: 'unknown',
+      displayName: 'AI model',
+      sizeBytes: 0,
+      runtime: 'Unknown',
+      quantization: 'Unknown',
+      contextTokens: 0,
+      installed: results[0],
+      supported: results[1],
+      downloadSupported: results[1],
+      supportReason:
+          results[1] ? LlmSupportReason.supported : LlmSupportReason.unknown,
+      backend: 'Unknown',
+      downloadState:
+          results[0] ? LlmDownloadState.installed : LlmDownloadState.idle,
+      downloadedBytes: 0,
+    );
+  }
+
+  Future<LlmOperationResult> downloadModelResult() async {
+    final success = await downloadModel();
+    return LlmOperationResult(
+      success: success,
+      code: success ? 'ok' : 'failure',
+    );
+  }
+
+  Future<bool> cancelModelDownload() async => false;
 
   Future<bool> downloadModelWithRetry({
     int maxRetries = 3,
@@ -76,17 +121,28 @@ class PlatformLlmRuntime extends LlmRuntime {
   final bool enabled;
 
   @override
-  Future<LlmResult<String>> complete(String prompt) async {
+  Future<LlmResult<String>> complete(String prompt) => completeRequest(
+        LlmRequest(
+          systemInstruction: "Follow the user's instruction.",
+          userMessage: prompt,
+          task: LlmTask.narrative,
+        ),
+      );
+
+  @override
+  Future<LlmResult<String>> completeRequest(LlmRequest request) async {
     if (!enabled) {
       return const LlmUnavailable(LlmUnavailableReason.featureDisabled);
     }
-    if (prompt.trim().isEmpty) {
+    if (!request.isValid) {
       return const LlmUnavailable(LlmUnavailableReason.failure);
     }
     try {
       final response = await _channel.invokeMethod<String>('complete', {
-        'prompt': prompt,
-      });
+        'systemInstruction': request.systemInstruction.trim(),
+        'userMessage': request.userMessage.trim(),
+        'task': request.task.wireValue,
+      }).timeout(const Duration(minutes: 2));
       if (response == null) {
         return const LlmUnavailable(LlmUnavailableReason.modelAbsent);
       }
@@ -102,31 +158,41 @@ class PlatformLlmRuntime extends LlmRuntime {
   Future<LlmResult<Map<String, Object?>>> extractJson(
     String prompt,
     Map<String, Object?> schema,
-  ) async {
-    final schemaText = jsonEncode(schema);
-    String buildRequest(String instruction) {
-      final schemaInstruction = '$instruction\n$schemaText';
-      if (prompt.contains(llmJsonSchemaPlaceholder)) {
-        return prompt.replaceFirst(
-          llmJsonSchemaPlaceholder,
-          schemaInstruction,
-        );
-      }
-      if (prompt.contains(llmJsonValidationOnlyPlaceholder)) {
-        return prompt.replaceFirst(
-          llmJsonValidationOnlyPlaceholder,
-          instruction.replaceFirst('this schema', 'the field contract above'),
-        );
-      }
-      return '$prompt\n$schemaInstruction';
-    }
+  ) =>
+      extractJsonRequest(
+        LlmRequest(
+          systemInstruction:
+              'Extract the requested data and return only schema-valid JSON.',
+          userMessage: prompt,
+          task: LlmTask.jsonExtraction,
+        ),
+        schema,
+      );
 
-    final request = buildRequest('Return only JSON matching this schema:');
-    final result = await complete(request);
+  @override
+  Future<LlmResult<Map<String, Object?>>> extractJsonRequest(
+    LlmRequest request,
+    Map<String, Object?> schema,
+  ) async {
+    if (!request.isValid) {
+      return const LlmUnavailable(LlmUnavailableReason.failure);
+    }
+    final schemaText = jsonEncode(schema);
+    final result = await completeRequest(
+      LlmRequest(
+        systemInstruction:
+            '${request.systemInstruction.trim()}\nReturn only JSON matching this schema:\n$schemaText',
+        userMessage: request.userMessage,
+        task: request.task,
+      ),
+    );
     if (result is LlmUnavailable<String>) {
       return LlmUnavailable(result.reason);
     }
-    final text = (result as LlmSuccess<String>).value;
+    final text = _withoutThinking((result as LlmSuccess<String>).value);
+    if (text == null) {
+      return const LlmUnavailable(LlmUnavailableReason.failure);
+    }
     final decoded = _validatedObject(text, schema);
     if (decoded != null) return LlmSuccess(decoded);
     return const LlmUnavailable(LlmUnavailableReason.failure);
@@ -143,6 +209,46 @@ class PlatformLlmRuntime extends LlmRuntime {
 
   @override
   Future<bool> deleteModel() => _boolCall('deleteModel');
+
+  @override
+  Future<LlmModelStatus> modelStatus() async {
+    try {
+      final result = await _channel.invokeMapMethod<Object?, Object?>(
+        'modelStatus',
+      );
+      return result == null
+          ? LlmModelStatus.unavailable
+          : LlmModelStatus.fromMap(result);
+    } on PlatformException {
+      return LlmModelStatus.unavailable;
+    } on MissingPluginException {
+      return LlmModelStatus.unavailable;
+    }
+  }
+
+  @override
+  Future<LlmOperationResult> downloadModelResult() =>
+      _operationCall('downloadModel');
+
+  @override
+  Future<bool> cancelModelDownload() => _boolCall('cancelModelDownload');
+
+  Future<LlmOperationResult> _operationCall(String method) async {
+    try {
+      final result = await _channel
+          .invokeMethod<Object?>(method)
+          .timeout(const Duration(minutes: 15));
+      final success = result == true;
+      return LlmOperationResult(
+        success: success,
+        code: success ? 'ok' : 'failure',
+      );
+    } on PlatformException catch (error) {
+      return LlmOperationResult(success: false, code: error.code);
+    } on MissingPluginException {
+      return const LlmOperationResult(success: false, code: 'missing_plugin');
+    }
+  }
 
   Future<bool> _boolCall(String method) async {
     try {
@@ -163,6 +269,22 @@ class PlatformLlmRuntime extends LlmRuntime {
       'UNSUPPORTED_DEVICE' => LlmUnavailableReason.unsupportedDevice,
       _ => LlmUnavailableReason.failure,
     };
+  }
+
+  String? _withoutThinking(String value) {
+    var text = value.trim();
+    final emptyThinking = RegExp(
+      r'^<think>\s*</think>\s*',
+      caseSensitive: false,
+    );
+    text = text.replaceFirst(emptyThinking, '');
+    if (RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false)
+            .hasMatch(text) ||
+        text.toLowerCase().contains('<think>') ||
+        text.toLowerCase().contains('</think>')) {
+      return null;
+    }
+    return text;
   }
 
   Map<String, Object?>? _validatedObject(

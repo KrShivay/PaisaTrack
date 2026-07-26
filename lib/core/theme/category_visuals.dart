@@ -28,6 +28,30 @@ abstract final class CategoryVisuals {
   /// Fixed icon choices available to user-created categories.
   static const iconOptions = <CategoryIconOption>[
     CategoryIconOption('category', 'General', Icons.category),
+    CategoryIconOption(
+      'emoji_food_beverage',
+      'Tea & cigarette',
+      Icons.emoji_food_beverage,
+    ),
+    CategoryIconOption('pets', 'Pet care', Icons.pets),
+    CategoryIconOption('favorite', 'Family transfer', Icons.favorite),
+    CategoryIconOption(
+      'face_retouching_natural',
+      'Grooming',
+      Icons.face_retouching_natural,
+    ),
+    CategoryIconOption(
+      'local_gas_station',
+      'Bike petrol',
+      Icons.local_gas_station,
+    ),
+    CategoryIconOption('house', 'House rent', Icons.house),
+    CategoryIconOption(
+      'psychology_alt',
+      'Claude subscription',
+      Icons.psychology_alt,
+    ),
+    CategoryIconOption('terminal', 'Codex subscription', Icons.terminal),
     CategoryIconOption('smoking_rooms', 'Smoking', Icons.smoking_rooms),
     CategoryIconOption('swap_horiz', 'Transfer', Icons.swap_horiz),
     CategoryIconOption('medical_services', 'Health', Icons.medical_services),
@@ -59,6 +83,65 @@ abstract final class CategoryVisuals {
     CategoryIconOption('school', 'Education', Icons.school),
     CategoryIconOption('flight', 'Travel', Icons.flight),
     CategoryIconOption('directions_car', 'Transport', Icons.directions_car),
+    CategoryIconOption('subway', 'Metro', Icons.subway),
+    CategoryIconOption('local_taxi', 'Cab', Icons.local_taxi),
+    CategoryIconOption(
+      'electric_rickshaw',
+      'Auto rickshaw',
+      Icons.electric_rickshaw,
+    ),
+    CategoryIconOption('directions_bus', 'Bus', Icons.directions_bus),
+    CategoryIconOption('train', 'Train', Icons.train),
+    CategoryIconOption('local_parking', 'Parking', Icons.local_parking),
+    CategoryIconOption('toll', 'Toll', Icons.toll),
+    CategoryIconOption(
+      'delivery_dining',
+      'Food delivery',
+      Icons.delivery_dining,
+    ),
+    CategoryIconOption('lunch_dining', 'Lunch', Icons.lunch_dining),
+    CategoryIconOption(
+      'local_grocery_store',
+      'Groceries',
+      Icons.local_grocery_store,
+    ),
+    CategoryIconOption('shopping_cart', 'Quick commerce', Icons.shopping_cart),
+    CategoryIconOption('electric_bolt', 'Electricity', Icons.electric_bolt),
+    CategoryIconOption('water_drop', 'Water bill', Icons.water_drop),
+    CategoryIconOption('propane', 'Cooking gas', Icons.propane),
+    CategoryIconOption('tv', 'DTH & OTT', Icons.tv),
+    CategoryIconOption('credit_card', 'Credit card', Icons.credit_card),
+    CategoryIconOption('apartment', 'Society charges', Icons.apartment),
+    CategoryIconOption(
+      'cleaning_services',
+      'House help',
+      Icons.cleaning_services,
+    ),
+    CategoryIconOption('handyman', 'Home repair', Icons.handyman),
+    CategoryIconOption(
+      'local_laundry_service',
+      'Laundry',
+      Icons.local_laundry_service,
+    ),
+    CategoryIconOption('fitness_center', 'Gym', Icons.fitness_center),
+    CategoryIconOption('sports_cricket', 'Sports', Icons.sports_cricket),
+    CategoryIconOption('medication', 'Pharmacy', Icons.medication),
+    CategoryIconOption('child_care', 'Child care', Icons.child_care),
+    CategoryIconOption('laptop_mac', 'Online services', Icons.laptop_mac),
+    CategoryIconOption('hotel', 'Hotel', Icons.hotel),
+    CategoryIconOption('shield', 'Insurance', Icons.shield),
+    CategoryIconOption('savings', 'Savings', Icons.savings),
+    CategoryIconOption('currency_rupee', 'Tax & money', Icons.currency_rupee),
+    CategoryIconOption(
+      'volunteer_activism',
+      'Donation',
+      Icons.volunteer_activism,
+    ),
+    CategoryIconOption('temple_hindu', 'Religious', Icons.temple_hindu),
+    CategoryIconOption('redeem', 'Gifts', Icons.redeem),
+    CategoryIconOption('movie', 'Movies', Icons.movie),
+    CategoryIconOption('music_note', 'Music', Icons.music_note),
+    CategoryIconOption('cloud', 'Cloud storage', Icons.cloud),
   ];
 
   /// Suggests one curated icon from the category name, entirely on-device.
@@ -73,17 +156,31 @@ abstract final class CategoryVisuals {
     final transferAction = hasAny(const ['transfer', 'send', 'allowance']);
     final familyTarget = hasAny(const ['wife', 'husband', 'family']);
 
+    if (hasAny(const ['json', 'pet dog', 'pet care', 'veterinary', 'vet'])) {
+      return 'pets';
+    }
+    if (hasAny(const ['tea']) &&
+        hasAny(const ['cigarette', 'tobacco', 'smoke', 'smoking'])) {
+      return 'emoji_food_beverage';
+    }
     if (hasAny(const ['cigarette', 'tobacco', 'smoke', 'smoking'])) {
       return 'smoking_rooms';
     }
-    if (transferAction && familyTarget) return 'swap_horiz';
+    if (transferAction && familyTarget) return 'favorite';
     if (hasAny(const ['doctor', 'medicine', 'medical', 'pharmacy'])) {
       return 'medical_services';
     }
+    if (hasAny(const ['house rent', 'rent to landlord'])) return 'house';
     if (hasAny(const ['rent', 'landlord', 'housing'])) return 'home';
-    if (hasAny(const ['salon', 'haircut', 'grooming'])) return 'content_cut';
+    if (hasAny(const ['salon', 'haircut', 'grooming'])) {
+      return 'face_retouching_natural';
+    }
     if (hasAny(const ['mutual fund', 'mutualfund'])) return 'show_chart';
     if (hasAny(const ['redemption', 'redeem'])) return 'currency_exchange';
+    if (value.contains('bike') &&
+        hasAny(const ['petrol', 'fuel', 'gas station'])) {
+      return 'local_gas_station';
+    }
     if (value.contains('bike') && value.contains('service')) {
       return 'two_wheeler';
     }
@@ -92,9 +189,13 @@ abstract final class CategoryVisuals {
         hasAny(const ['recharge', 'payment', 'bill'])) {
       return 'phone_android';
     }
-    if (hasAny(const ['claude', 'codex']) &&
+    if (value.contains('claude') &&
         hasAny(const ['subscription', 'payment', 'plan'])) {
-      return 'smart_toy';
+      return 'psychology_alt';
+    }
+    if (value.contains('codex') &&
+        hasAny(const ['subscription', 'payment', 'plan'])) {
+      return 'terminal';
     }
     if (hasAny(const ['salary', 'paycheck', 'pay cheque'])) return 'payments';
     if (hasAny(const ['dividend'])) return 'account_balance_wallet';
@@ -112,8 +213,15 @@ abstract final class CategoryVisuals {
   }
 
   /// Stable hue for a category id.
-  static Color color(String? categoryId) =>
-      _colors[categoryId] ?? fallbackColor;
+  static Color color(String? categoryId) {
+    final exact = _colors[categoryId];
+    if (exact != null) return exact;
+    if (categoryId == null) return fallbackColor;
+    for (final entry in _colorPrefixes.entries) {
+      if (categoryId.startsWith(entry.key)) return entry.value;
+    }
+    return fallbackColor;
+  }
 
   // Icon identifiers used by assets/seed/categories.json. Const map of
   // codepoints is not tree-shake friendly for unused entries, but this set is
@@ -151,6 +259,49 @@ abstract final class CategoryVisuals {
     'candlestick_chart': Icons.candlestick_chart,
     'grass': Icons.grass,
     'local_bar': Icons.local_bar,
+    'emoji_food_beverage': Icons.emoji_food_beverage,
+    'pets': Icons.pets,
+    'favorite': Icons.favorite,
+    'face_retouching_natural': Icons.face_retouching_natural,
+    'local_gas_station': Icons.local_gas_station,
+    'house': Icons.house,
+    'psychology_alt': Icons.psychology_alt,
+    'terminal': Icons.terminal,
+    'subway': Icons.subway,
+    'local_taxi': Icons.local_taxi,
+    'electric_rickshaw': Icons.electric_rickshaw,
+    'directions_bus': Icons.directions_bus,
+    'train': Icons.train,
+    'local_parking': Icons.local_parking,
+    'toll': Icons.toll,
+    'delivery_dining': Icons.delivery_dining,
+    'lunch_dining': Icons.lunch_dining,
+    'local_grocery_store': Icons.local_grocery_store,
+    'shopping_cart': Icons.shopping_cart,
+    'electric_bolt': Icons.electric_bolt,
+    'water_drop': Icons.water_drop,
+    'propane': Icons.propane,
+    'tv': Icons.tv,
+    'credit_card': Icons.credit_card,
+    'apartment': Icons.apartment,
+    'cleaning_services': Icons.cleaning_services,
+    'handyman': Icons.handyman,
+    'local_laundry_service': Icons.local_laundry_service,
+    'fitness_center': Icons.fitness_center,
+    'sports_cricket': Icons.sports_cricket,
+    'medication': Icons.medication,
+    'child_care': Icons.child_care,
+    'laptop_mac': Icons.laptop_mac,
+    'hotel': Icons.hotel,
+    'shield': Icons.shield,
+    'savings': Icons.savings,
+    'currency_rupee': Icons.currency_rupee,
+    'volunteer_activism': Icons.volunteer_activism,
+    'temple_hindu': Icons.temple_hindu,
+    'redeem': Icons.redeem,
+    'movie': Icons.movie,
+    'music_note': Icons.music_note,
+    'cloud': Icons.cloud,
   };
 
   // One fixed hue per seed category; hues spread across the wheel so adjacent
@@ -175,5 +326,25 @@ abstract final class CategoryVisuals {
     'cash_withdrawal': Color(0xFFA8A29E), // stone
     'investments': Color(0xFFE8B54D), // brand gold
     'other': Color(0xFF9CA3AF), // gray
+  };
+
+  static const _colorPrefixes = <String, Color>{
+    'food_': Color(0xFFF97316),
+    'groceries_': Color(0xFF84CC16),
+    'transport_': Color(0xFF38BDF8),
+    'shopping_': Color(0xFFE879F9),
+    'bills_': Color(0xFFFACC15),
+    'subscriptions_': Color(0xFFA78BFA),
+    'rent_': Color(0xFF2DD4BF),
+    'emi_': Color(0xFFFB7185),
+    'health_': Color(0xFF4ADE80),
+    'education_': Color(0xFF60A5FA),
+    'entertainment_': Color(0xFFF472B6),
+    'travel_': Color(0xFF22D3EE),
+    'transfers_': Color(0xFF94A3B8),
+    'income_': Color(0xFF34D399),
+    'fees_': Color(0xFFF59E0B),
+    'investments_': Color(0xFFE8B54D),
+    'other_': Color(0xFF9CA3AF),
   };
 }

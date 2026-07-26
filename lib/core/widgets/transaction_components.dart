@@ -77,6 +77,12 @@ class TransactionCategoryIcon extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           shape: BoxShape.circle,
+          border: Border.all(
+            color: selected
+                ? theme.colorScheme.primary
+                : color.withValues(alpha: 0.3),
+            width: 1.2,
+          ),
         ),
         child: Icon(icon, size: 20, color: iconColor),
       ),

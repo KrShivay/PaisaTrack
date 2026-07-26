@@ -18,6 +18,7 @@ import 'anomaly_detector.dart';
 import 'burn_rate_forecaster.dart';
 import 'insights_engine.dart';
 import 'llm/llm_runtime.dart';
+import 'models/embedder.dart';
 import 'narrative_insight_generator.dart';
 import 'recurring_detector.dart';
 
@@ -57,7 +58,10 @@ class NightlyPipeline {
         _actions = actions,
         _clock = clock ?? DateTime.now;
 
-  factory NightlyPipeline.production(AppDatabase database) {
+  factory NightlyPipeline.production(
+    AppDatabase database, {
+    Embedder recurringEmbedder = const NoopEmbedder(),
+  }) {
     return NightlyPipeline(
       database: database,
       actions: {
@@ -82,7 +86,10 @@ class NightlyPipeline {
           });
         },
         NightlyStage.recurringScan: (now) async {
-          await RecurringDetector(database).run(today: now);
+          await RecurringDetector(
+            database,
+            embedder: recurringEmbedder,
+          ).run(today: now);
         },
         NightlyStage.baselines: (now) async {
           await AnomalyDetector(database).run(today: now);
@@ -186,7 +193,10 @@ void nightlyCallbackDispatcher() {
     DartPluginRegistrant.ensureInitialized();
     final database = await _openWorkerDatabase();
     try {
-      final result = await NightlyPipeline.production(database).run();
+      final result = await NightlyPipeline.production(
+        database,
+        recurringEmbedder: const PlatformEmbedder(),
+      ).run();
       return result.completed;
     } finally {
       await closeAppDatabase(database);
@@ -212,7 +222,7 @@ Future<void> initializeNightlyWork() async {
 Future<AppDatabase> _openWorkerDatabase() async {
   final directory = await getApplicationDocumentsDirectory();
   final passphrase =
-      await AndroidKeystoreDatabasePassphraseProvider().getPassphrase();
+      await const AndroidKeystoreDatabasePassphraseProvider().getPassphrase();
   return AppDatabase(
     openEncryptedDatabase(
       file: File(p.join(directory.path, appDatabaseFileName)),

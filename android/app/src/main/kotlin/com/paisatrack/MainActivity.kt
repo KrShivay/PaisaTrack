@@ -16,6 +16,8 @@ import com.paisatrack.capture.CapturedSmsSink
 import com.paisatrack.capture.SmsInboxReader
 import com.paisatrack.intelligence.EmbedderBridge
 import com.paisatrack.intelligence.LlmBridge
+import com.paisatrack.intelligence.LlmOperationException
+import com.paisatrack.intelligence.LlmTask
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -48,7 +50,10 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        llmBridge?.close()
+        val previousBridge = llmBridge
+        if (previousBridge != null) {
+            runCatching { llmExecutor.execute { previousBridge.close() } }
+        }
         val bridge = LlmBridge(applicationContext)
         llmBridge = bridge
         MethodChannel(
@@ -62,22 +67,42 @@ class MainActivity : FlutterActivity() {
                 "isDeviceSupported" -> runOnExecutor(llmExecutor, result) {
                     bridge.isDeviceSupported()
                 }
+                "modelStatus" -> runOnExecutor(llmExecutor, result) {
+                    bridge.modelStatus()
+                }
                 "downloadModel" -> runOnExecutor(llmExecutor, result) {
                     bridge.downloadModel()
                 }
+                // Cancellation must not queue behind the download on the same
+                // single-thread executor. The bridge only flips an atomic flag.
+                "cancelModelDownload" -> result.success(bridge.cancelModelDownload())
                 "deleteModel" -> runOnExecutor(llmExecutor, result) {
                     bridge.deleteModel()
                 }
                 "complete" -> {
-                    val prompt = call.argument<String>("prompt")
-                    if (prompt == null) {
-                        result.error("invalid_arguments", "Missing prompt.", null)
+                    val legacyPrompt = call.argument<String>("prompt")
+                    val systemInstruction =
+                        call.argument<String>("systemInstruction")
+                            ?: if (legacyPrompt != null) {
+                                "Follow the user's instruction."
+                            } else {
+                                null
+                            }
+                    val userMessage = call.argument<String>("userMessage") ?: legacyPrompt
+                    val taskName = call.argument<String>("task")
+                        ?: if (legacyPrompt != null) "narrative" else null
+                    val task = taskName?.let(LlmTask::fromWire)
+                    if (systemInstruction.isNullOrBlank() ||
+                        userMessage.isNullOrBlank() ||
+                        task == null
+                    ) {
+                        result.error("invalid_arguments", "Invalid LLM request.", null)
                     } else {
                         runOnExecutor(llmExecutor, result) {
                             llmIdleClose?.cancel(false)
                             llmIdleClose = null
                             try {
-                                bridge.complete(prompt)
+                                bridge.complete(systemInstruction, userMessage, task)
                             } finally {
                                 if (activityResumed) {
                                     llmIdleClose = llmExecutor.schedule(
@@ -229,17 +254,20 @@ class MainActivity : FlutterActivity() {
         executor.execute {
             val outcome = try {
                 Result.success(block())
-            } catch (error: Exception) {
+            } catch (error: Throwable) {
+                if (error is OutOfMemoryError) throw error
                 Result.failure(error)
             }
             mainHandler.post {
                 outcome.fold(
                     onSuccess = { result.success(it) },
                     onFailure = {
-                        val code = if (it is UnsupportedOperationException &&
-                            it.message == "unsupported_device"
-                        ) "unsupported_device" else "inference_failure"
-                        result.error(code, it.message, null)
+                        val code = when (it) {
+                            is LlmOperationException -> it.code
+                            is LinkageError -> "initialization_failure"
+                            else -> "inference_failure"
+                        }
+                        result.error(code, null, null)
                     },
                 )
             }
@@ -280,8 +308,11 @@ class MainActivity : FlutterActivity() {
         embedderExecutor.shutdown()
         llmIdleClose?.cancel(false)
         llmIdleClose = null
-        llmBridge?.close()
+        val bridgeToClose = llmBridge
         llmBridge = null
+        if (bridgeToClose != null) {
+            runCatching { llmExecutor.execute { bridgeToClose.close() } }
+        }
         llmExecutor.shutdown()
         super.cleanUpFlutterEngine(flutterEngine)
     }

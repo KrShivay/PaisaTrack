@@ -14,7 +14,7 @@ const appDatabaseFileName = 'paisatrack.db';
 /// Tests can override this provider or `appDatabaseProvider` directly when a
 /// fake or in-memory database is more appropriate than platform channels.
 final databasePassphraseProvider = Provider<DatabasePassphraseProvider>((ref) {
-  return AndroidKeystoreDatabasePassphraseProvider();
+  return const AndroidKeystoreDatabasePassphraseProvider();
 });
 
 /// Resolves the app-private directory that contains the encrypted database.
@@ -54,16 +54,26 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
     ),
   );
 
-
   ref.onDispose(() {
     closeAppDatabase(database);
   });
 
-  // T-039 regression fix: the categorizer stamps `category_id` on every parsed
-  // transaction and `PRAGMA foreign_keys = ON` enforces the reference, so the
-  // bundled defaults MUST exist before any ingest runs. Idempotent
-  // (insertOrIgnore) and preserves user-edited rows.
-  await database.seedDefaultCategories();
+  try {
+    // T-039 regression fix: the categorizer stamps `category_id` on every parsed
+    // transaction and `PRAGMA foreign_keys = ON` enforces the reference, so the
+    // bundled defaults MUST exist before any ingest runs. Idempotent
+    // (insertOrIgnore) and preserves user-edited rows.
+    await database.seedDefaultCategories();
+  } on Object catch (e) {
+    await closeAppDatabase(database);
+    if (dbExists) {
+      throw DatabaseKeyLostError(
+        'Database passphrase decryption or initialization failed against an existing database file',
+        e,
+      );
+    }
+    rethrow;
+  }
 
   return database;
 });

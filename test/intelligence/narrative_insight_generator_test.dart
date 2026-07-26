@@ -53,6 +53,32 @@ void main() {
 
     expect(generated, isFalse);
   });
+
+  test('rejects advice, Unicode digits, thinking markup, and oversized text',
+      () async {
+    await database.into(database.insights).insert(
+          InsightsCompanion.insert(
+            id: 'forecast:2026-07',
+            period: '2026-07',
+            kind: 'forecast',
+            payloadJson: '{}',
+          ),
+        );
+
+    for (final output in [
+      'You should reduce discretionary spending.',
+      'Spending changed by \u0662 percent.',
+      '<think>hidden</think>Spending was steady.',
+      'x' * 281,
+    ]) {
+      final generated = await NarrativeInsightGenerator(
+        database,
+        _TextRuntime(output),
+        enabled: true,
+      ).run(today: DateTime.utc(2026, 7, 12));
+      expect(generated, isFalse, reason: output);
+    }
+  });
 }
 
 class _TextRuntime extends NoopLlmRuntime {

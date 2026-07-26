@@ -13,6 +13,7 @@ import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
 import '../features/settings/app_settings.dart';
 import '../intelligence/nightly_job.dart';
+import '../intelligence/models/embedder.dart';
 import '../intelligence/recurring_detector.dart';
 import 'captured_sms_source.dart';
 import 'parser_cascade.dart';
@@ -407,7 +408,10 @@ Future<void> _runCatchUpSafely(
 ) async {
   try {
     await catchUp.run();
-    await ForegroundRecurringScanner(database).runIfStale();
+    await ForegroundRecurringScanner(
+      database,
+      embedder: const PlatformEmbedder(),
+    ).runIfStale();
     await NightlyPipeline.production(database).runStages(
       only: {NightlyStage.purgeExpiredRawSms},
     );

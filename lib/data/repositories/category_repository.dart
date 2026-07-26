@@ -21,6 +21,7 @@ class CategoryRepository {
     required String name,
     String icon = 'category',
     bool isSpending = true,
+    String? parentId,
     DateTime Function() clock = DateTime.now,
   }) async {
     final trimmed = name.trim();
@@ -35,6 +36,7 @@ class CategoryRepository {
           CategoriesCompanion.insert(
             id: id,
             name: trimmed,
+            parentId: Value(parentId),
             icon: icon,
             isSpending: isSpending,
             sortOrder: maxSort + 1,
@@ -49,6 +51,8 @@ class CategoryRepository {
     required String name,
     String? icon,
     bool? isSpending,
+    String? parentId,
+    bool updateParent = false,
   }) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) throw ArgumentError.value(name, 'name');
@@ -60,6 +64,7 @@ class CategoryRepository {
         icon: icon == null ? const Value.absent() : Value(icon),
         isSpending:
             isSpending == null ? const Value.absent() : Value(isSpending),
+        parentId: updateParent ? Value(parentId) : const Value.absent(),
       ),
     );
   }

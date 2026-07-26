@@ -8,8 +8,8 @@ void main() {
 
   group('AndroidKeystoreDatabasePassphraseProvider', () {
     const channel = MethodChannel('test/database_passphrase');
-    final provider = AndroidKeystoreDatabasePassphraseProvider(
-      delegate: const keystore.AndroidKeystoreDatabasePassphraseProvider(
+    const provider = AndroidKeystoreDatabasePassphraseProvider(
+      delegate: keystore.AndroidKeystoreDatabasePassphraseProvider(
         channel: channel,
       ),
     );

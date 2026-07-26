@@ -43,6 +43,45 @@ abstract final class AppColorTokens {
   static const warningLight = Color(0xFFB45309);
   static const errorDark = Color(0xFFF87171); // failures only, not debits
   static const errorLight = Color(0xFFDC2626);
+
+  // Brand gradients for rich UI cards & hero headers.
+  static const darkHeroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF14241F),
+      Color(0xFF0F1B17),
+      Color(0xFF0B1210),
+    ],
+  );
+
+  static const lightHeroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFFFFFFF),
+      Color(0xFFF1F8F5),
+      Color(0xFFE8F3EE),
+    ],
+  );
+
+  static const emeraldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF34D399),
+      Color(0xFF059669),
+    ],
+  );
+
+  static const goldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFFBBF24),
+      Color(0xFFD97706),
+    ],
+  );
 }
 
 /// 4pt spacing scale. Use these instead of raw EdgeInsets values.

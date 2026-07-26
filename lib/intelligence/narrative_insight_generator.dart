@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../core/constants.dart';
 import '../data/db/database.dart';
+import 'llm/llm_request.dart';
 import 'llm/llm_runtime.dart';
 
 /// Generates a qualitative monthly summary from aggregate insight JSON only.
@@ -45,16 +46,33 @@ class NarrativeInsightGenerator {
           'payload': _object(row.payloadJson),
         },
     ];
-    final result = await _runtime.complete(
-      'Write one short, neutral observation about these financial aggregates. '
-      'Do not give advice and do not include any digits or currency amounts. '
-      'Use only the supplied JSON.\n${jsonEncode(aggregates)}',
+    final result = await _runtime.completeRequest(
+      LlmRequest(
+        systemInstruction:
+            'Write one short, neutral observation about the supplied financial '
+            'aggregates. Do not give advice. Do not include digits or currency '
+            'amounts. Use only the supplied aggregate JSON.',
+        userMessage: jsonEncode(aggregates),
+        task: LlmTask.narrative,
+      ),
     );
     if (result is! LlmSuccess<String>) return false;
     final body = result.value.trim();
     // Reject numbers so every displayed number continues to come from a
     // deterministic payload rather than model-authored prose.
-    if (body.isEmpty || body.length > 280 || RegExp(r'\d').hasMatch(body)) {
+    final containsDigit =
+        RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9\u0966-\u096F]').hasMatch(body);
+    final containsAdvice = RegExp(
+      r'\b(should|recommend|consider|need to|try to)\b',
+      caseSensitive: false,
+    ).hasMatch(body);
+    final containsThinking = body.toLowerCase().contains('<think>') ||
+        body.toLowerCase().contains('</think>');
+    if (body.isEmpty ||
+        body.length > 280 ||
+        containsDigit ||
+        containsAdvice ||
+        containsThinking) {
       return false;
     }
     final existing = await (_database.select(_database.insights)

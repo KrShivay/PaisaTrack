@@ -38,7 +38,7 @@ void main() {
     'swiggy': 'food_dining',
     'zomato': 'food_dining',
     'hdfc': 'fees_charges',
-    'hdfc ergo': 'health',
+    'hdfc ergo': 'health_insurance',
   });
 
   setUp(() async {
@@ -61,7 +61,10 @@ void main() {
     });
 
     test('prefers the longest matching key', () {
-      expect(seedMap.categoryFor('HDFC ERGO GENERAL INSURANCE'), 'health');
+      expect(
+        seedMap.categoryFor('HDFC ERGO GENERAL INSURANCE'),
+        'health_insurance',
+      );
       expect(seedMap.categoryFor('HDFC BANK CHARGES'), 'fees_charges');
     });
 

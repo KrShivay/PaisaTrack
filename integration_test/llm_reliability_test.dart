@@ -6,6 +6,7 @@ import 'package:paisatrack/core/crypto/database_cipher.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent_classifier.dart';
+import 'package:paisatrack/intelligence/llm/llm_request.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -27,32 +28,34 @@ void main() {
     'required': ['status'],
     'additionalProperties': false,
   };
-  const prompt = '''
-<|im_start|>system
-Return one JSON object only. Output must match this schema:
-$llmJsonSchemaPlaceholder
-<|im_end|>
-<|im_start|>user
-Set status to ok.
-<|im_end|>
-<|im_start|>assistant
-''';
+  const request = LlmRequest(
+    systemInstruction: 'Return one JSON object only.',
+    userMessage: 'Set status to ok.',
+    task: LlmTask.jsonExtraction,
+  );
 
   test(
     'model returns valid JSON twice',
     () async {
       expect(await runtime.isDeviceSupported(), isTrue);
+      if (!await runtime.isModelAvailable()) {
+        final download = await runtime.downloadModelResult();
+        expect(
+          download.success,
+          isTrue,
+          reason: 'Pinned model download failed: ${download.code}',
+        );
+      }
       expect(
         await runtime.isModelAvailable(),
         isTrue,
-        reason:
-            'Download the pinned model in Settings before this device test.',
+        reason: 'Pinned model must be installed after download.',
       );
 
       final latencies = <Duration>[];
       for (var attempt = 0; attempt < 2; attempt++) {
         final stopwatch = Stopwatch()..start();
-        final result = await runtime.extractJson(prompt, schema);
+        final result = await runtime.extractJsonRequest(request, schema);
         stopwatch.stop();
         latencies.add(stopwatch.elapsed);
         expect(result, isA<LlmSuccess<Map<String, Object?>>>());
@@ -66,7 +69,7 @@ Set status to ok.
       print('LLM DEVICE LATENCY: first=${latencies[0].inMilliseconds}ms, '
           'second=${latencies[1].inMilliseconds}ms');
     },
-    timeout: const Timeout(Duration(minutes: 5)),
+    timeout: const Timeout(Duration(minutes: 20)),
   );
 
   test(
@@ -75,7 +78,7 @@ Set status to ok.
       final tempDir = await getTemporaryDirectory();
       final dbFile = File('${tempDir.path}/llm_reliability_test.db');
       if (dbFile.existsSync()) dbFile.deleteSync();
-      final passphrase = await AndroidKeystoreDatabasePassphraseProvider()
+      final passphrase = await const AndroidKeystoreDatabasePassphraseProvider()
           .getPassphrase();
       final database = AppDatabase(
         openEncryptedDatabase(file: dbFile, passphrase: passphrase),
@@ -115,7 +118,7 @@ Set status to ok.
       final tempDir = await getTemporaryDirectory();
       final dbFile = File('${tempDir.path}/llm_accuracy_test.db');
       if (dbFile.existsSync()) dbFile.deleteSync();
-      final passphrase = await AndroidKeystoreDatabasePassphraseProvider()
+      final passphrase = await const AndroidKeystoreDatabasePassphraseProvider()
           .getPassphrase();
       final database = AppDatabase(
         openEncryptedDatabase(file: dbFile, passphrase: passphrase),

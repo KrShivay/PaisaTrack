@@ -5,7 +5,6 @@ import 'capture/permissions/sms_permission.dart';
 import 'capture/permissions/sms_permission_provider.dart';
 import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
-import 'core/crypto/database_cipher.dart';
 import 'core/theme/app_theme.dart';
 import 'data/db/database_provider.dart';
 import 'features/home/home_shell.dart';
@@ -37,15 +36,15 @@ class PaisaTrackApp extends ConsumerWidget {
     final settings = ref.watch(appSettingsControllerProvider);
 
     final Widget homeWidget = switch (dbAsync) {
-      AsyncError(:final error) when error is DatabaseKeyLostError =>
-        const KeyLossScreen(),
-      _ => switch (permission) {
+      AsyncData() => switch (permission) {
           AsyncData(:final value) when value == SmsPermissionStatus.granted =>
             const HomeShell(),
           AsyncLoading() => const _StartupScreen(),
           _ when continueWithoutSms => const HomeShell(),
           _ => const OnboardingScreen(),
         },
+      AsyncError() => const KeyLossScreen(),
+      _ => const _StartupScreen(),
     };
 
     return MaterialApp(

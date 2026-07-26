@@ -12,7 +12,7 @@ void main() {
   testWidgets('keystore passphrase is stable until app storage is cleared', (
     tester,
   ) async {
-    final provider = AndroidKeystoreDatabasePassphraseProvider();
+    const provider = AndroidKeystoreDatabasePassphraseProvider();
 
     await provider.debugResetForTests();
     final first = await provider.getPassphrase();
@@ -31,7 +31,7 @@ void main() {
   });
 
   testWidgets('migration v1 creates encrypted schema', (tester) async {
-    final provider = AndroidKeystoreDatabasePassphraseProvider();
+    const provider = AndroidKeystoreDatabasePassphraseProvider();
     final tempDir = await getTemporaryDirectory();
     final dbFile = File('${tempDir.path}/paisatrack_integration_test.db');
     if (dbFile.existsSync()) {

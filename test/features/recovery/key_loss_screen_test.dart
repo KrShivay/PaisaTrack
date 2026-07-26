@@ -65,4 +65,23 @@ void main() {
 
     expect(fakeReset.deleteCalls, 1);
   });
+
+  testWidgets('app routes to KeyLossScreen on generic database error',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith(
+            (ref) => Future.error(
+              Exception('Generic database initialization error'),
+            ),
+          ),
+        ],
+        child: const PaisaTrackApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(KeyLossScreen), findsOneWidget);
+  });
 }

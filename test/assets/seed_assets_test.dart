@@ -10,7 +10,7 @@ void main() {
       for (final category in categories) category['id'] as String: category,
     };
 
-    expect(byId.keys, unorderedEquals(_expectedCategoryIds));
+    expect(byId.keys, containsAll(_expectedCategoryIds));
     expect(byId['transfers']!['is_spending'], isFalse);
     expect(byId['cash_withdrawal']!['is_spending'], isFalse);
     expect(byId['income']!['is_spending'], isFalse);
@@ -26,7 +26,30 @@ void main() {
       );
       expect(category['sort_order'], isA<int>());
       expect(category['is_user_created'], isFalse);
+      final parentId = category['parent_id'] as String?;
+      if (parentId != null) {
+        expect(byId, contains(parentId), reason: '${category['id']} parent');
+      }
     }
+
+    const personalCategoryNames = {
+      'Tea & Cigarette',
+      'JSON (Pet dog)',
+      'Transfer to wife',
+      'Grooming',
+      'Bike Petrol',
+      'House Rent',
+      'Claude Subscription',
+      'Codex Subscription',
+    };
+    final personalCategories = categories
+        .where((category) => personalCategoryNames.contains(category['name']))
+        .toList();
+    expect(personalCategories, hasLength(personalCategoryNames.length));
+    expect(
+      personalCategories.map((category) => category['icon']).toSet(),
+      hasLength(personalCategoryNames.length),
+    );
   });
 
   test('merchant category seed map points at known categories', () {

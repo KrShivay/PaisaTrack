@@ -238,31 +238,78 @@ class _BaselineSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final paisa = PaisaColors.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final change = comparison.pctChange;
+
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(AppRadius.lg),
+        gradient: isDark
+            ? AppColorTokens.darkHeroGradient
+            : AppColorTokens.lightHeroGradient,
+        border: Border.all(
+          color: (isDark
+                  ? AppColorTokens.emeraldBright
+                  : AppColorTokens.emerald)
+              .withValues(alpha: isDark ? 0.2 : 0.15),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Monthly spending', style: theme.textTheme.labelLarge),
+          Text(
+            'Monthly spending',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             formatInr(spent),
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w800,
               fontFeatures: AppTheme.tabularFigures,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Received ${formatInr(received)}'),
-          if (change != null)
-            Text(
-              '${change.abs() * 100 < 0.5 ? 'About the same as' : '${(change.abs() * 100).toStringAsFixed(0)}% ${change < 0 ? 'lower' : 'higher'} than'} last month',
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: paisa.credit.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  'Received ${formatInr(received)}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: paisa.credit,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: AppTheme.tabularFigures,
+                  ),
+                ),
+              ),
+              if (change != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '${change.abs() * 100 < 0.5 ? 'About the same as' : '${(change.abs() * 100).toStringAsFixed(0)}% ${change < 0 ? 'lower' : 'higher'} than'} last month',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -316,13 +363,17 @@ class _InsightCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: 0.14),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
               ),
-              child: Icon(presentation.icon, color: color, size: 20),
+              child: Icon(presentation.icon, color: color, size: 22),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

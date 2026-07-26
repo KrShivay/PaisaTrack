@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
+import '../intelligence/llm/llm_request.dart';
 import '../intelligence/llm/llm_runtime.dart';
 
 /// Validates model-proposed fields before producing the frozen parse contract.
@@ -35,9 +36,15 @@ class LlmExtractor {
   };
 
   Future<NormalizedTransactionRecord?> extract(RawSms sms) async {
-    final result = await _runtime.extractJson(
-      'Extract one completed financial transaction from this SMS. '
-      'Omit unknown optional fields; never guess them. SMS:\n${sms.body}',
+    final result = await _runtime.extractJsonRequest(
+      LlmRequest(
+        systemInstruction:
+            'Extract exactly one completed financial transaction from the '
+            'user-provided SMS. Omit unknown optional fields and never guess. '
+            'Return only schema-valid JSON.',
+        userMessage: sms.body,
+        task: LlmTask.jsonExtraction,
+      ),
       schema,
     );
     if (result is! LlmSuccess<Map<String, Object?>>) return null;
