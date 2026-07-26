@@ -1,0 +1,94 @@
+{
+  "locale": "en_IN",
+  "cues": {
+    "otp": [
+      "\\bOTP\\b",
+      "one time password",
+      "verification code",
+      "do not share",
+      "secret code"
+    ],
+    "failed": [
+      "failed",
+      "declined",
+      "unsuccessful",
+      "could not be processed",
+      "txn failed",
+      "transaction failed",
+      "card declined"
+    ],
+    "reversal": [
+      "reversed",
+      "refunded",
+      "reversal of",
+      "credited back",
+      "cashback credited",
+      "refund of"
+    ],
+    "reminder": [
+      "due on",
+      "payment due",
+      "bill generated",
+      "reminder for bill",
+      "is due",
+      "bill due",
+      "minimum amount due",
+      "total due"
+    ],
+    "mandate": [
+      "e-mandate",
+      "autopay registered",
+      "standing instruction",
+      "mandate created",
+      "autopay scheduled",
+      "autopay active"
+    ],
+    "statement": [
+      "statement.*generated",
+      "e-statement",
+      "monthly statement",
+      "account statement",
+      "statement for",
+      "\\bstatement\\b"
+    ],
+    "balance": [
+      "available balance",
+      "bal in a/c",
+      "clear balance",
+      "current balance",
+      "avail bal",
+      "ac bal"
+    ],
+    "promo": [
+      "cashback offer",
+      "pre-approved",
+      "apply now",
+      "discount coupon",
+      "limited period offer",
+      "congratulations",
+      "exclusive offer",
+      "flat discount"
+    ],
+    "pendingAuth": [
+      "pre-auth",
+      "authorized",
+      "held on card",
+      "pre-authorized",
+      "temp block"
+    ],
+    "settledCredit": [
+      "credited",
+      "received",
+      "deposited",
+      "added to"
+    ],
+    "settledDebit": [
+      "debited",
+      "spent",
+      "withdrawn",
+      "paid",
+      "sent",
+      "purchase of"
+    ]
+  }
+}
