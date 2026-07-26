@@ -113,48 +113,41 @@ class PaymentSourceRepository {
       await _database.update(_database.transactions).write(
             const TransactionsCompanion(ownedTransferId: Value(null)),
           );
-      final ownedSourceIds = (await (_database.select(_database.paymentSources)
-                ..where((row) => row.isOwned.equals(true)))
-              .get())
-          .map((row) => row.id)
-          .toSet();
-      if (ownedSourceIds.length < 2) return 0;
-      final rows = await (_database.select(_database.transactions)
-            ..where(
-              (row) =>
-                  row.paymentSourceId.isIn(ownedSourceIds) &
-                  row.isDeleted.equals(false) &
-                  row.duplicateOfTxnId.isNull(),
-            )
-            ..orderBy([(row) => OrderingTerm.asc(row.ts)]))
+      final ownedSources = await (_database.select(_database.paymentSources)
+            ..where((row) => row.isOwned.equals(true) & row.isActive.equals(true)))
           .get();
+      final ownedSourceIds = ownedSources.map((row) => row.id).toSet();
+      if (ownedSourceIds.length < 2) return 0;
+
+      final rows = await _database.customSelect(
+        '''
+SELECT t1.id AS id1, t2.id AS id2
+FROM transactions t1
+JOIN transactions t2 ON t1.amount = t2.amount
+  AND t1.direction != t2.direction
+  AND t1.payment_source_id != t2.payment_source_id
+  AND ABS(t1.ts - t2.ts) <= 600000
+  AND t1.payment_source_id IN (SELECT id FROM payment_sources WHERE is_owned = 1 AND is_active = 1)
+  AND t2.payment_source_id IN (SELECT id FROM payment_sources WHERE is_owned = 1 AND is_active = 1)
+WHERE t1.is_deleted = 0 AND t1.duplicate_of_txn_id IS NULL AND t1.owned_transfer_id IS NULL
+  AND t2.is_deleted = 0 AND t2.duplicate_of_txn_id IS NULL AND t2.owned_transfer_id IS NULL
+ORDER BY t1.ts ASC
+''',
+        readsFrom: {_database.transactions, _database.paymentSources},
+      ).get();
+
       final used = <String>{};
       var pairs = 0;
 
-      List<Transaction> candidatesFor(Transaction source) {
-        return rows.where((candidate) {
-          if (candidate.id == source.id || used.contains(candidate.id)) {
-            return false;
-          }
-          if (candidate.paymentSourceId == source.paymentSourceId) return false;
-          if (candidate.direction == source.direction) return false;
-          if ((candidate.amount - source.amount).abs() > 0.005) return false;
-          return (candidate.ts - source.ts).abs() <=
-              const Duration(minutes: 10).inMilliseconds;
-        }).toList(growable: false);
-      }
-
       for (final row in rows) {
-        if (used.contains(row.id)) continue;
-        final candidates = candidatesFor(row);
-        if (candidates.length != 1) continue;
-        final match = candidates.single;
-        final reverse = candidatesFor(match)
-            .where((candidate) => candidate.id == row.id)
-            .toList(growable: false);
-        if (reverse.length != 1) continue;
-        final ids = [row.id, match.id]..sort();
+        final id1 = row.read<String>('id1');
+        final id2 = row.read<String>('id2');
+        if (used.contains(id1) || used.contains(id2)) continue;
+
+        final ids = [id1, id2]..sort();
         final pairId = 'owned_transfer_${ids.join('_')}';
+        final nowMs = clock().toUtc().millisecondsSinceEpoch;
+
         await (_database.update(_database.transactions)
               ..where((transaction) => transaction.id.isIn(ids)))
             .write(
@@ -163,6 +156,18 @@ class PaymentSourceRepository {
             updatedAt: Value(clock().toUtc()),
           ),
         );
+
+        await _database.into(_database.transactionLinks).insertOnConflictUpdate(
+              TransactionLinksCompanion.insert(
+                id: 'link_${ids.join('_')}',
+                fromTxnId: id1,
+                toTxnId: id2,
+                linkType: 'transfer_leg',
+                basis: 'indexed_owned_transfer',
+                createdAt: nowMs,
+              ),
+            );
+
         used.addAll(ids);
         pairs += 1;
       }
