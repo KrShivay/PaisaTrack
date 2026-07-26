@@ -11,6 +11,7 @@ import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
+import '../data/repositories/expected_event_repository.dart';
 import '../data/repositories/rule_repository.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
@@ -145,6 +146,7 @@ class SmsIngestor {
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
     MessageKindClassifier? messageKindClassifier,
+    ExpectedEventRepository? expectedEventRepository,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
@@ -155,25 +157,20 @@ class SmsIngestor {
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _messageKindClassifier = messageKindClassifier,
+        _expectedEventRepository = expectedEventRepository ?? ExpectedEventRepository(database),
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
   final ParserCascade _parser;
-
-  /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
-  /// without one; production wiring always supplies it.
   final Categorizer? _categorizer;
   final MerchantResolver? _merchantResolver;
-
-  /// Resolves the daily ask budget at decision time, so a Settings change
-  /// applies to the next ingest without rebuilding the capture pipeline
-  /// (see smsCaptureBootstrapProvider).
   final int Function() _askDailyBudget;
   final DecisionStatus? _fixedStatus;
   final Set<String>? _knownTransactionIds;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
   final MessageKindClassifier? _messageKindClassifier;
+  final ExpectedEventRepository _expectedEventRepository;
   final DateTime Function() _now;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
@@ -181,12 +178,6 @@ class SmsIngestor {
     final transactionId = 'txn_${sms.id}';
     if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     await _database.transaction(() async {
-      // Inbox re-import is intentionally non-destructive. A deterministic SMS
-      // id maps to a deterministic transaction id, so an existing row may
-      // contain user edits, confirmation state, or a user deletion that must
-      // never be overwritten by a newer parser/categorizer result. Check this
-      // before the raw upsert so re-import also does not resurrect bodies that
-      // the retention job already purged.
       final existingTransaction = await (_database.select(
         _database.transactions,
       )..where((row) => row.id.equals(transactionId)))
@@ -208,6 +199,42 @@ class SmsIngestor {
       final kind = _messageKindClassifier?.classify(sms.body) ?? MessageKind.settledDebit;
 
       if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
+        final parseResult = await _parser.parse(sms);
+        int amountPaise = 0;
+        int? amountLowPaise;
+        int? amountHighPaise;
+        String label = sms.sender;
+        String? counterpartyId;
+
+        if (parseResult is Ok<NormalizedTransactionRecord, ParseFailure>) {
+          amountPaise = (parseResult.value.amount * 100).round();
+          label = parseResult.value.merchantRaw ?? sms.sender;
+          counterpartyId = parseResult.value.counterpartyVpa;
+        } else {
+          final amtMatch = RegExp(r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)', caseSensitive: false).firstMatch(sms.body);
+          if (amtMatch != null) {
+            final amt = double.tryParse(amtMatch.group(1)!) ?? 0.0;
+            amountPaise = (amt * 100).round();
+          }
+          final rangeMatch = RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false).firstMatch(sms.body);
+          if (rangeMatch != null) {
+            amountLowPaise = (double.parse(rangeMatch.group(1)!) * 100).round();
+            amountHighPaise = (double.parse(rangeMatch.group(2)!) * 100).round();
+          }
+        }
+
+        await _expectedEventRepository.recordExpectedEvent(
+          source: 'sms_${kind.name}',
+          originSmsId: sms.id,
+          counterpartyId: counterpartyId,
+          label: label,
+          expectedAmountPaise: amountPaise,
+          amountLowPaise: amountLowPaise,
+          amountHighPaise: amountHighPaise,
+          expectedDate: sms.receivedAt,
+          confidence: 0.95,
+        );
+
         await _markRawSmsProcessed(sms.id, processed: true);
         return;
       }
