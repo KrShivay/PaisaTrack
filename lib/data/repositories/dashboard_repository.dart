@@ -153,6 +153,7 @@ WHERE t.ts >= ? AND t.ts < ?
   AND t.is_analytics_excluded = 0
   AND t.owned_transfer_id IS NULL
   AND t.lifecycle_state = 'settled'
+  AND (t.merchant_raw IS NULL OR (UPPER(t.merchant_raw) NOT LIKE '%CREDIT CARD%' AND UPPER(t.merchant_raw) NOT LIKE '%CARD BILL%' AND UPPER(t.merchant_raw) NOT LIKE '%ATM%'))
 GROUP BY t.category_id, c.name, c.icon
 ORDER BY total DESC, name ASC
 ''',

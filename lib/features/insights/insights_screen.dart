@@ -506,7 +506,7 @@ class _BarColumn extends StatelessWidget {
         const SizedBox(height: 4),
         Container(
           width: 24,
-          height: 100 * heightFactor,
+          height: 80 * heightFactor,
           decoration: BoxDecoration(
             color: isCurrent ? activeColor : inactiveColor,
             borderRadius: BorderRadius.circular(8),

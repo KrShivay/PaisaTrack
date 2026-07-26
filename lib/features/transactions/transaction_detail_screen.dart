@@ -332,6 +332,64 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 16),
 
+                  // Exclusion Explanation Banner (T-135c)
+                  if (txn.ownedTransferId != null ||
+                      (txn.merchantRaw != null &&
+                          (txn.merchantRaw!.toUpperCase().contains('CREDIT CARD') ||
+                              txn.merchantRaw!.toUpperCase().contains('CARD BILL'))) ||
+                      (txn.merchantRaw != null &&
+                          (txn.merchantRaw!.toUpperCase().contains('ATM') ||
+                              txn.merchantRaw!.toUpperCase().contains('WITHDRAWAL'))) ||
+                      txn.isAnalyticsExcluded) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF3B82F6).withValues(alpha: 0.4)
+                              : const Color(0xFFBFDBFE),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: isDark ? const Color(0xFF60A5FA) : Colors.blue.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              txn.ownedTransferId != null
+                                  ? 'Self-transfer — excluded from totals to prevent double-counting.'
+                                  : (txn.merchantRaw != null &&
+                                          (txn.merchantRaw!.toUpperCase().contains('CREDIT CARD') ||
+                                              txn.merchantRaw!.toUpperCase().contains('CARD BILL')))
+                                      ? 'Credit card bill payment — excluded from totals (card purchases are counted individually).'
+                                      : (txn.merchantRaw != null &&
+                                              (txn.merchantRaw!.toUpperCase().contains('ATM') ||
+                                                  txn.merchantRaw!.toUpperCase().contains('WITHDRAWAL')))
+                                          ? 'Cash withdrawal — moved to untracked cash (excluded from category spending).'
+                                          : 'Excluded from analytics per settings.',
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w500,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextPrimary
+                                    : AppColorTokens.ink,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Review Queue Banner (Confirm / Fix)
                   if (txn.status == 'needs_review' ||
                       detail.isLowTrustParse) ...[
