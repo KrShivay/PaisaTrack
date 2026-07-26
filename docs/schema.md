@@ -66,3 +66,6 @@ Existing rows backfill `lifecycle_state` to `'settled'`. Regression fixture:
 
 Schema v10 adds `financial_events` (id, event_key unique, key_basis, kind, net_amount_paise, currency, opened_at, closed_at, state, confidence) and `transaction_links` (id, from_txn_id, to_txn_id, link_type, confidence, basis, created_by, created_at) tables (T-134a). Monetary amounts in new tables use integer paise. Regression fixture:
 `test/data/db/app_database_v10_migration_test.dart`.
+
+Schema v11 adds `counterparties` (id, kind, identity_key unique, display_name, inferred_name, psp_family, merchant_id, first_seen, last_seen, txn_count) table (T-136a). Regression fixture:
+`test/data/db/app_database_v11_migration_test.dart`.

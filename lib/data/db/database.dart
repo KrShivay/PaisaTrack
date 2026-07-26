@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 
 import '../../core/constants.dart';
 import '../dedup/duplicate_match_rule.dart';
-import 'tables/categories_table.dart';
 import 'tables/baselines_table.dart';
+import 'tables/categories_table.dart';
+import 'tables/counterparties_table.dart';
 import 'tables/feedback_table.dart';
 import 'tables/financial_events_table.dart';
 import 'tables/insights_table.dart';
@@ -31,6 +32,7 @@ part 'database.g.dart';
   tables: [
     Baselines,
     Categories,
+    Counterparties,
     Feedback,
     FinancialEvents,
     Insights,
@@ -73,7 +75,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -153,6 +155,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 10) {
           await migrator.createTable(financialEvents);
           await migrator.createTable(transactionLinks);
+        }
+        if (from < 11) {
+          await migrator.createTable(counterparties);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

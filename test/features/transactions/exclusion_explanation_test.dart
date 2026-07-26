@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
-import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
