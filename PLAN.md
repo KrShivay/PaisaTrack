@@ -74,6 +74,10 @@ Requirements:
 
 Add a planning layer over trustworthy spending totals.
 
+The current global monthly-budget and merchant-cap prototype is not this
+feature. It stores overall values in `baselines`, has no per-category/month
+model, and must not be treated as completed T-098 work.
+
 Requirements:
 
 - Monthly limit per spending category, with optional notification threshold.
@@ -81,6 +85,18 @@ Requirements:
 - Transfers and excluded payment sources do not consume budgets.
 - Editing a budget never edits transactions.
 - Initial version uses calendar months and no automatic rollover.
+
+## Rework plans
+
+Two design documents now sit ahead of the roadmap above; both are decomposed
+into PR-sized task briefs under `docs/tasks/` with a one-line index in
+`TASKS.md`.
+
+- `docs/sms-intelligence-design.md` — capture, parsing, identity, lifecycle, and
+  the net-spending contract (T-131…T-144). Closes T-100 and T-101 on completion
+  and supplies the shared spending definition T-098 depends on.
+- `docs/ui-gaps-and-redesign.md` — conformance with the accepted Bloom handoff
+  plus reported UI defects (T-145…T-154).
 
 ## Existing implementation backlog
 
@@ -103,11 +119,37 @@ Requirements:
 4. T-100 reimbursement/refund links.
 5. T-101 recurring calendar and upcoming-message parsing.
 6. T-098 monthly category budgets.
-7. T-109/T-110 review fixes, then T-096 tolerant category resolution.
-8. T-090..T-094 release hardening.
+7. T-121..T-130 correctness, recovery, scale, accessibility, and release
+   blockers from the verified product audit.
+8. T-096 tolerant category resolution, then remaining T-090..T-094 hardening.
 
 Identity and source management come before budgets because incorrect payees,
 transfers, and account inclusion rules would make budget totals untrustworthy.
+
+## Open decisions
+
+High-priority product decisions that the rework depends on. **Each has a default
+already applied**, so none of them blocks implementation — the plan proceeds on
+the default and the decision only changes behaviour if made before the "decide
+by" task ships. Nothing here is a gate.
+
+| # | Decision | Default in effect | Decide by | Cost of changing later |
+|---|---|---|---|---|
+| 1 | Do pending card authorisations count in the headline monthly total? | **No** — excluded; shown only in an explicitly-labelled "including pending" view, never in budgets | T-132c | Low — a display predicate and a setting |
+| 2 | Is a credit-card bill payment shown as an excluded transfer, or hidden entirely? | **Shown, excluded, with an explanation** — counting both the bill and the card's purchases double-counts | T-135c | Low — copy and one predicate |
+| 3 | How long are quarantined (unreadable) messages kept? | **30 days**, matching `raw_sms` retention | T-133a | Medium — a template written on day 40 cannot retry a message purged on day 30. A content-free fingerprint kept longer would let the app say "we now support 14 messages we previously missed" |
+| 4 | How are non-INR transactions treated? | **Captured with their currency, never converted**, excluded from INR totals with a visible marker | T-135a | Low — conversion needs rates, which needs a network call, which ADR 0002 forbids. Manual per-transaction rate entry is the only offline-honest alternative |
+| 5 | Does skip in Sort persist across app restarts, or reset? | **Persists** through process death within the session; resets on a new day | T-153c | Low — provider storage choice |
+| 6 | Which on-device model backs span location and inference? | **Qwen3-0.6B mixed-INT4** (ADR 0009) | T-115 profiling | Medium — Gemma 3 270M is worth benchmarking against the 421–533 MB PSS problem; span location is a much easier task than structured extraction, so a smaller model may suffice |
+| 7 | What confidence auto-links a refund to its original expense? | **0.90**, with undo | T-135b | Low — a threshold in `feature_flags`, tunable from T-143 metrics without a rebuild |
+| 8 | Is the profile display name required? | **Optional** — blank falls back to a neutral greeting, never "Hey ," | T-149a | Low |
+
+Two of these are worth an early answer because the cost of reversing them grows:
+**#3** (retention shapes what can ever be recovered) and **#6** (model choice
+shapes the memory budget the whole app is measured against).
+
+Everything else can be decided when its task is claimed, or left on the default
+indefinitely.
 
 ## Definition of done
 
