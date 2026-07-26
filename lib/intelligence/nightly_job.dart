@@ -14,6 +14,7 @@ import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../enrichment/decision_policy.dart';
 import '../enrichment/local_classifier.dart';
+import '../enrichment/merchant_clusterer.dart';
 import 'anomaly_detector.dart';
 import 'burn_rate_forecaster.dart';
 import 'insights_engine.dart';
@@ -34,6 +35,7 @@ enum NightlyStage {
   baselines,
   retrainClassifier,
   recomputeThresholds,
+  merchantClustering,
   precomputeInsights,
 }
 
@@ -99,6 +101,9 @@ class NightlyPipeline {
         },
         NightlyStage.recomputeThresholds: (_) async {
           await AdaptiveThresholdPolicy(database).recompute();
+        },
+        NightlyStage.merchantClustering: (_) async {
+          await MerchantClusterer(database).cluster();
         },
         NightlyStage.precomputeInsights: (now) async {
           await BurnRateForecaster(database).run(today: now);
