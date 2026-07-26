@@ -699,8 +699,7 @@ WHERE t.status = 'needs_review'
       final expected = ruleInput.matchValue.trim().toLowerCase();
       final query = _database.select(_database.transactions)
         ..where(
-          (row) =>
-              row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
+          (row) => row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
         );
 
       if (ruleInput.matchType == 'counterparty') {

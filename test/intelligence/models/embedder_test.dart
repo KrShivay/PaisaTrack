@@ -51,7 +51,8 @@ void main() {
       expect(await embedder.embed('ZOMATO'), isNull);
     });
 
-    test('returns null for empty and whitespace-only text without a channel '
+    test(
+        'returns null for empty and whitespace-only text without a channel '
         'call', () async {
       var called = false;
       mockHandler((call) async {
@@ -72,7 +73,8 @@ void main() {
       expect(await embedder.embed('AMAZON PAY'), isNull);
     });
 
-    test('returns null instead of throwing when no native side exists '
+    test(
+        'returns null instead of throwing when no native side exists '
         '(MissingPluginException)', () async {
       // No mock handler and no real platform: invokeMethod throws
       // MissingPluginException on the test host.

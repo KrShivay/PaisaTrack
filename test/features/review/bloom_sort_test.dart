@@ -69,7 +69,9 @@ void main() {
 
       expect(find.text('Inbox Zero!'), findsOneWidget);
       expect(
-          find.text('You sorted all transactions for today.'), findsOneWidget);
+        find.text('You sorted all transactions for today.'),
+        findsOneWidget,
+      );
       expect(find.byType(BloomMascot), findsOneWidget);
     });
 

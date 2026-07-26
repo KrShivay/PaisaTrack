@@ -86,7 +86,8 @@ UnparsedReason categorizeUnparsedSms(String body) {
 
 /// Groups unparsed raw SMS by rejection reason and sorts by count descending.
 final unparsedReasonCountsProvider =
-    Provider.autoDispose<AsyncValue<List<MapEntry<UnparsedReason, int>>>>((ref) {
+    Provider.autoDispose<AsyncValue<List<MapEntry<UnparsedReason, int>>>>(
+        (ref) {
   return ref.watch(unparsedSmsListProvider).whenData((unparsed) {
     final counts = <UnparsedReason, int>{};
     for (final item in unparsed) {

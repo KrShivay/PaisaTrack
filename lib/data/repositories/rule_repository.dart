@@ -36,8 +36,10 @@ class RuleRepository {
       for (final rule in rules) {
         final value = _normalize(rule.matchValue);
         if (rule.matchType == 'merchant' && value != null) {
-          final pattern =
-              RegExp(r'\b' + RegExp.escape(value) + r'\b', caseSensitive: false);
+          final pattern = RegExp(
+            r'\b' + RegExp.escape(value) + r'\b',
+            caseSensitive: false,
+          );
           if (pattern.hasMatch(merchant)) {
             return rule;
           }

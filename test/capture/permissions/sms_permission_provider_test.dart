@@ -20,8 +20,7 @@ void main() {
     );
     final container = containerWith(gate);
 
-    final status =
-        await container.read(smsPermissionControllerProvider.future);
+    final status = await container.read(smsPermissionControllerProvider.future);
 
     expect(status, SmsPermissionStatus.denied);
     expect(gate.statusCalls, 1);
@@ -36,9 +35,7 @@ void main() {
     final container = containerWith(gate);
     await container.read(smsPermissionControllerProvider.future);
 
-    await container
-        .read(smsPermissionControllerProvider.notifier)
-        .request();
+    await container.read(smsPermissionControllerProvider.notifier).request();
 
     expect(
       container.read(smsPermissionControllerProvider).value,
@@ -55,9 +52,7 @@ void main() {
     final container = containerWith(gate);
     await container.read(smsPermissionControllerProvider.future);
 
-    await container
-        .read(smsPermissionControllerProvider.notifier)
-        .request();
+    await container.read(smsPermissionControllerProvider.notifier).request();
 
     expect(
       container.read(smsPermissionControllerProvider).value,
@@ -77,7 +72,10 @@ void main() {
   });
 
   test('fromName maps unknown or null names defensively', () {
-    expect(SmsPermissionStatus.fromName('granted'), SmsPermissionStatus.granted);
+    expect(
+      SmsPermissionStatus.fromName('granted'),
+      SmsPermissionStatus.granted,
+    );
     expect(SmsPermissionStatus.fromName(null), SmsPermissionStatus.unknown);
     expect(SmsPermissionStatus.fromName('bogus'), SmsPermissionStatus.unknown);
   });

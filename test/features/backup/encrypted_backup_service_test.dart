@@ -216,7 +216,8 @@ void main() {
     );
   });
 
-  test('backup export/import includes baselines, insights, model_meta, and recurring_series',
+  test(
+      'backup export/import includes baselines, insights, model_meta, and recurring_series',
       () async {
     final now = DateTime.utc(2026, 7, 20);
     await database.into(database.baselines).insert(

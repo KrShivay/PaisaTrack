@@ -206,7 +206,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 
-  testWidgets('displays unparsed reason breakdown summary card', (tester) async {
+  testWidgets('displays unparsed reason breakdown summary card',
+      (tester) async {
     final now = DateTime.utc(2026, 7, 6, 9);
     await pumpScreen(tester, [
       UnparsedSms(
@@ -228,13 +229,17 @@ void main() {
     expect(find.textContaining('Unmatched financial SMS: 1'), findsOneWidget);
   });
 
-  test('categorizeUnparsedSms classifies balance and login footer messages correctly', () {
+  test(
+      'categorizeUnparsedSms classifies balance and login footer messages correctly',
+      () {
     expect(
       categorizeUnparsedSms('Avail Bal in A/C XX1234 is INR 5,230.00'),
       UnparsedReason.balanceInfo,
     );
     expect(
-      categorizeUnparsedSms('Rs.500 debited from A/C x1234. Login to NetBanking.'),
+      categorizeUnparsedSms(
+        'Rs.500 debited from A/C x1234. Login to NetBanking.',
+      ),
       UnparsedReason.unmatchedFinancial,
     );
     expect(

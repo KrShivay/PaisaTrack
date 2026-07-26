@@ -39,7 +39,8 @@ void main() {
     expect(find.byKey(const ValueKey('key_loss_reset_button')), findsOneWidget);
   });
 
-  testWidgets('KeyLossScreen reset button invokes deleteEverything after confirmation',
+  testWidgets(
+      'KeyLossScreen reset button invokes deleteEverything after confirmation',
       (tester) async {
     final fakeReset = _FakeResetService();
 
