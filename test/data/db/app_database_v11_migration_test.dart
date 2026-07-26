@@ -17,7 +17,7 @@ void main() {
     addTearDown(database.close);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data['user_version'], 11);
+    expect(version.data['user_version'], greaterThanOrEqualTo(11));
 
     final tableResult = await database.customSelect(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='counterparties'",

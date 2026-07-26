@@ -69,3 +69,6 @@ Schema v10 adds `financial_events` (id, event_key unique, key_basis, kind, net_a
 
 Schema v11 adds `counterparties` (id, kind, identity_key unique, display_name, inferred_name, psp_family, merchant_id, first_seen, last_seen, txn_count) table (T-136a). Regression fixture:
 `test/data/db/app_database_v11_migration_test.dart`.
+
+Schema v12 adds `expected_events` (id, source, origin_sms_id, series_id, counterparty_id, label, expected_amount_paise, amount_low_paise, amount_high_paise, expected_date, date_window_days default 3, cadence, state, fulfilled_txn_id, confidence, dedup_key) table (T-138a). Regression fixture:
+`test/data/db/app_database_v12_migration_test.dart`.
