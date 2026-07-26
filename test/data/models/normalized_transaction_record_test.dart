@@ -79,7 +79,7 @@ void main() {
       evidence: evidenceList,
     );
 
-    final json = record.toJson();
+    final json = record.toJson(includeEvidence: true);
     expect(json['evidence'], [
       {
         'field': 'amount',

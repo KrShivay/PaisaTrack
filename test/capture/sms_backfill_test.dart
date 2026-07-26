@@ -452,6 +452,38 @@ class FakeParserCascade extends ParserCascade {
     RawSms sms,
   ) async {
     if (throwIds.contains(sms.id)) throw StateError('simulated parse failure');
-    return Ok(_record);
+    var resRecord = _record;
+    if (resRecord.evidence == null || resRecord.evidence!.isEmpty) {
+      final amountStr = resRecord.amount == resRecord.amount.toInt()
+          ? resRecord.amount.toInt().toString()
+          : resRecord.amount.toString();
+      final idx = sms.body.indexOf(amountStr);
+      final start = idx >= 0 ? idx : 0;
+      final end = idx >= 0 ? idx + amountStr.length : sms.body.length;
+      resRecord = resRecord.withEvidence([
+        FieldEvidence(
+          field: 'amount',
+          start: start,
+          end: end,
+          verbatim: sms.body.substring(start, end),
+          extractor: 'test',
+        ),
+        FieldEvidence(
+          field: 'direction',
+          start: 0,
+          end: sms.body.length,
+          verbatim: sms.body,
+          extractor: 'test',
+        ),
+        FieldEvidence(
+          field: 'ts',
+          start: 0,
+          end: sms.body.length,
+          verbatim: sms.body,
+          extractor: 'test',
+        ),
+      ]);
+    }
+    return Ok(resRecord);
   }
 }

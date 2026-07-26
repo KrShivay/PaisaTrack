@@ -45,6 +45,26 @@ class NormalizedTransactionRecord {
   /// Verifying span evidence linking record values back to raw source text.
   final List<FieldEvidence>? evidence;
 
+  /// Returns this record with updated evidence.
+  NormalizedTransactionRecord withEvidence(List<FieldEvidence> evidence) {
+    return NormalizedTransactionRecord(
+      amount: amount,
+      direction: direction,
+      channel: channel,
+      merchantRaw: merchantRaw,
+      counterpartyVpa: counterpartyVpa,
+      accountHint: accountHint,
+      balanceAfter: balanceAfter,
+      refId: refId,
+      ts: ts,
+      parseSource: parseSource,
+      parseConfidence: parseConfidence,
+      templateId: templateId,
+      templateProvenance: templateProvenance,
+      evidence: evidence,
+    );
+  }
+
   /// Returns this record with a different parser confidence.
   NormalizedTransactionRecord withParseConfidence(double confidence) {
     return NormalizedTransactionRecord(
@@ -66,7 +86,7 @@ class NormalizedTransactionRecord {
   }
 
   /// Serializes using stable wire names for fixtures and future interchange.
-  Map<String, Object?> toJson() {
+  Map<String, Object?> toJson({bool includeEvidence = false}) {
     return {
       'amount': amount,
       'direction': direction.wireName,
@@ -79,7 +99,7 @@ class NormalizedTransactionRecord {
       'ts': ts.millisecondsSinceEpoch,
       'parse_source': parseSource.wireName,
       'parse_confidence': parseConfidence,
-      if (evidence != null)
+      if (includeEvidence && evidence != null)
         'evidence': evidence!.map((e) => e.toJson()).toList(),
     };
   }
