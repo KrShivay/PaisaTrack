@@ -55,6 +55,7 @@ void main() {
         status: 'confirmed',
         isDeleted: false,
         isAnalyticsExcluded: false,
+        lifecycleState: 'settled',
         createdAt: now,
         updatedAt: now,
       ),

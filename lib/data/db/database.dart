@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -84,6 +84,10 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_transactions_counterparty_vpa_lower '
           'ON transactions (lower(counterparty_vpa));',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_lifecycle_state '
+          'ON transactions (lifecycle_state);',
         );
       },
       onUpgrade: (migrator, from, to) async {
@@ -132,6 +136,15 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 8) {
           await migrator.addColumn(transactions, transactions.evidenceJson);
+        }
+        if (from < 9) {
+          await migrator.addColumn(transactions, transactions.lifecycleState);
+          await migrator.addColumn(transactions, transactions.lifecycleReason);
+          await migrator.addColumn(transactions, transactions.messageKind);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_lifecycle_state '
+            'ON transactions (lifecycle_state);',
+          );
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

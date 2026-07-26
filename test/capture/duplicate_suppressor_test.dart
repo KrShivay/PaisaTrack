@@ -69,6 +69,7 @@ Transaction _existing({
     isDeleted: isDeleted,
     duplicateOfTxnId: duplicateOfTxnId,
     isAnalyticsExcluded: false,
+    lifecycleState: 'settled',
     createdAt: ts,
     updatedAt: ts,
   );

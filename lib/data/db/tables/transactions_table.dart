@@ -61,6 +61,11 @@ class Transactions extends Table {
   BoolColumn get isAnalyticsExcluded =>
       boolean().withDefault(const Constant(false))();
   TextColumn get evidenceJson => text().nullable()();
+  // v9 columns for lifecycle state split (T-132a).
+  TextColumn get lifecycleState =>
+      text().withDefault(const Constant('settled'))();
+  TextColumn get lifecycleReason => text().nullable()();
+  TextColumn get messageKind => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
