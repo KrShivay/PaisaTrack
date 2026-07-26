@@ -1,14 +1,27 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
-import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
+
+import 'package:paisatrack/core/undo/undo_controller.dart';
+import 'package:paisatrack/features/settings/app_settings.dart';
+
+class FakeAppSettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async => const AppSettings();
+}
+
+class FakeUndoController extends UndoController {
+  @override
+  void pushUndo(UndoToken token) {
+    state = token;
+  }
+}
 
 TransactionReviewItem testReviewItem({
   required String id,
@@ -43,17 +56,32 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          appDatabaseProvider.overrideWith((ref) async => db),
           reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+          categoryListProvider.overrideWith(
+            (ref) => Stream.value([
+              const Category(
+                id: 'food_dining',
+                name: 'Food & Dining',
+                icon: 'restaurant',
+                isSpending: true,
+                sortOrder: 10,
+                isUserCreated: false,
+              ),
+            ]),
+          ),
+          appSettingsControllerProvider
+              .overrideWith(() => FakeAppSettingsController()),
+          undoControllerProvider.overrideWith(() => FakeUndoController()),
         ],
-        child: const MaterialApp(
-          home: BloomUndoToastHost(
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: const BloomUndoToastHost(
             child: WeeklyReviewScreen(),
           ),
         ),
@@ -113,7 +141,6 @@ void main() {
       final keepButton = find.byIcon(Icons.check_rounded);
       await tester.tap(keepButton);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Inbox Zero!'), findsOneWidget);
     });

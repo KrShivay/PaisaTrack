@@ -1,14 +1,18 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
-import 'package:paisatrack/data/db/database.dart';
-import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
+
+import 'package:paisatrack/features/settings/app_settings.dart';
+
+class FakeAppSettingsController extends AppSettingsController {
+  @override
+  Future<AppSettings> build() async => const AppSettings();
+}
 
 void main() {
   TransactionReviewItem reviewItem({
@@ -41,17 +45,20 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          appDatabaseProvider.overrideWith((ref) async => db),
           reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+          appSettingsControllerProvider
+              .overrideWith(() => FakeAppSettingsController()),
         ],
-        child: const MaterialApp(
-          home: BloomUndoToastHost(
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: const BloomUndoToastHost(
             child: WeeklyReviewScreen(),
           ),
         ),

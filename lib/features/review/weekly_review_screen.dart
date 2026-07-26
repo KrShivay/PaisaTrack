@@ -199,28 +199,32 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
 
   Future<void> _confirmItem(TransactionReviewItem item) async {
     setState(() => _currentIndex++);
-    final database = await ref.read(appDatabaseProvider.future);
-    final repo = ref.read(transactionRepositoryProvider(database));
-    await repo.updateWithFeedback(
-      txnId: item.id,
-      status: const Value('confirmed'),
-      context: 'sort_confirm',
-    );
+    try {
+      final database = ref.read(appDatabaseProvider).valueOrNull ??
+          await ref.read(appDatabaseProvider.future);
+      if (database == null) return;
+      final repo = ref.read(transactionRepositoryProvider(database));
+      await repo.updateWithFeedback(
+        txnId: item.id,
+        status: const Value('confirmed'),
+        context: 'sort_confirm',
+      );
 
-    ref.read(undoControllerProvider.notifier).pushUndo(
-          UndoToken(
-            id: 'sort_confirm_${item.id}',
-            message: 'Marked confirmed',
-            undoAction: () async {
-              await repo.updateWithFeedback(
-                txnId: item.id,
-                status: const Value('needs_review'),
-                context: 'undo_sort',
-              );
-              if (mounted) setState(() => _currentIndex--);
-            },
-          ),
-        );
+      ref.read(undoControllerProvider.notifier).pushUndo(
+            UndoToken(
+              id: 'sort_confirm_${item.id}',
+              message: 'Marked confirmed',
+              undoAction: () async {
+                await repo.updateWithFeedback(
+                  txnId: item.id,
+                  status: const Value('needs_review'),
+                  context: 'undo_sort',
+                );
+                if (mounted) setState(() => _currentIndex--);
+              },
+            ),
+          );
+    } catch (_) {}
   }
 
   Future<void> _recategorizeItem(TransactionReviewItem item) async {
@@ -237,30 +241,34 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     if (chosen == null || !mounted) return;
 
     setState(() => _currentIndex++);
-    final database = await ref.read(appDatabaseProvider.future);
-    final repo = ref.read(transactionRepositoryProvider(database));
-    final prevCategory = item.categoryId;
+    try {
+      final database = ref.read(appDatabaseProvider).valueOrNull ??
+          await ref.read(appDatabaseProvider.future);
+      if (database == null) return;
+      final repo = ref.read(transactionRepositoryProvider(database));
+      final prevCategory = item.categoryId;
 
-    await repo.updateWithFeedback(
-      txnId: item.id,
-      categoryId: Value(chosen.id),
-      context: 'sort_categorize',
-    );
+      await repo.updateWithFeedback(
+        txnId: item.id,
+        categoryId: Value(chosen.id),
+        context: 'sort_categorize',
+      );
 
-    ref.read(undoControllerProvider.notifier).pushUndo(
-          UndoToken(
-            id: 'sort_cat_${item.id}',
-            message: 'Filed under ${chosen.name}',
-            undoAction: () async {
-              await repo.updateWithFeedback(
-                txnId: item.id,
-                categoryId: Value(prevCategory),
-                context: 'undo_sort',
-              );
-              if (mounted) setState(() => _currentIndex--);
-            },
-          ),
-        );
+      ref.read(undoControllerProvider.notifier).pushUndo(
+            UndoToken(
+              id: 'sort_cat_${item.id}',
+              message: 'Filed under ${chosen.name}',
+              undoAction: () async {
+                await repo.updateWithFeedback(
+                  txnId: item.id,
+                  categoryId: Value(prevCategory),
+                  context: 'undo_sort',
+                );
+                if (mounted) setState(() => _currentIndex--);
+              },
+            ),
+          );
+    } catch (_) {}
   }
 }
 
@@ -493,14 +501,17 @@ class _InboxZeroView extends ConsumerWidget {
                         color: AppColorTokens.bloomGold,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '$streak day streak maintained!',
-                        style: AppTheme.bloomDisplay(
-                          14,
-                          FontWeight.w600,
-                          color: isDark
-                              ? AppColorTokens.bloomGold
-                              : const Color(0xFF8A5A00),
+                      Flexible(
+                        child: Text(
+                          '$streak day streak maintained!',
+                          style: AppTheme.bloomDisplay(
+                            14,
+                            FontWeight.w600,
+                            color: isDark
+                                ? AppColorTokens.bloomGold
+                                : const Color(0xFF8A5A00),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

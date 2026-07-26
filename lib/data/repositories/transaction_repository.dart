@@ -324,7 +324,8 @@ WHERE t.status = 'needs_review'
     return _database.transaction(() async {
       final row = await (_database.select(_database.transactions)
             ..where((t) => t.id.equals(txnId)))
-          .getSingle();
+          .getSingleOrNull();
+      if (row == null) return 0;
       final now = clock().toUtc();
       final confidence = _parseConfidenceOf(row);
       if (amount.present && amount.value <= 0) {
