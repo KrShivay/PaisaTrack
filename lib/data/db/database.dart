@@ -9,6 +9,7 @@ import '../dedup/duplicate_match_rule.dart';
 import 'tables/categories_table.dart';
 import 'tables/baselines_table.dart';
 import 'tables/feedback_table.dart';
+import 'tables/financial_events_table.dart';
 import 'tables/insights_table.dart';
 import 'tables/merchant_aliases_table.dart';
 import 'tables/merchants_table.dart';
@@ -17,6 +18,7 @@ import 'tables/payment_sources_table.dart';
 import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
+import 'tables/transaction_links_table.dart';
 import 'tables/transactions_table.dart';
 
 part 'database.g.dart';
@@ -30,6 +32,7 @@ part 'database.g.dart';
     Baselines,
     Categories,
     Feedback,
+    FinancialEvents,
     Insights,
     MerchantAliases,
     Merchants,
@@ -38,6 +41,7 @@ part 'database.g.dart';
     RawSms,
     RecurringSeries,
     Rules,
+    TransactionLinks,
     Transactions,
   ],
 )
@@ -69,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -145,6 +149,10 @@ class AppDatabase extends _$AppDatabase {
             'CREATE INDEX IF NOT EXISTS idx_transactions_lifecycle_state '
             'ON transactions (lifecycle_state);',
           );
+        }
+        if (from < 10) {
+          await migrator.createTable(financialEvents);
+          await migrator.createTable(transactionLinks);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.
