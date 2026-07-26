@@ -169,7 +169,10 @@ void main() {
 
     await tester.tap(find.text('Received'));
     await tester.pump();
-    await tester.enterText(find.widgetWithText(TextFormField, 'Amount'), '1200');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Amount'),
+      '1200',
+    );
 
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();

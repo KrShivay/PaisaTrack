@@ -45,11 +45,11 @@ void main() {
       txn: Transaction(
         id: 'txn_101',
         ts: now.millisecondsSinceEpoch,
-        amount: 449,
+        amount: 649,
         direction: 'debit',
         channel: 'upi',
         categoryId: 'food_dining',
-        merchantRaw: 'amazon',
+        merchantRaw: 'Swiggy',
         parseSource: 'template',
         confidenceJson: '{}',
         status: 'confirmed',
@@ -58,26 +58,25 @@ void main() {
         createdAt: now,
         updatedAt: now,
       ),
-      merchantName: 'amazon',
+      merchantName: 'Swiggy',
       categoryName: 'Food & Dining',
       parseConfidence: 0.98,
       confidenceTrail: TransactionConfidenceTrail.fromJson('{}'),
       isLowTrustParse: false,
     );
 
-    testWidgets('renders transaction detail with category tile and hero amount',
+    testWidgets('renders category tile, merchant header, and hero amount',
         (tester) async {
       await pumpDetail(tester, testDetail);
 
       expect(find.text('Transaction Detail'), findsOneWidget);
-      expect(find.text('amazon'), findsOneWidget);
+      expect(find.text('Swiggy'), findsOneWidget);
       expect(find.text('Food & Dining'), findsOneWidget);
       expect(find.byType(BloomCategoryTile), findsOneWidget);
       expect(find.byType(BloomAmount), findsOneWidget);
     });
 
-    testWidgets('discloses technical details & raw SMS provenance when tapped',
-        (tester) async {
+    testWidgets('discloses technical provenance on tap', (tester) async {
       await pumpDetail(tester, testDetail);
 
       final techHeader = find.text('Technical details & SMS provenance');

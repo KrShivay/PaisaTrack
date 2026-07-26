@@ -1,30 +1,19 @@
-import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
-import '../../core/widgets/app_state_views.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
-import '../../core/widgets/correction_scope_sheet.dart';
-import '../../core/widgets/transaction_components.dart';
-import '../../data/db/database.dart' show Category, Transaction;
+import '../../core/undo/undo_controller.dart';
+import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
-import '../../data/models/normalized_transaction_record.dart';
-import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'transactions_providers.dart';
-import 'transaction_source_actions.dart';
 
-/// Read-and-correct view of a single transaction (T-038).
-///
-/// Shows every frozen §6.2 field plus status, with a confidence-trail
-/// placeholder (full enrichment trail lands in Phase 3). Category and
-/// description are editable; category changes use an explicit correction
-/// scope while description-only edits use
-/// [TransactionRepository.updateWithFeedback].
+/// Redesigned Bloom Transaction Detail sheet with hero amount, category editor,
+/// and technical SMS provenance disclosure.
 class TransactionDetailScreen extends ConsumerStatefulWidget {
   const TransactionDetailScreen({super.key, required this.txnId});
 
@@ -37,740 +26,422 @@ class TransactionDetailScreen extends ConsumerStatefulWidget {
 
 class _TransactionDetailScreenState
     extends ConsumerState<TransactionDetailScreen> {
-  final _descriptionController = TextEditingController();
-  bool _editsSeeded = false;
+  final _noteController = TextEditingController();
+  bool _seeded = false;
   String? _categoryId;
-  String? _initialCategoryId;
-  CorrectionScope _categoryScope = CorrectionScope.thisTransaction;
-  String _initialDescription = '';
-  bool _saving = false;
-  bool _savingParseVerdict = false;
-  bool _confirmingCategory = false;
+  String? _categoryName;
+  bool _showTechnicalDetails = false;
 
   @override
   void dispose() {
-    _descriptionController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
-  /// Seeds the editable fields once from the loaded row, so in-progress
-  /// edits are not clobbered by stream re-emissions.
-  void _seedEdits(TransactionDetail detail) {
-    if (_editsSeeded) return;
-    _editsSeeded = true;
+  void _seed(TransactionDetail detail) {
+    if (_seeded) return;
+    _seeded = true;
     _categoryId = detail.txn.categoryId;
-    _initialCategoryId = detail.txn.categoryId;
-    _initialDescription = detail.txn.description ?? '';
-    _descriptionController.text = _initialDescription;
-    _descriptionController.addListener(_handleEdit);
+    _noteController.text = detail.txn.description ?? '';
   }
 
-  bool get _isDirty =>
-      _categoryId != _initialCategoryId ||
-      _descriptionController.text.trim() != _initialDescription.trim();
-
-  void _handleEdit() {
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      final database = await ref.read(appDatabaseProvider.future);
-      final repository = ref.read(transactionRepositoryProvider(database));
-      final description = _descriptionController.text.trim();
-      final categoryChanged = _categoryId != _initialCategoryId;
-      final descriptionChanged = description != _initialDescription.trim();
-      CategoryCorrectionResult? correction;
-      final written = categoryChanged
-          ? (correction = await repository.correctCategory(
-              txnId: widget.txnId,
-              categoryId: _categoryId!,
-              scope: _categoryScope,
-              context: 'detail_edit',
-              description: descriptionChanged
-                  ? Value(description.isEmpty ? null : description)
-                  : const Value.absent(),
-            ))
-              .feedbackCount
-          : await repository.updateWithFeedback(
-              txnId: widget.txnId,
-              description: Value(description.isEmpty ? null : description),
-            );
-      if (mounted) {
-        setState(() {
-          _saving = false;
-          if (written > 0) {
-            _initialCategoryId = _categoryId;
-            _initialDescription = description;
-          }
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              correction?.ruleCreated == true
-                  ? 'Saved. PaisaTrack will remember this.'
-                  : correction != null &&
-                          correction.affectedTransactionCount > 1
-                      ? '${correction.affectedTransactionCount} transactions updated'
-                      : written > 0
-                          ? 'Saved'
-                          : 'No changes to save',
-            ),
-          ),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save changes')),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmParse() async {
-    setState(() => _savingParseVerdict = true);
-    try {
-      final database = await ref.read(appDatabaseProvider.future);
-      await ref
-          .read(transactionRepositoryProvider(database))
-          .confirmParse(txnId: widget.txnId);
-      if (mounted) {
-        setState(() => _savingParseVerdict = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Parse confirmed')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _savingParseVerdict = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not confirm parse')),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmCategory() async {
-    setState(() => _confirmingCategory = true);
-    try {
-      final database = await ref.read(appDatabaseProvider.future);
-      await ref
-          .read(transactionRepositoryProvider(database))
-          .confirm(txnId: widget.txnId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Category confirmed')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not confirm category')),
-      );
-    } finally {
-      if (mounted) setState(() => _confirmingCategory = false);
-    }
-  }
-
-  Future<void> _fixParse(Transaction txn) async {
-    final correction = await showParseCorrectionSheet(
-      context,
-      amount: txn.amount,
-      direction: txn.direction,
-      merchantRaw: txn.merchantRaw,
-    );
-    if (correction == null || !mounted) return;
-
-    setState(() => _savingParseVerdict = true);
-    try {
-      final database = await ref.read(appDatabaseProvider.future);
-      final written = await ref
-          .read(transactionRepositoryProvider(database))
-          .updateWithFeedback(
-            txnId: widget.txnId,
-            amount: Value(correction.amount),
-            direction: Value(correction.direction),
-            merchantRaw: Value(correction.merchantRaw),
-            context: 'parse_confirm',
-            recordParseCorrections: true,
-          );
-      if (mounted) {
-        setState(() => _savingParseVerdict = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              written > 0 ? 'Parse correction saved' : 'No parse changes',
-            ),
-          ),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _savingParseVerdict = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save parse correction')),
-        );
-      }
-    }
-  }
-
-  Future<void> _chooseCategory(
-    List<Category> categories,
-    Transaction transaction,
-  ) async {
-    final chosen = await showModalBottomSheet<Category>(
+  Future<void> _changeCategory() async {
+    final categories = await ref.read(categoryListProvider.future);
+    if (!mounted) return;
+    final chosen = await showBloomModalSheet<Category>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       builder: (context) => CategoryPickerSheet(
         categories: categories,
-        currentCategoryId: _categoryId,
-        suggestedCategoryIds: [
-          if (_categoryId != null) _categoryId!,
-          'transfers',
-          'other',
-        ],
-        explanations: {
-          if (_categoryId != null) _categoryId!: 'Current category',
-          'transfers': 'Use for self-transfers or excluded movement',
-        },
+        title: 'Change Category',
       ),
     );
     if (chosen == null || !mounted) return;
-    if (chosen.id == _categoryId) return;
-    final hasReusableMatch =
-        transaction.counterpartyVpa?.trim().isNotEmpty == true ||
-            transaction.merchantRaw?.trim().isNotEmpty == true;
-    final scope = await showCorrectionScopeSheet(
-      context: context,
-      categoryName: chosen.name,
-      availableScopes: {
-        CorrectionScope.thisTransaction,
-        if (hasReusableMatch) ...{
-          CorrectionScope.futureMatching,
-          CorrectionScope.existingAndFuture,
-        },
-      },
-      initialScope: defaultCorrectionScope(CorrectionContext.oneOffEdit),
-    );
-    if (scope == null || !mounted) return;
+
+    final database = await ref.read(appDatabaseProvider.future);
+    final repo = ref.read(transactionRepositoryProvider(database));
+    final prevCategory = _categoryId;
+
     setState(() {
       _categoryId = chosen.id;
-      _categoryScope = scope;
+      _categoryName = chosen.name;
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final detail = ref.watch(transactionDetailProvider(widget.txnId));
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Transaction details')),
-      body: switch (detail) {
-        AsyncData(:final value?) => _buildDetail(context, value),
-        AsyncData() => const EmptyStateView(
-            illustration: AppIllustrations.spendAnalysis,
-            title: 'Transaction not found',
-            message: 'It may have been deleted.',
-          ),
-        AsyncError() => const ErrorStateView(
-            message: 'Could not load this transaction.',
-          ),
-        _ => const Center(child: CircularProgressIndicator()),
-      },
+    await repo.updateWithFeedback(
+      txnId: widget.txnId,
+      categoryId: Value(chosen.id),
+      context: 'detail_edit',
     );
-  }
 
-  Widget _buildDetail(BuildContext context, TransactionDetail detail) {
-    _seedEdits(detail);
-    final theme = Theme.of(context);
-    final localizations = MaterialLocalizations.of(context);
-    final txn = detail.txn;
-    final isCredit = txn.direction == 'credit';
-    final direction =
-        isCredit ? TransactionDirection.credit : TransactionDirection.debit;
-    final ts =
-        DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true).toLocal();
-    final categories = ref.watch(categoryListProvider);
-    final merchantName =
-        detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
-    final categoryName = switch (categories) {
-      AsyncData(:final value) => _selectedCategoryName(value),
-      _ => 'Uncategorized',
-    };
-
-    return ListView(
-      padding: AppSpacing.screen,
-      children: [
-        Text(
-          merchantName,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TransactionAmount(
-          amount: txn.amount,
-          direction: direction,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          '${localizations.formatMediumDate(ts)} · '
-          '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(ts))}',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          [categoryName, txn.channel.toUpperCase(), txn.accountHint]
-              .whereType<String>()
-              .where((value) => value.isNotEmpty)
-              .join(' · '),
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TransactionSourceActions(
-          txnId: widget.txnId,
-          fallbackVpa: txn.counterpartyVpa,
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        // Rendered only once categories have loaded, so the current category
-        // id is always among the dropdown's items (a stale/unknown id would
-        // otherwise trip the dropdown's value assertion).
-        switch (categories) {
-          AsyncData(:final value) => _CategoryField(
-              categoryName: _selectedCategoryName(value),
-              onTap: () => _chooseCategory(value, txn),
-            ),
-          _ => const TextField(
-              enabled: false,
-              decoration: InputDecoration(labelText: 'Category'),
-            ),
-        },
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          _categoryExplanation(detail),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        TextFormField(
-          controller: _descriptionController,
-          decoration: const InputDecoration(
-            labelText: 'Note or details (optional)',
-            hintText: 'What was this payment for?',
-          ),
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        if (txn.status == 'needs_review') ...[
-          const SizedBox(height: AppSpacing.lg),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Verify category',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  const Text(
-                    'Confirm the suggested category, or choose a different one above.',
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  FilledButton.icon(
-                    onPressed: _isDirty || _confirmingCategory
-                        ? null
-                        : _confirmCategory,
-                    icon: const Icon(Icons.check),
-                    label: Text(
-                      _confirmingCategory
-                          ? 'Confirming…'
-                          : 'Category is correct',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-        if (_isDirty) ...[
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: const Icon(Icons.save_outlined),
-            label: Text(_saving ? 'Saving changes…' : 'Save changes'),
-          ),
-        ],
-        if (detail.isLowTrustParse) ...[
-          const SizedBox(height: AppSpacing.lg),
-          _ParseConfirmationCard(
-            saving: _savingParseVerdict,
-            onConfirm: _confirmParse,
-            onFix: () => _fixParse(txn),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.xl),
-        _DetailSection(
-          title: 'Transaction details',
-          child: Column(
-            children: [
-              _FieldRow(label: 'Direction', value: txn.direction),
-              _FieldRow(label: 'Channel', value: txn.channel),
-              _FieldRow(label: 'Account', value: txn.accountHint),
-              _FieldRow(
-                label: 'Balance after',
-                value: txn.balanceAfter == null
-                    ? null
-                    : formatInr(txn.balanceAfter!),
-              ),
-              _FieldRow(label: 'Reference', value: txn.refId),
-              _FieldRow(label: 'Counterparty VPA', value: txn.counterpartyVpa),
-            ],
-          ),
-        ),
-        _DetailSection(
-          title: 'Technical details',
-          child: Consumer(
-            builder: (context, ref, _) {
-              final source = kDebugMode
-                  ? ref
-                      .watch(transactionSourceProvider(widget.txnId))
-                      .valueOrNull
-                  : null;
-              final prettyEvidence = _prettyJson(txn.confidenceJson);
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _FieldRow(label: 'Parse source', value: txn.parseSource),
-                  _FieldRow(
-                    label: 'Parse confidence',
-                    value: detail.parseConfidence?.toStringAsFixed(2),
-                  ),
-                  if (kDebugMode) ...[
-                    _FieldRow(label: 'SMS sender', value: source?.smsSender),
-                    _FieldRow(label: 'SMS body', value: source?.smsBody),
-                  ],
-                  _FieldRow(
-                    label: 'Merchant value',
-                    value: detail.confidenceTrail.merchant?.value?.toString(),
-                  ),
-                  _FieldRow(
-                    label: 'Merchant source',
-                    value: detail.confidenceTrail.merchant?.source,
-                  ),
-                  _FieldRow(
-                    label: 'Merchant confidence',
-                    value: detail.confidenceTrail.merchant?.confidence
-                        ?.toStringAsFixed(2),
-                  ),
-                  _FieldRow(
-                    label: 'Category source',
-                    value: detail.confidenceTrail.category?.source,
-                  ),
-                  _FieldRow(
-                    label: 'Category confidence',
-                    value: detail.confidenceTrail.category?.confidence
-                        ?.toStringAsFixed(2),
-                  ),
-                  _FieldRow(
-                    label: 'Category rule',
-                    value: detail.confidenceTrail.category?.ruleId,
-                  ),
-                  if (kDebugMode && prettyEvidence != null) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Confidence evidence',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    SelectableText(
-                      prettyEvidence,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                    ),
-                  ],
-                ],
+    ref.read(undoControllerProvider.notifier).pushUndo(
+          UndoToken(
+            id: 'cat_detail_${widget.txnId}',
+            message: 'Category updated to ${chosen.name}',
+            undoAction: () async {
+              await repo.updateWithFeedback(
+                txnId: widget.txnId,
+                categoryId: Value(prevCategory),
+                context: 'undo_detail',
               );
+              if (mounted) {
+                setState(() => _categoryId = prevCategory);
+              }
             },
           ),
-        ),
-      ],
-    );
+        );
   }
-
-  String _selectedCategoryName(List<Category> categories) {
-    for (final category in categories) {
-      if (category.id == _categoryId) return category.name;
-    }
-    return 'Uncategorized';
-  }
-
-  String _categoryExplanation(TransactionDetail detail) {
-    final source = detail.confidenceTrail.category?.source?.toLowerCase();
-    if (source?.contains('rule') ?? false) {
-      return 'Suggested from your rule for this merchant.';
-    }
-    if (source?.contains('feedback') ?? false) {
-      return 'Previously used for similar transactions.';
-    }
-    if (source?.contains('seed') ?? false) {
-      return 'Suggested from PaisaTrack’s category mapping.';
-    }
-    return detail.txn.categoryId == null
-        ? 'Choose a category to help organise this transaction.'
-        : 'This category needs your confirmation when it looks incorrect.';
-  }
-
-  String? _prettyJson(String? rawJson) {
-    if (rawJson == null || rawJson.isEmpty) return null;
-    try {
-      final object = jsonDecode(rawJson);
-      return const JsonEncoder.withIndent('  ').convert(object);
-    } catch (_) {
-      return rawJson;
-    }
-  }
-}
-
-class _DetailSection extends StatelessWidget {
-  const _DetailSection({
-    required this.title,
-    required this.child,
-  });
-
-  final String title;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.md),
-      title: Text(title, style: Theme.of(context).textTheme.titleMedium),
-      children: [Align(alignment: Alignment.centerLeft, child: child)],
-    );
-  }
-}
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final detailAsync = ref.watch(transactionDetailProvider(widget.txnId));
 
-class _CategoryField extends StatelessWidget {
-  const _CategoryField({
-    required this.categoryName,
-    required this.onTap,
-  });
-
-  final String categoryName;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Category, $categoryName',
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: onTap,
-        child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Category',
-            suffixIcon: Icon(Icons.expand_more),
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Transaction Detail',
+          style: AppTheme.bloomDisplay(
+            18,
+            FontWeight.w700,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextPrimary
+                : AppColorTokens.ink,
           ),
-          child: Text(categoryName),
         ),
       ),
-    );
-  }
-}
+      body: SafeArea(
+        child: detailAsync.when(
+          data: (detail) {
+            if (detail == null) {
+              return const Center(child: Text('Transaction not found'));
+            }
+            _seed(detail);
 
-/// Compact verdict control shown only when ADR 0005 requires a user check.
-class _ParseConfirmationCard extends StatelessWidget {
-  const _ParseConfirmationCard({
-    required this.saving,
-    required this.onConfirm,
-    required this.onFix,
-  });
+            final txn = detail.txn;
+            final isDebit = txn.direction == 'debit';
+            final categoryDisplayName =
+                _categoryName ?? detail.categoryName ?? 'Uncategorised';
+            final displayName =
+                detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
+            final date = DateTime.fromMillisecondsSinceEpoch(txn.ts);
 
-  final bool saving;
-  final VoidCallback onConfirm;
-  final VoidCallback onFix;
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                children: [
+                  // Top Header: Category Tile (44px) + Merchant Title
+                  Row(
+                    children: [
+                      BloomCategoryTile(
+                        categoryId: _categoryId ?? txn.categoryId,
+                        size: 44,
+                        borderRadius: 16,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: AppTheme.bloomDisplay(
+                                18,
+                                FontWeight.w700,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextPrimary
+                                    : AppColorTokens.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatDate(date),
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w400,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextTertiary
+                                    : AppColorTokens.inkTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Parsed correctly?',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Check the amount, direction, and merchant.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              children: [
-                FilledButton(
-                  onPressed: saving ? null : onConfirm,
-                  child: const Text('Confirm'),
-                ),
-                OutlinedButton(
-                  onPressed: saving ? null : onFix,
-                  child: const Text('Fix'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                  // Hero Amount 44px
+                  BloomAmount(
+                    amount: isDebit ? -txn.amount : txn.amount,
+                    size: 44,
+                    weight: FontWeight.w600,
+                  ),
+                  const SizedBox(height: 24),
 
-/// User-entered replacements for fields extracted from a low-trust parse.
-class ParseCorrection {
-  const ParseCorrection({
-    required this.amount,
-    required this.direction,
-    required this.merchantRaw,
-  });
-
-  final double amount;
-  final String direction;
-  final String? merchantRaw;
-}
-
-/// Shows the shared amount, direction, and merchant correction form.
-Future<ParseCorrection?> showParseCorrectionSheet(
-  BuildContext context, {
-  required double amount,
-  required String direction,
-  required String? merchantRaw,
-}) async {
-  final amountController = TextEditingController(text: amount.toString());
-  final merchantController = TextEditingController(text: merchantRaw ?? '');
-  var selectedDirection = direction;
-  try {
-    return await showModalBottomSheet<ParseCorrection>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.screen.left,
-            AppSpacing.screen.top,
-            AppSpacing.screen.right,
-            MediaQuery.viewInsetsOf(context).bottom + AppSpacing.screen.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Fix parsed fields',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Amount'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              DropdownButtonFormField<String>(
-                initialValue: selectedDirection,
-                decoration: const InputDecoration(labelText: 'Direction'),
-                items: const [
-                  DropdownMenuItem(value: 'debit', child: Text('Spent')),
-                  DropdownMenuItem(value: 'credit', child: Text('Received')),
-                ],
-                onChanged: (value) {
-                  if (value != null) setState(() => selectedDirection = value);
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: merchantController,
-                decoration: const InputDecoration(labelText: 'Merchant'),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () {
-                  final amount = double.tryParse(
-                    amountController.text.replaceAll(',', '').trim(),
-                  );
-                  if (amount == null || amount <= 0) return;
-                  final merchant = merchantController.text.trim();
-                  Navigator.of(context).pop(
-                    ParseCorrection(
-                      amount: amount,
-                      direction: selectedDirection,
-                      merchantRaw: merchant.isEmpty ? null : merchant,
+                  // Metadata Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomCard,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  );
-                },
-                child: const Text('Save parse correction'),
+                    child: Column(
+                      children: [
+                        // Category Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'CATEGORY',
+                                  style: AppTheme.bloomDisplay(
+                                    10,
+                                    FontWeight.w600,
+                                    letterSpacing: 0.1,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextTertiary
+                                        : AppColorTokens.inkTertiary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  categoryDisplayName,
+                                  style: AppTheme.bloomDisplay(
+                                    14,
+                                    FontWeight.w600,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextPrimary
+                                        : AppColorTokens.ink,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            GestureDetector(
+                              onTap: _changeCategory,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColorTokens.violetPrimary
+                                      : AppColorTokens.ink,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Text(
+                                  'Change',
+                                  style: AppTheme.bloomDisplay(
+                                    12,
+                                    FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (txn.accountHint != null &&
+                            txn.accountHint!.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Divider(height: 1),
+                          ),
+                          // Account / Source Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Payment Source',
+                                style: AppTheme.bloomDisplay(
+                                  13,
+                                  FontWeight.w400,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                              ),
+                              Text(
+                                txn.accountHint!,
+                                style: AppTheme.bloomMono(
+                                  13,
+                                  FontWeight.w500,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextPrimary
+                                      : AppColorTokens.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Technical SMS Provenance Disclosure
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showTechnicalDetails = !_showTechnicalDetails;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColorTokens.bloomDarkCard
+                            : const Color(0xFFF1EFFB),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.terminal_rounded,
+                                  size: 16,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextTertiary
+                                      : AppColorTokens.inkTertiary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Technical details & SMS provenance',
+                                    style: AppTheme.bloomDisplay(
+                                      12,
+                                      FontWeight.w500,
+                                      color: isDark
+                                          ? AppColorTokens
+                                              .bloomDarkTextSecondary
+                                          : AppColorTokens.inkSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            _showTechnicalDetails
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextTertiary
+                                : AppColorTokens.inkTertiary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  if (_showTechnicalDetails) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColorTokens.bloomDarkCard
+                            : AppColorTokens.bloomCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColorTokens.bloomDarkOutline
+                              : AppColorTokens.bloomChip,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PARSED PROVENANCE',
+                            style: AppTheme.bloomDisplay(
+                              10,
+                              FontWeight.w600,
+                              letterSpacing: 0.1,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Channel: ${txn.channel} · Status: ${txn.status}',
+                            style: AppTheme.bloomMono(
+                              12,
+                              FontWeight.w400,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextSecondary
+                                  : AppColorTokens.inkSecondary,
+                            ),
+                          ),
+                          if (detail.parseConfidence != null) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              'CONFIDENCE: ${(detail.parseConfidence! * 100).toStringAsFixed(0)}%',
+                              style: AppTheme.bloomMono(
+                                11,
+                                FontWeight.w600,
+                                color: AppColorTokens.violetPrimary,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 40),
+                ],
               ),
-            ],
-          ),
+            );
+          },
+          loading: () =>
+              const Center(child: BloomSkeleton(width: 260, height: 180)),
+          error: (err, _) => Center(child: Text('Error loading detail: $err')),
         ),
       ),
     );
-  } finally {
-    amountController.dispose();
-    merchantController.dispose();
   }
-}
 
-/// Label/value row for read-only detail fields; null values render as '—'.
-class _FieldRow extends StatelessWidget {
-  const _FieldRow({required this.label, required this.value});
-
-  final String label;
-  final String? value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 140,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(value ?? '—', style: theme.textTheme.bodyMedium),
-          ),
-        ],
-      ),
-    );
+  String _formatDate(DateTime date) {
+    final local = date.toLocal();
+    final h =
+        local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
+    final m = local.minute.toString().padLeft(2, '0');
+    final ampm = local.hour >= 12 ? 'pm' : 'am';
+    return '${_shortMonth(local.month)} ${local.day}, ${local.year} · $h:$m $ampm';
   }
+
+  String _shortMonth(int month) => const [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
 }
