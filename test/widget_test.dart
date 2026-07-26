@@ -65,13 +65,14 @@ void main() {
     expect(find.byType(WeeklyReviewScreen), findsNothing);
     expect(find.byType(InsightsScreen), findsNothing);
 
-    await tester.tap(find.text('Transactions'));
+    await tester.tap(find.text('Activity').first);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(TransactionsScreen), findsOneWidget);
     expect(find.byType(WeeklyReviewScreen), findsNothing);
-    expect(find.text('Transactions'), findsWidgets);
-    expect(find.text('Review'), findsOneWidget);
-    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Activity'), findsWidgets);
+    expect(find.text('Sort'), findsOneWidget);
+    expect(find.text('Trends'), findsOneWidget);
 
     await database.close();
   });
