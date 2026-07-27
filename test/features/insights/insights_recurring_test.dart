@@ -67,8 +67,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          recurringSeriesProvider
-              .overrideWith((ref) => Stream.value([item1, item2])),
+          recurringSeriesProvider.overrideWith(
+            (ref) => Stream.value([
+              RecurringSeriesItem(series: item1),
+              RecurringSeriesItem(series: item2),
+            ]),
+          ),
           appDatabaseProvider.overrideWith((ref) async => database),
         ],
         child: MaterialApp(
