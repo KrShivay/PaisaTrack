@@ -55,6 +55,9 @@ PaisaTrack is local-first:
   pinned, integrity-checked open-weight models described by ADR 0007/0009. The
   download request carries no user data and inference code paths never open a
   network connection; the permission's scope is documented inline.
+- **SMS Admission & Shape-based Triage**: PaisaTrack uses shape-based admission triage rather than a fixed bank allowlist (T-133a). Incoming messages are inspected locally for financial transaction structures (amount, currency, direction, sender) before admission. Non-financial messages (e.g. OTPs, personal chats, marketing) are rejected immediately and never saved.
+- **In-App Prominent Disclosure & Consent**: Prominent disclosure precedes the Android runtime SMS permission request, explicitly explaining: (1) what is read (only transactional money texts), (2) that all parsing and storage are 100% on-device with zero cloud uploads, and (3) what happens on decline (manual tracking remains fully available).
+- **Capture & Privacy Controls**: Global capture pause and per-sender blacklisting in Settings allow stopping ingestion immediately.
 
 Future statement import must parse locally, avoid retaining the source file,
 store only required normalized/source-fingerprint data, and require explicit

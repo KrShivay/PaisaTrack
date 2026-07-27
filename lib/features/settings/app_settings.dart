@@ -37,24 +37,32 @@ class AppSettings {
     this.askDailyBudget = AppConstants.askNowDailyBudget,
     this.showPaise = true,
     this.streak = 0,
+    this.isCapturePaused = false,
+    this.pausedSenders = const [],
   });
 
   final AppThemeChoice themeChoice;
   final int askDailyBudget;
   final bool showPaise;
   final int streak;
+  final bool isCapturePaused;
+  final List<String> pausedSenders;
 
   AppSettings copyWith({
     AppThemeChoice? themeChoice,
     int? askDailyBudget,
     bool? showPaise,
     int? streak,
+    bool? isCapturePaused,
+    List<String>? pausedSenders,
   }) {
     return AppSettings(
       themeChoice: themeChoice ?? this.themeChoice,
       askDailyBudget: askDailyBudget ?? this.askDailyBudget,
       showPaise: showPaise ?? this.showPaise,
       streak: streak ?? this.streak,
+      isCapturePaused: isCapturePaused ?? this.isCapturePaused,
+      pausedSenders: pausedSenders ?? this.pausedSenders,
     );
   }
 
@@ -64,6 +72,8 @@ class AppSettings {
       'ask_daily_budget': askDailyBudget,
       'show_paise': showPaise,
       'streak': streak,
+      'is_capture_paused': isCapturePaused,
+      'paused_senders': pausedSenders,
     };
   }
 
@@ -76,6 +86,11 @@ class AppSettings {
           json['ask_daily_budget'] as int? ?? AppConstants.askNowDailyBudget,
       showPaise: json['show_paise'] as bool? ?? true,
       streak: json['streak'] as int? ?? 0,
+      isCapturePaused: json['is_capture_paused'] as bool? ?? false,
+      pausedSenders: (json['paused_senders'] as List?)
+              ?.cast<String>()
+              .toList() ??
+          const [],
     );
   }
 }
@@ -162,6 +177,28 @@ class AppSettingsController extends AsyncNotifier<AppSettings> {
   Future<void> setStreak(int streak) async {
     final next = (state.valueOrNull ?? const AppSettings()).copyWith(
       streak: streak,
+    );
+    await _save(next);
+  }
+
+  Future<void> setCapturePaused(bool paused) async {
+    final next = (state.valueOrNull ?? const AppSettings()).copyWith(
+      isCapturePaused: paused,
+    );
+    await _save(next);
+  }
+
+  Future<void> setSenderPaused(String sender, bool paused) async {
+    final current = [...(state.valueOrNull?.pausedSenders ?? <String>[])];
+    final normalized = sender.trim().toUpperCase();
+    if (normalized.isEmpty) return;
+    if (paused && !current.contains(normalized)) {
+      current.add(normalized);
+    } else if (!paused) {
+      current.remove(normalized);
+    }
+    final next = (state.valueOrNull ?? const AppSettings()).copyWith(
+      pausedSenders: current,
     );
     await _save(next);
   }
