@@ -48,9 +48,8 @@ void main() {
     expect(find.text('Export backup'), findsOneWidget);
     expect(find.text('Import backup'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView), const Offset(0, -400));
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(find.text('Delete all local data'), findsOneWidget);
+    final deleteTarget = find.text('Delete all local data');
+    await tester.scrollUntilVisible(deleteTarget, 300);
+    expect(deleteTarget, findsOneWidget);
   });
 }

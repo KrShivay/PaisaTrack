@@ -94,6 +94,15 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
     askDailyBudgetResolver: () =>
         ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
         AppConstants.askNowDailyBudget,
+    isCapturePausedResolver: () =>
+        ref.read(appSettingsControllerProvider).valueOrNull?.isCapturePaused ??
+        false,
+    isSenderPausedResolver: (sender) {
+      final paused =
+          ref.read(appSettingsControllerProvider).valueOrNull?.pausedSenders ??
+              [];
+      return paused.contains(sender.trim().toUpperCase());
+    },
   );
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),
@@ -140,6 +149,8 @@ class SmsIngestor {
     MerchantResolver? merchantResolver,
     int askDailyBudget = AppConstants.askNowDailyBudget,
     int Function()? askDailyBudgetResolver,
+    bool Function()? isCapturePausedResolver,
+    bool Function(String sender)? isSenderPausedResolver,
     DecisionStatus? fixedStatus,
     Set<String>? knownTransactionIds,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
@@ -152,6 +163,8 @@ class SmsIngestor {
         _categorizer = categorizer,
         _merchantResolver = merchantResolver,
         _askDailyBudget = askDailyBudgetResolver ?? (() => askDailyBudget),
+        _isCapturePaused = isCapturePausedResolver,
+        _isSenderPaused = isSenderPausedResolver,
         _fixedStatus = fixedStatus,
         _knownTransactionIds = knownTransactionIds,
         _decisionPolicy = decisionPolicy,
@@ -165,6 +178,8 @@ class SmsIngestor {
   final Categorizer? _categorizer;
   final MerchantResolver? _merchantResolver;
   final int Function() _askDailyBudget;
+  final bool Function()? _isCapturePaused;
+  final bool Function(String sender)? _isSenderPaused;
   final DecisionStatus? _fixedStatus;
   final Set<String>? _knownTransactionIds;
   final DecisionPolicy _decisionPolicy;
@@ -175,6 +190,8 @@ class SmsIngestor {
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
   Future<void> ingest(RawSms sms) async {
+    if (_isCapturePaused?.call() == true) return;
+    if (_isSenderPaused?.call(sms.sender) == true) return;
     final transactionId = 'txn_${sms.id}';
     if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     await _database.transaction(() async {
