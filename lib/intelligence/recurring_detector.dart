@@ -295,6 +295,11 @@ class RecurringDetector {
   String? _kind(String label, String direction) {
     if (direction == 'credit') return 'income';
     final normalized = label.toLowerCase();
+    if (normalized.contains('ambig') ||
+        normalized.contains('unknown') ||
+        normalized.contains('unclassified')) {
+      return 'unclassified';
+    }
     if (normalized.contains('emi') ||
         normalized.contains('loan') ||
         normalized.contains('mortgage')) {
@@ -514,4 +519,22 @@ class _PendingRecurringWrite {
 
   final RecurringDetection detection;
   final List<_TransactionPoint> points;
+}
+
+/// Computes the total monthly commitment load across all active recurring detections (T-139a).
+double computeTotalMonthlyCommitmentLoad(List<RecurringDetection> detections) {
+  var total = 0.0;
+  for (final d in detections) {
+    if (d.status != 'active' || d.kind == 'income') continue;
+    final monthlyAmount = switch (d.period) {
+      'weekly' => d.expectedAmount * (365 / 7 / 12),
+      'fortnightly' => d.expectedAmount * (365 / 14 / 12),
+      'monthly' => d.expectedAmount,
+      'quarterly' => d.expectedAmount / 3,
+      'yearly' => d.expectedAmount / 12,
+      _ => d.expectedAmount,
+    };
+    total += monthlyAmount;
+  }
+  return total;
 }
