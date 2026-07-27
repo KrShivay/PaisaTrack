@@ -38,7 +38,10 @@ class BloomCategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hue = CategoryVisuals.color(categoryId);
-    final icon = CategoryVisuals.icon(iconName);
+    final icon = CategoryVisuals.iconFor(
+      iconName: iconName,
+      categoryId: categoryId,
+    );
     final radius = borderRadius ?? AppRadius.bloomIconTile;
     final iSize = iconSize ?? size * 0.5;
 

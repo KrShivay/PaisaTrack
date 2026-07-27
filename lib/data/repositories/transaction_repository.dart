@@ -133,6 +133,7 @@ class TransactionDetail {
     required this.txn,
     required this.merchantName,
     required this.categoryName,
+    this.categoryIcon,
     required this.parseConfidence,
     required this.confidenceTrail,
     required this.isLowTrustParse,
@@ -142,6 +143,7 @@ class TransactionDetail {
   final Transaction txn;
   final String? merchantName;
   final String? categoryName;
+  final String? categoryIcon;
   final double? parseConfidence;
   final TransactionConfidenceTrail confidenceTrail;
   final bool isLowTrustParse;
@@ -297,6 +299,7 @@ WHERE t.status = 'needs_review'
           null => null,
         },
         categoryName: row.readTableOrNull(_database.categories)?.name,
+        categoryIcon: row.readTableOrNull(_database.categories)?.icon,
         parseConfidence: confidenceTrail.parser?.confidence,
         confidenceTrail: confidenceTrail,
         isLowTrustParse: _isLowTrustParse(txn),

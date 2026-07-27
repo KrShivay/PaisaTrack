@@ -187,6 +187,7 @@ class _TransactionDetailScreenState
                     children: [
                       BloomCategoryTile(
                         categoryId: _categoryId ?? txn.categoryId,
+                        iconName: detail.categoryIcon,
                         size: 44,
                         borderRadius: 16,
                       ),
