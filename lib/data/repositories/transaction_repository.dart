@@ -136,6 +136,7 @@ class TransactionDetail {
     required this.parseConfidence,
     required this.confidenceTrail,
     required this.isLowTrustParse,
+    this.rawSmsBody,
   });
 
   final Transaction txn;
@@ -144,6 +145,7 @@ class TransactionDetail {
   final double? parseConfidence;
   final TransactionConfidenceTrail confidenceTrail;
   final bool isLowTrustParse;
+  final String? rawSmsBody;
 }
 
 /// Reads non-deleted, non-suppressed transactions for list and dashboard
@@ -275,6 +277,10 @@ WHERE t.status = 'needs_review'
         _database.categories,
         _database.categories.id.equalsExp(_database.transactions.categoryId),
       ),
+      leftOuterJoin(
+        _database.rawSms,
+        _database.rawSms.id.equalsExp(_database.transactions.smsId),
+      ),
     ])
       ..where(_database.transactions.id.equals(txnId));
 
@@ -294,6 +300,7 @@ WHERE t.status = 'needs_review'
         parseConfidence: confidenceTrail.parser?.confidence,
         confidenceTrail: confidenceTrail,
         isLowTrustParse: _isLowTrustParse(txn),
+        rawSmsBody: row.readTableOrNull(_database.rawSms)?.body,
       );
     });
   }
