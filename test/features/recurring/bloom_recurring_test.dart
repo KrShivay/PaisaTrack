@@ -45,8 +45,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          recurringSeriesProvider
-              .overrideWith((ref) => Stream.value(seriesList)),
+          recurringSeriesProvider.overrideWith(
+            (ref) => Stream.value(
+              seriesList
+                  .map((r) => RecurringSeriesItem(series: r))
+                  .toList(),
+            ),
+          ),
         ],
         child: const MaterialApp(
           home: RecurringScreen(),
