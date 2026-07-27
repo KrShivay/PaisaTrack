@@ -7,12 +7,17 @@ import '../data/db/database.dart';
 
 /// Incremental weekly-category and monthly-merchant anomaly scanner.
 class AnomalyDetector {
-  const AnomalyDetector(this._database);
+  const AnomalyDetector(
+    this._database, {
+    this.amountFloor = defaultAmountFloor,
+  });
 
   static const minimumBaselinePeriods = 8;
   static const sigmaThreshold = 2.5;
+  static const defaultAmountFloor = 500.0;
 
   final AppDatabase _database;
+  final double amountFloor;
 
   /// Processes the UTC week/month containing [today] exactly once per key.
   Future<int> run({DateTime? today}) {
@@ -68,6 +73,11 @@ class AnomalyDetector {
       if (identity != null) groups.putIfAbsent(identity, () => []).add(txn);
     }
 
+    final activeSeries = await (_database.select(_database.recurringSeries)
+          ..where((s) => s.status.equals('active')))
+        .get();
+    final recurringMerchantIds = {for (final s in activeSeries) s.merchantId};
+
     var flags = 0;
     for (final entry in groups.entries) {
       final key = '$keyPrefix${entry.key}$suffix';
@@ -82,6 +92,16 @@ class AnomalyDetector {
       final threshold = existing == null
           ? double.infinity
           : existing.mean + sigmaThreshold * existing.std;
+
+      final isBelowFloor = aggregate < amountFloor;
+      final isRecurring = keyPrefix == 'mer:'
+          ? recurringMerchantIds.contains(entry.key)
+          : false;
+      final isSuppressed = isBelowFloor || isRecurring;
+      final suppressionReason = isBelowFloor
+          ? 'below_floor'
+          : (isRecurring ? 'recurring_series' : null);
+
       if (existing != null &&
           existing.n >= minimumBaselinePeriods &&
           aggregate > threshold) {
@@ -99,10 +119,12 @@ class AnomalyDetector {
                   'top_transaction_ids': [
                     for (final txn in contributors.take(3)) txn.id,
                   ],
+                  'suppressed': isSuppressed,
+                  'suppression_reason': suppressionReason,
                 }),
               ),
             );
-        flags++;
+        if (!isSuppressed) flags++;
       }
       final updated = _update(existing, aggregate);
       await _database.into(_database.baselines).insertOnConflictUpdate(
