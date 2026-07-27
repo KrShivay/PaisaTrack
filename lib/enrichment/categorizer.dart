@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
@@ -42,6 +43,10 @@ typedef MerchantMemoryResolver = Future<CategorizationResult?> Function({
   String? counterpartyVpa,
 });
 
+typedef LlmCategorySuggester = Future<CategorizationResult?> Function(
+  NormalizedTransactionRecord record,
+);
+
 /// Computes Laplace-smoothed agreement across confirmed categories for a merchant (T-140a).
 CategorizationResult? computeMerchantMemoryHit({
   required Map<String, int> confirmedCategoryCounts,
@@ -77,21 +82,25 @@ class Categorizer {
     LocalClassifier? classifier,
     Future<double> Function(String categoryId)? classifierThreshold,
     MerchantMemoryResolver? merchantMemory,
+    LlmCategorySuggester? llmSuggester,
   })  : _rules = rules,
         _seedMap = seedMap,
         _classifier = classifier,
         _classifierThreshold = classifierThreshold,
-        _merchantMemory = merchantMemory;
+        _merchantMemory = merchantMemory,
+        _llmSuggester = llmSuggester;
 
   static const seedConfidence = 0.8;
   static const fallbackConfidence = 0.3;
   static const fallbackCategoryId = 'other';
+  static const maxLlmCategoryConfidence = 0.70;
 
   final RuleRepository _rules;
   final SeedCategoryMap _seedMap;
   final LocalClassifier? _classifier;
   final Future<double> Function(String categoryId)? _classifierThreshold;
   final MerchantMemoryResolver? _merchantMemory;
+  final LlmCategorySuggester? _llmSuggester;
 
   /// Runs the ladder for one parsed record. Rules always win.
   Future<CategorizationResult> categorize(
@@ -156,6 +165,21 @@ class Categorizer {
         confidence: 1.0,
         source: 'p2p_default',
       );
+    }
+
+    if (_llmSuggester != null) {
+      final suggestion = await _llmSuggester(record);
+      if (suggestion != null) {
+        final cappedConfidence = math.min(
+          suggestion.confidence,
+          maxLlmCategoryConfidence,
+        );
+        return CategorizationResult(
+          categoryId: suggestion.categoryId,
+          confidence: cappedConfidence,
+          source: 'llm_suggestion',
+        );
+      }
     }
 
     return const CategorizationResult(
