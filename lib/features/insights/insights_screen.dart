@@ -713,6 +713,7 @@ class _CategoryBreakdownSection extends StatelessWidget {
                     children: [
                       BloomCategoryTile(
                         categoryId: cat.categoryId,
+                        iconName: cat.icon,
                         size: 32,
                         borderRadius: 11,
                       ),

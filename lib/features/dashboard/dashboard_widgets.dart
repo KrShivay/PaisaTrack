@@ -697,6 +697,7 @@ class _CategoryRow extends StatelessWidget {
       children: [
         BloomCategoryTile(
           categoryId: slice.categoryId,
+          iconName: slice.icon,
           size: 36,
           borderRadius: 13,
         ),
@@ -1036,6 +1037,7 @@ class _TransactionRow extends StatelessWidget {
           children: [
             BloomCategoryTile(
               categoryId: txn.categoryId,
+              iconName: txn.categoryIcon,
               size: 36,
               borderRadius: 13,
             ),
