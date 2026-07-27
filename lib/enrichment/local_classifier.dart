@@ -21,6 +21,9 @@ class LocalClassifier {
   LocalClassifier(this._database);
   final AppDatabase _database;
 
+  static int get defaultFeatureCount =>
+      64 + 3 + TransactionChannel.values.length + 4;
+
   Future<ClassificationPrediction?> predict(
     NormalizedTransactionRecord record, {
     Float32List? merchantEmbedding,
@@ -31,6 +34,7 @@ class LocalClassifier {
     if (meta == null) return null;
     final model = ClassifierModel.tryParse(meta.value);
     if (model == null) return null;
+    if (model.featureCount != defaultFeatureCount) return null;
     final values = _features(record, merchantEmbedding, model.featureCount);
     if (values.length != model.featureCount) return null;
     final scores = <double>[];
@@ -57,16 +61,30 @@ class LocalClassifier {
   static List<double> features(
     NormalizedTransactionRecord record,
     Float32List? merchantEmbedding, {
-    int embeddingDimensions = 16,
+    int embeddingDimensions = 64,
+    int merchantTxnCount = 0,
+    double daysSinceLastSeen = 0,
+    double amountZScore = 0.0,
   }) =>
-      _features(record, merchantEmbedding, embeddingDimensions + 4);
+      _features(
+        record,
+        merchantEmbedding,
+        embeddingDimensions + 4 + TransactionChannel.values.length + 3,
+        merchantTxnCount: merchantTxnCount,
+        daysSinceLastSeen: daysSinceLastSeen,
+        amountZScore: amountZScore,
+      );
 
   static List<double> _features(
     NormalizedTransactionRecord record,
     Float32List? embedding,
-    int featureCount,
-  ) {
-    final embeddingDimensions = max(0, featureCount - 4);
+    int featureCount, {
+    int merchantTxnCount = 0,
+    double daysSinceLastSeen = 0,
+    double amountZScore = 0.0,
+  }) {
+    final nonEmbeddingCount = 4 + TransactionChannel.values.length + 3;
+    final embeddingDimensions = max(0, featureCount - nonEmbeddingCount);
     final result = <double>[];
     for (var i = 0; i < embeddingDimensions; i++) {
       result.add(embedding != null && i < embedding.length ? embedding[i] : 0);
@@ -75,10 +93,21 @@ class LocalClassifier {
     result
       ..add(log(record.amount + 1) / 16)
       ..add(date.hour / 23)
-      ..add(date.weekday / 7)
-      ..add(
-        record.channel.index / max(1, TransactionChannel.values.length - 1),
-      );
+      ..add(date.weekday / 7);
+
+    // One-hot encoding for channel
+    for (var i = 0; i < TransactionChannel.values.length; i++) {
+      result.add(record.channel.index == i ? 1.0 : 0.0);
+    }
+
+    // Merchant history and amount features (T-140b)
+    final isRound = (record.amount > 0 && record.amount % 10 == 0) ? 1.0 : 0.0;
+    result
+      ..add(log(merchantTxnCount + 1) / 10)
+      ..add(min(1.0, max(0.0, daysSinceLastSeen) / 365))
+      ..add(amountZScore.clamp(-3.0, 3.0) / 3.0)
+      ..add(isRound);
+
     return result;
   }
 }
