@@ -1,7 +1,19 @@
 {
-  "sender": "JM-INDUSB-T",
-  "received_at": 1774865081961,
+  "sender": "VM-INDUSB",
+  "received_at": 1774868176627,
   "expected": {
-    "err": "unparsed"
+    "ok": {
+      "amount": 1.0,
+      "direction": "credit",
+      "channel": "netbanking",
+      "merchant_raw": "account XXXXXXX0050/RAPIPAY FI (IMPS",
+      "counterparty_vpa": null,
+      "account_hint": "xx4521",
+      "balance_after": null,
+      "ref_id": null,
+      "ts": 1774868176627,
+      "parse_source": "generic",
+      "parse_confidence": 0.6
+    }
   }
 }

@@ -15,3 +15,4 @@ export 'bloom_sheet_scaffold.dart';
 export 'bloom_skeleton.dart';
 export 'bloom_typography.dart';
 export 'bloom_undo_toast.dart';
+export 'bloom_sheet.dart';

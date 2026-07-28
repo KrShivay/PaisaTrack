@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/db/database.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../intelligence/models/embedder.dart';
+import 'counterparty_key.dart';
 
 /// Result of resolving parser text to a canonical merchant (PLAN §7.3).
 class MerchantResolution {
@@ -42,6 +43,22 @@ class MerchantResolver {
   final Embedder _embedder;
 
   Future<MerchantResolution> resolve(NormalizedTransactionRecord record) async {
+    final counterparty = const CounterpartyKeyParser().parse(
+      vpa: record.counterpartyVpa,
+      merchantRaw: record.merchantRaw,
+    );
+
+    if (record.merchantRaw == null &&
+        (counterparty.kind == CounterpartyKind.person || counterparty.kind == CounterpartyKind.self)) {
+      return MerchantResolution(
+        merchantId: null,
+        canonicalName: record.counterpartyVpa ?? counterparty.inferredName ?? counterparty.displayName ?? 'P2P Transfer',
+        confidence: 1.0,
+        source: 'counterparty_person',
+        needsReview: false,
+      );
+    }
+
     final raw = record.merchantRaw ?? record.counterpartyVpa;
     if (raw == null || raw.trim().isEmpty) {
       return const MerchantResolution(confidence: 0, source: 'none');

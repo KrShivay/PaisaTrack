@@ -682,6 +682,1488 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   }
 }
 
+class $CounterpartiesTable extends Counterparties
+    with TableInfo<$CounterpartiesTable, Counterparty> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CounterpartiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _identityKeyMeta =
+      const VerificationMeta('identityKey');
+  @override
+  late final GeneratedColumn<String> identityKey = GeneratedColumn<String>(
+      'identity_key', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _displayNameMeta =
+      const VerificationMeta('displayName');
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+      'display_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _inferredNameMeta =
+      const VerificationMeta('inferredName');
+  @override
+  late final GeneratedColumn<String> inferredName = GeneratedColumn<String>(
+      'inferred_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pspFamilyMeta =
+      const VerificationMeta('pspFamily');
+  @override
+  late final GeneratedColumn<String> pspFamily = GeneratedColumn<String>(
+      'psp_family', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _merchantIdMeta =
+      const VerificationMeta('merchantId');
+  @override
+  late final GeneratedColumn<String> merchantId = GeneratedColumn<String>(
+      'merchant_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _firstSeenMeta =
+      const VerificationMeta('firstSeen');
+  @override
+  late final GeneratedColumn<DateTime> firstSeen = GeneratedColumn<DateTime>(
+      'first_seen', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _lastSeenMeta =
+      const VerificationMeta('lastSeen');
+  @override
+  late final GeneratedColumn<DateTime> lastSeen = GeneratedColumn<DateTime>(
+      'last_seen', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _txnCountMeta =
+      const VerificationMeta('txnCount');
+  @override
+  late final GeneratedColumn<int> txnCount = GeneratedColumn<int>(
+      'txn_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        kind,
+        identityKey,
+        displayName,
+        inferredName,
+        pspFamily,
+        merchantId,
+        firstSeen,
+        lastSeen,
+        txnCount
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'counterparties';
+  @override
+  VerificationContext validateIntegrity(Insertable<Counterparty> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('identity_key')) {
+      context.handle(
+          _identityKeyMeta,
+          identityKey.isAcceptableOrUnknown(
+              data['identity_key']!, _identityKeyMeta));
+    } else if (isInserting) {
+      context.missing(_identityKeyMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+          _displayNameMeta,
+          displayName.isAcceptableOrUnknown(
+              data['display_name']!, _displayNameMeta));
+    }
+    if (data.containsKey('inferred_name')) {
+      context.handle(
+          _inferredNameMeta,
+          inferredName.isAcceptableOrUnknown(
+              data['inferred_name']!, _inferredNameMeta));
+    }
+    if (data.containsKey('psp_family')) {
+      context.handle(_pspFamilyMeta,
+          pspFamily.isAcceptableOrUnknown(data['psp_family']!, _pspFamilyMeta));
+    }
+    if (data.containsKey('merchant_id')) {
+      context.handle(
+          _merchantIdMeta,
+          merchantId.isAcceptableOrUnknown(
+              data['merchant_id']!, _merchantIdMeta));
+    }
+    if (data.containsKey('first_seen')) {
+      context.handle(_firstSeenMeta,
+          firstSeen.isAcceptableOrUnknown(data['first_seen']!, _firstSeenMeta));
+    } else if (isInserting) {
+      context.missing(_firstSeenMeta);
+    }
+    if (data.containsKey('last_seen')) {
+      context.handle(_lastSeenMeta,
+          lastSeen.isAcceptableOrUnknown(data['last_seen']!, _lastSeenMeta));
+    } else if (isInserting) {
+      context.missing(_lastSeenMeta);
+    }
+    if (data.containsKey('txn_count')) {
+      context.handle(_txnCountMeta,
+          txnCount.isAcceptableOrUnknown(data['txn_count']!, _txnCountMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Counterparty map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Counterparty(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      identityKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}identity_key'])!,
+      displayName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}display_name']),
+      inferredName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}inferred_name']),
+      pspFamily: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}psp_family']),
+      merchantId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}merchant_id']),
+      firstSeen: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}first_seen'])!,
+      lastSeen: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}last_seen'])!,
+      txnCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}txn_count'])!,
+    );
+  }
+
+  @override
+  $CounterpartiesTable createAlias(String alias) {
+    return $CounterpartiesTable(attachedDatabase, alias);
+  }
+}
+
+class Counterparty extends DataClass implements Insertable<Counterparty> {
+  final String id;
+  final String kind;
+  final String identityKey;
+  final String? displayName;
+  final String? inferredName;
+  final String? pspFamily;
+  final String? merchantId;
+  final DateTime firstSeen;
+  final DateTime lastSeen;
+  final int txnCount;
+  const Counterparty(
+      {required this.id,
+      required this.kind,
+      required this.identityKey,
+      this.displayName,
+      this.inferredName,
+      this.pspFamily,
+      this.merchantId,
+      required this.firstSeen,
+      required this.lastSeen,
+      required this.txnCount});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['kind'] = Variable<String>(kind);
+    map['identity_key'] = Variable<String>(identityKey);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    if (!nullToAbsent || inferredName != null) {
+      map['inferred_name'] = Variable<String>(inferredName);
+    }
+    if (!nullToAbsent || pspFamily != null) {
+      map['psp_family'] = Variable<String>(pspFamily);
+    }
+    if (!nullToAbsent || merchantId != null) {
+      map['merchant_id'] = Variable<String>(merchantId);
+    }
+    map['first_seen'] = Variable<DateTime>(firstSeen);
+    map['last_seen'] = Variable<DateTime>(lastSeen);
+    map['txn_count'] = Variable<int>(txnCount);
+    return map;
+  }
+
+  CounterpartiesCompanion toCompanion(bool nullToAbsent) {
+    return CounterpartiesCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      identityKey: Value(identityKey),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      inferredName: inferredName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inferredName),
+      pspFamily: pspFamily == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pspFamily),
+      merchantId: merchantId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(merchantId),
+      firstSeen: Value(firstSeen),
+      lastSeen: Value(lastSeen),
+      txnCount: Value(txnCount),
+    );
+  }
+
+  factory Counterparty.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Counterparty(
+      id: serializer.fromJson<String>(json['id']),
+      kind: serializer.fromJson<String>(json['kind']),
+      identityKey: serializer.fromJson<String>(json['identityKey']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      inferredName: serializer.fromJson<String?>(json['inferredName']),
+      pspFamily: serializer.fromJson<String?>(json['pspFamily']),
+      merchantId: serializer.fromJson<String?>(json['merchantId']),
+      firstSeen: serializer.fromJson<DateTime>(json['firstSeen']),
+      lastSeen: serializer.fromJson<DateTime>(json['lastSeen']),
+      txnCount: serializer.fromJson<int>(json['txnCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(kind),
+      'identityKey': serializer.toJson<String>(identityKey),
+      'displayName': serializer.toJson<String?>(displayName),
+      'inferredName': serializer.toJson<String?>(inferredName),
+      'pspFamily': serializer.toJson<String?>(pspFamily),
+      'merchantId': serializer.toJson<String?>(merchantId),
+      'firstSeen': serializer.toJson<DateTime>(firstSeen),
+      'lastSeen': serializer.toJson<DateTime>(lastSeen),
+      'txnCount': serializer.toJson<int>(txnCount),
+    };
+  }
+
+  Counterparty copyWith(
+          {String? id,
+          String? kind,
+          String? identityKey,
+          Value<String?> displayName = const Value.absent(),
+          Value<String?> inferredName = const Value.absent(),
+          Value<String?> pspFamily = const Value.absent(),
+          Value<String?> merchantId = const Value.absent(),
+          DateTime? firstSeen,
+          DateTime? lastSeen,
+          int? txnCount}) =>
+      Counterparty(
+        id: id ?? this.id,
+        kind: kind ?? this.kind,
+        identityKey: identityKey ?? this.identityKey,
+        displayName: displayName.present ? displayName.value : this.displayName,
+        inferredName:
+            inferredName.present ? inferredName.value : this.inferredName,
+        pspFamily: pspFamily.present ? pspFamily.value : this.pspFamily,
+        merchantId: merchantId.present ? merchantId.value : this.merchantId,
+        firstSeen: firstSeen ?? this.firstSeen,
+        lastSeen: lastSeen ?? this.lastSeen,
+        txnCount: txnCount ?? this.txnCount,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('Counterparty(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('identityKey: $identityKey, ')
+          ..write('displayName: $displayName, ')
+          ..write('inferredName: $inferredName, ')
+          ..write('pspFamily: $pspFamily, ')
+          ..write('merchantId: $merchantId, ')
+          ..write('firstSeen: $firstSeen, ')
+          ..write('lastSeen: $lastSeen, ')
+          ..write('txnCount: $txnCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, kind, identityKey, displayName,
+      inferredName, pspFamily, merchantId, firstSeen, lastSeen, txnCount);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Counterparty &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.identityKey == this.identityKey &&
+          other.displayName == this.displayName &&
+          other.inferredName == this.inferredName &&
+          other.pspFamily == this.pspFamily &&
+          other.merchantId == this.merchantId &&
+          other.firstSeen == this.firstSeen &&
+          other.lastSeen == this.lastSeen &&
+          other.txnCount == this.txnCount);
+}
+
+class CounterpartiesCompanion extends UpdateCompanion<Counterparty> {
+  final Value<String> id;
+  final Value<String> kind;
+  final Value<String> identityKey;
+  final Value<String?> displayName;
+  final Value<String?> inferredName;
+  final Value<String?> pspFamily;
+  final Value<String?> merchantId;
+  final Value<DateTime> firstSeen;
+  final Value<DateTime> lastSeen;
+  final Value<int> txnCount;
+  final Value<int> rowid;
+  const CounterpartiesCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.identityKey = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.inferredName = const Value.absent(),
+    this.pspFamily = const Value.absent(),
+    this.merchantId = const Value.absent(),
+    this.firstSeen = const Value.absent(),
+    this.lastSeen = const Value.absent(),
+    this.txnCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CounterpartiesCompanion.insert({
+    required String id,
+    required String kind,
+    required String identityKey,
+    this.displayName = const Value.absent(),
+    this.inferredName = const Value.absent(),
+    this.pspFamily = const Value.absent(),
+    this.merchantId = const Value.absent(),
+    required DateTime firstSeen,
+    required DateTime lastSeen,
+    this.txnCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        kind = Value(kind),
+        identityKey = Value(identityKey),
+        firstSeen = Value(firstSeen),
+        lastSeen = Value(lastSeen);
+  static Insertable<Counterparty> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? identityKey,
+    Expression<String>? displayName,
+    Expression<String>? inferredName,
+    Expression<String>? pspFamily,
+    Expression<String>? merchantId,
+    Expression<DateTime>? firstSeen,
+    Expression<DateTime>? lastSeen,
+    Expression<int>? txnCount,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (identityKey != null) 'identity_key': identityKey,
+      if (displayName != null) 'display_name': displayName,
+      if (inferredName != null) 'inferred_name': inferredName,
+      if (pspFamily != null) 'psp_family': pspFamily,
+      if (merchantId != null) 'merchant_id': merchantId,
+      if (firstSeen != null) 'first_seen': firstSeen,
+      if (lastSeen != null) 'last_seen': lastSeen,
+      if (txnCount != null) 'txn_count': txnCount,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CounterpartiesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? kind,
+      Value<String>? identityKey,
+      Value<String?>? displayName,
+      Value<String?>? inferredName,
+      Value<String?>? pspFamily,
+      Value<String?>? merchantId,
+      Value<DateTime>? firstSeen,
+      Value<DateTime>? lastSeen,
+      Value<int>? txnCount,
+      Value<int>? rowid}) {
+    return CounterpartiesCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      identityKey: identityKey ?? this.identityKey,
+      displayName: displayName ?? this.displayName,
+      inferredName: inferredName ?? this.inferredName,
+      pspFamily: pspFamily ?? this.pspFamily,
+      merchantId: merchantId ?? this.merchantId,
+      firstSeen: firstSeen ?? this.firstSeen,
+      lastSeen: lastSeen ?? this.lastSeen,
+      txnCount: txnCount ?? this.txnCount,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (identityKey.present) {
+      map['identity_key'] = Variable<String>(identityKey.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (inferredName.present) {
+      map['inferred_name'] = Variable<String>(inferredName.value);
+    }
+    if (pspFamily.present) {
+      map['psp_family'] = Variable<String>(pspFamily.value);
+    }
+    if (merchantId.present) {
+      map['merchant_id'] = Variable<String>(merchantId.value);
+    }
+    if (firstSeen.present) {
+      map['first_seen'] = Variable<DateTime>(firstSeen.value);
+    }
+    if (lastSeen.present) {
+      map['last_seen'] = Variable<DateTime>(lastSeen.value);
+    }
+    if (txnCount.present) {
+      map['txn_count'] = Variable<int>(txnCount.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CounterpartiesCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('identityKey: $identityKey, ')
+          ..write('displayName: $displayName, ')
+          ..write('inferredName: $inferredName, ')
+          ..write('pspFamily: $pspFamily, ')
+          ..write('merchantId: $merchantId, ')
+          ..write('firstSeen: $firstSeen, ')
+          ..write('lastSeen: $lastSeen, ')
+          ..write('txnCount: $txnCount, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ExpectedEventsTable extends ExpectedEvents
+    with TableInfo<$ExpectedEventsTable, ExpectedEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExpectedEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+      'source', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _originSmsIdMeta =
+      const VerificationMeta('originSmsId');
+  @override
+  late final GeneratedColumn<String> originSmsId = GeneratedColumn<String>(
+      'origin_sms_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _seriesIdMeta =
+      const VerificationMeta('seriesId');
+  @override
+  late final GeneratedColumn<String> seriesId = GeneratedColumn<String>(
+      'series_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _counterpartyIdMeta =
+      const VerificationMeta('counterpartyId');
+  @override
+  late final GeneratedColumn<String> counterpartyId = GeneratedColumn<String>(
+      'counterparty_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+      'label', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _expectedAmountPaiseMeta =
+      const VerificationMeta('expectedAmountPaise');
+  @override
+  late final GeneratedColumn<int> expectedAmountPaise = GeneratedColumn<int>(
+      'expected_amount_paise', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _amountLowPaiseMeta =
+      const VerificationMeta('amountLowPaise');
+  @override
+  late final GeneratedColumn<int> amountLowPaise = GeneratedColumn<int>(
+      'amount_low_paise', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _amountHighPaiseMeta =
+      const VerificationMeta('amountHighPaise');
+  @override
+  late final GeneratedColumn<int> amountHighPaise = GeneratedColumn<int>(
+      'amount_high_paise', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _expectedDateMeta =
+      const VerificationMeta('expectedDate');
+  @override
+  late final GeneratedColumn<DateTime> expectedDate = GeneratedColumn<DateTime>(
+      'expected_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _dateWindowDaysMeta =
+      const VerificationMeta('dateWindowDays');
+  @override
+  late final GeneratedColumn<int> dateWindowDays = GeneratedColumn<int>(
+      'date_window_days', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(3));
+  static const VerificationMeta _cadenceMeta =
+      const VerificationMeta('cadence');
+  @override
+  late final GeneratedColumn<String> cadence = GeneratedColumn<String>(
+      'cadence', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+      'state', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fulfilledTxnIdMeta =
+      const VerificationMeta('fulfilledTxnId');
+  @override
+  late final GeneratedColumn<String> fulfilledTxnId = GeneratedColumn<String>(
+      'fulfilled_txn_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _confidenceMeta =
+      const VerificationMeta('confidence');
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+      'confidence', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _dedupKeyMeta =
+      const VerificationMeta('dedupKey');
+  @override
+  late final GeneratedColumn<String> dedupKey = GeneratedColumn<String>(
+      'dedup_key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        source,
+        originSmsId,
+        seriesId,
+        counterpartyId,
+        label,
+        expectedAmountPaise,
+        amountLowPaise,
+        amountHighPaise,
+        expectedDate,
+        dateWindowDays,
+        cadence,
+        state,
+        fulfilledTxnId,
+        confidence,
+        dedupKey
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'expected_events';
+  @override
+  VerificationContext validateIntegrity(Insertable<ExpectedEvent> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta,
+          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('origin_sms_id')) {
+      context.handle(
+          _originSmsIdMeta,
+          originSmsId.isAcceptableOrUnknown(
+              data['origin_sms_id']!, _originSmsIdMeta));
+    }
+    if (data.containsKey('series_id')) {
+      context.handle(_seriesIdMeta,
+          seriesId.isAcceptableOrUnknown(data['series_id']!, _seriesIdMeta));
+    }
+    if (data.containsKey('counterparty_id')) {
+      context.handle(
+          _counterpartyIdMeta,
+          counterpartyId.isAcceptableOrUnknown(
+              data['counterparty_id']!, _counterpartyIdMeta));
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+          _labelMeta, label.isAcceptableOrUnknown(data['label']!, _labelMeta));
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('expected_amount_paise')) {
+      context.handle(
+          _expectedAmountPaiseMeta,
+          expectedAmountPaise.isAcceptableOrUnknown(
+              data['expected_amount_paise']!, _expectedAmountPaiseMeta));
+    } else if (isInserting) {
+      context.missing(_expectedAmountPaiseMeta);
+    }
+    if (data.containsKey('amount_low_paise')) {
+      context.handle(
+          _amountLowPaiseMeta,
+          amountLowPaise.isAcceptableOrUnknown(
+              data['amount_low_paise']!, _amountLowPaiseMeta));
+    }
+    if (data.containsKey('amount_high_paise')) {
+      context.handle(
+          _amountHighPaiseMeta,
+          amountHighPaise.isAcceptableOrUnknown(
+              data['amount_high_paise']!, _amountHighPaiseMeta));
+    }
+    if (data.containsKey('expected_date')) {
+      context.handle(
+          _expectedDateMeta,
+          expectedDate.isAcceptableOrUnknown(
+              data['expected_date']!, _expectedDateMeta));
+    } else if (isInserting) {
+      context.missing(_expectedDateMeta);
+    }
+    if (data.containsKey('date_window_days')) {
+      context.handle(
+          _dateWindowDaysMeta,
+          dateWindowDays.isAcceptableOrUnknown(
+              data['date_window_days']!, _dateWindowDaysMeta));
+    }
+    if (data.containsKey('cadence')) {
+      context.handle(_cadenceMeta,
+          cadence.isAcceptableOrUnknown(data['cadence']!, _cadenceMeta));
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+          _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+    } else if (isInserting) {
+      context.missing(_stateMeta);
+    }
+    if (data.containsKey('fulfilled_txn_id')) {
+      context.handle(
+          _fulfilledTxnIdMeta,
+          fulfilledTxnId.isAcceptableOrUnknown(
+              data['fulfilled_txn_id']!, _fulfilledTxnIdMeta));
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+          _confidenceMeta,
+          confidence.isAcceptableOrUnknown(
+              data['confidence']!, _confidenceMeta));
+    } else if (isInserting) {
+      context.missing(_confidenceMeta);
+    }
+    if (data.containsKey('dedup_key')) {
+      context.handle(_dedupKeyMeta,
+          dedupKey.isAcceptableOrUnknown(data['dedup_key']!, _dedupKeyMeta));
+    } else if (isInserting) {
+      context.missing(_dedupKeyMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ExpectedEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExpectedEvent(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      source: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      originSmsId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}origin_sms_id']),
+      seriesId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}series_id']),
+      counterpartyId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}counterparty_id']),
+      label: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}label'])!,
+      expectedAmountPaise: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}expected_amount_paise'])!,
+      amountLowPaise: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}amount_low_paise']),
+      amountHighPaise: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}amount_high_paise']),
+      expectedDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}expected_date'])!,
+      dateWindowDays: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}date_window_days'])!,
+      cadence: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}cadence']),
+      state: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}state'])!,
+      fulfilledTxnId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}fulfilled_txn_id']),
+      confidence: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}confidence'])!,
+      dedupKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}dedup_key'])!,
+    );
+  }
+
+  @override
+  $ExpectedEventsTable createAlias(String alias) {
+    return $ExpectedEventsTable(attachedDatabase, alias);
+  }
+}
+
+class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
+  final String id;
+  final String source;
+  final String? originSmsId;
+  final String? seriesId;
+  final String? counterpartyId;
+  final String label;
+  final int expectedAmountPaise;
+  final int? amountLowPaise;
+  final int? amountHighPaise;
+  final DateTime expectedDate;
+  final int dateWindowDays;
+  final String? cadence;
+  final String state;
+  final String? fulfilledTxnId;
+  final double confidence;
+  final String dedupKey;
+  const ExpectedEvent(
+      {required this.id,
+      required this.source,
+      this.originSmsId,
+      this.seriesId,
+      this.counterpartyId,
+      required this.label,
+      required this.expectedAmountPaise,
+      this.amountLowPaise,
+      this.amountHighPaise,
+      required this.expectedDate,
+      required this.dateWindowDays,
+      this.cadence,
+      required this.state,
+      this.fulfilledTxnId,
+      required this.confidence,
+      required this.dedupKey});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source'] = Variable<String>(source);
+    if (!nullToAbsent || originSmsId != null) {
+      map['origin_sms_id'] = Variable<String>(originSmsId);
+    }
+    if (!nullToAbsent || seriesId != null) {
+      map['series_id'] = Variable<String>(seriesId);
+    }
+    if (!nullToAbsent || counterpartyId != null) {
+      map['counterparty_id'] = Variable<String>(counterpartyId);
+    }
+    map['label'] = Variable<String>(label);
+    map['expected_amount_paise'] = Variable<int>(expectedAmountPaise);
+    if (!nullToAbsent || amountLowPaise != null) {
+      map['amount_low_paise'] = Variable<int>(amountLowPaise);
+    }
+    if (!nullToAbsent || amountHighPaise != null) {
+      map['amount_high_paise'] = Variable<int>(amountHighPaise);
+    }
+    map['expected_date'] = Variable<DateTime>(expectedDate);
+    map['date_window_days'] = Variable<int>(dateWindowDays);
+    if (!nullToAbsent || cadence != null) {
+      map['cadence'] = Variable<String>(cadence);
+    }
+    map['state'] = Variable<String>(state);
+    if (!nullToAbsent || fulfilledTxnId != null) {
+      map['fulfilled_txn_id'] = Variable<String>(fulfilledTxnId);
+    }
+    map['confidence'] = Variable<double>(confidence);
+    map['dedup_key'] = Variable<String>(dedupKey);
+    return map;
+  }
+
+  ExpectedEventsCompanion toCompanion(bool nullToAbsent) {
+    return ExpectedEventsCompanion(
+      id: Value(id),
+      source: Value(source),
+      originSmsId: originSmsId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originSmsId),
+      seriesId: seriesId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(seriesId),
+      counterpartyId: counterpartyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(counterpartyId),
+      label: Value(label),
+      expectedAmountPaise: Value(expectedAmountPaise),
+      amountLowPaise: amountLowPaise == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amountLowPaise),
+      amountHighPaise: amountHighPaise == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amountHighPaise),
+      expectedDate: Value(expectedDate),
+      dateWindowDays: Value(dateWindowDays),
+      cadence: cadence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cadence),
+      state: Value(state),
+      fulfilledTxnId: fulfilledTxnId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fulfilledTxnId),
+      confidence: Value(confidence),
+      dedupKey: Value(dedupKey),
+    );
+  }
+
+  factory ExpectedEvent.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExpectedEvent(
+      id: serializer.fromJson<String>(json['id']),
+      source: serializer.fromJson<String>(json['source']),
+      originSmsId: serializer.fromJson<String?>(json['originSmsId']),
+      seriesId: serializer.fromJson<String?>(json['seriesId']),
+      counterpartyId: serializer.fromJson<String?>(json['counterpartyId']),
+      label: serializer.fromJson<String>(json['label']),
+      expectedAmountPaise:
+          serializer.fromJson<int>(json['expectedAmountPaise']),
+      amountLowPaise: serializer.fromJson<int?>(json['amountLowPaise']),
+      amountHighPaise: serializer.fromJson<int?>(json['amountHighPaise']),
+      expectedDate: serializer.fromJson<DateTime>(json['expectedDate']),
+      dateWindowDays: serializer.fromJson<int>(json['dateWindowDays']),
+      cadence: serializer.fromJson<String?>(json['cadence']),
+      state: serializer.fromJson<String>(json['state']),
+      fulfilledTxnId: serializer.fromJson<String?>(json['fulfilledTxnId']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      dedupKey: serializer.fromJson<String>(json['dedupKey']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'source': serializer.toJson<String>(source),
+      'originSmsId': serializer.toJson<String?>(originSmsId),
+      'seriesId': serializer.toJson<String?>(seriesId),
+      'counterpartyId': serializer.toJson<String?>(counterpartyId),
+      'label': serializer.toJson<String>(label),
+      'expectedAmountPaise': serializer.toJson<int>(expectedAmountPaise),
+      'amountLowPaise': serializer.toJson<int?>(amountLowPaise),
+      'amountHighPaise': serializer.toJson<int?>(amountHighPaise),
+      'expectedDate': serializer.toJson<DateTime>(expectedDate),
+      'dateWindowDays': serializer.toJson<int>(dateWindowDays),
+      'cadence': serializer.toJson<String?>(cadence),
+      'state': serializer.toJson<String>(state),
+      'fulfilledTxnId': serializer.toJson<String?>(fulfilledTxnId),
+      'confidence': serializer.toJson<double>(confidence),
+      'dedupKey': serializer.toJson<String>(dedupKey),
+    };
+  }
+
+  ExpectedEvent copyWith(
+          {String? id,
+          String? source,
+          Value<String?> originSmsId = const Value.absent(),
+          Value<String?> seriesId = const Value.absent(),
+          Value<String?> counterpartyId = const Value.absent(),
+          String? label,
+          int? expectedAmountPaise,
+          Value<int?> amountLowPaise = const Value.absent(),
+          Value<int?> amountHighPaise = const Value.absent(),
+          DateTime? expectedDate,
+          int? dateWindowDays,
+          Value<String?> cadence = const Value.absent(),
+          String? state,
+          Value<String?> fulfilledTxnId = const Value.absent(),
+          double? confidence,
+          String? dedupKey}) =>
+      ExpectedEvent(
+        id: id ?? this.id,
+        source: source ?? this.source,
+        originSmsId: originSmsId.present ? originSmsId.value : this.originSmsId,
+        seriesId: seriesId.present ? seriesId.value : this.seriesId,
+        counterpartyId:
+            counterpartyId.present ? counterpartyId.value : this.counterpartyId,
+        label: label ?? this.label,
+        expectedAmountPaise: expectedAmountPaise ?? this.expectedAmountPaise,
+        amountLowPaise:
+            amountLowPaise.present ? amountLowPaise.value : this.amountLowPaise,
+        amountHighPaise: amountHighPaise.present
+            ? amountHighPaise.value
+            : this.amountHighPaise,
+        expectedDate: expectedDate ?? this.expectedDate,
+        dateWindowDays: dateWindowDays ?? this.dateWindowDays,
+        cadence: cadence.present ? cadence.value : this.cadence,
+        state: state ?? this.state,
+        fulfilledTxnId:
+            fulfilledTxnId.present ? fulfilledTxnId.value : this.fulfilledTxnId,
+        confidence: confidence ?? this.confidence,
+        dedupKey: dedupKey ?? this.dedupKey,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('ExpectedEvent(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('originSmsId: $originSmsId, ')
+          ..write('seriesId: $seriesId, ')
+          ..write('counterpartyId: $counterpartyId, ')
+          ..write('label: $label, ')
+          ..write('expectedAmountPaise: $expectedAmountPaise, ')
+          ..write('amountLowPaise: $amountLowPaise, ')
+          ..write('amountHighPaise: $amountHighPaise, ')
+          ..write('expectedDate: $expectedDate, ')
+          ..write('dateWindowDays: $dateWindowDays, ')
+          ..write('cadence: $cadence, ')
+          ..write('state: $state, ')
+          ..write('fulfilledTxnId: $fulfilledTxnId, ')
+          ..write('confidence: $confidence, ')
+          ..write('dedupKey: $dedupKey')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      source,
+      originSmsId,
+      seriesId,
+      counterpartyId,
+      label,
+      expectedAmountPaise,
+      amountLowPaise,
+      amountHighPaise,
+      expectedDate,
+      dateWindowDays,
+      cadence,
+      state,
+      fulfilledTxnId,
+      confidence,
+      dedupKey);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExpectedEvent &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.originSmsId == this.originSmsId &&
+          other.seriesId == this.seriesId &&
+          other.counterpartyId == this.counterpartyId &&
+          other.label == this.label &&
+          other.expectedAmountPaise == this.expectedAmountPaise &&
+          other.amountLowPaise == this.amountLowPaise &&
+          other.amountHighPaise == this.amountHighPaise &&
+          other.expectedDate == this.expectedDate &&
+          other.dateWindowDays == this.dateWindowDays &&
+          other.cadence == this.cadence &&
+          other.state == this.state &&
+          other.fulfilledTxnId == this.fulfilledTxnId &&
+          other.confidence == this.confidence &&
+          other.dedupKey == this.dedupKey);
+}
+
+class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
+  final Value<String> id;
+  final Value<String> source;
+  final Value<String?> originSmsId;
+  final Value<String?> seriesId;
+  final Value<String?> counterpartyId;
+  final Value<String> label;
+  final Value<int> expectedAmountPaise;
+  final Value<int?> amountLowPaise;
+  final Value<int?> amountHighPaise;
+  final Value<DateTime> expectedDate;
+  final Value<int> dateWindowDays;
+  final Value<String?> cadence;
+  final Value<String> state;
+  final Value<String?> fulfilledTxnId;
+  final Value<double> confidence;
+  final Value<String> dedupKey;
+  final Value<int> rowid;
+  const ExpectedEventsCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.originSmsId = const Value.absent(),
+    this.seriesId = const Value.absent(),
+    this.counterpartyId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.expectedAmountPaise = const Value.absent(),
+    this.amountLowPaise = const Value.absent(),
+    this.amountHighPaise = const Value.absent(),
+    this.expectedDate = const Value.absent(),
+    this.dateWindowDays = const Value.absent(),
+    this.cadence = const Value.absent(),
+    this.state = const Value.absent(),
+    this.fulfilledTxnId = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.dedupKey = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExpectedEventsCompanion.insert({
+    required String id,
+    required String source,
+    this.originSmsId = const Value.absent(),
+    this.seriesId = const Value.absent(),
+    this.counterpartyId = const Value.absent(),
+    required String label,
+    required int expectedAmountPaise,
+    this.amountLowPaise = const Value.absent(),
+    this.amountHighPaise = const Value.absent(),
+    required DateTime expectedDate,
+    this.dateWindowDays = const Value.absent(),
+    this.cadence = const Value.absent(),
+    required String state,
+    this.fulfilledTxnId = const Value.absent(),
+    required double confidence,
+    required String dedupKey,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        source = Value(source),
+        label = Value(label),
+        expectedAmountPaise = Value(expectedAmountPaise),
+        expectedDate = Value(expectedDate),
+        state = Value(state),
+        confidence = Value(confidence),
+        dedupKey = Value(dedupKey);
+  static Insertable<ExpectedEvent> custom({
+    Expression<String>? id,
+    Expression<String>? source,
+    Expression<String>? originSmsId,
+    Expression<String>? seriesId,
+    Expression<String>? counterpartyId,
+    Expression<String>? label,
+    Expression<int>? expectedAmountPaise,
+    Expression<int>? amountLowPaise,
+    Expression<int>? amountHighPaise,
+    Expression<DateTime>? expectedDate,
+    Expression<int>? dateWindowDays,
+    Expression<String>? cadence,
+    Expression<String>? state,
+    Expression<String>? fulfilledTxnId,
+    Expression<double>? confidence,
+    Expression<String>? dedupKey,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (originSmsId != null) 'origin_sms_id': originSmsId,
+      if (seriesId != null) 'series_id': seriesId,
+      if (counterpartyId != null) 'counterparty_id': counterpartyId,
+      if (label != null) 'label': label,
+      if (expectedAmountPaise != null)
+        'expected_amount_paise': expectedAmountPaise,
+      if (amountLowPaise != null) 'amount_low_paise': amountLowPaise,
+      if (amountHighPaise != null) 'amount_high_paise': amountHighPaise,
+      if (expectedDate != null) 'expected_date': expectedDate,
+      if (dateWindowDays != null) 'date_window_days': dateWindowDays,
+      if (cadence != null) 'cadence': cadence,
+      if (state != null) 'state': state,
+      if (fulfilledTxnId != null) 'fulfilled_txn_id': fulfilledTxnId,
+      if (confidence != null) 'confidence': confidence,
+      if (dedupKey != null) 'dedup_key': dedupKey,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExpectedEventsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? source,
+      Value<String?>? originSmsId,
+      Value<String?>? seriesId,
+      Value<String?>? counterpartyId,
+      Value<String>? label,
+      Value<int>? expectedAmountPaise,
+      Value<int?>? amountLowPaise,
+      Value<int?>? amountHighPaise,
+      Value<DateTime>? expectedDate,
+      Value<int>? dateWindowDays,
+      Value<String?>? cadence,
+      Value<String>? state,
+      Value<String?>? fulfilledTxnId,
+      Value<double>? confidence,
+      Value<String>? dedupKey,
+      Value<int>? rowid}) {
+    return ExpectedEventsCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      originSmsId: originSmsId ?? this.originSmsId,
+      seriesId: seriesId ?? this.seriesId,
+      counterpartyId: counterpartyId ?? this.counterpartyId,
+      label: label ?? this.label,
+      expectedAmountPaise: expectedAmountPaise ?? this.expectedAmountPaise,
+      amountLowPaise: amountLowPaise ?? this.amountLowPaise,
+      amountHighPaise: amountHighPaise ?? this.amountHighPaise,
+      expectedDate: expectedDate ?? this.expectedDate,
+      dateWindowDays: dateWindowDays ?? this.dateWindowDays,
+      cadence: cadence ?? this.cadence,
+      state: state ?? this.state,
+      fulfilledTxnId: fulfilledTxnId ?? this.fulfilledTxnId,
+      confidence: confidence ?? this.confidence,
+      dedupKey: dedupKey ?? this.dedupKey,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (originSmsId.present) {
+      map['origin_sms_id'] = Variable<String>(originSmsId.value);
+    }
+    if (seriesId.present) {
+      map['series_id'] = Variable<String>(seriesId.value);
+    }
+    if (counterpartyId.present) {
+      map['counterparty_id'] = Variable<String>(counterpartyId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (expectedAmountPaise.present) {
+      map['expected_amount_paise'] = Variable<int>(expectedAmountPaise.value);
+    }
+    if (amountLowPaise.present) {
+      map['amount_low_paise'] = Variable<int>(amountLowPaise.value);
+    }
+    if (amountHighPaise.present) {
+      map['amount_high_paise'] = Variable<int>(amountHighPaise.value);
+    }
+    if (expectedDate.present) {
+      map['expected_date'] = Variable<DateTime>(expectedDate.value);
+    }
+    if (dateWindowDays.present) {
+      map['date_window_days'] = Variable<int>(dateWindowDays.value);
+    }
+    if (cadence.present) {
+      map['cadence'] = Variable<String>(cadence.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (fulfilledTxnId.present) {
+      map['fulfilled_txn_id'] = Variable<String>(fulfilledTxnId.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (dedupKey.present) {
+      map['dedup_key'] = Variable<String>(dedupKey.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExpectedEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('originSmsId: $originSmsId, ')
+          ..write('seriesId: $seriesId, ')
+          ..write('counterpartyId: $counterpartyId, ')
+          ..write('label: $label, ')
+          ..write('expectedAmountPaise: $expectedAmountPaise, ')
+          ..write('amountLowPaise: $amountLowPaise, ')
+          ..write('amountHighPaise: $amountHighPaise, ')
+          ..write('expectedDate: $expectedDate, ')
+          ..write('dateWindowDays: $dateWindowDays, ')
+          ..write('cadence: $cadence, ')
+          ..write('state: $state, ')
+          ..write('fulfilledTxnId: $fulfilledTxnId, ')
+          ..write('confidence: $confidence, ')
+          ..write('dedupKey: $dedupKey, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FeatureFlagsTable extends FeatureFlags
+    with TableInfo<$FeatureFlagsTable, FeatureFlag> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FeatureFlagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+      'key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+      'value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [key, value, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'feature_flags';
+  @override
+  VerificationContext validateIntegrity(Insertable<FeatureFlag> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+          _valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  FeatureFlag map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FeatureFlag(
+      key: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      value: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}value'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+    );
+  }
+
+  @override
+  $FeatureFlagsTable createAlias(String alias) {
+    return $FeatureFlagsTable(attachedDatabase, alias);
+  }
+}
+
+class FeatureFlag extends DataClass implements Insertable<FeatureFlag> {
+  final String key;
+  final String value;
+  final DateTime? updatedAt;
+  const FeatureFlag({required this.key, required this.value, this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    return map;
+  }
+
+  FeatureFlagsCompanion toCompanion(bool nullToAbsent) {
+    return FeatureFlagsCompanion(
+      key: Value(key),
+      value: Value(value),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory FeatureFlag.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FeatureFlag(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+    };
+  }
+
+  FeatureFlag copyWith(
+          {String? key,
+          String? value,
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
+      FeatureFlag(
+        key: key ?? this.key,
+        value: value ?? this.value,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('FeatureFlag(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FeatureFlag &&
+          other.key == this.key &&
+          other.value == this.value &&
+          other.updatedAt == this.updatedAt);
+}
+
+class FeatureFlagsCompanion extends UpdateCompanion<FeatureFlag> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<DateTime?> updatedAt;
+  final Value<int> rowid;
+  const FeatureFlagsCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FeatureFlagsCompanion.insert({
+    required String key,
+    required String value,
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        value = Value(value);
+  static Insertable<FeatureFlag> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FeatureFlagsCompanion copyWith(
+      {Value<String>? key,
+      Value<String>? value,
+      Value<DateTime?>? updatedAt,
+      Value<int>? rowid}) {
+    return FeatureFlagsCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeatureFlagsCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PaymentSourcesTable extends PaymentSources
     with TableInfo<$PaymentSourcesTable, PaymentSource> {
   @override
@@ -2105,6 +3587,26 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> evidenceJson = GeneratedColumn<String>(
       'evidence_json', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _lifecycleStateMeta =
+      const VerificationMeta('lifecycleState');
+  @override
+  late final GeneratedColumn<String> lifecycleState = GeneratedColumn<String>(
+      'lifecycle_state', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('settled'));
+  static const VerificationMeta _lifecycleReasonMeta =
+      const VerificationMeta('lifecycleReason');
+  @override
+  late final GeneratedColumn<String> lifecycleReason = GeneratedColumn<String>(
+      'lifecycle_reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _messageKindMeta =
+      const VerificationMeta('messageKind');
+  @override
+  late final GeneratedColumn<String> messageKind = GeneratedColumn<String>(
+      'message_kind', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -2142,6 +3644,9 @@ class $TransactionsTable extends Transactions
         ownedTransferId,
         isAnalyticsExcluded,
         evidenceJson,
+        lifecycleState,
+        lifecycleReason,
+        messageKind,
         createdAt,
         updatedAt
       ];
@@ -2289,6 +3794,24 @@ class $TransactionsTable extends Transactions
           evidenceJson.isAcceptableOrUnknown(
               data['evidence_json']!, _evidenceJsonMeta));
     }
+    if (data.containsKey('lifecycle_state')) {
+      context.handle(
+          _lifecycleStateMeta,
+          lifecycleState.isAcceptableOrUnknown(
+              data['lifecycle_state']!, _lifecycleStateMeta));
+    }
+    if (data.containsKey('lifecycle_reason')) {
+      context.handle(
+          _lifecycleReasonMeta,
+          lifecycleReason.isAcceptableOrUnknown(
+              data['lifecycle_reason']!, _lifecycleReasonMeta));
+    }
+    if (data.containsKey('message_kind')) {
+      context.handle(
+          _messageKindMeta,
+          messageKind.isAcceptableOrUnknown(
+              data['message_kind']!, _messageKindMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -2356,6 +3879,12 @@ class $TransactionsTable extends Transactions
           DriftSqlType.bool, data['${effectivePrefix}is_analytics_excluded'])!,
       evidenceJson: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}evidence_json']),
+      lifecycleState: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}lifecycle_state'])!,
+      lifecycleReason: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}lifecycle_reason']),
+      messageKind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}message_kind']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -2393,6 +3922,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? ownedTransferId;
   final bool isAnalyticsExcluded;
   final String? evidenceJson;
+  final String lifecycleState;
+  final String? lifecycleReason;
+  final String? messageKind;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction(
@@ -2419,6 +3951,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.ownedTransferId,
       required this.isAnalyticsExcluded,
       this.evidenceJson,
+      required this.lifecycleState,
+      this.lifecycleReason,
+      this.messageKind,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -2472,6 +4007,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['is_analytics_excluded'] = Variable<bool>(isAnalyticsExcluded);
     if (!nullToAbsent || evidenceJson != null) {
       map['evidence_json'] = Variable<String>(evidenceJson);
+    }
+    map['lifecycle_state'] = Variable<String>(lifecycleState);
+    if (!nullToAbsent || lifecycleReason != null) {
+      map['lifecycle_reason'] = Variable<String>(lifecycleReason);
+    }
+    if (!nullToAbsent || messageKind != null) {
+      map['message_kind'] = Variable<String>(messageKind);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2527,6 +4069,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       evidenceJson: evidenceJson == null && nullToAbsent
           ? const Value.absent()
           : Value(evidenceJson),
+      lifecycleState: Value(lifecycleState),
+      lifecycleReason: lifecycleReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lifecycleReason),
+      messageKind: messageKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(messageKind),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2560,6 +4109,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       isAnalyticsExcluded:
           serializer.fromJson<bool>(json['isAnalyticsExcluded']),
       evidenceJson: serializer.fromJson<String?>(json['evidenceJson']),
+      lifecycleState: serializer.fromJson<String>(json['lifecycleState']),
+      lifecycleReason: serializer.fromJson<String?>(json['lifecycleReason']),
+      messageKind: serializer.fromJson<String?>(json['messageKind']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2591,6 +4143,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'ownedTransferId': serializer.toJson<String?>(ownedTransferId),
       'isAnalyticsExcluded': serializer.toJson<bool>(isAnalyticsExcluded),
       'evidenceJson': serializer.toJson<String?>(evidenceJson),
+      'lifecycleState': serializer.toJson<String>(lifecycleState),
+      'lifecycleReason': serializer.toJson<String?>(lifecycleReason),
+      'messageKind': serializer.toJson<String?>(messageKind),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2620,6 +4175,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> ownedTransferId = const Value.absent(),
           bool? isAnalyticsExcluded,
           Value<String?> evidenceJson = const Value.absent(),
+          String? lifecycleState,
+          Value<String?> lifecycleReason = const Value.absent(),
+          Value<String?> messageKind = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Transaction(
@@ -2656,6 +4214,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
         evidenceJson:
             evidenceJson.present ? evidenceJson.value : this.evidenceJson,
+        lifecycleState: lifecycleState ?? this.lifecycleState,
+        lifecycleReason: lifecycleReason.present
+            ? lifecycleReason.value
+            : this.lifecycleReason,
+        messageKind: messageKind.present ? messageKind.value : this.messageKind,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -2685,6 +4248,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('ownedTransferId: $ownedTransferId, ')
           ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
           ..write('evidenceJson: $evidenceJson, ')
+          ..write('lifecycleState: $lifecycleState, ')
+          ..write('lifecycleReason: $lifecycleReason, ')
+          ..write('messageKind: $messageKind, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2716,6 +4282,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         ownedTransferId,
         isAnalyticsExcluded,
         evidenceJson,
+        lifecycleState,
+        lifecycleReason,
+        messageKind,
         createdAt,
         updatedAt
       ]);
@@ -2746,6 +4315,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.ownedTransferId == this.ownedTransferId &&
           other.isAnalyticsExcluded == this.isAnalyticsExcluded &&
           other.evidenceJson == this.evidenceJson &&
+          other.lifecycleState == this.lifecycleState &&
+          other.lifecycleReason == this.lifecycleReason &&
+          other.messageKind == this.messageKind &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2774,6 +4346,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> ownedTransferId;
   final Value<bool> isAnalyticsExcluded;
   final Value<String?> evidenceJson;
+  final Value<String> lifecycleState;
+  final Value<String?> lifecycleReason;
+  final Value<String?> messageKind;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -2801,6 +4376,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.ownedTransferId = const Value.absent(),
     this.isAnalyticsExcluded = const Value.absent(),
     this.evidenceJson = const Value.absent(),
+    this.lifecycleState = const Value.absent(),
+    this.lifecycleReason = const Value.absent(),
+    this.messageKind = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2829,6 +4407,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.ownedTransferId = const Value.absent(),
     this.isAnalyticsExcluded = const Value.absent(),
     this.evidenceJson = const Value.absent(),
+    this.lifecycleState = const Value.absent(),
+    this.lifecycleReason = const Value.absent(),
+    this.messageKind = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -2866,6 +4447,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? ownedTransferId,
     Expression<bool>? isAnalyticsExcluded,
     Expression<String>? evidenceJson,
+    Expression<String>? lifecycleState,
+    Expression<String>? lifecycleReason,
+    Expression<String>? messageKind,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -2895,6 +4479,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (isAnalyticsExcluded != null)
         'is_analytics_excluded': isAnalyticsExcluded,
       if (evidenceJson != null) 'evidence_json': evidenceJson,
+      if (lifecycleState != null) 'lifecycle_state': lifecycleState,
+      if (lifecycleReason != null) 'lifecycle_reason': lifecycleReason,
+      if (messageKind != null) 'message_kind': messageKind,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -2925,6 +4512,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? ownedTransferId,
       Value<bool>? isAnalyticsExcluded,
       Value<String?>? evidenceJson,
+      Value<String>? lifecycleState,
+      Value<String?>? lifecycleReason,
+      Value<String?>? messageKind,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -2952,6 +4542,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       ownedTransferId: ownedTransferId ?? this.ownedTransferId,
       isAnalyticsExcluded: isAnalyticsExcluded ?? this.isAnalyticsExcluded,
       evidenceJson: evidenceJson ?? this.evidenceJson,
+      lifecycleState: lifecycleState ?? this.lifecycleState,
+      lifecycleReason: lifecycleReason ?? this.lifecycleReason,
+      messageKind: messageKind ?? this.messageKind,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3030,6 +4623,15 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (evidenceJson.present) {
       map['evidence_json'] = Variable<String>(evidenceJson.value);
     }
+    if (lifecycleState.present) {
+      map['lifecycle_state'] = Variable<String>(lifecycleState.value);
+    }
+    if (lifecycleReason.present) {
+      map['lifecycle_reason'] = Variable<String>(lifecycleReason.value);
+    }
+    if (messageKind.present) {
+      map['message_kind'] = Variable<String>(messageKind.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3068,6 +4670,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('ownedTransferId: $ownedTransferId, ')
           ..write('isAnalyticsExcluded: $isAnalyticsExcluded, ')
           ..write('evidenceJson: $evidenceJson, ')
+          ..write('lifecycleState: $lifecycleState, ')
+          ..write('lifecycleReason: $lifecycleReason, ')
+          ..write('messageKind: $messageKind, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -3500,6 +5105,498 @@ class FeedbackCompanion extends UpdateCompanion<FeedbackData> {
           ..write('context: $context, ')
           ..write('modelConfidenceAtTime: $modelConfidenceAtTime, ')
           ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FinancialEventsTable extends FinancialEvents
+    with TableInfo<$FinancialEventsTable, FinancialEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FinancialEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _eventKeyMeta =
+      const VerificationMeta('eventKey');
+  @override
+  late final GeneratedColumn<String> eventKey = GeneratedColumn<String>(
+      'event_key', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'));
+  static const VerificationMeta _keyBasisMeta =
+      const VerificationMeta('keyBasis');
+  @override
+  late final GeneratedColumn<String> keyBasis = GeneratedColumn<String>(
+      'key_basis', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _netAmountPaiseMeta =
+      const VerificationMeta('netAmountPaise');
+  @override
+  late final GeneratedColumn<int> netAmountPaise = GeneratedColumn<int>(
+      'net_amount_paise', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _currencyMeta =
+      const VerificationMeta('currency');
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+      'currency', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('INR'));
+  static const VerificationMeta _openedAtMeta =
+      const VerificationMeta('openedAt');
+  @override
+  late final GeneratedColumn<int> openedAt = GeneratedColumn<int>(
+      'opened_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _closedAtMeta =
+      const VerificationMeta('closedAt');
+  @override
+  late final GeneratedColumn<int> closedAt = GeneratedColumn<int>(
+      'closed_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+      'state', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('open'));
+  static const VerificationMeta _confidenceMeta =
+      const VerificationMeta('confidence');
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+      'confidence', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1.0));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        eventKey,
+        keyBasis,
+        kind,
+        netAmountPaise,
+        currency,
+        openedAt,
+        closedAt,
+        state,
+        confidence
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'financial_events';
+  @override
+  VerificationContext validateIntegrity(Insertable<FinancialEvent> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('event_key')) {
+      context.handle(_eventKeyMeta,
+          eventKey.isAcceptableOrUnknown(data['event_key']!, _eventKeyMeta));
+    } else if (isInserting) {
+      context.missing(_eventKeyMeta);
+    }
+    if (data.containsKey('key_basis')) {
+      context.handle(_keyBasisMeta,
+          keyBasis.isAcceptableOrUnknown(data['key_basis']!, _keyBasisMeta));
+    } else if (isInserting) {
+      context.missing(_keyBasisMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('net_amount_paise')) {
+      context.handle(
+          _netAmountPaiseMeta,
+          netAmountPaise.isAcceptableOrUnknown(
+              data['net_amount_paise']!, _netAmountPaiseMeta));
+    } else if (isInserting) {
+      context.missing(_netAmountPaiseMeta);
+    }
+    if (data.containsKey('currency')) {
+      context.handle(_currencyMeta,
+          currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta));
+    }
+    if (data.containsKey('opened_at')) {
+      context.handle(_openedAtMeta,
+          openedAt.isAcceptableOrUnknown(data['opened_at']!, _openedAtMeta));
+    } else if (isInserting) {
+      context.missing(_openedAtMeta);
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(_closedAtMeta,
+          closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta));
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+          _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+          _confidenceMeta,
+          confidence.isAcceptableOrUnknown(
+              data['confidence']!, _confidenceMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FinancialEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FinancialEvent(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      eventKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}event_key'])!,
+      keyBasis: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key_basis'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      netAmountPaise: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}net_amount_paise'])!,
+      currency: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency'])!,
+      openedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}opened_at'])!,
+      closedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}closed_at']),
+      state: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}state'])!,
+      confidence: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}confidence'])!,
+    );
+  }
+
+  @override
+  $FinancialEventsTable createAlias(String alias) {
+    return $FinancialEventsTable(attachedDatabase, alias);
+  }
+}
+
+class FinancialEvent extends DataClass implements Insertable<FinancialEvent> {
+  final String id;
+  final String eventKey;
+  final String keyBasis;
+  final String kind;
+  final int netAmountPaise;
+  final String currency;
+  final int openedAt;
+  final int? closedAt;
+  final String state;
+  final double confidence;
+  const FinancialEvent(
+      {required this.id,
+      required this.eventKey,
+      required this.keyBasis,
+      required this.kind,
+      required this.netAmountPaise,
+      required this.currency,
+      required this.openedAt,
+      this.closedAt,
+      required this.state,
+      required this.confidence});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['event_key'] = Variable<String>(eventKey);
+    map['key_basis'] = Variable<String>(keyBasis);
+    map['kind'] = Variable<String>(kind);
+    map['net_amount_paise'] = Variable<int>(netAmountPaise);
+    map['currency'] = Variable<String>(currency);
+    map['opened_at'] = Variable<int>(openedAt);
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<int>(closedAt);
+    }
+    map['state'] = Variable<String>(state);
+    map['confidence'] = Variable<double>(confidence);
+    return map;
+  }
+
+  FinancialEventsCompanion toCompanion(bool nullToAbsent) {
+    return FinancialEventsCompanion(
+      id: Value(id),
+      eventKey: Value(eventKey),
+      keyBasis: Value(keyBasis),
+      kind: Value(kind),
+      netAmountPaise: Value(netAmountPaise),
+      currency: Value(currency),
+      openedAt: Value(openedAt),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      state: Value(state),
+      confidence: Value(confidence),
+    );
+  }
+
+  factory FinancialEvent.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FinancialEvent(
+      id: serializer.fromJson<String>(json['id']),
+      eventKey: serializer.fromJson<String>(json['eventKey']),
+      keyBasis: serializer.fromJson<String>(json['keyBasis']),
+      kind: serializer.fromJson<String>(json['kind']),
+      netAmountPaise: serializer.fromJson<int>(json['netAmountPaise']),
+      currency: serializer.fromJson<String>(json['currency']),
+      openedAt: serializer.fromJson<int>(json['openedAt']),
+      closedAt: serializer.fromJson<int?>(json['closedAt']),
+      state: serializer.fromJson<String>(json['state']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'eventKey': serializer.toJson<String>(eventKey),
+      'keyBasis': serializer.toJson<String>(keyBasis),
+      'kind': serializer.toJson<String>(kind),
+      'netAmountPaise': serializer.toJson<int>(netAmountPaise),
+      'currency': serializer.toJson<String>(currency),
+      'openedAt': serializer.toJson<int>(openedAt),
+      'closedAt': serializer.toJson<int?>(closedAt),
+      'state': serializer.toJson<String>(state),
+      'confidence': serializer.toJson<double>(confidence),
+    };
+  }
+
+  FinancialEvent copyWith(
+          {String? id,
+          String? eventKey,
+          String? keyBasis,
+          String? kind,
+          int? netAmountPaise,
+          String? currency,
+          int? openedAt,
+          Value<int?> closedAt = const Value.absent(),
+          String? state,
+          double? confidence}) =>
+      FinancialEvent(
+        id: id ?? this.id,
+        eventKey: eventKey ?? this.eventKey,
+        keyBasis: keyBasis ?? this.keyBasis,
+        kind: kind ?? this.kind,
+        netAmountPaise: netAmountPaise ?? this.netAmountPaise,
+        currency: currency ?? this.currency,
+        openedAt: openedAt ?? this.openedAt,
+        closedAt: closedAt.present ? closedAt.value : this.closedAt,
+        state: state ?? this.state,
+        confidence: confidence ?? this.confidence,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('FinancialEvent(')
+          ..write('id: $id, ')
+          ..write('eventKey: $eventKey, ')
+          ..write('keyBasis: $keyBasis, ')
+          ..write('kind: $kind, ')
+          ..write('netAmountPaise: $netAmountPaise, ')
+          ..write('currency: $currency, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('state: $state, ')
+          ..write('confidence: $confidence')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, eventKey, keyBasis, kind, netAmountPaise,
+      currency, openedAt, closedAt, state, confidence);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FinancialEvent &&
+          other.id == this.id &&
+          other.eventKey == this.eventKey &&
+          other.keyBasis == this.keyBasis &&
+          other.kind == this.kind &&
+          other.netAmountPaise == this.netAmountPaise &&
+          other.currency == this.currency &&
+          other.openedAt == this.openedAt &&
+          other.closedAt == this.closedAt &&
+          other.state == this.state &&
+          other.confidence == this.confidence);
+}
+
+class FinancialEventsCompanion extends UpdateCompanion<FinancialEvent> {
+  final Value<String> id;
+  final Value<String> eventKey;
+  final Value<String> keyBasis;
+  final Value<String> kind;
+  final Value<int> netAmountPaise;
+  final Value<String> currency;
+  final Value<int> openedAt;
+  final Value<int?> closedAt;
+  final Value<String> state;
+  final Value<double> confidence;
+  final Value<int> rowid;
+  const FinancialEventsCompanion({
+    this.id = const Value.absent(),
+    this.eventKey = const Value.absent(),
+    this.keyBasis = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.netAmountPaise = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.openedAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.state = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FinancialEventsCompanion.insert({
+    required String id,
+    required String eventKey,
+    required String keyBasis,
+    required String kind,
+    required int netAmountPaise,
+    this.currency = const Value.absent(),
+    required int openedAt,
+    this.closedAt = const Value.absent(),
+    this.state = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        eventKey = Value(eventKey),
+        keyBasis = Value(keyBasis),
+        kind = Value(kind),
+        netAmountPaise = Value(netAmountPaise),
+        openedAt = Value(openedAt);
+  static Insertable<FinancialEvent> custom({
+    Expression<String>? id,
+    Expression<String>? eventKey,
+    Expression<String>? keyBasis,
+    Expression<String>? kind,
+    Expression<int>? netAmountPaise,
+    Expression<String>? currency,
+    Expression<int>? openedAt,
+    Expression<int>? closedAt,
+    Expression<String>? state,
+    Expression<double>? confidence,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (eventKey != null) 'event_key': eventKey,
+      if (keyBasis != null) 'key_basis': keyBasis,
+      if (kind != null) 'kind': kind,
+      if (netAmountPaise != null) 'net_amount_paise': netAmountPaise,
+      if (currency != null) 'currency': currency,
+      if (openedAt != null) 'opened_at': openedAt,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (state != null) 'state': state,
+      if (confidence != null) 'confidence': confidence,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FinancialEventsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? eventKey,
+      Value<String>? keyBasis,
+      Value<String>? kind,
+      Value<int>? netAmountPaise,
+      Value<String>? currency,
+      Value<int>? openedAt,
+      Value<int?>? closedAt,
+      Value<String>? state,
+      Value<double>? confidence,
+      Value<int>? rowid}) {
+    return FinancialEventsCompanion(
+      id: id ?? this.id,
+      eventKey: eventKey ?? this.eventKey,
+      keyBasis: keyBasis ?? this.keyBasis,
+      kind: kind ?? this.kind,
+      netAmountPaise: netAmountPaise ?? this.netAmountPaise,
+      currency: currency ?? this.currency,
+      openedAt: openedAt ?? this.openedAt,
+      closedAt: closedAt ?? this.closedAt,
+      state: state ?? this.state,
+      confidence: confidence ?? this.confidence,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (eventKey.present) {
+      map['event_key'] = Variable<String>(eventKey.value);
+    }
+    if (keyBasis.present) {
+      map['key_basis'] = Variable<String>(keyBasis.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (netAmountPaise.present) {
+      map['net_amount_paise'] = Variable<int>(netAmountPaise.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (openedAt.present) {
+      map['opened_at'] = Variable<int>(openedAt.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<int>(closedAt.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FinancialEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('eventKey: $eventKey, ')
+          ..write('keyBasis: $keyBasis, ')
+          ..write('kind: $kind, ')
+          ..write('netAmountPaise: $netAmountPaise, ')
+          ..write('currency: $currency, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('state: $state, ')
+          ..write('confidence: $confidence, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5320,16 +7417,444 @@ class RulesCompanion extends UpdateCompanion<Rule> {
   }
 }
 
+class $TransactionLinksTable extends TransactionLinks
+    with TableInfo<$TransactionLinksTable, TransactionLink> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TransactionLinksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fromTxnIdMeta =
+      const VerificationMeta('fromTxnId');
+  @override
+  late final GeneratedColumn<String> fromTxnId = GeneratedColumn<String>(
+      'from_txn_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES transactions (id)'));
+  static const VerificationMeta _toTxnIdMeta =
+      const VerificationMeta('toTxnId');
+  @override
+  late final GeneratedColumn<String> toTxnId = GeneratedColumn<String>(
+      'to_txn_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES transactions (id)'));
+  static const VerificationMeta _linkTypeMeta =
+      const VerificationMeta('linkType');
+  @override
+  late final GeneratedColumn<String> linkType = GeneratedColumn<String>(
+      'link_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _confidenceMeta =
+      const VerificationMeta('confidence');
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+      'confidence', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1.0));
+  static const VerificationMeta _basisMeta = const VerificationMeta('basis');
+  @override
+  late final GeneratedColumn<String> basis = GeneratedColumn<String>(
+      'basis', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdByMeta =
+      const VerificationMeta('createdBy');
+  @override
+  late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
+      'created_by', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('system'));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        fromTxnId,
+        toTxnId,
+        linkType,
+        confidence,
+        basis,
+        createdBy,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'transaction_links';
+  @override
+  VerificationContext validateIntegrity(Insertable<TransactionLink> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('from_txn_id')) {
+      context.handle(
+          _fromTxnIdMeta,
+          fromTxnId.isAcceptableOrUnknown(
+              data['from_txn_id']!, _fromTxnIdMeta));
+    } else if (isInserting) {
+      context.missing(_fromTxnIdMeta);
+    }
+    if (data.containsKey('to_txn_id')) {
+      context.handle(_toTxnIdMeta,
+          toTxnId.isAcceptableOrUnknown(data['to_txn_id']!, _toTxnIdMeta));
+    } else if (isInserting) {
+      context.missing(_toTxnIdMeta);
+    }
+    if (data.containsKey('link_type')) {
+      context.handle(_linkTypeMeta,
+          linkType.isAcceptableOrUnknown(data['link_type']!, _linkTypeMeta));
+    } else if (isInserting) {
+      context.missing(_linkTypeMeta);
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+          _confidenceMeta,
+          confidence.isAcceptableOrUnknown(
+              data['confidence']!, _confidenceMeta));
+    }
+    if (data.containsKey('basis')) {
+      context.handle(
+          _basisMeta, basis.isAcceptableOrUnknown(data['basis']!, _basisMeta));
+    } else if (isInserting) {
+      context.missing(_basisMeta);
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(_createdByMeta,
+          createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TransactionLink map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TransactionLink(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      fromTxnId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}from_txn_id'])!,
+      toTxnId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}to_txn_id'])!,
+      linkType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}link_type'])!,
+      confidence: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}confidence'])!,
+      basis: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}basis'])!,
+      createdBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}created_by'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $TransactionLinksTable createAlias(String alias) {
+    return $TransactionLinksTable(attachedDatabase, alias);
+  }
+}
+
+class TransactionLink extends DataClass implements Insertable<TransactionLink> {
+  final String id;
+  final String fromTxnId;
+  final String toTxnId;
+  final String linkType;
+  final double confidence;
+  final String basis;
+  final String createdBy;
+  final int createdAt;
+  const TransactionLink(
+      {required this.id,
+      required this.fromTxnId,
+      required this.toTxnId,
+      required this.linkType,
+      required this.confidence,
+      required this.basis,
+      required this.createdBy,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['from_txn_id'] = Variable<String>(fromTxnId);
+    map['to_txn_id'] = Variable<String>(toTxnId);
+    map['link_type'] = Variable<String>(linkType);
+    map['confidence'] = Variable<double>(confidence);
+    map['basis'] = Variable<String>(basis);
+    map['created_by'] = Variable<String>(createdBy);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  TransactionLinksCompanion toCompanion(bool nullToAbsent) {
+    return TransactionLinksCompanion(
+      id: Value(id),
+      fromTxnId: Value(fromTxnId),
+      toTxnId: Value(toTxnId),
+      linkType: Value(linkType),
+      confidence: Value(confidence),
+      basis: Value(basis),
+      createdBy: Value(createdBy),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TransactionLink.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TransactionLink(
+      id: serializer.fromJson<String>(json['id']),
+      fromTxnId: serializer.fromJson<String>(json['fromTxnId']),
+      toTxnId: serializer.fromJson<String>(json['toTxnId']),
+      linkType: serializer.fromJson<String>(json['linkType']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      basis: serializer.fromJson<String>(json['basis']),
+      createdBy: serializer.fromJson<String>(json['createdBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fromTxnId': serializer.toJson<String>(fromTxnId),
+      'toTxnId': serializer.toJson<String>(toTxnId),
+      'linkType': serializer.toJson<String>(linkType),
+      'confidence': serializer.toJson<double>(confidence),
+      'basis': serializer.toJson<String>(basis),
+      'createdBy': serializer.toJson<String>(createdBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  TransactionLink copyWith(
+          {String? id,
+          String? fromTxnId,
+          String? toTxnId,
+          String? linkType,
+          double? confidence,
+          String? basis,
+          String? createdBy,
+          int? createdAt}) =>
+      TransactionLink(
+        id: id ?? this.id,
+        fromTxnId: fromTxnId ?? this.fromTxnId,
+        toTxnId: toTxnId ?? this.toTxnId,
+        linkType: linkType ?? this.linkType,
+        confidence: confidence ?? this.confidence,
+        basis: basis ?? this.basis,
+        createdBy: createdBy ?? this.createdBy,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('TransactionLink(')
+          ..write('id: $id, ')
+          ..write('fromTxnId: $fromTxnId, ')
+          ..write('toTxnId: $toTxnId, ')
+          ..write('linkType: $linkType, ')
+          ..write('confidence: $confidence, ')
+          ..write('basis: $basis, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, fromTxnId, toTxnId, linkType, confidence,
+      basis, createdBy, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TransactionLink &&
+          other.id == this.id &&
+          other.fromTxnId == this.fromTxnId &&
+          other.toTxnId == this.toTxnId &&
+          other.linkType == this.linkType &&
+          other.confidence == this.confidence &&
+          other.basis == this.basis &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt);
+}
+
+class TransactionLinksCompanion extends UpdateCompanion<TransactionLink> {
+  final Value<String> id;
+  final Value<String> fromTxnId;
+  final Value<String> toTxnId;
+  final Value<String> linkType;
+  final Value<double> confidence;
+  final Value<String> basis;
+  final Value<String> createdBy;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const TransactionLinksCompanion({
+    this.id = const Value.absent(),
+    this.fromTxnId = const Value.absent(),
+    this.toTxnId = const Value.absent(),
+    this.linkType = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.basis = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TransactionLinksCompanion.insert({
+    required String id,
+    required String fromTxnId,
+    required String toTxnId,
+    required String linkType,
+    this.confidence = const Value.absent(),
+    required String basis,
+    this.createdBy = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        fromTxnId = Value(fromTxnId),
+        toTxnId = Value(toTxnId),
+        linkType = Value(linkType),
+        basis = Value(basis),
+        createdAt = Value(createdAt);
+  static Insertable<TransactionLink> custom({
+    Expression<String>? id,
+    Expression<String>? fromTxnId,
+    Expression<String>? toTxnId,
+    Expression<String>? linkType,
+    Expression<double>? confidence,
+    Expression<String>? basis,
+    Expression<String>? createdBy,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fromTxnId != null) 'from_txn_id': fromTxnId,
+      if (toTxnId != null) 'to_txn_id': toTxnId,
+      if (linkType != null) 'link_type': linkType,
+      if (confidence != null) 'confidence': confidence,
+      if (basis != null) 'basis': basis,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TransactionLinksCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? fromTxnId,
+      Value<String>? toTxnId,
+      Value<String>? linkType,
+      Value<double>? confidence,
+      Value<String>? basis,
+      Value<String>? createdBy,
+      Value<int>? createdAt,
+      Value<int>? rowid}) {
+    return TransactionLinksCompanion(
+      id: id ?? this.id,
+      fromTxnId: fromTxnId ?? this.fromTxnId,
+      toTxnId: toTxnId ?? this.toTxnId,
+      linkType: linkType ?? this.linkType,
+      confidence: confidence ?? this.confidence,
+      basis: basis ?? this.basis,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fromTxnId.present) {
+      map['from_txn_id'] = Variable<String>(fromTxnId.value);
+    }
+    if (toTxnId.present) {
+      map['to_txn_id'] = Variable<String>(toTxnId.value);
+    }
+    if (linkType.present) {
+      map['link_type'] = Variable<String>(linkType.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (basis.present) {
+      map['basis'] = Variable<String>(basis.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransactionLinksCompanion(')
+          ..write('id: $id, ')
+          ..write('fromTxnId: $fromTxnId, ')
+          ..write('toTxnId: $toTxnId, ')
+          ..write('linkType: $linkType, ')
+          ..write('confidence: $confidence, ')
+          ..write('basis: $basis, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   _$AppDatabaseManager get managers => _$AppDatabaseManager(this);
   late final $BaselinesTable baselines = $BaselinesTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
+  late final $CounterpartiesTable counterparties = $CounterpartiesTable(this);
+  late final $ExpectedEventsTable expectedEvents = $ExpectedEventsTable(this);
+  late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
   late final $PaymentSourcesTable paymentSources = $PaymentSourcesTable(this);
   late final $MerchantsTable merchants = $MerchantsTable(this);
   late final $RawSmsTable rawSms = $RawSmsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $FeedbackTable feedback = $FeedbackTable(this);
+  late final $FinancialEventsTable financialEvents =
+      $FinancialEventsTable(this);
   late final $InsightsTable insights = $InsightsTable(this);
   late final $MerchantAliasesTable merchantAliases =
       $MerchantAliasesTable(this);
@@ -5337,6 +7862,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecurringSeriesTable recurringSeries =
       $RecurringSeriesTable(this);
   late final $RulesTable rules = $RulesTable(this);
+  late final $TransactionLinksTable transactionLinks =
+      $TransactionLinksTable(this);
   late final Index idxInsightsPeriod = Index('idx_insights_period',
       'CREATE INDEX idx_insights_period ON insights (period)');
   late final Index idxPaymentSourcesIdentity = Index(
@@ -5376,16 +7903,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
         baselines,
         categories,
+        counterparties,
+        expectedEvents,
+        featureFlags,
         paymentSources,
         merchants,
         rawSms,
         transactions,
         feedback,
+        financialEvents,
         insights,
         merchantAliases,
         modelMeta,
         recurringSeries,
         rules,
+        transactionLinks,
         idxInsightsPeriod,
         idxPaymentSourcesIdentity,
         idxRecurringSeriesMerchantId,
@@ -5753,6 +8285,661 @@ class $$CategoriesTableOrderingComposer
                 $state.db.categories, joinBuilder, parentComposers)));
     return composer;
   }
+}
+
+typedef $$CounterpartiesTableInsertCompanionBuilder = CounterpartiesCompanion
+    Function({
+  required String id,
+  required String kind,
+  required String identityKey,
+  Value<String?> displayName,
+  Value<String?> inferredName,
+  Value<String?> pspFamily,
+  Value<String?> merchantId,
+  required DateTime firstSeen,
+  required DateTime lastSeen,
+  Value<int> txnCount,
+  Value<int> rowid,
+});
+typedef $$CounterpartiesTableUpdateCompanionBuilder = CounterpartiesCompanion
+    Function({
+  Value<String> id,
+  Value<String> kind,
+  Value<String> identityKey,
+  Value<String?> displayName,
+  Value<String?> inferredName,
+  Value<String?> pspFamily,
+  Value<String?> merchantId,
+  Value<DateTime> firstSeen,
+  Value<DateTime> lastSeen,
+  Value<int> txnCount,
+  Value<int> rowid,
+});
+
+class $$CounterpartiesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CounterpartiesTable,
+    Counterparty,
+    $$CounterpartiesTableFilterComposer,
+    $$CounterpartiesTableOrderingComposer,
+    $$CounterpartiesTableProcessedTableManager,
+    $$CounterpartiesTableInsertCompanionBuilder,
+    $$CounterpartiesTableUpdateCompanionBuilder> {
+  $$CounterpartiesTableTableManager(
+      _$AppDatabase db, $CounterpartiesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$CounterpartiesTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$CounterpartiesTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$CounterpartiesTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> identityKey = const Value.absent(),
+            Value<String?> displayName = const Value.absent(),
+            Value<String?> inferredName = const Value.absent(),
+            Value<String?> pspFamily = const Value.absent(),
+            Value<String?> merchantId = const Value.absent(),
+            Value<DateTime> firstSeen = const Value.absent(),
+            Value<DateTime> lastSeen = const Value.absent(),
+            Value<int> txnCount = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CounterpartiesCompanion(
+            id: id,
+            kind: kind,
+            identityKey: identityKey,
+            displayName: displayName,
+            inferredName: inferredName,
+            pspFamily: pspFamily,
+            merchantId: merchantId,
+            firstSeen: firstSeen,
+            lastSeen: lastSeen,
+            txnCount: txnCount,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String kind,
+            required String identityKey,
+            Value<String?> displayName = const Value.absent(),
+            Value<String?> inferredName = const Value.absent(),
+            Value<String?> pspFamily = const Value.absent(),
+            Value<String?> merchantId = const Value.absent(),
+            required DateTime firstSeen,
+            required DateTime lastSeen,
+            Value<int> txnCount = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CounterpartiesCompanion.insert(
+            id: id,
+            kind: kind,
+            identityKey: identityKey,
+            displayName: displayName,
+            inferredName: inferredName,
+            pspFamily: pspFamily,
+            merchantId: merchantId,
+            firstSeen: firstSeen,
+            lastSeen: lastSeen,
+            txnCount: txnCount,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$CounterpartiesTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $CounterpartiesTable,
+    Counterparty,
+    $$CounterpartiesTableFilterComposer,
+    $$CounterpartiesTableOrderingComposer,
+    $$CounterpartiesTableProcessedTableManager,
+    $$CounterpartiesTableInsertCompanionBuilder,
+    $$CounterpartiesTableUpdateCompanionBuilder> {
+  $$CounterpartiesTableProcessedTableManager(super.$state);
+}
+
+class $$CounterpartiesTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $CounterpartiesTable> {
+  $$CounterpartiesTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get identityKey => $state.composableBuilder(
+      column: $state.table.identityKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get displayName => $state.composableBuilder(
+      column: $state.table.displayName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get inferredName => $state.composableBuilder(
+      column: $state.table.inferredName,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get pspFamily => $state.composableBuilder(
+      column: $state.table.pspFamily,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get merchantId => $state.composableBuilder(
+      column: $state.table.merchantId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get firstSeen => $state.composableBuilder(
+      column: $state.table.firstSeen,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get lastSeen => $state.composableBuilder(
+      column: $state.table.lastSeen,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get txnCount => $state.composableBuilder(
+      column: $state.table.txnCount,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$CounterpartiesTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $CounterpartiesTable> {
+  $$CounterpartiesTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get identityKey => $state.composableBuilder(
+      column: $state.table.identityKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get displayName => $state.composableBuilder(
+      column: $state.table.displayName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get inferredName => $state.composableBuilder(
+      column: $state.table.inferredName,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get pspFamily => $state.composableBuilder(
+      column: $state.table.pspFamily,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get merchantId => $state.composableBuilder(
+      column: $state.table.merchantId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get firstSeen => $state.composableBuilder(
+      column: $state.table.firstSeen,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get lastSeen => $state.composableBuilder(
+      column: $state.table.lastSeen,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get txnCount => $state.composableBuilder(
+      column: $state.table.txnCount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$ExpectedEventsTableInsertCompanionBuilder = ExpectedEventsCompanion
+    Function({
+  required String id,
+  required String source,
+  Value<String?> originSmsId,
+  Value<String?> seriesId,
+  Value<String?> counterpartyId,
+  required String label,
+  required int expectedAmountPaise,
+  Value<int?> amountLowPaise,
+  Value<int?> amountHighPaise,
+  required DateTime expectedDate,
+  Value<int> dateWindowDays,
+  Value<String?> cadence,
+  required String state,
+  Value<String?> fulfilledTxnId,
+  required double confidence,
+  required String dedupKey,
+  Value<int> rowid,
+});
+typedef $$ExpectedEventsTableUpdateCompanionBuilder = ExpectedEventsCompanion
+    Function({
+  Value<String> id,
+  Value<String> source,
+  Value<String?> originSmsId,
+  Value<String?> seriesId,
+  Value<String?> counterpartyId,
+  Value<String> label,
+  Value<int> expectedAmountPaise,
+  Value<int?> amountLowPaise,
+  Value<int?> amountHighPaise,
+  Value<DateTime> expectedDate,
+  Value<int> dateWindowDays,
+  Value<String?> cadence,
+  Value<String> state,
+  Value<String?> fulfilledTxnId,
+  Value<double> confidence,
+  Value<String> dedupKey,
+  Value<int> rowid,
+});
+
+class $$ExpectedEventsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ExpectedEventsTable,
+    ExpectedEvent,
+    $$ExpectedEventsTableFilterComposer,
+    $$ExpectedEventsTableOrderingComposer,
+    $$ExpectedEventsTableProcessedTableManager,
+    $$ExpectedEventsTableInsertCompanionBuilder,
+    $$ExpectedEventsTableUpdateCompanionBuilder> {
+  $$ExpectedEventsTableTableManager(
+      _$AppDatabase db, $ExpectedEventsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ExpectedEventsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$ExpectedEventsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$ExpectedEventsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> source = const Value.absent(),
+            Value<String?> originSmsId = const Value.absent(),
+            Value<String?> seriesId = const Value.absent(),
+            Value<String?> counterpartyId = const Value.absent(),
+            Value<String> label = const Value.absent(),
+            Value<int> expectedAmountPaise = const Value.absent(),
+            Value<int?> amountLowPaise = const Value.absent(),
+            Value<int?> amountHighPaise = const Value.absent(),
+            Value<DateTime> expectedDate = const Value.absent(),
+            Value<int> dateWindowDays = const Value.absent(),
+            Value<String?> cadence = const Value.absent(),
+            Value<String> state = const Value.absent(),
+            Value<String?> fulfilledTxnId = const Value.absent(),
+            Value<double> confidence = const Value.absent(),
+            Value<String> dedupKey = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ExpectedEventsCompanion(
+            id: id,
+            source: source,
+            originSmsId: originSmsId,
+            seriesId: seriesId,
+            counterpartyId: counterpartyId,
+            label: label,
+            expectedAmountPaise: expectedAmountPaise,
+            amountLowPaise: amountLowPaise,
+            amountHighPaise: amountHighPaise,
+            expectedDate: expectedDate,
+            dateWindowDays: dateWindowDays,
+            cadence: cadence,
+            state: state,
+            fulfilledTxnId: fulfilledTxnId,
+            confidence: confidence,
+            dedupKey: dedupKey,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String source,
+            Value<String?> originSmsId = const Value.absent(),
+            Value<String?> seriesId = const Value.absent(),
+            Value<String?> counterpartyId = const Value.absent(),
+            required String label,
+            required int expectedAmountPaise,
+            Value<int?> amountLowPaise = const Value.absent(),
+            Value<int?> amountHighPaise = const Value.absent(),
+            required DateTime expectedDate,
+            Value<int> dateWindowDays = const Value.absent(),
+            Value<String?> cadence = const Value.absent(),
+            required String state,
+            Value<String?> fulfilledTxnId = const Value.absent(),
+            required double confidence,
+            required String dedupKey,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ExpectedEventsCompanion.insert(
+            id: id,
+            source: source,
+            originSmsId: originSmsId,
+            seriesId: seriesId,
+            counterpartyId: counterpartyId,
+            label: label,
+            expectedAmountPaise: expectedAmountPaise,
+            amountLowPaise: amountLowPaise,
+            amountHighPaise: amountHighPaise,
+            expectedDate: expectedDate,
+            dateWindowDays: dateWindowDays,
+            cadence: cadence,
+            state: state,
+            fulfilledTxnId: fulfilledTxnId,
+            confidence: confidence,
+            dedupKey: dedupKey,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ExpectedEventsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $ExpectedEventsTable,
+    ExpectedEvent,
+    $$ExpectedEventsTableFilterComposer,
+    $$ExpectedEventsTableOrderingComposer,
+    $$ExpectedEventsTableProcessedTableManager,
+    $$ExpectedEventsTableInsertCompanionBuilder,
+    $$ExpectedEventsTableUpdateCompanionBuilder> {
+  $$ExpectedEventsTableProcessedTableManager(super.$state);
+}
+
+class $$ExpectedEventsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $ExpectedEventsTable> {
+  $$ExpectedEventsTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get source => $state.composableBuilder(
+      column: $state.table.source,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get originSmsId => $state.composableBuilder(
+      column: $state.table.originSmsId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get seriesId => $state.composableBuilder(
+      column: $state.table.seriesId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get counterpartyId => $state.composableBuilder(
+      column: $state.table.counterpartyId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get label => $state.composableBuilder(
+      column: $state.table.label,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get expectedAmountPaise => $state.composableBuilder(
+      column: $state.table.expectedAmountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get amountLowPaise => $state.composableBuilder(
+      column: $state.table.amountLowPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get amountHighPaise => $state.composableBuilder(
+      column: $state.table.amountHighPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get expectedDate => $state.composableBuilder(
+      column: $state.table.expectedDate,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get dateWindowDays => $state.composableBuilder(
+      column: $state.table.dateWindowDays,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get cadence => $state.composableBuilder(
+      column: $state.table.cadence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get state => $state.composableBuilder(
+      column: $state.table.state,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get fulfilledTxnId => $state.composableBuilder(
+      column: $state.table.fulfilledTxnId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get dedupKey => $state.composableBuilder(
+      column: $state.table.dedupKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ExpectedEventsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $ExpectedEventsTable> {
+  $$ExpectedEventsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get source => $state.composableBuilder(
+      column: $state.table.source,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get originSmsId => $state.composableBuilder(
+      column: $state.table.originSmsId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get seriesId => $state.composableBuilder(
+      column: $state.table.seriesId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get counterpartyId => $state.composableBuilder(
+      column: $state.table.counterpartyId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get label => $state.composableBuilder(
+      column: $state.table.label,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get expectedAmountPaise => $state.composableBuilder(
+      column: $state.table.expectedAmountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get amountLowPaise => $state.composableBuilder(
+      column: $state.table.amountLowPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get amountHighPaise => $state.composableBuilder(
+      column: $state.table.amountHighPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get expectedDate => $state.composableBuilder(
+      column: $state.table.expectedDate,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get dateWindowDays => $state.composableBuilder(
+      column: $state.table.dateWindowDays,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get cadence => $state.composableBuilder(
+      column: $state.table.cadence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get state => $state.composableBuilder(
+      column: $state.table.state,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get fulfilledTxnId => $state.composableBuilder(
+      column: $state.table.fulfilledTxnId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get dedupKey => $state.composableBuilder(
+      column: $state.table.dedupKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$FeatureFlagsTableInsertCompanionBuilder = FeatureFlagsCompanion
+    Function({
+  required String key,
+  required String value,
+  Value<DateTime?> updatedAt,
+  Value<int> rowid,
+});
+typedef $$FeatureFlagsTableUpdateCompanionBuilder = FeatureFlagsCompanion
+    Function({
+  Value<String> key,
+  Value<String> value,
+  Value<DateTime?> updatedAt,
+  Value<int> rowid,
+});
+
+class $$FeatureFlagsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $FeatureFlagsTable,
+    FeatureFlag,
+    $$FeatureFlagsTableFilterComposer,
+    $$FeatureFlagsTableOrderingComposer,
+    $$FeatureFlagsTableProcessedTableManager,
+    $$FeatureFlagsTableInsertCompanionBuilder,
+    $$FeatureFlagsTableUpdateCompanionBuilder> {
+  $$FeatureFlagsTableTableManager(_$AppDatabase db, $FeatureFlagsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$FeatureFlagsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$FeatureFlagsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$FeatureFlagsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FeatureFlagsCompanion(
+            key: key,
+            value: value,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String key,
+            required String value,
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FeatureFlagsCompanion.insert(
+            key: key,
+            value: value,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$FeatureFlagsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $FeatureFlagsTable,
+    FeatureFlag,
+    $$FeatureFlagsTableFilterComposer,
+    $$FeatureFlagsTableOrderingComposer,
+    $$FeatureFlagsTableProcessedTableManager,
+    $$FeatureFlagsTableInsertCompanionBuilder,
+    $$FeatureFlagsTableUpdateCompanionBuilder> {
+  $$FeatureFlagsTableProcessedTableManager(super.$state);
+}
+
+class $$FeatureFlagsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableFilterComposer(super.$state);
+  ColumnFilters<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$FeatureFlagsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
 typedef $$PaymentSourcesTableInsertCompanionBuilder = PaymentSourcesCompanion
@@ -6416,6 +9603,9 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   Value<String?> ownedTransferId,
   Value<bool> isAnalyticsExcluded,
   Value<String?> evidenceJson,
+  Value<String> lifecycleState,
+  Value<String?> lifecycleReason,
+  Value<String?> messageKind,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -6445,6 +9635,9 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> ownedTransferId,
   Value<bool> isAnalyticsExcluded,
   Value<String?> evidenceJson,
+  Value<String> lifecycleState,
+  Value<String?> lifecycleReason,
+  Value<String?> messageKind,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -6493,6 +9686,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> ownedTransferId = const Value.absent(),
             Value<bool> isAnalyticsExcluded = const Value.absent(),
             Value<String?> evidenceJson = const Value.absent(),
+            Value<String> lifecycleState = const Value.absent(),
+            Value<String?> lifecycleReason = const Value.absent(),
+            Value<String?> messageKind = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -6521,6 +9717,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             ownedTransferId: ownedTransferId,
             isAnalyticsExcluded: isAnalyticsExcluded,
             evidenceJson: evidenceJson,
+            lifecycleState: lifecycleState,
+            lifecycleReason: lifecycleReason,
+            messageKind: messageKind,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -6549,6 +9748,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> ownedTransferId = const Value.absent(),
             Value<bool> isAnalyticsExcluded = const Value.absent(),
             Value<String?> evidenceJson = const Value.absent(),
+            Value<String> lifecycleState = const Value.absent(),
+            Value<String?> lifecycleReason = const Value.absent(),
+            Value<String?> messageKind = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -6577,6 +9779,9 @@ class $$TransactionsTableTableManager extends RootTableManager<
             ownedTransferId: ownedTransferId,
             isAnalyticsExcluded: isAnalyticsExcluded,
             evidenceJson: evidenceJson,
+            lifecycleState: lifecycleState,
+            lifecycleReason: lifecycleReason,
+            messageKind: messageKind,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -6689,6 +9894,21 @@ class $$TransactionsTableFilterComposer
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
+  ColumnFilters<String> get lifecycleState => $state.composableBuilder(
+      column: $state.table.lifecycleState,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get lifecycleReason => $state.composableBuilder(
+      column: $state.table.lifecycleReason,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get messageKind => $state.composableBuilder(
+      column: $state.table.messageKind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
   ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
       column: $state.table.createdAt,
       builder: (column, joinBuilders) =>
@@ -6784,6 +10004,34 @@ class $$TransactionsTableFilterComposer
                 $state.db, $state.db.rules, joinBuilder, parentComposers)));
     return f(composer);
   }
+
+  ComposableFilter fromTransactionLinks(
+      ComposableFilter Function($$TransactionLinksTableFilterComposer f) f) {
+    final $$TransactionLinksTableFilterComposer composer =
+        $state.composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $state.db.transactionLinks,
+            getReferencedColumn: (t) => t.fromTxnId,
+            builder: (joinBuilder, parentComposers) =>
+                $$TransactionLinksTableFilterComposer(ComposerState($state.db,
+                    $state.db.transactionLinks, joinBuilder, parentComposers)));
+    return f(composer);
+  }
+
+  ComposableFilter toTransactionLinks(
+      ComposableFilter Function($$TransactionLinksTableFilterComposer f) f) {
+    final $$TransactionLinksTableFilterComposer composer =
+        $state.composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $state.db.transactionLinks,
+            getReferencedColumn: (t) => t.toTxnId,
+            builder: (joinBuilder, parentComposers) =>
+                $$TransactionLinksTableFilterComposer(ComposerState($state.db,
+                    $state.db.transactionLinks, joinBuilder, parentComposers)));
+    return f(composer);
+  }
 }
 
 class $$TransactionsTableOrderingComposer
@@ -6876,6 +10124,21 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<String> get evidenceJson => $state.composableBuilder(
       column: $state.table.evidenceJson,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get lifecycleState => $state.composableBuilder(
+      column: $state.table.lifecycleState,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get lifecycleReason => $state.composableBuilder(
+      column: $state.table.lifecycleReason,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get messageKind => $state.composableBuilder(
+      column: $state.table.messageKind,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -7152,6 +10415,230 @@ class $$FeedbackTableOrderingComposer
                 $state.db.transactions, joinBuilder, parentComposers)));
     return composer;
   }
+}
+
+typedef $$FinancialEventsTableInsertCompanionBuilder = FinancialEventsCompanion
+    Function({
+  required String id,
+  required String eventKey,
+  required String keyBasis,
+  required String kind,
+  required int netAmountPaise,
+  Value<String> currency,
+  required int openedAt,
+  Value<int?> closedAt,
+  Value<String> state,
+  Value<double> confidence,
+  Value<int> rowid,
+});
+typedef $$FinancialEventsTableUpdateCompanionBuilder = FinancialEventsCompanion
+    Function({
+  Value<String> id,
+  Value<String> eventKey,
+  Value<String> keyBasis,
+  Value<String> kind,
+  Value<int> netAmountPaise,
+  Value<String> currency,
+  Value<int> openedAt,
+  Value<int?> closedAt,
+  Value<String> state,
+  Value<double> confidence,
+  Value<int> rowid,
+});
+
+class $$FinancialEventsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $FinancialEventsTable,
+    FinancialEvent,
+    $$FinancialEventsTableFilterComposer,
+    $$FinancialEventsTableOrderingComposer,
+    $$FinancialEventsTableProcessedTableManager,
+    $$FinancialEventsTableInsertCompanionBuilder,
+    $$FinancialEventsTableUpdateCompanionBuilder> {
+  $$FinancialEventsTableTableManager(
+      _$AppDatabase db, $FinancialEventsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$FinancialEventsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$FinancialEventsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$FinancialEventsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> eventKey = const Value.absent(),
+            Value<String> keyBasis = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<int> netAmountPaise = const Value.absent(),
+            Value<String> currency = const Value.absent(),
+            Value<int> openedAt = const Value.absent(),
+            Value<int?> closedAt = const Value.absent(),
+            Value<String> state = const Value.absent(),
+            Value<double> confidence = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FinancialEventsCompanion(
+            id: id,
+            eventKey: eventKey,
+            keyBasis: keyBasis,
+            kind: kind,
+            netAmountPaise: netAmountPaise,
+            currency: currency,
+            openedAt: openedAt,
+            closedAt: closedAt,
+            state: state,
+            confidence: confidence,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String eventKey,
+            required String keyBasis,
+            required String kind,
+            required int netAmountPaise,
+            Value<String> currency = const Value.absent(),
+            required int openedAt,
+            Value<int?> closedAt = const Value.absent(),
+            Value<String> state = const Value.absent(),
+            Value<double> confidence = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FinancialEventsCompanion.insert(
+            id: id,
+            eventKey: eventKey,
+            keyBasis: keyBasis,
+            kind: kind,
+            netAmountPaise: netAmountPaise,
+            currency: currency,
+            openedAt: openedAt,
+            closedAt: closedAt,
+            state: state,
+            confidence: confidence,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$FinancialEventsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $FinancialEventsTable,
+    FinancialEvent,
+    $$FinancialEventsTableFilterComposer,
+    $$FinancialEventsTableOrderingComposer,
+    $$FinancialEventsTableProcessedTableManager,
+    $$FinancialEventsTableInsertCompanionBuilder,
+    $$FinancialEventsTableUpdateCompanionBuilder> {
+  $$FinancialEventsTableProcessedTableManager(super.$state);
+}
+
+class $$FinancialEventsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $FinancialEventsTable> {
+  $$FinancialEventsTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get eventKey => $state.composableBuilder(
+      column: $state.table.eventKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get keyBasis => $state.composableBuilder(
+      column: $state.table.keyBasis,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get netAmountPaise => $state.composableBuilder(
+      column: $state.table.netAmountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currency => $state.composableBuilder(
+      column: $state.table.currency,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get openedAt => $state.composableBuilder(
+      column: $state.table.openedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get closedAt => $state.composableBuilder(
+      column: $state.table.closedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get state => $state.composableBuilder(
+      column: $state.table.state,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$FinancialEventsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $FinancialEventsTable> {
+  $$FinancialEventsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get eventKey => $state.composableBuilder(
+      column: $state.table.eventKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get keyBasis => $state.composableBuilder(
+      column: $state.table.keyBasis,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get netAmountPaise => $state.composableBuilder(
+      column: $state.table.netAmountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currency => $state.composableBuilder(
+      column: $state.table.currency,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get openedAt => $state.composableBuilder(
+      column: $state.table.openedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get closedAt => $state.composableBuilder(
+      column: $state.table.closedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get state => $state.composableBuilder(
+      column: $state.table.state,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
 typedef $$InsightsTableInsertCompanionBuilder = InsightsCompanion Function({
@@ -8032,6 +11519,227 @@ class $$RulesTableOrderingComposer
   }
 }
 
+typedef $$TransactionLinksTableInsertCompanionBuilder
+    = TransactionLinksCompanion Function({
+  required String id,
+  required String fromTxnId,
+  required String toTxnId,
+  required String linkType,
+  Value<double> confidence,
+  required String basis,
+  Value<String> createdBy,
+  required int createdAt,
+  Value<int> rowid,
+});
+typedef $$TransactionLinksTableUpdateCompanionBuilder
+    = TransactionLinksCompanion Function({
+  Value<String> id,
+  Value<String> fromTxnId,
+  Value<String> toTxnId,
+  Value<String> linkType,
+  Value<double> confidence,
+  Value<String> basis,
+  Value<String> createdBy,
+  Value<int> createdAt,
+  Value<int> rowid,
+});
+
+class $$TransactionLinksTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $TransactionLinksTable,
+    TransactionLink,
+    $$TransactionLinksTableFilterComposer,
+    $$TransactionLinksTableOrderingComposer,
+    $$TransactionLinksTableProcessedTableManager,
+    $$TransactionLinksTableInsertCompanionBuilder,
+    $$TransactionLinksTableUpdateCompanionBuilder> {
+  $$TransactionLinksTableTableManager(
+      _$AppDatabase db, $TransactionLinksTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$TransactionLinksTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$TransactionLinksTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$TransactionLinksTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> fromTxnId = const Value.absent(),
+            Value<String> toTxnId = const Value.absent(),
+            Value<String> linkType = const Value.absent(),
+            Value<double> confidence = const Value.absent(),
+            Value<String> basis = const Value.absent(),
+            Value<String> createdBy = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TransactionLinksCompanion(
+            id: id,
+            fromTxnId: fromTxnId,
+            toTxnId: toTxnId,
+            linkType: linkType,
+            confidence: confidence,
+            basis: basis,
+            createdBy: createdBy,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String fromTxnId,
+            required String toTxnId,
+            required String linkType,
+            Value<double> confidence = const Value.absent(),
+            required String basis,
+            Value<String> createdBy = const Value.absent(),
+            required int createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TransactionLinksCompanion.insert(
+            id: id,
+            fromTxnId: fromTxnId,
+            toTxnId: toTxnId,
+            linkType: linkType,
+            confidence: confidence,
+            basis: basis,
+            createdBy: createdBy,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$TransactionLinksTableProcessedTableManager
+    extends ProcessedTableManager<
+        _$AppDatabase,
+        $TransactionLinksTable,
+        TransactionLink,
+        $$TransactionLinksTableFilterComposer,
+        $$TransactionLinksTableOrderingComposer,
+        $$TransactionLinksTableProcessedTableManager,
+        $$TransactionLinksTableInsertCompanionBuilder,
+        $$TransactionLinksTableUpdateCompanionBuilder> {
+  $$TransactionLinksTableProcessedTableManager(super.$state);
+}
+
+class $$TransactionLinksTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $TransactionLinksTable> {
+  $$TransactionLinksTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get linkType => $state.composableBuilder(
+      column: $state.table.linkType,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get basis => $state.composableBuilder(
+      column: $state.table.basis,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get createdBy => $state.composableBuilder(
+      column: $state.table.createdBy,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  $$TransactionsTableFilterComposer get fromTxnId {
+    final $$TransactionsTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.fromTxnId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableFilterComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return composer;
+  }
+
+  $$TransactionsTableFilterComposer get toTxnId {
+    final $$TransactionsTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.toTxnId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableFilterComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return composer;
+  }
+}
+
+class $$TransactionLinksTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $TransactionLinksTable> {
+  $$TransactionLinksTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get linkType => $state.composableBuilder(
+      column: $state.table.linkType,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get basis => $state.composableBuilder(
+      column: $state.table.basis,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get createdBy => $state.composableBuilder(
+      column: $state.table.createdBy,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  $$TransactionsTableOrderingComposer get fromTxnId {
+    final $$TransactionsTableOrderingComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.fromTxnId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableOrderingComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return composer;
+  }
+
+  $$TransactionsTableOrderingComposer get toTxnId {
+    final $$TransactionsTableOrderingComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.toTxnId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableOrderingComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return composer;
+  }
+}
+
 class _$AppDatabaseManager {
   final _$AppDatabase _db;
   _$AppDatabaseManager(this._db);
@@ -8039,6 +11747,12 @@ class _$AppDatabaseManager {
       $$BaselinesTableTableManager(_db, _db.baselines);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
+  $$CounterpartiesTableTableManager get counterparties =>
+      $$CounterpartiesTableTableManager(_db, _db.counterparties);
+  $$ExpectedEventsTableTableManager get expectedEvents =>
+      $$ExpectedEventsTableTableManager(_db, _db.expectedEvents);
+  $$FeatureFlagsTableTableManager get featureFlags =>
+      $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
   $$PaymentSourcesTableTableManager get paymentSources =>
       $$PaymentSourcesTableTableManager(_db, _db.paymentSources);
   $$MerchantsTableTableManager get merchants =>
@@ -8049,6 +11763,8 @@ class _$AppDatabaseManager {
       $$TransactionsTableTableManager(_db, _db.transactions);
   $$FeedbackTableTableManager get feedback =>
       $$FeedbackTableTableManager(_db, _db.feedback);
+  $$FinancialEventsTableTableManager get financialEvents =>
+      $$FinancialEventsTableTableManager(_db, _db.financialEvents);
   $$InsightsTableTableManager get insights =>
       $$InsightsTableTableManager(_db, _db.insights);
   $$MerchantAliasesTableTableManager get merchantAliases =>
@@ -8059,4 +11775,6 @@ class _$AppDatabaseManager {
       $$RecurringSeriesTableTableManager(_db, _db.recurringSeries);
   $$RulesTableTableManager get rules =>
       $$RulesTableTableManager(_db, _db.rules);
+  $$TransactionLinksTableTableManager get transactionLinks =>
+      $$TransactionLinksTableTableManager(_db, _db.transactionLinks);
 }

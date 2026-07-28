@@ -6,9 +6,13 @@ import 'package:flutter/services.dart';
 
 import '../../core/constants.dart';
 import '../dedup/duplicate_match_rule.dart';
-import 'tables/categories_table.dart';
 import 'tables/baselines_table.dart';
+import 'tables/categories_table.dart';
+import 'tables/counterparties_table.dart';
+import 'tables/expected_events_table.dart';
+import 'tables/feature_flags_table.dart';
 import 'tables/feedback_table.dart';
+import 'tables/financial_events_table.dart';
 import 'tables/insights_table.dart';
 import 'tables/merchant_aliases_table.dart';
 import 'tables/merchants_table.dart';
@@ -17,6 +21,7 @@ import 'tables/payment_sources_table.dart';
 import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
+import 'tables/transaction_links_table.dart';
 import 'tables/transactions_table.dart';
 
 part 'database.g.dart';
@@ -29,7 +34,11 @@ part 'database.g.dart';
   tables: [
     Baselines,
     Categories,
+    Counterparties,
+    ExpectedEvents,
+    FeatureFlags,
     Feedback,
+    FinancialEvents,
     Insights,
     MerchantAliases,
     Merchants,
@@ -38,6 +47,7 @@ part 'database.g.dart';
     RawSms,
     RecurringSeries,
     Rules,
+    TransactionLinks,
     Transactions,
   ],
 )
@@ -69,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 13;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -84,6 +94,10 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_transactions_counterparty_vpa_lower '
           'ON transactions (lower(counterparty_vpa));',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_lifecycle_state '
+          'ON transactions (lifecycle_state);',
         );
       },
       onUpgrade: (migrator, from, to) async {
@@ -132,6 +146,28 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 8) {
           await migrator.addColumn(transactions, transactions.evidenceJson);
+        }
+        if (from < 9) {
+          await migrator.addColumn(transactions, transactions.lifecycleState);
+          await migrator.addColumn(transactions, transactions.lifecycleReason);
+          await migrator.addColumn(transactions, transactions.messageKind);
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_lifecycle_state '
+            'ON transactions (lifecycle_state);',
+          );
+        }
+        if (from < 10) {
+          await migrator.createTable(financialEvents);
+          await migrator.createTable(transactionLinks);
+        }
+        if (from < 11) {
+          await migrator.createTable(counterparties);
+        }
+        if (from < 12) {
+          await migrator.createTable(expectedEvents);
+        }
+        if (from < 13) {
+          await migrator.createTable(featureFlags);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

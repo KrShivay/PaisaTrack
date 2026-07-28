@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show OrderingTerm, Value;
+import 'package:drift/drift.dart' show OrderingTerm, Value, leftOuterJoin;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,19 +10,62 @@ import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../transactions/transactions_screen.dart';
 
+class RecurringSeriesItem {
+  const RecurringSeriesItem({
+    required this.series,
+    this.categoryHint,
+  });
+
+  final RecurringSery series;
+  final String? categoryHint;
+
+  String get categoryId {
+    final hint = categoryHint?.trim();
+    if (hint != null && hint.isNotEmpty) {
+      return hint;
+    }
+    return switch (series.kind.toLowerCase()) {
+      'subscription' => 'subscriptions',
+      'emi' => 'emi_loans',
+      'income' => 'income',
+      'rent' => 'rent_housing',
+      'bill' => 'bills_utilities',
+      _ => series.kind,
+    };
+  }
+}
+
 /// Live recurring streams ordered by their next expected occurrence.
-final recurringSeriesProvider = StreamProvider<List<RecurringSery>>((ref) {
+final recurringSeriesProvider =
+    StreamProvider<List<RecurringSeriesItem>>((ref) {
   final databaseAsync = ref.watch(appDatabaseProvider);
   return databaseAsync.when(
-    data: (database) => (database.select(database.recurringSeries)
-          ..orderBy([
-            (row) => OrderingTerm.asc(row.nextExpectedDate),
-            (row) => OrderingTerm.asc(row.label),
-          ]))
-        .watch(),
-    loading: () => const Stream<List<RecurringSery>>.empty(),
+    data: (database) {
+      final query = database.select(database.recurringSeries).join([
+        leftOuterJoin(
+          database.merchants,
+          database.merchants.id.equalsExp(database.recurringSeries.merchantId),
+        ),
+      ])
+        ..orderBy([
+          OrderingTerm.asc(database.recurringSeries.nextExpectedDate),
+          OrderingTerm.asc(database.recurringSeries.label),
+        ]);
+
+      return query.watch().map((rows) {
+        return rows.map((row) {
+          final series = row.readTable(database.recurringSeries);
+          final merchant = row.readTableOrNull(database.merchants);
+          return RecurringSeriesItem(
+            series: series,
+            categoryHint: merchant?.categoryHint,
+          );
+        }).toList();
+      });
+    },
+    loading: () => const Stream<List<RecurringSeriesItem>>.empty(),
     error: (error, stackTrace) =>
-        Stream<List<RecurringSery>>.error(error, stackTrace),
+        Stream<List<RecurringSeriesItem>>.error(error, stackTrace),
   );
 });
 
@@ -37,20 +80,20 @@ class RecurringScreen extends ConsumerWidget {
     final items = seriesAsync.valueOrNull ?? const [];
 
     final activeItems = items
-        .where((i) => i.status != 'inactive' && i.status != 'cancelled')
+        .where((i) => i.series.status != 'inactive' && i.series.status != 'cancelled')
         .toList();
     final totalCommitted = activeItems.fold<double>(
       0.0,
-      (sum, item) => sum + (item.kind != 'income' ? item.expectedAmount : 0.0),
+      (sum, item) => sum + (item.series.kind != 'income' ? item.series.expectedAmount : 0.0),
     );
 
     final now = DateTime.now();
     final fourteenDaysOut = now.add(const Duration(days: 14));
 
     final upcoming14d = items.where((i) {
-      final date = i.nextExpectedDate.toLocal();
-      return i.status != 'inactive' &&
-          i.status != 'cancelled' &&
+      final date = i.series.nextExpectedDate.toLocal();
+      return i.series.status != 'inactive' &&
+          i.series.status != 'cancelled' &&
           !date.isAfter(fourteenDaysOut);
     }).toList();
 
@@ -111,13 +154,13 @@ class RecurringScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              for (final series in upcoming14d) ...[
+              for (final item in upcoming14d) ...[
                 _RecurringTileRow(
-                  series: series,
+                  item: item,
                   isDark: isDark,
-                  onTap: () => _showSeriesOptions(context, ref, series),
+                  onTap: () => _showSeriesOptions(context, ref, item.series),
                 ),
-                if (series != upcoming14d.last) const SizedBox(height: 8),
+                if (item != upcoming14d.last) const SizedBox(height: 8),
               ],
               const SizedBox(height: 24),
             ],
@@ -179,13 +222,13 @@ class RecurringScreen extends ConsumerWidget {
                 ),
               )
             else
-              for (final series in items) ...[
+              for (final item in items) ...[
                 _RecurringTileRow(
-                  series: series,
+                  item: item,
                   isDark: isDark,
-                  onTap: () => _showSeriesOptions(context, ref, series),
+                  onTap: () => _showSeriesOptions(context, ref, item.series),
                 ),
-                if (series != items.last) const SizedBox(height: 10),
+                if (item != items.last) const SizedBox(height: 10),
               ],
 
             const SizedBox(height: 40),
@@ -375,19 +418,22 @@ class _CommitmentsSummaryCard extends StatelessWidget {
   }
 }
 
+
+
 class _RecurringTileRow extends StatelessWidget {
   const _RecurringTileRow({
-    required this.series,
+    required this.item,
     required this.isDark,
     required this.onTap,
   });
 
-  final RecurringSery series;
+  final RecurringSeriesItem item;
   final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final series = item.series;
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
     final isIncome = series.kind == 'income';
     final formattedDate = _formatDate(series.nextExpectedDate);
@@ -405,7 +451,7 @@ class _RecurringTileRow extends StatelessWidget {
         child: Row(
           children: [
             BloomCategoryTile(
-              categoryId: series.kind,
+              categoryId: item.categoryId,
               size: 36,
               borderRadius: 13,
             ),

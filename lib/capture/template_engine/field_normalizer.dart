@@ -17,8 +17,78 @@ class FieldNormalizer {
     required SmsTemplate template,
     required DateTime fallbackTimestamp,
   }) {
-    final amount = parseAmount(_namedGroup(match, 'amount'));
+    final amountGroup = _namedGroup(match, 'amount');
+    final amount = parseAmount(amountGroup);
     final account = _namedGroup(match, 'account');
+    final dateGroup = _namedGroup(match, 'date');
+    final parsedTs = parseDate(
+      value: dateGroup,
+      format: template.dateFormat,
+      fallback: fallbackTimestamp,
+    );
+
+    final input = match.input;
+    final evidence = <FieldEvidence>[];
+
+    if (amountGroup != null && amountGroup.isNotEmpty) {
+      final start = input.indexOf(amountGroup, match.start);
+      if (start != -1 && start <= match.end) {
+        evidence.add(
+          FieldEvidence(
+            field: 'amount',
+            start: start,
+            end: start + amountGroup.length,
+            verbatim: amountGroup,
+            extractor: 'template',
+          ),
+        );
+      }
+    }
+
+    evidence.add(
+      FieldEvidence(
+        field: 'direction',
+        start: match.start,
+        end: match.end,
+        verbatim: input.substring(match.start, match.end),
+        extractor: 'template',
+      ),
+    );
+
+    if (dateGroup != null && dateGroup.isNotEmpty) {
+      final start = input.indexOf(dateGroup, match.start);
+      if (start != -1 && start <= match.end) {
+        evidence.add(
+          FieldEvidence(
+            field: 'ts',
+            start: start,
+            end: start + dateGroup.length,
+            verbatim: dateGroup,
+            extractor: 'template',
+          ),
+        );
+      } else {
+        evidence.add(
+          FieldEvidence(
+            field: 'ts',
+            start: match.start,
+            end: match.end,
+            verbatim: input.substring(match.start, match.end),
+            extractor: 'template',
+          ),
+        );
+      }
+    } else {
+      evidence.add(
+        FieldEvidence(
+          field: 'ts',
+          start: match.start,
+          end: match.end,
+          verbatim: input.substring(match.start, match.end),
+          extractor: 'template',
+        ),
+      );
+    }
 
     return NormalizedTransactionRecord(
       amount: amount,
@@ -29,15 +99,12 @@ class FieldNormalizer {
       accountHint: account == null ? null : 'xx$account',
       balanceAfter: parseOptionalAmount(_namedGroup(match, 'balance')),
       refId: _namedGroup(match, 'ref'),
-      ts: parseDate(
-        value: _namedGroup(match, 'date'),
-        format: template.dateFormat,
-        fallback: fallbackTimestamp,
-      ),
+      ts: parsedTs,
       parseSource: ParseSource.template,
       parseConfidence: 0.97,
       templateId: template.id,
       templateProvenance: template.provenance.wireName,
+      evidence: evidence,
     );
   }
 

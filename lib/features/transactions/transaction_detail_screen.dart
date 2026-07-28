@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
@@ -8,8 +9,10 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
 import '../../core/undo/undo_controller.dart';
+import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
+import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'transaction_correction_sheet.dart';
@@ -184,6 +187,7 @@ class _TransactionDetailScreenState
                     children: [
                       BloomCategoryTile(
                         categoryId: _categoryId ?? txn.categoryId,
+                        iconName: detail.categoryIcon,
                         size: 44,
                         borderRadius: 16,
                       ),
@@ -240,60 +244,54 @@ class _TransactionDetailScreenState
                     child: Column(
                       children: [
                         // Category Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'CATEGORY',
-                                  style: AppTheme.bloomDisplay(
-                                    10,
-                                    FontWeight.w600,
-                                    letterSpacing: 0.1,
+                        Semantics(
+                          label: 'Category, $categoryDisplayName, double tap to change',
+                          button: true,
+                          child: InkWell(
+                            onTap: _changeCategory,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'CATEGORY',
+                                        style: AppTheme.bloomDisplay(
+                                          10,
+                                          FontWeight.w600,
+                                          letterSpacing: 0.1,
+                                          color: isDark
+                                              ? AppColorTokens.bloomDarkTextTertiary
+                                              : AppColorTokens.inkTertiary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        categoryDisplayName,
+                                        style: AppTheme.bloomDisplay(
+                                          14,
+                                          FontWeight.w600,
+                                          color: isDark
+                                              ? AppColorTokens.bloomDarkTextPrimary
+                                              : AppColorTokens.ink,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
                                     color: isDark
                                         ? AppColorTokens.bloomDarkTextTertiary
                                         : AppColorTokens.inkTertiary,
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  categoryDisplayName,
-                                  style: AppTheme.bloomDisplay(
-                                    14,
-                                    FontWeight.w600,
-                                    color: isDark
-                                        ? AppColorTokens.bloomDarkTextPrimary
-                                        : AppColorTokens.ink,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            GestureDetector(
-                              onTap: _changeCategory,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColorTokens.violetPrimary
-                                      : AppColorTokens.ink,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Text(
-                                  'Change',
-                                  style: AppTheme.bloomDisplay(
-                                    12,
-                                    FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                         if (txn.accountHint != null &&
                             txn.accountHint!.isNotEmpty) ...[
@@ -331,6 +329,64 @@ class _TransactionDetailScreenState
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Exclusion Explanation Banner (T-135c)
+                  if (txn.ownedTransferId != null ||
+                      (txn.merchantRaw != null &&
+                          (txn.merchantRaw!.toUpperCase().contains('CREDIT CARD') ||
+                              txn.merchantRaw!.toUpperCase().contains('CARD BILL'))) ||
+                      (txn.merchantRaw != null &&
+                          (txn.merchantRaw!.toUpperCase().contains('ATM') ||
+                              txn.merchantRaw!.toUpperCase().contains('WITHDRAWAL'))) ||
+                      txn.isAnalyticsExcluded) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF3B82F6).withValues(alpha: 0.4)
+                              : const Color(0xFFBFDBFE),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: isDark ? const Color(0xFF60A5FA) : Colors.blue.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              txn.ownedTransferId != null
+                                  ? 'Self-transfer — excluded from totals to prevent double-counting.'
+                                  : (txn.merchantRaw != null &&
+                                          (txn.merchantRaw!.toUpperCase().contains('CREDIT CARD') ||
+                                              txn.merchantRaw!.toUpperCase().contains('CARD BILL')))
+                                      ? 'Credit card bill payment — excluded from totals (card purchases are counted individually).'
+                                      : (txn.merchantRaw != null &&
+                                              (txn.merchantRaw!.toUpperCase().contains('ATM') ||
+                                                  txn.merchantRaw!.toUpperCase().contains('WITHDRAWAL')))
+                                          ? 'Cash withdrawal — moved to untracked cash (excluded from category spending).'
+                                          : 'Excluded from analytics per settings.',
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w500,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextPrimary
+                                    : AppColorTokens.ink,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Review Queue Banner (Confirm / Fix)
                   if (txn.status == 'needs_review' ||
@@ -659,6 +715,16 @@ class _TransactionDetailScreenState
                               ),
                             ),
                           ],
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          _SourceMessageEvidenceView(
+                            rawSmsBody: detail.rawSmsBody,
+                            evidence: parseEvidenceFromJson(txn.evidenceJson),
+                            parseSource: txn.parseSource,
+                            parseConfidence: detail.parseConfidence,
+                            isDark: isDark,
+                          ),
 
                           // Debug Mode Boundary: Raw SMS Body & LLM Json strictly gated
                           if (kDebugMode) ...[
@@ -719,4 +785,190 @@ class _TransactionDetailScreenState
         'Nov',
         'Dec',
       ][month - 1];
+}
+
+class _SourceMessageEvidenceView extends StatelessWidget {
+  const _SourceMessageEvidenceView({
+    required this.rawSmsBody,
+    required this.evidence,
+    required this.parseSource,
+    required this.parseConfidence,
+    required this.isDark,
+  });
+
+  final String? rawSmsBody;
+  final List<FieldEvidence>? evidence;
+  final String parseSource;
+  final double? parseConfidence;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rawSmsBody == null || rawSmsBody!.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColorTokens.bloomDarkCard
+              : AppColorTokens.bloomCard,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Source message purged per retention policy',
+          style: AppTheme.bloomDisplay(
+            12,
+            FontWeight.w400,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
+          ),
+        ),
+      );
+    }
+
+    final evList = evidence ?? [];
+    if (evList.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'WHERE THIS CAME FROM',
+            style: AppTheme.bloomDisplay(
+              10,
+              FontWeight.w600,
+              letterSpacing: 0.1,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextTertiary
+                  : AppColorTokens.inkTertiary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          SelectableText(
+            rawSmsBody!,
+            style: AppTheme.bloomMono(12, FontWeight.w400),
+          ),
+        ],
+      );
+    }
+
+    // Sort evidence spans by start offset
+    final sorted = [...evList]..sort((a, b) => a.start.compareTo(b.start));
+    final spans = <InlineSpan>[];
+    var currentOffset = 0;
+    final textLength = rawSmsBody!.length;
+
+    for (final ev in sorted) {
+      if (ev.start < currentOffset || ev.start >= textLength) continue;
+      if (ev.start > currentOffset) {
+        spans.add(
+          TextSpan(
+            text: rawSmsBody!.substring(currentOffset, ev.start),
+          ),
+        );
+      }
+      final end = math.min(ev.end, textLength);
+      final verbatimText = rawSmsBody!.substring(ev.start, end);
+      final highlightColor = _highlightColorFor(ev.field, isDark);
+
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: highlightColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              verbatimText,
+              style: AppTheme.bloomMono(
+                12,
+                FontWeight.w600,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+          ),
+        ),
+      );
+      currentOffset = end;
+    }
+    if (currentOffset < textLength) {
+      spans.add(TextSpan(text: rawSmsBody!.substring(currentOffset)));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'WHERE THIS CAME FROM',
+          style: AppTheme.bloomDisplay(
+            10,
+            FontWeight.w600,
+            letterSpacing: 0.1,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        SelectableText.rich(
+          TextSpan(
+            children: spans,
+            style: AppTheme.bloomMono(12, FontWeight.w400),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Field evidence legend badges with parser & confidence per field
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            for (final ev in evList)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColorTokens.bloomDarkBase
+                      : const Color(0xFFEFEBFD),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${ev.field}: "${ev.verbatim}" (${ev.extractor}, ${(parseConfidence ?? 1.0) * 100 ~/ 1}%)',
+                  style: AppTheme.bloomMono(
+                    10,
+                    FontWeight.w500,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Color _highlightColorFor(String field, bool isDark) {
+    switch (field.toLowerCase()) {
+      case 'amount':
+        return isDark
+            ? AppColorTokens.emerald.withValues(alpha: 0.35)
+            : const Color(0xFFD1F4E0);
+      case 'direction':
+        return isDark
+            ? AppColorTokens.violetPrimary.withValues(alpha: 0.35)
+            : const Color(0xFFE2D9F3);
+      case 'date':
+      case 'ts':
+        return isDark
+            ? AppColorTokens.warningDark.withValues(alpha: 0.35)
+            : const Color(0xFFFBE6B5);
+      default:
+        return isDark
+            ? AppColorTokens.royalBlue.withValues(alpha: 0.35)
+            : const Color(0xFFD9EEF9);
+    }
+  }
 }

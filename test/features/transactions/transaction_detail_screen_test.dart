@@ -55,6 +55,7 @@ void main() {
         status: 'confirmed',
         isDeleted: false,
         isAnalyticsExcluded: false,
+        lifecycleState: 'settled',
         createdAt: now,
         updatedAt: now,
       ),
@@ -90,6 +91,22 @@ void main() {
 
       expect(find.textContaining('Channel: upi'), findsOneWidget);
       expect(find.textContaining('CONFIDENCE: 98%'), findsOneWidget);
+    });
+
+    testWidgets('T-148a: category row is a >=48dp control with correct semantics',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpDetail(tester, testDetail);
+
+      final inkWellFinder = find.ancestor(
+        of: find.text('CATEGORY'),
+        matching: find.byType(InkWell),
+      );
+      expect(inkWellFinder, findsOneWidget);
+
+      final Size size = tester.getSize(inkWellFinder);
+      expect(size.height, greaterThanOrEqualTo(48.0));
+      handle.dispose();
     });
   });
 }

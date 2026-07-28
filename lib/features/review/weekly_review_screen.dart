@@ -514,6 +514,7 @@ class _SortCard extends StatelessWidget {
           // Category Tile 52px
           BloomCategoryTile(
             categoryId: item.categoryId,
+            iconName: item.categoryIcon,
             size: 52,
             borderRadius: 18,
           ),
@@ -769,6 +770,7 @@ class _ReviewListRow extends StatelessWidget {
           children: [
             BloomCategoryTile(
               categoryId: item.categoryId,
+              iconName: item.categoryIcon,
               size: 36,
               borderRadius: 13,
             ),

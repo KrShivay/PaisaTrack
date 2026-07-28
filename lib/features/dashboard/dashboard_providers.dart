@@ -606,9 +606,10 @@ final recentTransactionsProvider = Provider<List<TransactionListItem>>((ref) {
 });
 
 final upcomingRecurringProvider = Provider<List<RecurringSery>>((ref) {
-  final series = ref.watch(recurringSeriesProvider).valueOrNull ?? const [];
-  final upcoming = series
-      .where((item) => item.status != 'inactive')
+  final items = ref.watch(recurringSeriesProvider).valueOrNull ?? const [];
+  final upcoming = items
+      .where((item) => item.series.status != 'inactive')
+      .map((item) => item.series)
       .toList(growable: false)
     ..sort((a, b) => a.nextExpectedDate.compareTo(b.nextExpectedDate));
   return upcoming.take(3).toList(growable: false);

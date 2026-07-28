@@ -23,7 +23,64 @@ abstract final class CategoryVisuals {
   static const fallbackColor = Color(0xFF94A3B8); // neutral slate
 
   /// Material icon for a seed `icon` identifier.
-  static IconData icon(String? name) => _icons[name] ?? fallbackIcon;
+  static IconData icon(String? name) => iconFor(iconName: name);
+
+  /// Resolves the Material icon for an explicit [iconName] or falls back to
+  /// the icon mapped from [categoryId].
+  static IconData iconFor({String? iconName, String? categoryId}) {
+    if (iconName != null && _icons.containsKey(iconName)) {
+      return _icons[iconName]!;
+    }
+    if (categoryId != null) {
+      final exact = _categoryDefaultIcons[categoryId];
+      if (exact != null) return exact;
+      for (final entry in _categoryIconPrefixes.entries) {
+        if (categoryId.startsWith(entry.key)) return entry.value;
+      }
+    }
+    return _icons[iconName] ?? fallbackIcon;
+  }
+
+  static const _categoryDefaultIcons = <String, IconData>{
+    'food_dining': Icons.restaurant,
+    'groceries': Icons.local_grocery_store,
+    'transport': Icons.directions_car,
+    'shopping': Icons.shopping_bag,
+    'bills_utilities': Icons.receipt_long,
+    'subscriptions': Icons.subscriptions,
+    'rent_housing': Icons.home,
+    'emi_loans': Icons.credit_card,
+    'health': Icons.local_hospital,
+    'education': Icons.school,
+    'entertainment': Icons.theaters,
+    'travel': Icons.flight,
+    'transfers': Icons.swap_horiz,
+    'income': Icons.payments,
+    'fees_charges': Icons.request_quote,
+    'cash_withdrawal': Icons.atm,
+    'investments': Icons.trending_up,
+    'other': Icons.category,
+  };
+
+  static const _categoryIconPrefixes = <String, IconData>{
+    'food_': Icons.restaurant,
+    'groceries_': Icons.local_grocery_store,
+    'transport_': Icons.directions_car,
+    'shopping_': Icons.shopping_bag,
+    'bills_': Icons.receipt_long,
+    'subscriptions_': Icons.subscriptions,
+    'rent_': Icons.home,
+    'emi_': Icons.credit_card,
+    'health_': Icons.local_hospital,
+    'education_': Icons.school,
+    'entertainment_': Icons.theaters,
+    'travel_': Icons.flight,
+    'transfers_': Icons.swap_horiz,
+    'income_': Icons.payments,
+    'fees_': Icons.request_quote,
+    'investments_': Icons.trending_up,
+    'other_': Icons.category,
+  };
 
   /// Fixed icon choices available to user-created categories.
   static const iconOptions = <CategoryIconOption>[

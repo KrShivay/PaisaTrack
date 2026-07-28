@@ -117,6 +117,7 @@ WHERE t.is_deleted = 0
   AND t.duplicate_of_txn_id IS NULL
   AND t.is_analytics_excluded = 0
   AND t.owned_transfer_id IS NULL
+  AND t.lifecycle_state = 'settled'
 ''',
       variables: [
         Variable.withInt(window.start.millisecondsSinceEpoch),
@@ -151,6 +152,8 @@ WHERE t.ts >= ? AND t.ts < ?
   AND t.duplicate_of_txn_id IS NULL
   AND t.is_analytics_excluded = 0
   AND t.owned_transfer_id IS NULL
+  AND t.lifecycle_state = 'settled'
+  AND (t.merchant_raw IS NULL OR (UPPER(t.merchant_raw) NOT LIKE '%CREDIT CARD%' AND UPPER(t.merchant_raw) NOT LIKE '%CARD BILL%' AND UPPER(t.merchant_raw) NOT LIKE '%ATM%'))
 GROUP BY t.category_id, c.name, c.icon
 ORDER BY total DESC, name ASC
 ''',
@@ -189,6 +192,7 @@ WHERE t.ts >= ? AND t.ts < ?
   AND t.duplicate_of_txn_id IS NULL
   AND t.is_analytics_excluded = 0
   AND t.owned_transfer_id IS NULL
+  AND t.lifecycle_state = 'settled'
 GROUP BY name
 ORDER BY total DESC, name ASC
 LIMIT 5
@@ -229,6 +233,7 @@ WHERE t.ts >= ? AND t.ts < ?
   AND t.duplicate_of_txn_id IS NULL
   AND t.is_analytics_excluded = 0
   AND t.owned_transfer_id IS NULL
+  AND t.lifecycle_state = 'settled'
 GROUP BY month_key
 ''',
       variables: [

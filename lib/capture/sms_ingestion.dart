@@ -11,6 +11,7 @@ import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
+import '../data/repositories/expected_event_repository.dart';
 import '../data/repositories/rule_repository.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
@@ -19,10 +20,12 @@ import '../features/settings/app_settings.dart';
 import '../intelligence/llm/llm_runtime.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
-import 'llm_extractor.dart';
+import 'llm_field_locator.dart';
+import 'message_kind_classifier.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
+import 'span_verifier.dart';
 import 'template_engine/template_matcher.dart';
 import 'template_engine/template_registry.dart';
 import 'template_engine/template_trust_ledger.dart';
@@ -56,7 +59,7 @@ final templateMatcherProvider = FutureProvider<TemplateMatcher>((ref) async {
 final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
   return ParserCascade(
     templateMatcher: await ref.watch(templateMatcherProvider.future),
-    llmExtractor: LlmExtractor(ref.watch(llmRuntimeProvider)),
+    llmFieldLocator: LlmFieldLocator(ref.watch(llmRuntimeProvider)),
   );
 });
 
@@ -91,6 +94,15 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
     askDailyBudgetResolver: () =>
         ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
         AppConstants.askNowDailyBudget,
+    isCapturePausedResolver: () =>
+        ref.read(appSettingsControllerProvider).valueOrNull?.isCapturePaused ??
+        false,
+    isSenderPausedResolver: (sender) {
+      final paused =
+          ref.read(appSettingsControllerProvider).valueOrNull?.pausedSenders ??
+              [];
+      return paused.contains(sender.trim().toUpperCase());
+    },
   );
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),
@@ -137,51 +149,52 @@ class SmsIngestor {
     MerchantResolver? merchantResolver,
     int askDailyBudget = AppConstants.askNowDailyBudget,
     int Function()? askDailyBudgetResolver,
+    bool Function()? isCapturePausedResolver,
+    bool Function(String sender)? isSenderPausedResolver,
     DecisionStatus? fixedStatus,
     Set<String>? knownTransactionIds,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
+    MessageKindClassifier? messageKindClassifier,
+    ExpectedEventRepository? expectedEventRepository,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
         _merchantResolver = merchantResolver,
         _askDailyBudget = askDailyBudgetResolver ?? (() => askDailyBudget),
+        _isCapturePaused = isCapturePausedResolver,
+        _isSenderPaused = isSenderPausedResolver,
         _fixedStatus = fixedStatus,
         _knownTransactionIds = knownTransactionIds,
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
+        _messageKindClassifier = messageKindClassifier,
+        _expectedEventRepository = expectedEventRepository ?? ExpectedEventRepository(database),
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
   final ParserCascade _parser;
-
-  /// Categorizer ladder (T-039). Nullable so capture-focused tests can run
-  /// without one; production wiring always supplies it.
   final Categorizer? _categorizer;
   final MerchantResolver? _merchantResolver;
-
-  /// Resolves the daily ask budget at decision time, so a Settings change
-  /// applies to the next ingest without rebuilding the capture pipeline
-  /// (see smsCaptureBootstrapProvider).
   final int Function() _askDailyBudget;
+  final bool Function()? _isCapturePaused;
+  final bool Function(String sender)? _isSenderPaused;
   final DecisionStatus? _fixedStatus;
   final Set<String>? _knownTransactionIds;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
+  final MessageKindClassifier? _messageKindClassifier;
+  final ExpectedEventRepository _expectedEventRepository;
   final DateTime Function() _now;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
   Future<void> ingest(RawSms sms) async {
+    if (_isCapturePaused?.call() == true) return;
+    if (_isSenderPaused?.call(sms.sender) == true) return;
     final transactionId = 'txn_${sms.id}';
     if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     await _database.transaction(() async {
-      // Inbox re-import is intentionally non-destructive. A deterministic SMS
-      // id maps to a deterministic transaction id, so an existing row may
-      // contain user edits, confirmation state, or a user deletion that must
-      // never be overwritten by a newer parser/categorizer result. Check this
-      // before the raw upsert so re-import also does not resurrect bodies that
-      // the retention job already purged.
       final existingTransaction = await (_database.select(
         _database.transactions,
       )..where((row) => row.id.equals(transactionId)))
@@ -200,6 +213,57 @@ class SmsIngestor {
             ),
           );
 
+      final kind = _messageKindClassifier?.classify(sms.body) ?? MessageKind.settledDebit;
+
+      if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
+        final parseResult = await _parser.parse(sms);
+        int amountPaise = 0;
+        int? amountLowPaise;
+        int? amountHighPaise;
+        String label = sms.sender;
+        String? counterpartyId;
+
+        if (parseResult is Ok<NormalizedTransactionRecord, ParseFailure>) {
+          amountPaise = (parseResult.value.amount * 100).round();
+          label = parseResult.value.merchantRaw ?? sms.sender;
+          counterpartyId = parseResult.value.counterpartyVpa;
+        } else {
+          final amtMatch = RegExp(r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)', caseSensitive: false).firstMatch(sms.body);
+          if (amtMatch != null) {
+            final amt = double.tryParse(amtMatch.group(1)!) ?? 0.0;
+            amountPaise = (amt * 100).round();
+          }
+          final rangeMatch = RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false).firstMatch(sms.body);
+          if (rangeMatch != null) {
+            amountLowPaise = (double.parse(rangeMatch.group(1)!) * 100).round();
+            amountHighPaise = (double.parse(rangeMatch.group(2)!) * 100).round();
+          }
+        }
+
+        await _expectedEventRepository.recordExpectedEvent(
+          source: 'sms_${kind.name}',
+          originSmsId: sms.id,
+          counterpartyId: counterpartyId,
+          label: label,
+          expectedAmountPaise: amountPaise,
+          amountLowPaise: amountLowPaise,
+          amountHighPaise: amountHighPaise,
+          expectedDate: sms.receivedAt,
+          confidence: 0.95,
+        );
+
+        await _markRawSmsProcessed(sms.id, processed: true);
+        return;
+      }
+
+      final (lifecycleState, lifecycleReason) = switch (kind) {
+        MessageKind.settledDebit || MessageKind.settledCredit => ('settled', null),
+        MessageKind.pendingAuth => ('pending', 'authorized'),
+        MessageKind.failed => ('failed', 'declined'),
+        MessageKind.reversal => ('reversed', 'refund_or_reversal'),
+        _ => ('settled', null),
+      };
+
       final parseResult = await _parser.parse(sms);
       switch (parseResult) {
         case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
@@ -209,9 +273,7 @@ class SmsIngestor {
             value,
             merchantEmbedding: merchant?.embedding,
           );
-          // Suppressed echoes never surface to the user, so they must not
-          // enter the ask flow or consume ask budget — keep them 'auto'.
-          final status = duplicateOfTxnId != null
+          final initialStatus = duplicateOfTxnId != null
               ? DecisionStatus.auto
               : _fixedStatus ??
                   (merchant?.needsReview == true
@@ -220,6 +282,11 @@ class SmsIngestor {
                           value,
                           categorization: categorization,
                         ));
+          final status = SpanVerifier.enforceWriteGuard(
+            body: sms.body,
+            record: value,
+            requestedStatus: initialStatus,
+          );
           await _database.into(_database.transactions).insertOnConflictUpdate(
                 _transactionCompanionFor(
                   smsId: sms.id,
@@ -228,8 +295,23 @@ class SmsIngestor {
                   categorization: categorization,
                   merchant: merchant,
                   status: status,
+                  messageKind: kind,
+                  lifecycleState: lifecycleState,
+                  lifecycleReason: lifecycleReason,
                 ),
               );
+          if (duplicateOfTxnId != null) {
+            await _database.into(_database.transactionLinks).insertOnConflictUpdate(
+                  TransactionLinksCompanion.insert(
+                    id: 'link_${sms.id}_$duplicateOfTxnId',
+                    fromTxnId: 'txn_${sms.id}',
+                    toTxnId: duplicateOfTxnId,
+                    linkType: 'echo',
+                    basis: 'duplicate_suppressor',
+                    createdAt: DateTime.now().toUtc().millisecondsSinceEpoch,
+                  ),
+                );
+          }
           if (categorization?.ruleId != null) {
             await RuleRepository(_database)
                 .incrementHitCount(categorization!.ruleId!);
@@ -416,6 +498,9 @@ class SmsIngestor {
     required NormalizedTransactionRecord record,
     required String? duplicateOfTxnId,
     required DecisionStatus status,
+    required MessageKind messageKind,
+    required String lifecycleState,
+    String? lifecycleReason,
     CategorizationResult? categorization,
     MerchantResolution? merchant,
   }) {
@@ -464,6 +549,9 @@ class SmsIngestor {
             ? jsonEncode(record.evidence!.map((e) => e.toJson()).toList())
             : null,
       ),
+      lifecycleState: Value(lifecycleState),
+      lifecycleReason: Value(lifecycleReason),
+      messageKind: Value(messageKind.wireName),
       createdAt: timestamp,
       updatedAt: timestamp,
     );

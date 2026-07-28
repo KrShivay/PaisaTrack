@@ -614,6 +614,7 @@ class _DismissibleTransactionRow extends StatelessWidget {
             children: [
               BloomCategoryTile(
                 categoryId: item.categoryId,
+                iconName: item.categoryIcon,
                 size: 36,
                 borderRadius: 13,
               ),

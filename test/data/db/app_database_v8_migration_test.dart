@@ -23,7 +23,7 @@ void main() {
     expect(repo.parseEvidenceOf(txn), isNull);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data['user_version'], 8);
+    expect(version.data['user_version'], greaterThanOrEqualTo(8));
   });
 }
 

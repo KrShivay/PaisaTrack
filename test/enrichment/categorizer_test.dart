@@ -170,13 +170,13 @@ void main() {
     });
 
     test('classifier uses the winning category adaptive threshold', () async {
-      const model = ClassifierModel(
-        categories: ['food_dining', 'shopping'],
+      final model = ClassifierModel(
+        categories: const ['food_dining', 'shopping'],
         weights: [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
+          List.filled(LocalClassifier.defaultFeatureCount, 0.0),
+          List.filled(LocalClassifier.defaultFeatureCount, 0.0),
         ],
-        biases: [2, 0],
+        biases: const [2, 0],
       );
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(

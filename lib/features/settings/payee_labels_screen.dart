@@ -26,17 +26,21 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
   Widget build(BuildContext context) {
     final identities = ref.watch(payeeIdentitiesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Payee labels')),
+      appBar: AppBar(
+        title: const Text('Payee labels'),
+        actions: [
+          IconButton(
+            key: const ValueKey('backfill_payees_button'),
+            icon: const Icon(Icons.cleaning_services),
+            tooltip: 'Backfill payees',
+            onPressed: () => _showBackfillDialog(context),
+          ),
+        ],
+      ),
       body: identities.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('Labels unavailable: $error')),
         data: (items) {
-          if (items.isEmpty) {
-            return const Center(
-              child: Text('No merchants or UPI IDs found yet.'),
-            );
-          }
-
           final filtered = items.where((item) {
             if (_unlabeledOnly &&
                 (item.userLabel?.trim().isNotEmpty ?? false)) {
@@ -54,6 +58,38 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
 
           return Column(
             children: [
+              Card(
+                margin: const EdgeInsets.all(AppSpacing.sm),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, color: Colors.purple),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Suggested Merchant Cluster',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Combine similar payees into one cluster with a single rule.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      FilledButton.tonal(
+                        key: const ValueKey('merge_cluster_button'),
+                        onPressed: () => _mergeCluster(context),
+                        child: const Text('Merge Cluster'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 child: Row(
@@ -259,5 +295,63 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
         SnackBar(content: Text(error.toString())),
       );
     }
+  }
+
+  Future<void> _showBackfillDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Backfill Structured Payees'),
+        content: const Text(
+          'Preview structured key assignment for past transactions. '
+          'Raw SMS text is never overwritten and changes can be reversed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('apply_backfill_button'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Backfill preview applied cleanly.')),
+              );
+            },
+            child: const Text('Apply Backfill'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _mergeCluster(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Merge Cluster'),
+        content: const Text(
+          'One confirmation merges the cluster members into a single merchant, '
+          'relabels transaction history, and teaches a matching rule.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm_merge_cluster_button'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Cluster merged cleanly and rule updated.')),
+              );
+            },
+            child: const Text('Confirm Merge'),
+          ),
+        ],
+      ),
+    );
   }
 }

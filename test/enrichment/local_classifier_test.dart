@@ -98,7 +98,8 @@ void main() {
         Float32List.fromList([0.5, -0.5]),
         embeddingDimensions: 5,
       );
-      expect(values, hasLength(9));
+      final nonEmbeddingCount = 4 + TransactionChannel.values.length + 3;
+      expect(values, hasLength(5 + nonEmbeddingCount));
       expect(values.sublist(0, 5), [0.5, -0.5, 0, 0, 0]);
     });
 
@@ -108,8 +109,9 @@ void main() {
         Float32List.fromList([1, 2, 3, 4]),
         embeddingDimensions: 2,
       );
+      final nonEmbeddingCount = 4 + TransactionChannel.values.length + 3;
       expect(values.sublist(0, 2), [1, 2]);
-      expect(values, hasLength(6));
+      expect(values, hasLength(2 + nonEmbeddingCount));
     });
 
     test('null embedding fills the embedding slots with zero', () {
@@ -118,22 +120,19 @@ void main() {
       expect(values.sublist(0, 3), [0, 0, 0]);
     });
 
-    test('trailing four features are log-amount, hour, dow, channel bands', () {
+    test('features layout includes one-hot channel, merchant features, and round amount', () {
       final ts = DateTime.utc(2026, 7, 7, 12); // Tuesday
       final record = _record(
-        amount: 99,
+        amount: 100,
         ts: ts,
         channel: TransactionChannel.card,
       );
       final values =
           LocalClassifier.features(record, null, embeddingDimensions: 0);
-      final local = ts.toLocal();
-      expect(values, [
-        log(100) / 16,
-        local.hour / 23,
-        local.weekday / 7,
-        TransactionChannel.card.index / (TransactionChannel.values.length - 1),
-      ]);
+      expect(values, hasLength(4 + TransactionChannel.values.length + 3));
+      expect(values[0], log(101) / 16);
+      expect(values[3 + TransactionChannel.card.index], 1.0);
+      expect(values.last, 1.0); // isRound = 1.0 for 100
     });
   });
 
@@ -202,13 +201,13 @@ void main() {
     test('picks the highest-scoring category via softmax', () async {
       // Zero feature weights so only the bias decides: food_dining wins
       // regardless of the input record's feature values.
-      const model = ClassifierModel(
-        categories: ['food_dining', 'shopping'],
+      final model = ClassifierModel(
+        categories: const ['food_dining', 'shopping'],
         weights: [
-          [0.0, 0.0, 0.0, 0.0],
-          [0.0, 0.0, 0.0, 0.0],
+          List.filled(LocalClassifier.defaultFeatureCount, 0.0),
+          List.filled(LocalClassifier.defaultFeatureCount, 0.0),
         ],
-        biases: [5.0, 0.0],
+        biases: const [5.0, 0.0],
       );
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
@@ -247,6 +246,27 @@ void main() {
       final classifier = LocalClassifier(database);
       // featureCount = 3 -> embeddingDimensions = max(0, 3-4) = 0 -> 4
       // features produced, which mismatches the 3-wide weight rows.
+      expect(await classifier.predict(_record()), isNull);
+    });
+
+    test('older model trained against old feature count (20) returns null without crashing', () async {
+      // 20-feature model from old 16 embedding + 4 features schema
+      const model = ClassifierModel(
+        categories: ['food_dining', 'shopping'],
+        weights: [
+          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+        ],
+        biases: [0.5, 0.5],
+      );
+      await database.into(database.modelMeta).insertOnConflictUpdate(
+            ModelMetaCompanion.insert(
+              key: classifierModelMetaKey,
+              value: model.toJson(),
+            ),
+          );
+      final classifier = LocalClassifier(database);
+      // Predict cleanly returns null instead of throwing an exception
       expect(await classifier.predict(_record()), isNull);
     });
   });

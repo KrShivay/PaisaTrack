@@ -170,6 +170,80 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
+            // SMS Capture & Privacy Controls Section (T-144b)
+            _SettingsSection(
+              title: 'SMS CAPTURE & PRIVACY CONTROLS',
+              isDark: isDark,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Pause All SMS Capture',
+                      style: AppTheme.bloomDisplay(
+                        14,
+                        FontWeight.w600,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextPrimary
+                            : AppColorTokens.ink,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Temporarily stop automatic parsing of incoming bank & UPI texts',
+                      style: AppTheme.bloomDisplay(
+                        12,
+                        FontWeight.w400,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                    value: settings.isCapturePaused,
+                    activeThumbColor: AppColorTokens.violetPrimary,
+                    onChanged: (val) {
+                      ref
+                          .read(appSettingsControllerProvider.notifier)
+                          .setCapturePaused(val);
+                    },
+                  ),
+                  if (settings.pausedSenders.isNotEmpty) ...[
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    Text(
+                      'PAUSED SENDER IDS',
+                      style: AppTheme.bloomDisplay(
+                        11,
+                        FontWeight.w600,
+                        letterSpacing: 0.1,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        for (final sender in settings.pausedSenders)
+                          Chip(
+                            label: Text(sender),
+                            deleteIcon: const Icon(Icons.close, size: 14),
+                            onDeleted: () {
+                              ref
+                                  .read(appSettingsControllerProvider.notifier)
+                                  .setSenderPaused(sender, false);
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Categories & Learning Section
             _SettingsSection(
               title: 'CATEGORIES & LEARNING',

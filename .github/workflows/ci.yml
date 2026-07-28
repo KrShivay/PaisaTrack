@@ -48,5 +48,7 @@ jobs:
             git diff -- '*.g.dart'
             exit 1
           fi
+      - name: Verify Manifest Scope (Play SMS Exception Guard)
+        run: bash scripts/check_manifest_scope.sh
       - run: flutter analyze
       - run: flutter test

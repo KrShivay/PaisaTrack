@@ -70,16 +70,16 @@ void main() {
     await database.into(database.baselines).insert(
           BaselinesCompanion.insert(
             key: 'cat:shopping:week',
-            mean: 100,
-            std: 10,
+            mean: 400,
+            std: 40,
             n: 8,
             updatedAt: DateTime.utc(2026, 6, 29),
           ),
         );
-    await txn('largest', 60);
-    await txn('second', 40);
-    await txn('third', 20);
-    await txn('fourth', 10);
+    await txn('largest', 300);
+    await txn('second', 200);
+    await txn('third', 100);
+    await txn('fourth', 50);
 
     final flags =
         await AnomalyDetector(database).run(today: DateTime.utc(2026, 7, 8));
@@ -87,11 +87,11 @@ void main() {
     expect(flags, 1);
     final insight = await database.select(database.insights).getSingle();
     final payload = jsonDecode(insight.payloadJson) as Map<String, Object?>;
-    expect(payload['aggregate'], 130);
-    expect(payload['threshold'], 125);
+    expect(payload['aggregate'], 650);
+    expect(payload['threshold'], 500);
     expect(payload['top_transaction_ids'], ['largest', 'second', 'third']);
     final baseline = await database.select(database.baselines).getSingle();
     expect(baseline.n, 9);
-    expect(baseline.mean, closeTo(103.333, 0.001));
+    expect(baseline.mean, closeTo(427.777, 0.001));
   });
 }
