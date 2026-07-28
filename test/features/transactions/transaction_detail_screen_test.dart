@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,6 +117,72 @@ void main() {
       expect(find.text('CATEGORY'), findsOneWidget);
       expect(find.text('Food & Dining'), findsOneWidget); // Selected chip
       expect(find.text('More…'), findsOneWidget);
+    });
+
+    testWidgets('T-147b: renders Parsed locally badge and parser name for template source',
+        (tester) async {
+      final templateDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(
+          id: 'txn_tmpl_147b',
+          smsId: const Value('sms_001'),
+          parseSource: 'template',
+        ),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: 0.99,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: 'Paid Rs 449 to Swiggy on A/c XX1234',
+      );
+
+      await pumpDetail(tester, templateDetail);
+
+      expect(find.text('Parsed locally'), findsOneWidget);
+      expect(find.text('Template match · 99%'), findsOneWidget);
+    });
+
+    testWidgets('T-147b: renders Parsed locally badge and parser name for generic source',
+        (tester) async {
+      final genericDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(
+          id: 'txn_gen_147b',
+          smsId: const Value('sms_002'),
+          parseSource: 'generic',
+        ),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: 0.85,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: 'Rs 100 paid to Cafe',
+      );
+
+      await pumpDetail(tester, genericDetail);
+
+      expect(find.text('Parsed locally'), findsOneWidget);
+      expect(find.text('Pattern match · 85%'), findsOneWidget);
+    });
+
+    testWidgets('T-147b: renders Parsed locally badge and parser name for LLM source',
+        (tester) async {
+      final llmDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(
+          id: 'txn_llm_147b',
+          smsId: const Value('sms_003'),
+          parseSource: 'llm',
+        ),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: 0.92,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: 'Debited Rs 500 at Uber',
+      );
+
+      await pumpDetail(tester, llmDetail);
+
+      expect(find.text('Parsed locally'), findsOneWidget);
+      expect(find.text('AI model · 92%'), findsOneWidget);
     });
   });
 }

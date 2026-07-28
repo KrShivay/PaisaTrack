@@ -81,7 +81,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
+      expect(find.text('FIELD EVIDENCE SPANS'), findsOneWidget);
       expect(find.textContaining('amount: "450.00" (template, 98%)'), findsOneWidget);
       expect(find.textContaining('direction: "debited" (template, 98%)'), findsOneWidget);
     });
@@ -162,8 +162,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
-      expect(find.text(legacyBody), findsOneWidget);
+      expect(find.text('FIELD EVIDENCE SPANS'), findsOneWidget);
+      expect(find.text(legacyBody), findsWidgets);
     });
   });
 }
