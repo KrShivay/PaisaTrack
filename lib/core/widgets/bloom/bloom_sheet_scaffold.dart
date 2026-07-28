@@ -74,6 +74,7 @@ class BloomSheetScaffold extends StatelessWidget {
                   if (showBack)
                     IconButton(
                       icon: const Icon(Icons.arrow_back),
+                      tooltip: 'Back',
                       onPressed:
                           onBack ?? () => Navigator.of(context).maybePop(),
                     ),
@@ -96,6 +97,7 @@ class BloomSheetScaffold extends StatelessWidget {
                   if (showClose)
                     IconButton(
                       icon: const Icon(Icons.close),
+                      tooltip: 'Close',
                       onPressed:
                           onClose ?? () => Navigator.of(context).maybePop(),
                     ),
