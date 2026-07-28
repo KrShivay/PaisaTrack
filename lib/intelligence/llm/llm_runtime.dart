@@ -221,8 +221,6 @@ class PlatformLlmRuntime extends LlmRuntime {
           : LlmModelStatus.fromMap(result);
     } on PlatformException {
       return LlmModelStatus.unavailable;
-    } on MissingPluginException {
-      return LlmModelStatus.unavailable;
     }
   }
 
@@ -245,8 +243,6 @@ class PlatformLlmRuntime extends LlmRuntime {
       );
     } on PlatformException catch (error) {
       return LlmOperationResult(success: false, code: error.code);
-    } on MissingPluginException {
-      return const LlmOperationResult(success: false, code: 'missing_plugin');
     }
   }
 
@@ -255,8 +251,6 @@ class PlatformLlmRuntime extends LlmRuntime {
       final res = await _channel.invokeMethod<Object?>(method);
       return res == true;
     } on PlatformException {
-      return false;
-    } on MissingPluginException {
       return false;
     }
   }
