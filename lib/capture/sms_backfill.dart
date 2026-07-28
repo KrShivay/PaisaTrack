@@ -91,20 +91,25 @@ class PlatformSmsInboxReader implements SmsInboxReader {
       throw const FormatException('Invalid SMS inbox messages payload');
     }
     final hasMore = response['hasMore'] == true;
-    final nextEpoch = response['nextBeforeEpochMillis'];
-    final nextId = response['nextBeforeId'];
-    if (hasMore && (nextEpoch is! int || nextId is! int)) {
-      throw const FormatException('Invalid SMS inbox cursor payload');
+    SmsInboxCursor? nextCursor;
+    if (hasMore) {
+      if (response
+          case {
+            'nextBeforeEpochMillis': final int nextEpoch,
+            'nextBeforeId': final int nextId,
+          }) {
+        nextCursor = SmsInboxCursor(
+          beforeEpochMillis: nextEpoch,
+          beforeId: nextId,
+        );
+      } else {
+        throw const FormatException('Invalid SMS inbox cursor payload');
+      }
     }
 
     return SmsInboxPage(
       messages: payloads.map(decodeRawSmsPayload).toList(growable: false),
-      nextCursor: hasMore
-          ? SmsInboxCursor(
-              beforeEpochMillis: nextEpoch as int,
-              beforeId: nextId as int,
-            )
-          : null,
+      nextCursor: nextCursor,
     );
   }
 }
