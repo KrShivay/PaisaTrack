@@ -73,8 +73,8 @@ class BloomSheetScaffold extends StatelessWidget {
                 children: [
                   if (showBack)
                     IconButton(
-                      icon: const Icon(Icons.arrow_back),
                       tooltip: 'Back',
+                      icon: const Icon(Icons.arrow_back),
                       onPressed:
                           onBack ?? () => Navigator.of(context).maybePop(),
                     ),
@@ -96,8 +96,8 @@ class BloomSheetScaffold extends StatelessWidget {
                   if (actions != null) ...actions!,
                   if (showClose)
                     IconButton(
-                      icon: const Icon(Icons.close),
                       tooltip: 'Close',
+                      icon: const Icon(Icons.close),
                       onPressed:
                           onClose ?? () => Navigator.of(context).maybePop(),
                     ),
