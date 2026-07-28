@@ -39,12 +39,10 @@ class BloomSheetScaffold extends StatelessWidget {
     final handleColor =
         isDark ? AppColorTokens.bloomDarkOutline : const Color(0xFFDED8F5);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.bloomSheet),
-        ),
+    return Material(
+      color: bg,
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(AppRadius.bloomSheet),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
