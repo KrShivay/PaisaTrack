@@ -37,57 +37,41 @@ class PlatformEmbedder implements Embedder {
 
   final MethodChannel _channel;
 
+  Future<T?> _invoke<T>(String method, [dynamic arguments]) async {
+    try {
+      return await _channel.invokeMethod<T>(method, arguments);
+    } on Exception catch (e) {
+      if (e is PlatformException || e is MissingPluginException) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
   @override
   Future<Float32List?> embed(String text) async {
     final normalized = text.trim();
     if (normalized.isEmpty) return null;
-    try {
-      final raw = await _channel.invokeMethod<Object?>('embed', {
-        'text': normalized,
-      });
-      final vector = _asFloat32List(raw);
-      if (vector == null || vector.isEmpty) return null;
-      return vector;
-    } on PlatformException {
-      // Model missing/corrupt or native failure: fall back, never block.
-      return null;
-    } on MissingPluginException {
-      // Host without the native side (e.g. widget tests): no-op.
-      return null;
-    }
+
+    final raw = await _invoke<Object?>('embed', {'text': normalized});
+    final vector = _asFloat32List(raw);
+    if (vector == null || vector.isEmpty) return null;
+    return vector;
   }
 
   @override
   Future<bool> isModelAvailable() async {
-    try {
-      return await _channel.invokeMethod<bool>('isModelAvailable') ?? false;
-    } on PlatformException {
-      return false;
-    } on MissingPluginException {
-      return false;
-    }
+    return await _invoke<bool>('isModelAvailable') ?? false;
   }
 
   @override
   Future<bool> downloadModel() async {
-    try {
-      return await _channel.invokeMethod<bool>('downloadModel') ?? false;
-    } on PlatformException {
-      return false;
-    } on MissingPluginException {
-      return false;
-    }
+    return await _invoke<bool>('downloadModel') ?? false;
   }
 
   @override
   Future<bool> deleteModel() async {
-    try {
-      return await _channel.invokeMethod<bool>('deleteModel') ?? false;
-    } on PlatformException {
-      return false;
-    } on MissingPluginException {
-      return false;
-    }
+    return await _invoke<bool>('deleteModel') ?? false;
   }
 
   /// The channel codec surfaces the native DoubleArray as a [Float64List]
