@@ -71,3 +71,7 @@ is fully offline: prompts and responses never leave the phone. Extraction
 prompts may contain the raw SMS text needed to parse a transaction, but that
 text is passed only to the on-device model. The model download request contains
 no SMS, transaction, account, or other user data.
+
+## Raw SMS Provenance & App Lock (T-147b)
+
+The raw SMS provenance section ("WHERE THIS CAME FROM") in transaction details displays the raw message body (the most sensitive string in the app). It is strictly excluded from home widgets (T-091) and covered by app lock (T-090).

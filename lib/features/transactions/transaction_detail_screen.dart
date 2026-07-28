@@ -640,10 +640,12 @@ class _TransactionDetailScreenState
                       },
                     ),
                   ),
-                  // WHERE THIS CAME FROM (T-147a) - First-class source message section
+                  // WHERE THIS CAME FROM (T-147a & T-147b) - First-class source message section
                   if (txn.smsId != null) ...[
                     _WhereThisCameFromSection(
                       rawSmsBody: detail.rawSmsBody,
+                      parseSource: txn.parseSource,
+                      parseConfidence: detail.parseConfidence,
                       isDark: isDark,
                     ),
                     const SizedBox(height: 20),
@@ -1147,10 +1149,14 @@ class _MoreCategoryChip extends StatelessWidget {
 class _WhereThisCameFromSection extends StatelessWidget {
   const _WhereThisCameFromSection({
     required this.rawSmsBody,
+    this.parseSource,
+    this.parseConfidence,
     required this.isDark,
   });
 
   final String? rawSmsBody;
+  final String? parseSource;
+  final double? parseConfidence;
   final bool isDark;
 
   @override
@@ -1163,6 +1169,24 @@ class _WhereThisCameFromSection extends StatelessWidget {
 
     final displayBody = rawSmsBody ??
         'Original message no longer stored — kept for 30 days';
+
+    final parserDisplay = switch (parseSource) {
+      'template' => 'Template match',
+      'generic' => 'Pattern match',
+      'llm' => 'AI model',
+      'manual' => 'Manual entry',
+      final src? => src,
+      null => 'Parsed',
+    };
+
+    final confidencePct = parseConfidence != null
+        ? '${(parseConfidence! * 100).toStringAsFixed(0)}%'
+        : null;
+
+    final infoLine = confidencePct != null
+        ? '$parserDisplay · $confidencePct'
+        : parserDisplay;
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1187,13 +1211,65 @@ class _WhereThisCameFromSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: border, width: 1),
           ),
-          child: Text(
-            displayBody,
-            style: AppTheme.bloomMono(
-              11,
-              FontWeight.w400,
-              color: textColor,
-            ).copyWith(height: 1.6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayBody,
+                style: AppTheme.bloomMono(
+                  11,
+                  FontWeight.w400,
+                  color: textColor,
+                ).copyWith(height: 1.6),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    height: 24,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0E7A56),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.security_rounded,
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Parsed locally',
+                          style: AppTheme.bloomDisplay(
+                            11,
+                            FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      infoLine,
+                      style: AppTheme.bloomMono(
+                        11,
+                        FontWeight.w500,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextSecondary
+                            : AppColorTokens.inkSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ],
