@@ -10,6 +10,7 @@ import 'tables/baselines_table.dart';
 import 'tables/categories_table.dart';
 import 'tables/counterparties_table.dart';
 import 'tables/expected_events_table.dart';
+import 'tables/feature_flags_table.dart';
 import 'tables/feedback_table.dart';
 import 'tables/financial_events_table.dart';
 import 'tables/insights_table.dart';
@@ -35,6 +36,7 @@ part 'database.g.dart';
     Categories,
     Counterparties,
     ExpectedEvents,
+    FeatureFlags,
     Feedback,
     FinancialEvents,
     Insights,
@@ -77,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -163,6 +165,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 12) {
           await migrator.createTable(expectedEvents);
+        }
+        if (from < 13) {
+          await migrator.createTable(featureFlags);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

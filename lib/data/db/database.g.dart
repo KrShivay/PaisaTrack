@@ -1940,6 +1940,230 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
   }
 }
 
+class $FeatureFlagsTable extends FeatureFlags
+    with TableInfo<$FeatureFlagsTable, FeatureFlag> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FeatureFlagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+      'key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+      'value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [key, value, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'feature_flags';
+  @override
+  VerificationContext validateIntegrity(Insertable<FeatureFlag> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+          _valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  FeatureFlag map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FeatureFlag(
+      key: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      value: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}value'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+    );
+  }
+
+  @override
+  $FeatureFlagsTable createAlias(String alias) {
+    return $FeatureFlagsTable(attachedDatabase, alias);
+  }
+}
+
+class FeatureFlag extends DataClass implements Insertable<FeatureFlag> {
+  final String key;
+  final String value;
+  final DateTime? updatedAt;
+  const FeatureFlag({required this.key, required this.value, this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    return map;
+  }
+
+  FeatureFlagsCompanion toCompanion(bool nullToAbsent) {
+    return FeatureFlagsCompanion(
+      key: Value(key),
+      value: Value(value),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory FeatureFlag.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FeatureFlag(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+    };
+  }
+
+  FeatureFlag copyWith(
+          {String? key,
+          String? value,
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
+      FeatureFlag(
+        key: key ?? this.key,
+        value: value ?? this.value,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('FeatureFlag(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FeatureFlag &&
+          other.key == this.key &&
+          other.value == this.value &&
+          other.updatedAt == this.updatedAt);
+}
+
+class FeatureFlagsCompanion extends UpdateCompanion<FeatureFlag> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<DateTime?> updatedAt;
+  final Value<int> rowid;
+  const FeatureFlagsCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FeatureFlagsCompanion.insert({
+    required String key,
+    required String value,
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        value = Value(value);
+  static Insertable<FeatureFlag> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FeatureFlagsCompanion copyWith(
+      {Value<String>? key,
+      Value<String>? value,
+      Value<DateTime?>? updatedAt,
+      Value<int>? rowid}) {
+    return FeatureFlagsCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeatureFlagsCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PaymentSourcesTable extends PaymentSources
     with TableInfo<$PaymentSourcesTable, PaymentSource> {
   @override
@@ -7623,6 +7847,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $CounterpartiesTable counterparties = $CounterpartiesTable(this);
   late final $ExpectedEventsTable expectedEvents = $ExpectedEventsTable(this);
+  late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
   late final $PaymentSourcesTable paymentSources = $PaymentSourcesTable(this);
   late final $MerchantsTable merchants = $MerchantsTable(this);
   late final $RawSmsTable rawSms = $RawSmsTable(this);
@@ -7680,6 +7905,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         categories,
         counterparties,
         expectedEvents,
+        featureFlags,
         paymentSources,
         merchants,
         rawSms,
@@ -8601,6 +8827,117 @@ class $$ExpectedEventsTableOrderingComposer
 
   ColumnOrderings<String> get dedupKey => $state.composableBuilder(
       column: $state.table.dedupKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
+typedef $$FeatureFlagsTableInsertCompanionBuilder = FeatureFlagsCompanion
+    Function({
+  required String key,
+  required String value,
+  Value<DateTime?> updatedAt,
+  Value<int> rowid,
+});
+typedef $$FeatureFlagsTableUpdateCompanionBuilder = FeatureFlagsCompanion
+    Function({
+  Value<String> key,
+  Value<String> value,
+  Value<DateTime?> updatedAt,
+  Value<int> rowid,
+});
+
+class $$FeatureFlagsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $FeatureFlagsTable,
+    FeatureFlag,
+    $$FeatureFlagsTableFilterComposer,
+    $$FeatureFlagsTableOrderingComposer,
+    $$FeatureFlagsTableProcessedTableManager,
+    $$FeatureFlagsTableInsertCompanionBuilder,
+    $$FeatureFlagsTableUpdateCompanionBuilder> {
+  $$FeatureFlagsTableTableManager(_$AppDatabase db, $FeatureFlagsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$FeatureFlagsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$FeatureFlagsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$FeatureFlagsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FeatureFlagsCompanion(
+            key: key,
+            value: value,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String key,
+            required String value,
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FeatureFlagsCompanion.insert(
+            key: key,
+            value: value,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$FeatureFlagsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $FeatureFlagsTable,
+    FeatureFlag,
+    $$FeatureFlagsTableFilterComposer,
+    $$FeatureFlagsTableOrderingComposer,
+    $$FeatureFlagsTableProcessedTableManager,
+    $$FeatureFlagsTableInsertCompanionBuilder,
+    $$FeatureFlagsTableUpdateCompanionBuilder> {
+  $$FeatureFlagsTableProcessedTableManager(super.$state);
+}
+
+class $$FeatureFlagsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableFilterComposer(super.$state);
+  ColumnFilters<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$FeatureFlagsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get key => $state.composableBuilder(
+      column: $state.table.key,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get value => $state.composableBuilder(
+      column: $state.table.value,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
@@ -11414,6 +11751,8 @@ class _$AppDatabaseManager {
       $$CounterpartiesTableTableManager(_db, _db.counterparties);
   $$ExpectedEventsTableTableManager get expectedEvents =>
       $$ExpectedEventsTableTableManager(_db, _db.expectedEvents);
+  $$FeatureFlagsTableTableManager get featureFlags =>
+      $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
   $$PaymentSourcesTableTableManager get paymentSources =>
       $$PaymentSourcesTableTableManager(_db, _db.paymentSources);
   $$MerchantsTableTableManager get merchants =>

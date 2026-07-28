@@ -72,3 +72,6 @@ Schema v11 adds `counterparties` (id, kind, identity_key unique, display_name, i
 
 Schema v12 adds `expected_events` (id, source, origin_sms_id, series_id, counterparty_id, label, expected_amount_paise, amount_low_paise, amount_high_paise, expected_date, date_window_days default 3, cadence, state, fulfilled_txn_id, confidence, dedup_key) table (T-138a). Regression fixture:
 `test/data/db/app_database_v12_migration_test.dart`.
+
+Schema v13 adds `feature_flags` (key primary key, value, updated_at) table (T-143a) to store dynamic behavioral thresholds and flags with `AppConstants` acting as static fallbacks. Regression fixture:
+`test/data/db/app_database_v13_migration_test.dart`.

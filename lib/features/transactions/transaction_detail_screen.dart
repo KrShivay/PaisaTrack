@@ -244,60 +244,54 @@ class _TransactionDetailScreenState
                     child: Column(
                       children: [
                         // Category Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'CATEGORY',
-                                  style: AppTheme.bloomDisplay(
-                                    10,
-                                    FontWeight.w600,
-                                    letterSpacing: 0.1,
+                        Semantics(
+                          label: 'Category, $categoryDisplayName, double tap to change',
+                          button: true,
+                          child: InkWell(
+                            onTap: _changeCategory,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'CATEGORY',
+                                        style: AppTheme.bloomDisplay(
+                                          10,
+                                          FontWeight.w600,
+                                          letterSpacing: 0.1,
+                                          color: isDark
+                                              ? AppColorTokens.bloomDarkTextTertiary
+                                              : AppColorTokens.inkTertiary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        categoryDisplayName,
+                                        style: AppTheme.bloomDisplay(
+                                          14,
+                                          FontWeight.w600,
+                                          color: isDark
+                                              ? AppColorTokens.bloomDarkTextPrimary
+                                              : AppColorTokens.ink,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
                                     color: isDark
                                         ? AppColorTokens.bloomDarkTextTertiary
                                         : AppColorTokens.inkTertiary,
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  categoryDisplayName,
-                                  style: AppTheme.bloomDisplay(
-                                    14,
-                                    FontWeight.w600,
-                                    color: isDark
-                                        ? AppColorTokens.bloomDarkTextPrimary
-                                        : AppColorTokens.ink,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            GestureDetector(
-                              onTap: _changeCategory,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColorTokens.violetPrimary
-                                      : AppColorTokens.ink,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Text(
-                                  'Change',
-                                  style: AppTheme.bloomDisplay(
-                                    12,
-                                    FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                         if (txn.accountHint != null &&
                             txn.accountHint!.isNotEmpty) ...[

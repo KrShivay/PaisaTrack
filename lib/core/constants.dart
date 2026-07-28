@@ -42,4 +42,34 @@ class AppConstants {
   /// Max minutes apart two SMS may arrive and still be treated as one
   /// paired bank+wallet/UPI notification for duplicate suppression (T-025).
   static const duplicatePairWindowMinutes = 10;
+
+  /// Cosine similarity threshold for automatic merchant entity auto-linking (§10).
+  static const merchantAutoLinkThreshold = 0.92;
+
+  /// Cosine similarity threshold for merchant cluster suggestions (§10).
+  static const merchantClusterSuggestionThreshold = 0.85;
+
+  /// Maximum category confidence threshold cap for LLM suggestions (§10).
+  ///
+  /// Represents the upper bound confidence score (0.0 to 1.0) LLM category
+  /// suggestions can contribute; values above this cap fall through to seed maps.
+  static const llmCategorySuggestionCap = 0.70;
+
+  /// Confidence threshold for refund auto-linking (§10).
+  static const refundAutoLinkThreshold = 0.90;
+
+  /// Similarity/confidence threshold for linking authorization to settlement (§10).
+  static const authSettleLinkThreshold = 0.85;
+
+  /// Threshold for expected-to-debit event fulfilment (§10).
+  static const expectedDebitFulfilmentThreshold = 0.85;
+
+  /// Standard deviation multiplier for anomaly detection (§10).
+  static const anomalyAlertSigma = 2.5;
+
+  /// Minimum historical periods required before raising anomaly alerts (§10).
+  static const anomalyAlertMinPeriods = 8;
+
+  /// Absolute amount floor (in currency units) required to trigger anomaly alert (§10).
+  static const anomalyAlertFloorAmount = 500.0;
 }

@@ -72,10 +72,15 @@ class BloomSheetScaffold extends StatelessWidget {
               child: Row(
                 children: [
                   if (showBack)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed:
-                          onBack ?? () => Navigator.of(context).maybePop(),
+                    Semantics(
+                      label: 'Back',
+                      button: true,
+                      child: IconButton(
+                        tooltip: 'Back',
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed:
+                            onBack ?? () => Navigator.of(context).maybePop(),
+                      ),
                     ),
                   if (title != null)
                     Expanded(
@@ -94,10 +99,15 @@ class BloomSheetScaffold extends StatelessWidget {
                     const Spacer(),
                   if (actions != null) ...actions!,
                   if (showClose)
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed:
-                          onClose ?? () => Navigator.of(context).maybePop(),
+                    Semantics(
+                      label: 'Close',
+                      button: true,
+                      child: IconButton(
+                        tooltip: 'Close',
+                        icon: const Icon(Icons.close),
+                        onPressed:
+                            onClose ?? () => Navigator.of(context).maybePop(),
+                      ),
                     ),
                 ],
               ),
