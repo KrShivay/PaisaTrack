@@ -253,8 +253,7 @@ class PlatformLlmRuntime extends LlmRuntime {
   Future<bool> _boolCall(String method) async {
     try {
       final res = await _channel.invokeMethod<Object?>(method);
-      if (res is bool) return res;
-      return false;
+      return res == true;
     } on PlatformException {
       return false;
     } on MissingPluginException {
