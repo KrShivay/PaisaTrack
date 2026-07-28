@@ -640,7 +640,14 @@ class _TransactionDetailScreenState
                       },
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  // WHERE THIS CAME FROM (T-147a) - First-class source message section
+                  if (txn.smsId != null) ...[
+                    _WhereThisCameFromSection(
+                      rawSmsBody: detail.rawSmsBody,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Technical SMS Provenance Disclosure
                   GestureDetector(
@@ -898,7 +905,7 @@ class _SourceMessageEvidenceView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'WHERE THIS CAME FROM',
+            'FIELD EVIDENCE SPANS',
             style: AppTheme.bloomDisplay(
               10,
               FontWeight.w600,
@@ -966,7 +973,7 @@ class _SourceMessageEvidenceView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'WHERE THIS CAME FROM',
+          'FIELD EVIDENCE SPANS',
           style: AppTheme.bloomDisplay(
             10,
             FontWeight.w600,
@@ -1133,6 +1140,63 @@ class _MoreCategoryChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _WhereThisCameFromSection extends StatelessWidget {
+  const _WhereThisCameFromSection({
+    required this.rawSmsBody,
+    required this.isDark,
+  });
+
+  final String? rawSmsBody;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF132820) : const Color(0xFFF1FBF6);
+    final border = isDark ? const Color(0xFF1B4D3E) : const Color(0xFFC9EEDD);
+    final textColor = isDark
+        ? AppColorTokens.bloomDarkTextSecondary
+        : const Color(0xFF4E7A69);
+
+    final displayBody = rawSmsBody ??
+        'Original message no longer stored — kept for 30 days';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'WHERE THIS CAME FROM',
+          style: AppTheme.bloomDisplay(
+            12,
+            FontWeight.w700,
+            letterSpacing: 0.1,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: border, width: 1),
+          ),
+          child: Text(
+            displayBody,
+            style: AppTheme.bloomMono(
+              11,
+              FontWeight.w400,
+              color: textColor,
+            ).copyWith(height: 1.6),
+          ),
+        ),
+      ],
     );
   }
 }

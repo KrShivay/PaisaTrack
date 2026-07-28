@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,6 +117,62 @@ void main() {
       expect(find.text('CATEGORY'), findsOneWidget);
       expect(find.text('Food & Dining'), findsOneWidget); // Selected chip
       expect(find.text('More…'), findsOneWidget);
+    });
+
+    testWidgets('T-147a: renders retained source message as a first-class section',
+        (tester) async {
+      final retainedDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(smsId: const Value('sms_001')),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: testDetail.parseConfidence,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: 'Paid Rs 449 to Swiggy on A/c XX1234',
+      );
+
+      await pumpDetail(tester, retainedDetail);
+
+      expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
+      expect(find.text('Paid Rs 449 to Swiggy on A/c XX1234'), findsOneWidget);
+    });
+
+    testWidgets('T-147a: renders retention degradation copy for purged SMS row',
+        (tester) async {
+      final purgedDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(smsId: const Value('sms_002')),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: testDetail.parseConfidence,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: null,
+      );
+
+      await pumpDetail(tester, purgedDetail);
+
+      expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
+      expect(
+        find.text('Original message no longer stored — kept for 30 days'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('T-147a: omits WHERE THIS CAME FROM section for manual entry rows',
+        (tester) async {
+      final manualDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(smsId: const Value(null)),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: testDetail.parseConfidence,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: null,
+      );
+
+      await pumpDetail(tester, manualDetail);
+
+      expect(find.text('WHERE THIS CAME FROM'), findsNothing);
     });
   });
 }
