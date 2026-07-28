@@ -125,7 +125,9 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                       const SizedBox(height: AppSpacing.md),
                     ],
                     _SectionLabel(
-                      _query.trim().isEmpty ? 'All categories' : 'Matches',
+                      _query.trim().isEmpty
+                          ? 'All categories'
+                          : 'Matches (${filtered.length})',
                     ),
                     if (filtered.isEmpty)
                       Padding(
@@ -250,26 +252,29 @@ class _CategoryRow extends StatelessWidget {
       if (parentName case final parent?) 'Subcategory of $parent',
       if (explanation case final detail?) detail,
     ].join(' · ');
-    return ListTile(
-      minVerticalPadding: AppSpacing.sm,
-      contentPadding: EdgeInsets.only(left: parentName == null ? 0 : 20),
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          shape: BoxShape.circle,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        minVerticalPadding: AppSpacing.sm,
+        contentPadding: EdgeInsets.only(left: parentName == null ? 0 : 20),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            CategoryVisuals.icon(category.icon),
+            size: 20,
+            color: color,
+          ),
         ),
-        child: Icon(
-          CategoryVisuals.icon(category.icon),
-          size: 20,
-          color: color,
-        ),
+        title: Text(category.name),
+        subtitle: subtitle.isEmpty ? null : Text(subtitle),
+        trailing: selected ? const Icon(Icons.check_circle) : null,
+        onTap: () => Navigator.of(context).pop(category),
       ),
-      title: Text(category.name),
-      subtitle: subtitle.isEmpty ? null : Text(subtitle),
-      trailing: selected ? const Icon(Icons.check_circle) : null,
-      onTap: () => Navigator.of(context).pop(category),
     );
   }
 }

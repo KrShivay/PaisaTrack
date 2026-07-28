@@ -124,8 +124,8 @@ void main() {
       await tester.tap(find.text('Open Sheet'));
       await tester.pumpAndSettle();
 
-      expect(find.bySemanticsLabel('Back'), findsOneWidget);
-      expect(find.bySemanticsLabel('Close'), findsOneWidget);
+      expect(find.byTooltip('Back'), findsOneWidget);
+      expect(find.byTooltip('Close'), findsOneWidget);
 
       handle.dispose();
     });
