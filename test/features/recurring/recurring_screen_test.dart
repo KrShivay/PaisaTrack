@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/theme/category_visuals.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/features/recurring/recurring_screen.dart';
@@ -76,5 +77,24 @@ void main() {
     expect(find.text('Spotify'), findsAtLeast(1));
     expect(find.byType(BloomCategoryTile), findsWidgets);
     expect(find.byType(BloomAmount), findsWidgets);
+  });
+
+  testWidgets('renders recharge and investment kinds with valid visuals', (tester) async {
+    await pumpScreen(tester, [
+      series(id: '3', label: 'Jio', kind: 'recharge'),
+      series(id: '4', label: 'Mutual Fund', kind: 'investment'),
+    ]);
+
+    expect(find.text('Jio'), findsAtLeast(1));
+    expect(find.text('Mutual Fund'), findsAtLeast(1));
+    
+    // Check that we find tiles (may be 4 due to dual-rendering in upcoming + all sections)
+    final tiles = tester.widgetList<BloomCategoryTile>(find.byType(BloomCategoryTile));
+    expect(tiles.length, greaterThanOrEqualTo(2));
+
+    // Verify neither resolved to fallback color (0xFF94A3B8)
+    for (final tile in tiles) {
+      expect(CategoryVisuals.color(tile.categoryId).value, isNot(0xFF94A3B8));
+    }
   });
 }

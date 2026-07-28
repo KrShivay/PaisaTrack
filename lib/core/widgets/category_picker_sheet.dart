@@ -54,19 +54,16 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     final suggested = _idsToCategories(widget.suggestedCategoryIds, byId);
     final recent = _idsToCategories(widget.recentCategoryIds, byId);
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          insets.bottom + AppSpacing.lg,
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 640),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        insets.bottom + AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
               Text(
                 widget.title,
                 style: Theme.of(context).textTheme.titleLarge,
@@ -150,9 +147,7 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

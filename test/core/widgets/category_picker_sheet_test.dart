@@ -149,4 +149,33 @@ void main() {
     // Search field remains pinned at top and visible
     expect(find.byType(TextField), findsOneWidget);
   });
+
+  testWidgets('T-145a: honours keyboard insets', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            viewInsets: const EdgeInsets.only(bottom: 250),
+          ),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: CategoryPickerSheet(
+            title: 'Picker',
+            categories: categories,
+            currentCategoryId: 'food',
+          ),
+        ),
+      ),
+    );
+
+    final padding = tester.widget<Padding>(
+      find.descendant(
+        of: find.byType(CategoryPickerSheet),
+        matching: find.byType(Padding).first,
+      ),
+    );
+
+    expect(padding.padding.resolve(TextDirection.ltr).bottom, greaterThanOrEqualTo(250.0));
+  });
 }

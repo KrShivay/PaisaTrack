@@ -18,12 +18,18 @@ Future<T?> showBloomFullScreenSheet<T>({
     'T-152a: No screen built on this route can be reached without an exit affordance.',
   );
 
-  return showModalBottomSheet<T>(
+  final disableAnimations = MediaQuery.of(context).disableAnimations;
+  final controller = disableAnimations
+      ? (AnimationController(vsync: Navigator.of(context), duration: Duration.zero)..value = 1.0)
+      : null;
+
+  final result = showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     enableDrag: true,
     isDismissible: true,
+    transitionAnimationController: controller,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0xA61B1830), // ~65% opacity #1B1830
     builder: (BuildContext context) {
@@ -42,4 +48,10 @@ Future<T?> showBloomFullScreenSheet<T>({
       );
     },
   );
+  
+  if (controller != null) {
+    result.whenComplete(() => controller.dispose());
+  }
+
+  return result;
 }

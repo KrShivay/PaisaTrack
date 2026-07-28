@@ -298,9 +298,9 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   Future<void> _recategorizeItem(TransactionReviewItem item) async {
     final categories = await ref.read(categoryListProvider.future);
     if (!mounted) return;
-    final chosen = await showBloomModalSheet<Category>(
+    final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
-      isScrollControlled: true,
+      showBack: true,
       builder: (context) => CategoryPickerSheet(
         categories: categories,
         title: 'Change Category',

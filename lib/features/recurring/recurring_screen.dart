@@ -30,6 +30,8 @@ class RecurringSeriesItem {
       'income' => 'income',
       'rent' => 'rent_housing',
       'bill' => 'bills_utilities',
+      'recharge' => 'recharge',
+      'investment' => 'investments',
       _ => series.kind,
     };
   }

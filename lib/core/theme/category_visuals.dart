@@ -382,6 +382,7 @@ abstract final class CategoryVisuals {
     'fees_charges': Color(0xFFF59E0B), // amber (always surfaced in insights)
     'cash_withdrawal': Color(0xFFA8A29E), // stone
     'investments': Color(0xFFE8B54D), // brand gold
+    'recharge': Color(0xFFFACC15), // maps logically to bills_utilities yellow
     'other': Color(0xFF9CA3AF), // gray
   };
 

@@ -130,9 +130,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Future<void> _recategorizeItem(TransactionListItem item) async {
     final categories = await ref.read(categoryListProvider.future);
     if (!mounted) return;
-    final chosen = await showBloomModalSheet<Category>(
+    final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
-      isScrollControlled: true,
+      showBack: true,
       builder: (context) => CategoryPickerSheet(
         categories: categories,
         title: 'Change Category',

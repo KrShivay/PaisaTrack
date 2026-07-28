@@ -1,23 +1,52 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'dart:typed_data';
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../core/theme/category_visuals.dart';
+import '../../core/undo/undo_controller.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
-import '../../core/undo/undo_controller.dart';
 import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../enrichment/local_classifier.dart';
 import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
+
+final suggestedCategoriesProvider = FutureProvider.family<List<String>, String>((ref, txnId) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  final txn = await (db.select(db.transactions)..where((t) => t.id.equals(txnId))).getSingle();
+  final merchant = txn.merchantId != null ? await (db.select(db.merchants)..where((m) => m.id.equals(txn.merchantId!))).getSingleOrNull() : null;
+  final classifier = LocalClassifier(db);
+  
+  final record = NormalizedTransactionRecord(
+    amount: txn.amount,
+    direction: TransactionDirection.values.byName(txn.direction),
+    channel: TransactionChannel.values.byName(txn.channel),
+    merchantRaw: txn.merchantRaw,
+    counterpartyVpa: txn.counterpartyVpa,
+    accountHint: txn.accountHint,
+    balanceAfter: txn.balanceAfter,
+    refId: txn.refId,
+    ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
+    parseSource: ParseSource.values.firstWhere((source) => source.wireName == txn.parseSource, orElse: () => ParseSource.generic),
+    parseConfidence: 1,
+  );
+  
+  final blob = merchant?.embedding;
+  final Float32List? vector = blob == null ? null : Float32List.view(blob.buffer, blob.offsetInBytes, blob.lengthInBytes ~/ 4);
+  
+  final predictions = await classifier.predictTopK(record, 5, merchantEmbedding: vector);
+  return predictions.map((p) => p.categoryId).toList();
+});
 
 /// Redesigned Bloom Transaction Detail sheet with hero amount, category editor,
 /// scope selector, and technical SMS provenance disclosure.
@@ -88,9 +117,9 @@ class _TransactionDetailScreenState
   Future<void> _changeCategory() async {
     final categories = await ref.read(categoryListProvider.future);
     if (!mounted) return;
-    final chosen = await showBloomModalSheet<Category>(
+    final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
-      isScrollControlled: true,
+      showBack: true,
       builder: (context) => CategoryPickerSheet(
         categories: categories,
         title: 'Change Category',
@@ -144,18 +173,31 @@ class _TransactionDetailScreenState
     final database = await ref.read(appDatabaseProvider.future);
     final repo = ref.read(transactionRepositoryProvider(database));
     final prevCategory = _categoryId;
+    final prevCategoryName = _categoryName;
 
     setState(() {
       _categoryId = chosen.id;
       _categoryName = chosen.name;
     });
 
-    await repo.correctCategory(
-      txnId: widget.txnId,
-      categoryId: chosen.id,
-      scope: CorrectionScope.thisTransaction,
-      context: 'detail_chip_edit',
-    );
+    try {
+      await repo.correctCategory(
+        txnId: widget.txnId,
+        categoryId: chosen.id,
+        scope: CorrectionScope.thisTransaction,
+        context: 'detail_chip_edit',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update category: $e')),
+      );
+      setState(() {
+        _categoryId = prevCategory;
+        _categoryName = prevCategoryName;
+      });
+      return;
+    }
 
     ref.read(undoControllerProvider.notifier).pushUndo(
           UndoToken(
@@ -231,11 +273,21 @@ class _TransactionDetailScreenState
               ),
             );
 
+            final suggestedIds = ref.watch(suggestedCategoriesProvider(widget.txnId)).valueOrNull ?? [];
             final chipCategories = <Category>[currentCat];
-            for (final c in allCategories) {
+            for (final sid in suggestedIds) {
               if (chipCategories.length >= 3) break;
-              if (c.id != currentCat.id && c.id != 'uncategorized') {
-                chipCategories.add(c);
+              if (sid != currentCat.id && sid != 'uncategorized') {
+                final cat = allCategories.where((c) => c.id == sid).firstOrNull;
+                if (cat != null) chipCategories.add(cat);
+              }
+            }
+            if (chipCategories.length < 3) {
+              for (final c in allCategories) {
+                if (chipCategories.length >= 3) break;
+                if (c.id != currentCat.id && c.id != 'uncategorized' && !chipCategories.any((sc) => sc.id == c.id)) {
+                  chipCategories.add(c);
+                }
               }
             }
 
@@ -1063,44 +1115,50 @@ class _InlineCategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final catColor = CategoryVisuals.color(category.id);
-    final bg = isSelected
-        ? catColor
-        : (isDark ? const Color(0xFF282346) : const Color(0xFFF1EFFB));
-    final textColor = isSelected
-        ? Colors.white
-        : (isDark
-            ? AppColorTokens.bloomDarkTextSecondary
-            : const Color(0xFF5B5580));
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(17),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              CategoryVisuals.icon(category.icon),
-              size: 16,
-              color: textColor,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              category.name,
-              style: AppTheme.bloomDisplay(
-                13,
-                FontWeight.w600,
-                color: textColor,
+    return Semantics(
+      button: true,
+      label: 'Select category ${category.name}',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? CategoryVisuals.color(category.id)
+                : (isDark ? const Color(0xFF282346) : const Color(0xFFF1EFFB)),
+            borderRadius: BorderRadius.circular(17),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CategoryVisuals.icon(category.icon),
+                size: 16,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : const Color(0xFF5B5580)),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                category.name,
+                style: AppTheme.bloomDisplay(
+                  13,
+                  FontWeight.w600,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : const Color(0xFF5B5580)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1123,22 +1181,38 @@ class _MoreCategoryChip extends StatelessWidget {
         ? AppColorTokens.bloomDarkTextSecondary
         : const Color(0xFF5B5580);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(17),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          'More…',
-          style: AppTheme.bloomDisplay(
-            13,
-            FontWeight.w600,
-            color: textColor,
+    return Semantics(
+      button: true,
+      label: 'More categories',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(17),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.more_horiz_rounded,
+                size: 16,
+                color: textColor,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'More',
+                style: AppTheme.bloomDisplay(
+                  13,
+                  FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
           ),
         ),
       ),

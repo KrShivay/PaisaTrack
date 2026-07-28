@@ -4,24 +4,24 @@ import 'dart:math' as math;
 import 'package:drift/drift.dart';
 
 import '../data/db/database.dart';
+import '../data/repositories/feature_flag_repository.dart';
 
 /// Incremental weekly-category and monthly-merchant anomaly scanner.
 class AnomalyDetector {
-  const AnomalyDetector(
-    this._database, {
-    this.amountFloor = defaultAmountFloor,
-  });
+  const AnomalyDetector(this._database);
 
   static const minimumBaselinePeriods = 8;
   static const sigmaThreshold = 2.5;
   static const defaultAmountFloor = 500.0;
 
   final AppDatabase _database;
-  final double amountFloor;
 
   /// Processes the UTC week/month containing [today] exactly once per key.
-  Future<int> run({DateTime? today}) {
+  Future<int> run({DateTime? today}) async {
     final now = (today ?? DateTime.now()).toUtc();
+    final flagsRepo = FeatureFlagRepository(_database);
+    final flagsState = await flagsRepo.getFlags();
+
     return _database.transaction(() async {
       final weekStart = _weekStart(now);
       final monthStart = DateTime.utc(now.year, now.month);
@@ -35,6 +35,7 @@ class AnomalyDetector {
         end: nextWeek,
         period: _dateKey(weekStart),
         identityOf: (txn) => txn.categoryId,
+        flagsState: flagsState,
       );
       flags += await _processPeriod(
         keyPrefix: 'mer:',
@@ -43,6 +44,7 @@ class AnomalyDetector {
         end: nextMonth,
         period: '${now.year}-${now.month.toString().padLeft(2, '0')}',
         identityOf: (txn) => txn.merchantId,
+        flagsState: flagsState,
       );
       return flags;
     });
@@ -55,6 +57,7 @@ class AnomalyDetector {
     required DateTime end,
     required String period,
     required String? Function(Transaction txn) identityOf,
+    required FeatureFlagsState flagsState,
   }) async {
     final rows = await (_database.select(_database.transactions)
           ..where(
@@ -91,9 +94,9 @@ class AnomalyDetector {
           entry.value.fold<double>(0, (sum, txn) => sum + txn.amount);
       final threshold = existing == null
           ? double.infinity
-          : existing.mean + sigmaThreshold * existing.std;
+          : existing.mean + flagsState.anomalyAlertSigma * existing.std;
 
-      final isBelowFloor = aggregate < amountFloor;
+      final isBelowFloor = aggregate < flagsState.anomalyAlertFloorAmount;
       final isRecurring = keyPrefix == 'mer:'
           ? recurringMerchantIds.contains(entry.key)
           : false;
@@ -103,7 +106,7 @@ class AnomalyDetector {
           : (isRecurring ? 'recurring_series' : null);
 
       if (existing != null &&
-          existing.n >= minimumBaselinePeriods &&
+          existing.n >= flagsState.anomalyAlertMinPeriods &&
           aggregate > threshold) {
         final contributors = [...entry.value]
           ..sort((a, b) => b.amount.compareTo(a.amount));

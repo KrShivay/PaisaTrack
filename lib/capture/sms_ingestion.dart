@@ -12,6 +12,7 @@ import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import '../data/repositories/expected_event_repository.dart';
+import '../data/repositories/feature_flag_repository.dart';
 import '../data/repositories/rule_repository.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
@@ -194,6 +195,9 @@ class SmsIngestor {
     if (_isSenderPaused?.call(sms.sender) == true) return;
     final transactionId = 'txn_${sms.id}';
     if (_knownTransactionIds?.contains(transactionId) ?? false) return;
+    final flagsRepo = FeatureFlagRepository(_database);
+    final flagsState = await flagsRepo.getFlags();
+
     await _database.transaction(() async {
       final existingTransaction = await (_database.select(
         _database.transactions,
@@ -208,7 +212,7 @@ class SmsIngestor {
               body: sms.body,
               receivedAt: sms.receivedAt,
               purgeAfter: sms.receivedAt.add(
-                const Duration(days: AppConstants.rawSmsRetentionDays),
+                Duration(days: flagsState.rawSmsRetentionDays),
               ),
             ),
           );

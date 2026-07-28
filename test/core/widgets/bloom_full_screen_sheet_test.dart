@@ -157,9 +157,52 @@ void main() {
 
       await tester.tap(find.text('Open Sheet'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
+      // Verify it is immediately fully visible
       expect(find.text('No Motion'), findsOneWidget);
+      final dy = tester.getTopLeft(find.text('No Motion')).dy;
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.getTopLeft(find.text('No Motion')).dy, dy);
+    });
+
+    testWidgets('drag not past threshold springs back', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  showBloomFullScreenSheet(
+                    context: context,
+                    title: 'Spring Back Sheet',
+                    showClose: true,
+                    builder: (ctx) => const Center(child: Text('Drag Me')),
+                  );
+                },
+                child: const Text('Open Sheet'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      final initialRect = tester.getRect(find.text('Drag Me'));
+
+      // Drag down but not past dismissal threshold
+      // A small drag (e.g. 100 pixels) should not dismiss it.
+      await tester.drag(find.text('Spring Back Sheet'), const Offset(0, 100));
+      // Give it time to start springing back
+      await tester.pump();
+      // It should be moving back
+      expect(tester.getRect(find.text('Drag Me')).top, greaterThanOrEqualTo(initialRect.top));
+      
+      // Settle the spring back animation
+      await tester.pumpAndSettle();
+
+      // Verify it sprang back to original position
+      expect(tester.getRect(find.text('Drag Me')), initialRect);
     });
   });
 }

@@ -13,7 +13,7 @@ void main() {
   setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
     await database.seedDefaultCategories();
-    detector = AnomalyDetector(database, amountFloor: 500.0);
+    detector = AnomalyDetector(database);
   });
 
   tearDown(() async {

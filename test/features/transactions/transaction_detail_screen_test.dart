@@ -28,6 +28,8 @@ void main() {
         overrides: [
           transactionDetailProvider(detail.txn.id)
               .overrideWith((ref) => Stream.value(detail)),
+          suggestedCategoriesProvider(detail.txn.id)
+              .overrideWith((ref) => Future.value(['travel', 'utilities'])),
         ],
         child: MaterialApp(
           home: BloomUndoToastHost(
@@ -110,13 +112,13 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('T-148b: renders selected category chip in category hue and More... chip',
+    testWidgets('T-148b: renders selected category chip in category hue and More chip',
         (tester) async {
       await pumpDetail(tester, testDetail);
 
       expect(find.text('CATEGORY'), findsOneWidget);
       expect(find.text('Food & Dining'), findsOneWidget); // Selected chip
-      expect(find.text('More…'), findsOneWidget);
+      expect(find.text('More'), findsOneWidget);
     });
 
     testWidgets('T-147a: renders retained source message as a first-class section',

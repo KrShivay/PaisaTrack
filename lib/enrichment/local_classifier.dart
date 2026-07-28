@@ -58,6 +58,43 @@ class LocalClassifier {
     );
   }
 
+  Future<List<ClassificationPrediction>> predictTopK(
+    NormalizedTransactionRecord record,
+    int k, {
+    Float32List? merchantEmbedding,
+  }) async {
+    final meta = await (_database.select(_database.modelMeta)
+          ..where((row) => row.key.equals(classifierModelMetaKey)))
+        .getSingleOrNull();
+    if (meta == null) return [];
+    final model = ClassifierModel.tryParse(meta.value);
+    if (model == null) return [];
+    if (model.featureCount != defaultFeatureCount) return [];
+    final values = _features(record, merchantEmbedding, model.featureCount);
+    if (values.length != model.featureCount) return [];
+    final scores = <double>[];
+    for (var row = 0; row < model.categories.length; row++) {
+      var score = model.biases[row];
+      for (var col = 0; col < values.length; col++) {
+        score += model.weights[row][col] * values[col];
+      }
+      scores.add(score);
+    }
+    final maxScore = scores.reduce(max);
+    final exponentials = scores.map((score) => exp(score - maxScore)).toList();
+    final total = exponentials.reduce((a, b) => a + b);
+    
+    final predictions = <ClassificationPrediction>[];
+    for (var i = 0; i < exponentials.length; i++) {
+      predictions.add(ClassificationPrediction(
+        model.categories[i],
+        exponentials[i] / total,
+      ));
+    }
+    predictions.sort((a, b) => b.confidence.compareTo(a.confidence));
+    return predictions.take(k).toList();
+  }
+
   static List<double> features(
     NormalizedTransactionRecord record,
     Float32List? merchantEmbedding, {
