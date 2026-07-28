@@ -1,3 +1,4 @@
+import '../core/constants.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import 'template_engine/field_normalizer.dart';
@@ -154,8 +155,8 @@ class GenericTransactionParser {
         parseSource: ParseSource.generic,
         parseConfidence:
             amounts.length == 1 && merchant != null && merchant.isNotEmpty
-                ? 0.6
-                : 0.5,
+                ? AppConstants.genericHighParseConfidence
+                : AppConstants.genericLowParseConfidence,
         evidence: evidence,
       ),
       rejection: null,

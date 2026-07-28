@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../core/constants.dart';
 import '../../data/db/database.dart';
 
 /// Stored `model_meta` key for the ADR 0005 public-template trust ledger.
@@ -107,7 +108,9 @@ class TemplateTrustLedger {
   /// Reads the persisted ledger, defaulting unknown public templates to 0.85.
   Future<double> confidenceForTemplate(String templateId) async {
     final snapshot = await load();
-    return snapshot.entries[templateId]?.isPromoted == true ? 0.97 : 0.85;
+    return snapshot.entries[templateId]?.isPromoted == true
+        ? AppConstants.promotedTemplateConfidence
+        : AppConstants.defaultTemplateConfidence;
   }
 
   /// Recomputes counters from feedback and atomically updates `model_meta`.

@@ -1,3 +1,4 @@
+import '../core/constants.dart';
 import '../data/db/database.dart';
 import '../data/models/normalized_transaction_record.dart';
 
@@ -89,7 +90,7 @@ class EventCorrelator {
               matchedTransactionId: candidate.id,
               linkType: linkType,
               basis: 'ref_match:$normRef',
-              confidence: 0.99,
+              confidence: AppConstants.refMatchConfidence,
             );
           }
         }
@@ -117,7 +118,7 @@ class EventCorrelator {
               matchedTransactionId: candidate.id,
               linkType: TransactionLinkType.settles,
               basis: 'auth_settle_match',
-              confidence: 0.95,
+              confidence: AppConstants.authSettleMatchConfidence,
             );
           }
         }
@@ -136,7 +137,7 @@ class EventCorrelator {
               matchedTransactionId: candidate.id,
               linkType: TransactionLinkType.reverses,
               basis: 'reversal_amount_match',
-              confidence: 0.90,
+              confidence: AppConstants.reversalMatchConfidence,
             );
           }
         }
@@ -155,7 +156,7 @@ class EventCorrelator {
               matchedTransactionId: candidate.id,
               linkType: TransactionLinkType.echo,
               basis: 'echo_time_amount_match',
-              confidence: 0.98,
+              confidence: AppConstants.echoMatchConfidence,
             );
           }
         }
@@ -174,7 +175,7 @@ class EventCorrelator {
               matchedTransactionId: candidate.id,
               linkType: TransactionLinkType.transferLeg,
               basis: 'transfer_owned_sources',
-              confidence: 0.92,
+              confidence: AppConstants.transferLegMatchConfidence,
             );
           }
         }
@@ -243,7 +244,7 @@ class EventCorrelator {
         matchedTransactionId: match.id,
         linkType: TransactionLinkType.refunds,
         basis: isFullRefund ? 'refund_full_counterparty_match' : 'refund_partial_counterparty_match',
-        confidence: isFullRefund ? 0.95 : 0.91,
+        confidence: isFullRefund ? AppConstants.refundFullMatchConfidence : AppConstants.refundPartialMatchConfidence,
       );
     }
 

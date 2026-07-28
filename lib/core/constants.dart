@@ -72,4 +72,54 @@ class AppConstants {
 
   /// Absolute amount floor (in currency units) required to trigger anomaly alert (§10).
   static const anomalyAlertFloorAmount = 500.0;
+
+  // ── Categorizer confidence constants (T-155a) ──
+
+  /// Seed-map category confidence (categorizer ladder step 3).
+  static const seedConfidence = 0.8;
+
+  /// Fallback ('other') confidence when no ladder step matches.
+  static const categorizerFallbackConfidence = 0.3;
+
+  // ── Correlation confidence constants (T-155a) ──
+
+  /// UTR/Ref exact-match correlation confidence.
+  static const refMatchConfidence = 0.99;
+
+  /// Auth→settlement correlation confidence.
+  static const authSettleMatchConfidence = 0.95;
+
+  /// Reversal amount-match correlation confidence.
+  static const reversalMatchConfidence = 0.90;
+
+  /// Echo (duplicate) time+amount match confidence.
+  static const echoMatchConfidence = 0.98;
+
+  /// Transfer-leg (owned sources) match confidence.
+  static const transferLegMatchConfidence = 0.92;
+
+  /// Full refund counterparty match confidence.
+  static const refundFullMatchConfidence = 0.95;
+
+  /// Partial refund counterparty match confidence.
+  static const refundPartialMatchConfidence = 0.91;
+
+  // ── Template trust confidence constants (T-155a) ──
+
+  /// Promoted public-template parse confidence (ADR 0005).
+  static const promotedTemplateConfidence = 0.97;
+
+  /// Default (unpromoted) public-template parse confidence.
+  static const defaultTemplateConfidence = 0.85;
+
+  // ── Parser parse-confidence constants (T-155a) ──
+
+  /// LLM field-locator parse confidence.
+  static const llmParseConfidence = 0.75;
+
+  /// Generic parser confidence when amount is unambiguous and merchant is present.
+  static const genericHighParseConfidence = 0.6;
+
+  /// Generic parser confidence when amount is ambiguous or merchant is absent.
+  static const genericLowParseConfidence = 0.5;
 }

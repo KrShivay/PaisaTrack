@@ -1,3 +1,4 @@
+import '../../core/constants.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/models/raw_sms.dart';
 import 'field_normalizer.dart';
@@ -49,7 +50,7 @@ class TemplateMatcher {
           final confidence = await _trustLedger?.confidenceForTemplate(
                 template.id,
               ) ??
-              0.85;
+              AppConstants.defaultTemplateConfidence;
           return record.withParseConfidence(confidence);
         } on FormatException {
           continue;

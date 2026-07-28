@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/repositories/rule_repository.dart';
@@ -90,10 +91,10 @@ class Categorizer {
         _merchantMemory = merchantMemory,
         _llmSuggester = llmSuggester;
 
-  static const seedConfidence = 0.8;
-  static const fallbackConfidence = 0.3;
+  static const seedConfidence = AppConstants.seedConfidence;
+  static const fallbackConfidence = AppConstants.categorizerFallbackConfidence;
   static const fallbackCategoryId = 'other';
-  static const maxLlmCategoryConfidence = 0.70;
+  static const maxLlmCategoryConfidence = AppConstants.llmCategorySuggestionCap;
 
   final RuleRepository _rules;
   final SeedCategoryMap _seedMap;
@@ -125,7 +126,7 @@ class Categorizer {
         merchantRaw: record.merchantRaw,
         counterpartyVpa: record.counterpartyVpa,
       );
-      if (memoryHit != null && memoryHit.confidence >= 0.70) {
+      if (memoryHit != null && memoryHit.confidence >= AppConstants.llmCategorySuggestionCap) {
         return memoryHit;
       }
     }

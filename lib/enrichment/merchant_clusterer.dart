@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../core/constants.dart';
 import '../data/db/database.dart';
 
 /// Agglomerative cluster suggestion of similar merchant entities (T-137a).
@@ -24,7 +25,7 @@ class MerchantClusterer {
   MerchantClusterer(this._db);
 
   final AppDatabase _db;
-  static const clusterThreshold = 0.85;
+  static const clusterThreshold = AppConstants.merchantClusterSuggestionThreshold;
 
   /// Runs agglomerative clustering over stored merchants with embeddings.
   Future<List<MerchantClusterSuggestion>> cluster() async {

@@ -1,3 +1,4 @@
+import '../core/constants.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import '../intelligence/llm/llm_request.dart';
@@ -163,7 +164,7 @@ class LlmFieldLocator {
       refId: null,
       ts: ts,
       parseSource: ParseSource.localLlm,
-      parseConfidence: 0.75,
+      parseConfidence: AppConstants.llmParseConfidence,
       evidence: evidence,
     );
 
