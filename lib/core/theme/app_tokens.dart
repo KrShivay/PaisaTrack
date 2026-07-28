@@ -219,6 +219,13 @@ abstract final class AppSpacing {
   static const bloomScreen = EdgeInsets.symmetric(horizontal: 20);
 }
 
+/// Minimum hit-test sizes (Material accessibility baseline).
+abstract final class AppSizes {
+  /// Material minimum touch target (48dp). All interactive elements must
+  /// meet this. See T-128 (accessibility) and T-155b.
+  static const double minTouchTarget = 48.0;
+}
+
 /// Corner radius scale.
 abstract final class AppRadius {
   static const double sm = 8; // chips, small controls

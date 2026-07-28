@@ -352,8 +352,8 @@ class _AskOrbButtonState extends State<_AskOrbButton>
     return GestureDetector(
       onTap: widget.onTap,
       child: SizedBox(
-        width: 48,
-        height: 48,
+        width: AppSizes.minTouchTarget,
+        height: AppSizes.minTouchTarget,
         child: Stack(
           alignment: Alignment.center,
           children: [
