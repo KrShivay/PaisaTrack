@@ -297,6 +297,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.close, size: 18),
+                            tooltip: 'Clear search',
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _query = '');

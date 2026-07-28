@@ -54,15 +54,16 @@ class PlatformBackfillMarker implements BackfillMarker {
     if (payload is! Map<Object?, Object?>) {
       throw const FormatException('Invalid SMS import checkpoint payload');
     }
-    final beforeEpochMillis = payload['beforeEpochMillis'];
-    final beforeId = payload['beforeId'];
-    if (beforeEpochMillis is! int || beforeId is! int) {
-      throw const FormatException('Invalid SMS import checkpoint values');
+    if (payload case {
+      'beforeEpochMillis': final int beforeEpochMillis,
+      'beforeId': final int beforeId,
+    }) {
+      return SmsImportCheckpoint(
+        beforeEpochMillis: beforeEpochMillis,
+        beforeId: beforeId,
+      );
     }
-    return SmsImportCheckpoint(
-      beforeEpochMillis: beforeEpochMillis,
-      beforeId: beforeId,
-    );
+    throw const FormatException('Invalid SMS import checkpoint values');
   }
 
   @override

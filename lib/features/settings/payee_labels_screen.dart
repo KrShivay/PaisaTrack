@@ -104,6 +104,7 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear),
+                                  tooltip: 'Clear search',
                                   onPressed: () {
                                     _searchController.clear();
                                     setState(() => _searchQuery = '');
