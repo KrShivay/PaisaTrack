@@ -108,5 +108,14 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48.0));
       handle.dispose();
     });
+
+    testWidgets('T-148b: renders selected category chip in category hue and More... chip',
+        (tester) async {
+      await pumpDetail(tester, testDetail);
+
+      expect(find.text('CATEGORY'), findsOneWidget);
+      expect(find.text('Food & Dining'), findsOneWidget); // Selected chip
+      expect(find.text('More…'), findsOneWidget);
+    });
   });
 }

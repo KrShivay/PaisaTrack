@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/category_visuals.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
 import '../../core/undo/undo_controller.dart';
@@ -139,6 +140,43 @@ class _TransactionDetailScreenState
         );
   }
 
+  Future<void> _selectCategoryDirectly(Category chosen) async {
+    final database = await ref.read(appDatabaseProvider.future);
+    final repo = ref.read(transactionRepositoryProvider(database));
+    final prevCategory = _categoryId;
+
+    setState(() {
+      _categoryId = chosen.id;
+      _categoryName = chosen.name;
+    });
+
+    await repo.correctCategory(
+      txnId: widget.txnId,
+      categoryId: chosen.id,
+      scope: CorrectionScope.thisTransaction,
+      context: 'detail_chip_edit',
+    );
+
+    ref.read(undoControllerProvider.notifier).pushUndo(
+          UndoToken(
+            id: 'cat_detail_${widget.txnId}',
+            message: 'Category updated to ${chosen.name}',
+            undoAction: () async {
+              if (prevCategory != null) {
+                await repo.updateWithFeedback(
+                  txnId: widget.txnId,
+                  categoryId: Value(prevCategory),
+                  context: 'undo_detail',
+                );
+                if (mounted) {
+                  setState(() => _categoryId = prevCategory);
+                }
+              }
+            },
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -172,11 +210,34 @@ class _TransactionDetailScreenState
 
             final txn = detail.txn;
             final isDebit = txn.direction == 'debit';
+            final currentCatId = _categoryId ?? txn.categoryId ?? 'uncategorized';
             final categoryDisplayName =
                 _categoryName ?? detail.categoryName ?? 'Uncategorised';
             final displayName =
                 detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
             final date = DateTime.fromMillisecondsSinceEpoch(txn.ts);
+
+            final allCategories =
+                ref.watch(categoryListProvider).valueOrNull ?? const <Category>[];
+            final currentCat = allCategories.firstWhere(
+              (c) => c.id == currentCatId,
+              orElse: () => Category(
+                id: currentCatId,
+                name: categoryDisplayName,
+                icon: detail.categoryIcon ?? 'category',
+                isSpending: true,
+                sortOrder: 0,
+                isUserCreated: false,
+              ),
+            );
+
+            final chipCategories = <Category>[currentCat];
+            for (final c in allCategories) {
+              if (chipCategories.length >= 3) break;
+              if (c.id != currentCat.id && c.id != 'uncategorized') {
+                chipCategories.add(c);
+              }
+            }
 
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -186,7 +247,7 @@ class _TransactionDetailScreenState
                   Row(
                     children: [
                       BloomCategoryTile(
-                        categoryId: _categoryId ?? txn.categoryId,
+                        categoryId: currentCatId,
                         iconName: detail.categoryIcon,
                         size: 44,
                         borderRadius: 16,
@@ -243,7 +304,7 @@ class _TransactionDetailScreenState
                     ),
                     child: Column(
                       children: [
-                        // Category Row
+                        // Category Row with Inline Chips (T-148b)
                         Semantics(
                           label: 'Category, $categoryDisplayName, double tap to change',
                           button: true,
@@ -251,42 +312,47 @@ class _TransactionDetailScreenState
                             onTap: _changeCategory,
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'CATEGORY',
-                                        style: AppTheme.bloomDisplay(
-                                          10,
-                                          FontWeight.w600,
-                                          letterSpacing: 0.1,
-                                          color: isDark
-                                              ? AppColorTokens.bloomDarkTextTertiary
-                                              : AppColorTokens.inkTertiary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        categoryDisplayName,
-                                        style: AppTheme.bloomDisplay(
-                                          14,
-                                          FontWeight.w600,
-                                          color: isDark
-                                              ? AppColorTokens.bloomDarkTextPrimary
-                                              : AppColorTokens.ink,
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    'CATEGORY',
+                                    style: AppTheme.bloomDisplay(
+                                      12,
+                                      FontWeight.w700,
+                                      letterSpacing: 0.1,
+                                      color: isDark
+                                          ? AppColorTokens.bloomDarkTextTertiary
+                                          : AppColorTokens.inkTertiary,
+                                    ),
                                   ),
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: isDark
-                                        ? AppColorTokens.bloomDarkTextTertiary
-                                        : AppColorTokens.inkTertiary,
+                                  const SizedBox(height: 10),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        for (final cat in chipCategories) ...[
+                                          _InlineCategoryChip(
+                                            category: cat,
+                                            isSelected: cat.id == currentCatId,
+                                            isDark: isDark,
+                                            onTap: () {
+                                              if (cat.id == currentCatId) {
+                                                _changeCategory();
+                                              } else {
+                                                _selectCategoryDirectly(cat);
+                                              }
+                                            },
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        _MoreCategoryChip(
+                                          isDark: isDark,
+                                          onTap: _changeCategory,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -970,5 +1036,103 @@ class _SourceMessageEvidenceView extends StatelessWidget {
             ? AppColorTokens.royalBlue.withValues(alpha: 0.35)
             : const Color(0xFFD9EEF9);
     }
+  }
+}
+
+class _InlineCategoryChip extends StatelessWidget {
+  const _InlineCategoryChip({
+    required this.category,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final Category category;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final catColor = CategoryVisuals.color(category.id);
+    final bg = isSelected
+        ? catColor
+        : (isDark ? const Color(0xFF282346) : const Color(0xFFF1EFFB));
+    final textColor = isSelected
+        ? Colors.white
+        : (isDark
+            ? AppColorTokens.bloomDarkTextSecondary
+            : const Color(0xFF5B5580));
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(17),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              CategoryVisuals.icon(category.icon),
+              size: 16,
+              color: textColor,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              category.name,
+              style: AppTheme.bloomDisplay(
+                13,
+                FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MoreCategoryChip extends StatelessWidget {
+  const _MoreCategoryChip({
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF282346) : const Color(0xFFF1EFFB);
+    final textColor = isDark
+        ? AppColorTokens.bloomDarkTextSecondary
+        : const Color(0xFF5B5580);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(17),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'More…',
+          style: AppTheme.bloomDisplay(
+            13,
+            FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
   }
 }
