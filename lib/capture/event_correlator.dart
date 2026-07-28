@@ -38,6 +38,18 @@ class EventCorrelationResult {
 class EventCorrelator {
   const EventCorrelator();
 
+  /// Match window for UTR/ref, reversal, and refund correlation tiers.
+  static const _matchWindow = Duration(days: 30);
+
+  /// Auth→settlement match window.
+  static const _authSettleWindow = Duration(days: 5);
+
+  /// Echo (duplicate) match window.
+  static const _echoWindow = Duration(minutes: 10);
+
+  /// Transfer-leg match window between owned payment sources.
+  static const _transferLegWindow = Duration(minutes: 60);
+
   /// Normalizes a reference/UTR string to the longest digit run >= 9 or exact string >= 6 chars.
   static String? normalizeRefId(String? ref) {
     if (ref == null || ref.isEmpty) return null;
@@ -82,7 +94,7 @@ class EventCorrelator {
         final candNormRef = normalizeRefId(candidate.refId);
         if (candNormRef == normRef) {
           final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
-          if (diffMs <= const Duration(days: 30).inMilliseconds) {
+          if (diffMs <= _matchWindow.inMilliseconds) {
             final linkType = record.direction.wireName != candidate.direction
                 ? TransactionLinkType.reverses
                 : TransactionLinkType.echo;
@@ -104,7 +116,7 @@ class EventCorrelator {
       if (hasRefDisagreement(record.refId, candidate.refId)) continue;
 
       final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
-      if (diffMs <= const Duration(days: 5).inMilliseconds) {
+      if (diffMs <= _authSettleWindow.inMilliseconds) {
         final amountRatio = candidate.amount == 0 ? 0.0 : (record.amount - candidate.amount).abs() / candidate.amount;
         if (amountRatio <= 0.02) {
           final candAccount = candidate.accountHint?.toUpperCase();
@@ -131,7 +143,7 @@ class EventCorrelator {
 
       if (record.direction.wireName != candidate.direction) {
         final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
-        if (diffMs <= const Duration(days: 30).inMilliseconds) {
+        if (diffMs <= _matchWindow.inMilliseconds) {
           if ((record.amount - candidate.amount).abs() <= 0.01) {
             return EventCorrelationResult(
               matchedTransactionId: candidate.id,
@@ -150,7 +162,7 @@ class EventCorrelator {
 
       if (record.direction.wireName == candidate.direction) {
         final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
-        if (diffMs <= const Duration(minutes: 10).inMilliseconds) {
+        if (diffMs <= _echoWindow.inMilliseconds) {
           if ((record.amount - candidate.amount).abs() <= 0.01) {
             return EventCorrelationResult(
               matchedTransactionId: candidate.id,
@@ -169,7 +181,7 @@ class EventCorrelator {
 
       if (record.direction.wireName != candidate.direction && candidate.paymentSourceId != null) {
         final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
-        if (diffMs <= const Duration(minutes: 60).inMilliseconds) {
+        if (diffMs <= _transferLegWindow.inMilliseconds) {
           if ((record.amount - candidate.amount).abs() <= 0.01) {
             return EventCorrelationResult(
               matchedTransactionId: candidate.id,
@@ -205,7 +217,7 @@ class EventCorrelator {
         final candNormRef = normalizeRefId(candidate.refId);
         if (candNormRef == normRef) {
           final diffMs = (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
-          if (diffMs <= const Duration(days: 30).inMilliseconds) {
+          if (diffMs <= _matchWindow.inMilliseconds) {
             return EventCorrelationResult(
               matchedTransactionId: candidate.id,
               linkType: TransactionLinkType.refunds,
@@ -226,7 +238,7 @@ class EventCorrelator {
       if (hasRefDisagreement(refundRecord.refId, candidate.refId)) continue;
 
       final diffMs = (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
-      if (diffMs <= const Duration(days: 30).inMilliseconds) {
+      if (diffMs <= _matchWindow.inMilliseconds) {
         final amountMatch = (refundRecord.amount - candidate.amount).abs() <= 0.01 || refundRecord.amount <= candidate.amount;
         final candMerchant = candidate.merchantRaw?.toUpperCase();
         final merchantMatch = recordMerchant != null && candMerchant != null && (recordMerchant == candMerchant || recordMerchant.startsWith(candMerchant) || candMerchant.startsWith(recordMerchant));
