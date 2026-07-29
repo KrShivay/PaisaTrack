@@ -3,16 +3,23 @@
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
 
+## 2026-07-29 — T-156a approved: dialog consolidation
+
+- T-156a is complete and removed from `TASKS.md`. `showBloomDialog` now
+  owns every production dialog presentation; Dashboard and developer SMS
+  dialogs no longer bypass it. The Dashboard behavior test proves validation
+  and persistence; existing developer, recovery, and payee tests prove their
+  confirm/cancel actions.
+- Verification: `flutter analyze --no-pub`, focused dialog tests, full
+  `flutter test --no-pub`, and `git diff --check` pass. The raw-call audit
+  finds no `showDialog(` outside `bloom_dialog.dart`.
+
 ## 2026-07-29 — Board reconciliation and dialog consolidation
 
 - Reconciled `TASKS.md` to merged history. Removed completed P0 work
   (T-121–T-125), SMS work (T-131a–c, T-132a–c, T-134a–c, T-135a–c,
   T-136a–c, T-137a–b, T-138a–c, T-139a–b, T-140a–c, T-141a, T-142a,
   T-144a–b), and refactor work T-155a–c from the unfinished board.
-- T-156a is implemented but remains in `In Review`: the shared Bloom dialog
-  helper is used at every dialog call site, but its per-screen action-behavior
-  tests have not been added. Do not mark it complete until those tests and a
-  clean analyzer run exist.
 - Rebuilt GitNexus from a clean index after stale-cache recovery. The graph
   identifies `showBloomDialog` in the `Build → ShowBloomDialog` flow; no
   unrelated flow is affected.

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../capture/generic_transaction_parser.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
+import '../../core/widgets/bloom/bloom_dialog.dart';
 import '../../data/models/raw_sms.dart';
 import '../../data/repositories/raw_sms_repository.dart';
 import 'transaction_export.dart';
@@ -84,7 +85,7 @@ class _ExportTransactionsButton extends ConsumerWidget {
       icon: const Icon(Icons.file_download_outlined),
       tooltip: 'Export transactions JSON (debug)',
       onPressed: () async {
-        final confirmed = await showDialog<bool>(
+        final confirmed = await showBloomDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Export plaintext transaction data?'),
@@ -170,7 +171,7 @@ class _UnparsedListView extends StatelessWidget {
   Future<void> _previewDonation(BuildContext context, UnparsedSms sms) async {
     const donation = SmsFixtureDonation();
     final fixture = donation.fixture(sms);
-    final approved = await showDialog<bool>(
+    final approved = await showBloomDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Review sanitized SMS'),

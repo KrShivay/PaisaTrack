@@ -567,7 +567,7 @@ class _SetBudgetCard extends ConsumerWidget {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    final amount = await showDialog<double>(
+    final amount = await showBloomDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Set Monthly Budget'),
@@ -604,8 +604,7 @@ class _SetBudgetCard extends ConsumerWidget {
           FilledButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
-                Navigator.of(context)
-                    .pop(double.parse(controller.text.trim()));
+                Navigator.of(context).pop(double.parse(controller.text.trim()));
               }
             },
             child: const Text('Save'),

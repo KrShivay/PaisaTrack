@@ -219,12 +219,6 @@ T-156c and T-159b/c last.
 
 ## In Review
 
-- [ ] T-156a (@codex) [P2] Shared Bloom dialog helper.
-      Implementation: `showBloomDialog` now owns shared Bloom chrome and all
-      direct dialog calls route through it. Verification remaining: add the
-      per-screen action-behavior tests required by `docs/tasks/T-156.md` and
-      clear the repository analyzer findings before approval.
-
 ## Backlog
 
 <!-- Groom future work here before promoting it to Ready. -->

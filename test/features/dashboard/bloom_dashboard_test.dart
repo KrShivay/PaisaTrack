@@ -94,5 +94,35 @@ void main() {
 
       await database.close();
     });
+
+    testWidgets('monthly budget dialog validates and saves its action result',
+        (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      await pumpDashboard(tester, database);
+
+      await tester.tap(find.text('Set monthly budget'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Set Monthly Budget'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      expect(find.text('Enter an amount'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField), '12000');
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Set Monthly Budget'), findsNothing);
+      expect(
+        await database.select(database.baselines).get(),
+        isNotEmpty,
+      );
+
+      await database.close();
+    });
   });
 }
