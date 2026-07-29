@@ -94,7 +94,7 @@ void main() {
 
     // Verify neither resolved to fallback color (0xFF94A3B8)
     for (final tile in tiles) {
-      expect(CategoryVisuals.color(tile.categoryId).value, isNot(0xFF94A3B8));
+      expect(CategoryVisuals.color(tile.categoryId).toARGB32(), isNot(0xFF94A3B8));
     }
   });
 }

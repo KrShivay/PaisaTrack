@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../data/repositories/payment_source_repository.dart';
 
@@ -117,7 +118,7 @@ class _PaymentSourceTile extends ConsumerWidget {
 
   Future<void> _editNickname(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController(text: source.nickname);
-    final nickname = await showDialog<String>(
+    final nickname = await showBloomDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Source nickname'),
@@ -148,7 +149,7 @@ class _PaymentSourceTile extends ConsumerWidget {
 
   Future<void> _editInstitution(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController(text: source.institution);
-    final institution = await showDialog<String>(
+    final institution = await showBloomDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Financial institution'),

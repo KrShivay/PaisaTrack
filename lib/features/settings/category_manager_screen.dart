@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
@@ -257,7 +258,7 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
         categories.where((category) => category.id != source.id).toList();
     if (targets.isEmpty) return;
 
-    final target = await showDialog<Category>(
+    final target = await showBloomDialog<Category>(
       context: context,
       builder: (context) => SimpleDialog(
         title: Text('Merge ${source.name} into'),
@@ -272,7 +273,7 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
     );
     if (target == null || !context.mounted) return;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showBloomDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Merge ${source.name} into ${target.name}?'),

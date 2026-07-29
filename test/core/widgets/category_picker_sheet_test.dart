@@ -159,7 +159,7 @@ void main() {
           ),
           child: child!,
         ),
-        home: Scaffold(
+        home: const Scaffold(
           body: CategoryPickerSheet(
             title: 'Picker',
             categories: categories,

@@ -8,6 +8,7 @@ library;
 
 export 'bloom_amount.dart';
 export 'bloom_category_tile.dart';
+export 'bloom_dialog.dart';
 export 'bloom_mascot.dart';
 export 'bloom_motion.dart';
 export 'bloom_notice.dart';

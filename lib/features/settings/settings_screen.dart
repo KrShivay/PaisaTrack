@@ -401,7 +401,7 @@ class SettingsScreen extends ConsumerWidget {
     final controller = TextEditingController(
       text: currentBudget != null ? currentBudget.toStringAsFixed(0) : '',
     );
-    final result = await showDialog<double?>(
+    final result = await showBloomDialog<double?>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Monthly Budget'),
@@ -518,7 +518,7 @@ class SettingsScreen extends ConsumerWidget {
     required String title,
     required String confirmLabel,
   }) {
-    return showDialog<String>(
+    return showBloomDialog<String>(
       context: context,
       builder: (context) => _PassphraseDialog(
         title: title,
@@ -921,7 +921,7 @@ class _ResetDataButton extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () async {
-        final confirm = await showDialog<bool>(
+        final confirm = await showBloomDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete all local data?'),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../../data/repositories/payee_label_repository.dart';
 
 class PayeeLabelsScreen extends ConsumerStatefulWidget {
@@ -172,7 +173,7 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
       text: identity.userLabel ?? identity.displayName,
     );
     final selectedAliases = identity.aliases.toSet();
-    final saved = await showDialog<bool>(
+    final saved = await showBloomDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
@@ -239,7 +240,7 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
     );
     if (!context.mounted) return;
     if (preview.hasConflicts) {
-      await showDialog<void>(
+      await showBloomDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Aliases conflict'),
@@ -257,7 +258,7 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
       );
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showBloomDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Apply label?'),
@@ -298,7 +299,7 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
   }
 
   Future<void> _showBackfillDialog(BuildContext context) async {
-    showDialog(
+    showBloomDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Backfill Structured Payees'),
@@ -327,7 +328,7 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
   }
 
   Future<void> _mergeCluster(BuildContext context) async {
-    showDialog(
+    showBloomDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Merge Cluster'),

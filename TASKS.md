@@ -10,14 +10,6 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
-## Completed P0 Blockers
-
-- [x] T-121 Make dashboard guidance truthful (period-gated guidance, no hardcoded state, budget input dialog).
-- [x] T-122 Repair permission, startup, and key-loss recovery (openAppSettings, DatabaseErrorScreen with retry).
-- [x] T-123 Make Sort persistence-safe (session skip tracking, DB-first update with SnackBar on error).
-- [x] T-124 Complete local-data erasure and DB-key durability (clearAllNativeState channel, commit() for passphrase store, synchronized creation lock).
-- [x] T-125 Establish production Android release lane (keystore.properties, Gradle release signing guard, release-signing.md docs).
-
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
@@ -83,14 +75,6 @@ later hardening.
       transfer scan with indexed SQL, and plan integer-paise migration.
 
 ### Accessibility, security, and release
-
-- [ ] T-125 (@codex) [P0] Establish a production Android release lane.
-      Module: Gradle, CI, distribution.
-      Depends: CI-managed signing or Play App Signing.
-      Gap: release builds use the debug key; CI omits native tests.
-      Next: fail release assembly without production signing, add Android app
-      and Keystore tests plus debug/release assembly to CI, and document key
-      rotation/rollback.
 - [ ] T-128 (@codex) [P1] Complete accessibility and failure-state coverage.
       Module: shell and all primary Bloom screens.
       Depends: stable P0 flows.
@@ -162,42 +146,15 @@ Phase A blocks B; B blocks C and D.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| **T-131a** | P0 | ~M | Add `FieldEvidence` to the record contract | — |
-| **T-131b** | P0 | ~M | `SpanVerifier`; deterministic parsers emit evidence | T-131a |
-| **T-131c** | P0 | ~M | `LlmFieldLocator` replaces `LlmExtractor` | T-131b |
-| **T-132a** | P0 | ~M | Schema v8: `lifecycle_state`, `message_kind` | T-131a |
-| **T-132b** | P0 | ~M | Message-kind classifier + locale cue pack | T-132a |
-| **T-132c** | P0 | ~M | Route kinds through ingestion; narrow `_hardReject` | T-132b |
 | **T-143a** | P1 | ~S | `feature_flags` table | — |
 | **T-143b** | P1 | ~M | Link-sequence and adversarial fixtures | — |
 | **T-143c** | P1 | ~L | Shadow mode and on-device metrics | T-143a/b |
-| **T-133a** | P1 | ~L | Shape scoring and quarantine store | T-129, T-132b |
+| **T-133a** | P1 | ~L | Shape scoring and quarantine store | T-129 |
 | **T-133b** | P1 | ~M | "Messages we couldn't read" + retry on upgrade | T-133a |
-| **T-134a** | P1 | ~M | `financial_events` + `transaction_links` schema | T-132a |
-| **T-134b** | P1 | ~L | Correlation key ladder; drop substring matching | T-134a, T-143b |
-| **T-134c** | P1 | ~M | Materialized dedup/transfer projections | T-134b |
-| **T-135a** | P1 | ~L | `net_amount` as the single aggregate input | T-134a, T-126 |
-| **T-135b** | P1 | ~M | Refund linking (auto ≥0.90, else ranked review) | T-135a |
-| **T-135c** | P1 | ~M | Cash, transfers, card-bill treatment | T-135a |
-| **T-136a** | P1 | ~L | Counterparties table + identity parser | T-134a |
-| **T-136b** | P1 | ~M | Person/merchant split; people bypass the ladder | T-136a |
-| **T-136c** | P1 | ~M | Previewed, reversible identity backfill | T-136b |
-| **T-137a** | P2 | ~M | Nightly merchant clustering (suggestions only) | T-136b |
-| **T-137b** | P2 | ~M | Cluster review and one-tap merge | T-137a |
-| **T-138a** | P2 | ~M | `expected_events` schema + dedup key | T-132a |
-| **T-138b** | P2 | ~M | Reminders and mandates become expected events | T-138a, T-132c |
-| **T-138c** | P2 | ~M | Fulfilment, snooze, cancel, missed | T-138b, T-134b |
-| **T-139a** | P2 | ~M | Classify subscription vs EMI vs variable bill | T-136b, T-138b |
-| **T-139b** | P3 | ~S | Price-change insight | T-139a |
-| **T-140a** | P2 | ~M | Merchant-memory step in the categorizer | T-136b, T-143a |
-| **T-140b** | P2 | ~M | Classifier feature upgrade | T-140a |
-| **T-140c** | P2 | ~S | LLM category suggestion capped at 0.70 | T-140b, T-131c |
-| **T-141a** | P3 | ~S | Anomaly: series suppression + amount floor | T-139a |
-| **T-142a** | P3 | ~M | Highlight evidence spans in the source message | T-131a, T-147a |
-| **T-144a** | P1 | ~S | Manifest scope + merged-manifest CI guard | — |
-| **T-144b** | P1 | ~M | Prominent disclosure + capture controls | T-133a |
 
-Closes on completion: T-100 (by T-134/T-135), T-101 (by T-132/T-138).
+Completed work is retained in Git history: T-131a–c, T-132a–c, T-134a–c,
+T-135a–c, T-136a–c, T-137a–b, T-138a–c, T-139a–b, T-140a–c, T-141a,
+T-142a, and T-144a–b.
 
 #### UI gaps — `docs/ui-gaps-and-redesign.md`
 
@@ -206,19 +163,10 @@ T-154a.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| **T-146a** | P1 | ~S | Pass and resolve the category icon (8 call sites) | — |
-| **T-146b** | P2 | ~S | Fix the recurring screen's category id | — |
-| **T-148a** | P1 | ~S | Whole category row becomes the ≥48dp control | — |
-| **T-148b** | P2 | ~M | Inline category chips in the detail sheet | T-148a, T-145a |
-| **T-152a** | P2 | ~M | `showBloomFullScreenSheet` | — |
-| **T-145a** | P2 | ~M | Category picker to the full-screen route | T-152a |
-| **T-145b** | P3 | ~S | Sticky search, section headers, result count | T-145a |
-| **T-147a** | P2 | ~M | Render the source message + retention degradation | T-152a |
-| **T-147b** | P3 | ~S | Provenance badge and privacy gating | T-147a |
 | **T-150a** | P2 | ~M | Extract prompt catalogue; test against validator | — |
 | **T-150b** | P2 | ~M | Searchable, grouped empty state | T-150a |
 | **T-150c** | P3 | ~S | Rotating composer chips | T-150a, T-151c |
-| **T-151a** | P2 | ~M | Sheet presentation; remove the duplicate title | T-152a |
+| **T-151a** | P2 | ~M | Sheet presentation; remove the duplicate title | — |
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
 | **T-151c** | P2 | ~S | Composer styling | T-151a |
 | **T-151d** | P2 | ~M | Thinking, model-missing, no-answer states | T-151b |
@@ -226,21 +174,60 @@ T-154a.
 | **T-153a** | P2 | ~M | Ordered queue + cursor replaces the skip filter | — |
 | **T-153b** | P2 | ~S | Back navigation through seen cards | T-153a |
 | **T-153c** | P2 | ~M | Skipped end state, persistence, progress | T-153a |
-| **T-154a** | P2 | ~M | Open transaction detail from the Sort card | T-153a, T-152a |
+| **T-154a** | P2 | ~M | Open transaction detail from the Sort card | T-153a |
 | **T-154b** | P2 | ~M | Inline corrections + guess refresh before Keep | T-154a |
-| **T-149a** | P3 | ~M | Profile shell and personalisation | T-152a |
+| **T-149a** | P3 | ~M | Profile shell and personalisation | — |
 | **T-149b** | P3 | ~M | Habits and money shape | T-149a |
 | **T-149c** | P3 | ~S | Data footprint and privacy posture | T-149a |
 
+T-145a, T-145b, T-146a, T-146b, T-147a, T-147b, T-148a, T-148b, and T-152a are
+implemented on `main` (see WORKLOG.md) and removed from this board per the
+board rules below.
+
 #### Suggested order
 
-Ship first (small, independent, high visibility): T-146a, T-148a, T-131a.
-Then the foundations everything else waits on: T-152a, T-143a/b, T-131b/c,
-T-132a-c.
+Ship first (small, independent, high visibility): T-150a.
+Then the foundations everything else waits on: T-143a/b, T-131b/c, T-132a-c.
+
+#### Flutter refactor, no behavior change — `docs/tasks/`
+
+Scoped to duplicated category/icon/color resolution, sheet/dialog APIs,
+scattered threshold constants, the oversized `transaction_detail_screen.dart`,
+Riverpod boundary violations, and shallow render-only tests. Narrows T-130's
+"oversized repository/screens" gap for these specific files; does not replace
+T-130's data-layer/DTO scope. T-159a (regression tests) should land before
+T-157b starts — it is the safety net for the riskiest extraction here.
+
+| Task | P | Size | Summary | Depends |
+|---|---|---|---|---|
+| **T-156b** | P2 | ~M | Route 4 bespoke sheet presenters through Bloom helpers | — |
+| **T-156c** | P2 | ~M | Standardize TransactionDetailScreen's presentation | T-158c |
+| **T-157a** | P2 | ~M | Move raw Drift writes out of recurring/insights screens | — |
+| **T-157b** | P2 | ~L | Shared category-correction + undo controller | T-159a |
+| **T-157c** | P3 | ~S | Relocate `suggestedCategoriesProvider` out of the screen | — |
+| **T-158a** | P2 | ~M | Extract pure functions (chip ranking, exclusion, evidence) | — |
+| **T-158b** | P2 | ~M | Extract `TransactionDetailController` | T-157b |
+| **T-158c** | P2 | ~M | Extract sub-widgets into `detail/` | T-158a |
+| **T-158d** | P3 | ~S | Verify exclusion-reason parity (UI vs. analytics SQL) | T-158a |
+| **T-159a** | P1 | ~M | Characterize correction/undo behavior before extraction | — |
+| **T-159b** | P2 | ~S | Unit tests for extracted pure functions | T-158a |
+| **T-159c** | P3 | ~M | Convert remaining shallow render tests to behavioral | T-158c |
+
+Suggested order: T-159a first (safety net) — then T-155/T-156/T-157a/T-158a
+can proceed in any order (independent) — then T-157b — then T-158b/c — then
+T-156c and T-159b/c last.
 
 ## In Review
 
-<!-- Temporary: unresolved verification/review only. -->
+- [ ] T-156a (@codex) [P2] Shared Bloom dialog helper.
+      Implementation: `showBloomDialog` now owns shared Bloom chrome and all
+      direct dialog calls route through it. Verification remaining: add the
+      per-screen action-behavior tests required by `docs/tasks/T-156.md` and
+      clear the repository analyzer findings before approval.
+
+## Backlog
+
+<!-- Groom future work here before promoting it to Ready. -->
 
 ## Board rules
 

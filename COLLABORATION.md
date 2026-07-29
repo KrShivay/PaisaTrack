@@ -41,6 +41,9 @@ section.
 ## Definition of done
 
 - Acceptance criteria are met and proven by non-vacuous tests.
+- No unnecessary duplication (DRY): repeated logic, config, or copy-pasted
+  blocks are factored into shared code instead — but don't abstract for
+  hypothetical future reuse.
 - Privacy and local-first constraints remain intact.
 - Schema changes include generated code and migration tests.
 - `flutter analyze --no-pub`, focused tests, full Flutter tests, and

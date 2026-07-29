@@ -211,7 +211,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: Size(64, AppSizes.minTouchTarget), // >=48dp touch target height
+          minimumSize: const Size(64, AppSizes.minTouchTarget), // >=48dp touch target height
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
@@ -279,7 +279,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: Size(64, AppSizes.minTouchTarget),
+          minimumSize: const Size(64, AppSizes.minTouchTarget),
           backgroundColor: AppColorTokens.ink,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(

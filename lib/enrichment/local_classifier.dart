@@ -86,10 +86,12 @@ class LocalClassifier {
     
     final predictions = <ClassificationPrediction>[];
     for (var i = 0; i < exponentials.length; i++) {
-      predictions.add(ClassificationPrediction(
-        model.categories[i],
-        exponentials[i] / total,
-      ));
+      predictions.add(
+        ClassificationPrediction(
+          model.categories[i],
+          exponentials[i] / total,
+        ),
+      );
     }
     predictions.sort((a, b) => b.confidence.compareTo(a.confidence));
     return predictions.take(k).toList();

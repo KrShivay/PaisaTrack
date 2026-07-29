@@ -1,8 +1,7 @@
 # Product Status
 
-Status date: 2026-07-26  
-Code baseline: `codex/bloom-redesign` at `45a3546`, including the current
-uncommitted worktree
+Status date: 2026-07-29
+Code baseline: current `main` worktree, including T-156a dialog consolidation
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -16,11 +15,12 @@ categorization, recurring detection, deterministic analytics, grounded
 assistant, backup, and most Bloom UI paths are implemented and covered by a
 large host-side test suite.
 
-It is not production-ready. The current Bloom UI can present fabricated or
-mixed-period financial guidance, several data failures look like valid empty
-states, permanent SMS-permission recovery is broken, generic database failures
-lead to destructive recovery copy, delete-everything misses native state, and
-release builds use debug signing.
+The completed P0 fixes (T-121–T-125) removed fabricated dashboard guidance,
+permission/key-loss recovery failures, optimistic Sort completion, incomplete
+local erasure/key persistence, and unsafe release signing defaults. It is not
+production-ready: calendar/eligibility semantics, capture retry diagnostics,
+backup bounds, accessibility/device acceptance, and release/device evidence
+remain open.
 
 ## Current architecture
 
@@ -39,21 +39,21 @@ normative boundaries.
 
 | Product area | Actual state | Important gap |
 | --- | --- | --- |
-| Onboarding and SMS permission | Implemented; users may continue without SMS | “Open settings” does not open Android app settings after permanent denial |
+| Onboarding and SMS permission | Implemented; users may continue without SMS and can open app settings after permanent denial | Device acceptance for permission/recovery remains |
 | Live/history/resume SMS capture | Implemented, local, paged, and idempotent | Failed/unparsed rows lack a durable automatic retry contract; device acceptance remains |
 | Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm and generic coverage exist | Unknown-sender drops are not measurable; real-bank breadth remains incomplete |
 | Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI | Activity searches only the loaded 100-row window and converts query failures to empty state |
-| Review/Sort | Card/list presentation, keep/change/skip controls | Queue is capped at 100; shared index can create false Inbox Zero; writes advance before success |
-| Dashboard | SQL aggregates, period selector, global monthly budget prototype, recurring totals | Fabricated Blinkit insight/cap and fixed ₹48k setup; historical/custom periods mix with current-month advice |
+| Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates | Queue remains capped at 100; cursor/persistence work is T-153 |
+| Dashboard | SQL aggregates, period selector, truthful guidance, global monthly budget prototype, recurring totals | Calendar boundary and eligibility semantics remain inconsistent (T-126) |
 | Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Error states and period semantics are incomplete; eligibility diagnostics are absent |
 | Categories and identities | Category manager, payee labels, payment-source naming/ownership/exclusion | Payee aggregation remains unbounded; several secondary screens retain legacy surfaces |
 | Assistant | Deterministic intents and queries with guarded local-model fallback | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
-| Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, schema repair migrations | Passphrase persistence is asynchronous/racy; generic DB errors route to key-loss reset |
+| Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, durable key persistence, typed recovery | Backup/import remains memory-bound (T-127) |
 | Backup/import | v3 encrypted archive includes all 12 schema tables; 12-character export floor | Whole archive is held in memory; raw SMS outlives normal retention inside backups |
-| Delete everything | Deletes database files, DB key, Dart settings, and import markers | Native ask-answer preferences, notifications, and model/partial files survive |
+| Delete everything | Deletes database/native state, DB key, Dart settings, and import markers | Physical-device erasure acceptance remains |
 | Accessibility | Reduced motion and some semantics/responsive tests exist | Touch targets, TalkBack labels/order, contrast, large text, and device acceptance are incomplete |
 | Offline behavior | Core finance and inference work offline after optional model downloads | Background/device-only behavior is not fully accepted on physical hardware |
-| Release/distribution | Debug and test builds work | Release uses debug signing; CI omits native Android tests and device lanes |
+| Release/distribution | Release signing guard and rotation/rollback documentation exist | CI/device test lanes and distribution evidence remain |
 
 The stored global monthly budget and merchant-cap prototype are not T-098.
 T-098 is a future per-category, per-month budget feature and depends on a shared
@@ -61,26 +61,16 @@ net-spending contract.
 
 ## Known limitations by implementation priority
 
-1. **P0 — Financial truthfulness:** remove hardcoded Blinkit advice/cap and
-   fixed ₹48k setup; prevent historical/custom periods from driving
-   current-month “safe today” and runway.
-2. **P0 — Recovery and erasure:** distinguish typed key loss from retryable
-   database errors; complete native-state erasure; provide backup restore before
-   reset.
-3. **P0 — Permission and review flows:** open Android settings for permanent
-   SMS denial; make Sort persistence-first and impossible to falsely complete.
-4. **P0 — Release integrity:** configure production signing and fail release
-   builds when credentials are absent.
-5. **P1 — Error truthfulness:** never map loading/query errors to empty or zero
+1. **P1 — Error truthfulness:** never map loading/query errors to empty or zero
    financial state.
-6. **P1 — Data correctness:** unify local calendar boundaries and the
+2. **P1 — Data correctness:** unify local calendar boundaries and the
    analytics-eligibility predicate across dashboard, forecasts, anomalies,
    insights, and ask-budget calculations.
-7. **P1 — Scale:** move Activity/Review/Payee search and paging to SQL; stream
+3. **P1 — Scale:** move Activity/Review/Payee search and paging to SQL; stream
    backups; replace quadratic owned-transfer reconciliation.
-8. **P1 — Privacy:** exclude expired/raw SMS from backups, protect lock-screen
+4. **P1 — Privacy:** exclude expired/raw SMS from backups, protect lock-screen
    notification content, and move pending answers out of plaintext preferences.
-9. **P2 — Maintainability:** remove the database↔duplicate-rule import cycle,
+5. **P2 — Maintainability:** remove the database↔duplicate-rule import cycle,
    split oversized repositories/screens, and migrate money from `double`/REAL
    to integer paise.
 
@@ -109,16 +99,23 @@ landed in the worktree. Remaining Bloom and release gaps are normalized into
 
 ## Verification snapshot
 
-Verified in this workspace on 2026-07-26:
+Historical full-suite evidence, recorded on 2026-07-26:
 
 - `flutter test --no-pub --concurrency=1`: **490/490 passed**.
 - Android `:app:testDebugUnitTest` and
   `:paisatrack_keystore:testDebugUnitTest`: **passed**.
 - `flutter analyze --no-pub`: **one lint**, at
   `test/features/insights/insights_recurring_test.dart:102`.
-- GitNexus: 315 indexed files, 5,687 symbols, 224 execution flows.
-- GitNexus taint findings were unavailable because the index has no PDG layer;
-  this is not evidence that taint risks are absent.
+
+Current workspace verification, 2026-07-29:
+
+- Focused T-155/T-156 regression suite: **25/25 passed**.
+- `flutter analyze --no-pub`: **no issues found**.
+- GitNexus clean rebuild: status confirms the current `main` commit is indexed
+  and up to date.
+
+- GitNexus taint enumeration remains unavailable because the index has no PDG
+  layer; this is not evidence that taint risks are absent.
 
 Not verified: physical-device SMS delivery/resume, permanent-denial settings
 round-trip, WorkManager execution, TalkBack, large text, model download/inference

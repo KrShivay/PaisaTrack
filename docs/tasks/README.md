@@ -76,3 +76,8 @@ Rationale: doc §section — only when the "why" is non-obvious
 | T-152 | Full-screen sheet route | 1 | [T-152.md](T-152.md) |
 | T-153 | Sort cursor and skip | 3 | [T-153.md](T-153.md) |
 | T-154 | Edit from Sort | 2 | [T-154.md](T-154.md) |
+| T-155 | Threshold constant consolidation | 3 | [T-155.md](T-155.md) |
+| T-156 | Sheet and dialog consolidation | 3 | [T-156.md](T-156.md) |
+| T-157 | Riverpod boundary hardening | 3 | [T-157.md](T-157.md) |
+| T-158 | Split transaction_detail_screen.dart | 4 | [T-158.md](T-158.md) |
+| T-159 | Correction/detail regression coverage | 3 | [T-159.md](T-159.md) |

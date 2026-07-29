@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../settings/app_data_reset_service.dart';
 
 class KeyLossScreen extends ConsumerStatefulWidget {
@@ -15,7 +16,7 @@ class _KeyLossScreenState extends ConsumerState<KeyLossScreen> {
   bool _busy = false;
 
   Future<void> _confirmReset() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showBloomDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset local database?'),

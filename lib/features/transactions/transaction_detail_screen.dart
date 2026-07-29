@@ -1122,7 +1122,7 @@ class _InlineCategoryChip extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          constraints: BoxConstraints(minHeight: AppSizes.minTouchTarget),
+          constraints: const BoxConstraints(minHeight: AppSizes.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           margin: const EdgeInsets.only(right: 8),
           decoration: BoxDecoration(
@@ -1188,7 +1188,7 @@ class _MoreCategoryChip extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          constraints: BoxConstraints(minHeight: AppSizes.minTouchTarget),
+          constraints: const BoxConstraints(minHeight: AppSizes.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: bg,
