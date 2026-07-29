@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants.dart';
+import '../core/financial_calendar.dart';
 import '../core/result.dart';
 import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
@@ -159,6 +160,7 @@ class SmsIngestor {
     DateTime Function()? now,
     MessageKindClassifier? messageKindClassifier,
     ExpectedEventRepository? expectedEventRepository,
+    FinancialCalendar? financialCalendar,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
@@ -171,7 +173,9 @@ class SmsIngestor {
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _messageKindClassifier = messageKindClassifier,
-        _expectedEventRepository = expectedEventRepository ?? ExpectedEventRepository(database),
+        _expectedEventRepository =
+            expectedEventRepository ?? ExpectedEventRepository(database),
+        _financialCalendar = financialCalendar,
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
@@ -187,6 +191,7 @@ class SmsIngestor {
   final DuplicateSuppressor _duplicateSuppressor;
   final MessageKindClassifier? _messageKindClassifier;
   final ExpectedEventRepository _expectedEventRepository;
+  final FinancialCalendar? _financialCalendar;
   final DateTime Function() _now;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
@@ -217,7 +222,8 @@ class SmsIngestor {
             ),
           );
 
-      final kind = _messageKindClassifier?.classify(sms.body) ?? MessageKind.settledDebit;
+      final kind = _messageKindClassifier?.classify(sms.body) ??
+          MessageKind.settledDebit;
 
       if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
         final parseResult = await _parser.parse(sms);
@@ -232,15 +238,20 @@ class SmsIngestor {
           label = parseResult.value.merchantRaw ?? sms.sender;
           counterpartyId = parseResult.value.counterpartyVpa;
         } else {
-          final amtMatch = RegExp(r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)', caseSensitive: false).firstMatch(sms.body);
+          final amtMatch = RegExp(
+            r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)',
+            caseSensitive: false,
+          ).firstMatch(sms.body);
           if (amtMatch != null) {
             final amt = double.tryParse(amtMatch.group(1)!) ?? 0.0;
             amountPaise = (amt * 100).round();
           }
-          final rangeMatch = RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false).firstMatch(sms.body);
+          final rangeMatch = RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false)
+              .firstMatch(sms.body);
           if (rangeMatch != null) {
             amountLowPaise = (double.parse(rangeMatch.group(1)!) * 100).round();
-            amountHighPaise = (double.parse(rangeMatch.group(2)!) * 100).round();
+            amountHighPaise =
+                (double.parse(rangeMatch.group(2)!) * 100).round();
           }
         }
 
@@ -261,7 +272,10 @@ class SmsIngestor {
       }
 
       final (lifecycleState, lifecycleReason) = switch (kind) {
-        MessageKind.settledDebit || MessageKind.settledCredit => ('settled', null),
+        MessageKind.settledDebit || MessageKind.settledCredit => (
+            'settled',
+            null
+          ),
         MessageKind.pendingAuth => ('pending', 'authorized'),
         MessageKind.failed => ('failed', 'declined'),
         MessageKind.reversal => ('reversed', 'refund_or_reversal'),
@@ -305,7 +319,9 @@ class SmsIngestor {
                 ),
               );
           if (duplicateOfTxnId != null) {
-            await _database.into(_database.transactionLinks).insertOnConflictUpdate(
+            await _database
+                .into(_database.transactionLinks)
+                .insertOnConflictUpdate(
                   TransactionLinksCompanion.insert(
                     id: 'link_${sms.id}_$duplicateOfTxnId',
                     fromTxnId: 'txn_${sms.id}',
@@ -403,8 +419,8 @@ class SmsIngestor {
   }
 
   Future<int> _countAskedToday() async {
-    final now = _now().toUtc();
-    final start = DateTime.utc(now.year, now.month, now.day);
+    final calendar = _financialCalendar ?? FinancialCalendar();
+    final start = calendar.dayContaining(_now()).start;
     final askedCount = _database.transactions.id.count();
     final askedQuery = _database.selectOnly(_database.transactions)
       ..addColumns([askedCount])

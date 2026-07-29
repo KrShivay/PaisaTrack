@@ -13,14 +13,6 @@ later hardening.
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
-- [ ] T-126 (@codex) [P1] Unify financial calendar and spending semantics.
-      Module: dashboard repository, burn rate, anomalies, insights, ingestion.
-      Depends: shared analytics-eligibility view/service and injected local
-      calendar boundary service.
-      Gap: dashboard uses local time and spending categories while intelligence
-      uses UTC and broader debit/credit sets; ask quota resets at 05:30 IST.
-      Next: define one predicate and boundary API, convert local ranges to query
-      instants, and add parity tests across midnight/month boundaries.
 - [ ] T-129 (@codex) [P1] Add durable capture retry and privacy-safe diagnostics.
       Module: SMS backfill/ingestion, Android filter, SMS lookup/dev diagnostics.
       Depends: versioned retry reason/state.

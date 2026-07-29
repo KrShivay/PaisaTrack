@@ -72,6 +72,13 @@ merges without replacing raw source fields.
 
 ## Analytics and intelligence
 
+- `FinancialCalendar` turns local, half-open calendar days/months into UTC
+  instants for SQLite queries. Dashboard periods, forecasts, anomalies,
+  insights, and the Ask quota use it; tests inject the India offset around the
+  local midnight/month boundary.
+- `FinancialEligibility` is the shared spending contract: settled debit only,
+  excluding deleted, duplicate, opted-out, and owned-transfer rows, and
+  requiring a spending category (uncategorised defaults to spending).
 - Dashboard providers read SQL totals and grouped category, merchant, and trend
   aggregates. Transaction feeds load 100 newest rows at a time; recent cards use
   a separate six-row period query.
@@ -79,7 +86,8 @@ merges without replacing raw source fields.
   Conservatively paired transfers between owned sources are also excluded from
   aggregates without hiding either transaction.
 - Recurring detection derives series from settled history.
-- Anomaly, forecast, and insight engines are deterministic.
+- Anomaly, forecast, and insight engines are deterministic and consume the
+  same eligibility contract as Dashboard.
 - Nightly work purges expired raw SMS, refreshes recurring/baseline/classifier
   state, and recomputes insights with checkpoints.
 

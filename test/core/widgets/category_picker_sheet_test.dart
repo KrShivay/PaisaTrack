@@ -95,7 +95,8 @@ void main() {
     expect(selected?.id, 'transfers');
   });
 
-  testWidgets('T-145b: pinned search field remains visible while scrolling and result count is shown',
+  testWidgets(
+      'T-145b: pinned search field remains visible while scrolling and result count is shown',
       (tester) async {
     final manyCategories = List.generate(
       20,
@@ -152,30 +153,28 @@ void main() {
 
   testWidgets('T-145a: honours keyboard insets', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            viewInsets: const EdgeInsets.only(bottom: 250),
-          ),
-          child: child!,
-        ),
-        home: const Scaffold(
-          body: CategoryPickerSheet(
-            title: 'Picker',
-            categories: categories,
-            currentCategoryId: 'food',
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(viewInsets: EdgeInsets.only(bottom: 250)),
+          child: Scaffold(
+            resizeToAvoidBottomInset: false,
+            body: CategoryPickerSheet(
+              title: 'Picker',
+              categories: categories,
+              currentCategoryId: 'food',
+            ),
           ),
         ),
       ),
     );
 
-    final padding = tester.widget<Padding>(
-      find.descendant(
-        of: find.byType(CategoryPickerSheet),
-        matching: find.byType(Padding).first,
+    final paddings = tester.widgetList<Padding>(
+      find.ancestor(
+        of: find.byType(TextField),
+        matching: find.byType(Padding),
       ),
     );
 
-    expect(padding.padding.resolve(TextDirection.ltr).bottom, greaterThanOrEqualTo(250.0));
+    expect(paddings.last.padding.resolve(TextDirection.ltr).bottom, 266);
   });
 }

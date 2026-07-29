@@ -3,6 +3,16 @@
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
 
+## 2026-07-30 — T-126 complete: calendar and spending semantics
+
+- Added `FinancialCalendar` (local calendar → UTC query instants) and the
+  shared `FinancialEligibility` contract. Dashboard periods/repository,
+  burn-rate, anomaly, insights, and Ask quota now use the same settled-spend
+  definition and injected boundary service.
+- Added India midnight/month-boundary and lifecycle-exclusion coverage.
+  Repaired the category-picker keyboard-inset test harness so it asserts the
+  sheet's outer padding instead of an unrelated inner padding.
+
 ## 2026-07-29 — T-156a approved: dialog consolidation
 
 - T-156a is complete and removed from `TASKS.md`. `showBloomDialog` now

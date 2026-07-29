@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/financial_calendar.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/dashboard_repository.dart';
@@ -15,39 +16,61 @@ class DashboardPeriod {
     required this.end,
     required this.label,
     required this.isCalendarMonth,
+    required this.calendar,
   });
 
-  factory DashboardPeriod.month(DateTime value) {
-    final start = DateTime(value.year, value.month);
+  factory DashboardPeriod.month(
+    DateTime value, {
+    FinancialCalendar? calendar,
+  }) {
+    final boundary = calendar ?? FinancialCalendar();
+    final local = boundary.localDate(value);
+    final period = boundary.monthContaining(value);
     return DashboardPeriod(
-      start: start,
-      end: DateTime(value.year, value.month + 1),
-      label: '${_monthNames[value.month - 1]} ${value.year}',
+      start: period.start,
+      end: period.end,
+      label: '${_monthNames[local.month - 1]} ${local.year}',
       isCalendarMonth: true,
+      calendar: boundary,
     );
   }
 
-  factory DashboardPeriod.lastDays(int days, {DateTime? now}) {
+  factory DashboardPeriod.lastDays(
+    int days, {
+    DateTime? now,
+    FinancialCalendar? calendar,
+  }) {
     assert(days > 0);
-    final today = _localDay(now ?? DateTime.now());
-    final start = today.subtract(Duration(days: days - 1));
+    final boundary = calendar ?? FinancialCalendar();
+    final today = boundary.localDate(now ?? DateTime.now());
+    final day = boundary.dayContaining(now ?? DateTime.now());
+    final start = day.start.subtract(Duration(days: days - 1));
     return DashboardPeriod(
       start: start,
-      end: today.add(const Duration(days: 1)),
+      end: day.end,
       label: days == 1 ? _dateLabel(today) : 'Last $days days',
       isCalendarMonth: false,
+      calendar: boundary,
     );
   }
 
-  factory DashboardPeriod.range(DateTime start, DateTime inclusiveEnd) {
-    final localStart = _localDay(start);
-    final localEnd = _localDay(inclusiveEnd);
+  factory DashboardPeriod.range(
+    DateTime start,
+    DateTime inclusiveEnd, {
+    FinancialCalendar? calendar,
+  }) {
+    final boundary = calendar ?? FinancialCalendar();
+    final localStart = boundary.localDate(start);
+    final localEnd = boundary.localDate(inclusiveEnd);
     assert(!localEnd.isBefore(localStart));
+    final startPeriod = boundary.dayContaining(start);
+    final endPeriod = boundary.dayContaining(inclusiveEnd);
     return DashboardPeriod(
-      start: localStart,
-      end: localEnd.add(const Duration(days: 1)),
+      start: startPeriod.start,
+      end: endPeriod.end,
       label: _rangeLabel(localStart, localEnd),
       isCalendarMonth: false,
+      calendar: boundary,
     );
   }
 
@@ -55,21 +78,20 @@ class DashboardPeriod {
   final DateTime end;
   final String label;
   final bool isCalendarMonth;
+  final FinancialCalendar calendar;
 
-  bool contains(DateTime timestamp) {
-    final local = timestamp.toLocal();
-    return !local.isBefore(start) && local.isBefore(end);
-  }
+  bool contains(DateTime timestamp) =>
+      !timestamp.toUtc().isBefore(start) && timestamp.toUtc().isBefore(end);
 
   bool isCurrentMonth([DateTime? value]) {
     if (!isCalendarMonth) return false;
-    final now = value ?? DateTime.now();
-    return start.year == now.year && start.month == now.month;
+    final now = calendar.localDate(value ?? DateTime.now());
+    final monthStart = calendar.localDate(start);
+    return monthStart.year == now.year && monthStart.month == now.month;
   }
 
   int elapsedDays([DateTime? value]) {
-    final tomorrow =
-        _localDay(value ?? DateTime.now()).add(const Duration(days: 1));
+    final tomorrow = calendar.dayContaining(value ?? DateTime.now()).end;
     final effectiveEnd = end.isBefore(tomorrow) ? end : tomorrow;
     if (!start.isBefore(effectiveEnd)) return 0;
     return effectiveEnd.difference(start).inDays;
@@ -77,7 +99,10 @@ class DashboardPeriod {
 
   DashboardPeriod get previous {
     if (isCalendarMonth) {
-      return DashboardPeriod.month(DateTime(start.year, start.month - 1));
+      return DashboardPeriod.month(
+        start.subtract(const Duration(days: 1)),
+        calendar: calendar,
+      );
     }
     final duration = end.difference(start);
     final previousEnd = start;
@@ -86,10 +111,13 @@ class DashboardPeriod {
       start: previousStart,
       end: previousEnd,
       label: _rangeLabel(
-        previousStart,
-        previousEnd.subtract(const Duration(days: 1)),
+        calendar.localDate(previousStart),
+        calendar.localDate(
+          previousEnd.subtract(const Duration(days: 1)),
+        ),
       ),
       isCalendarMonth: false,
+      calendar: calendar,
     );
   }
 
@@ -97,9 +125,6 @@ class DashboardPeriod {
       isCalendarMonth ? 'vs previous month' : 'vs previous period';
 
   DateTime get trendAnchor => end.subtract(const Duration(microseconds: 1));
-
-  static DateTime _localDay(DateTime value) =>
-      DateTime(value.year, value.month, value.day);
 
   static String _dateLabel(DateTime value) =>
       '${value.day} ${_monthNames[value.month - 1]} ${value.year}';

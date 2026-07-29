@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../core/financial_calendar.dart';
+import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
 
 /// Result of one deterministic insight recomputation.
@@ -31,9 +33,10 @@ class _InsightSpec {
   final Map<String, Object?> payload;
 }
 
-/// Precomputes deterministic, no-LLM insights for one UTC calendar month.
+/// Precomputes deterministic, no-LLM insights for one local calendar month.
 class InsightsEngine {
-  const InsightsEngine(this._database);
+  const InsightsEngine(this._database, {FinancialCalendar? calendar})
+      : _calendar = calendar;
 
   static const _ownedKinds = {
     'duplicate_subscription',
@@ -45,38 +48,57 @@ class InsightsEngine {
   static const categoryDeltaThreshold = 0.10;
 
   final AppDatabase _database;
+  final FinancialCalendar? _calendar;
 
   /// Replaces this engine's insights for the current period atomically.
   ///
   /// Existing anomaly/forecast rows are owned by their dedicated engines and
   /// remain untouched. A user's dismissed state survives payload refreshes.
   Future<InsightsRunResult> run({DateTime? today}) {
-    final now = (today ?? DateTime.now()).toUtc();
-    final currentStart = DateTime.utc(now.year, now.month);
-    final nextMonth = DateTime.utc(now.year, now.month + 1);
-    final previousStart = DateTime.utc(now.year, now.month - 1);
-    final period = _monthKey(currentStart);
+    final calendar = _calendar ?? FinancialCalendar();
+    final instant = today ?? DateTime.now();
+    final now = calendar.localDate(instant);
+    final currentPeriod = calendar.monthContaining(instant);
+    final currentStart = currentPeriod.start;
+    final nextMonth = currentPeriod.end;
+    final previousStart =
+        DateTime.utc(now.year, now.month - 1).subtract(calendar.timeZoneOffset);
+    final period = calendar.monthKey(instant);
 
     return _database.transaction(() async {
       final recurring = await _database.select(_database.recurringSeries).get();
-      final transactions = await (_database.select(_database.transactions)
+      final candidates = await (_database.select(_database.transactions)
             ..where(
               (t) =>
                   t.ts.isBiggerOrEqualValue(
                     previousStart.millisecondsSinceEpoch,
                   ) &
                   t.ts.isSmallerThanValue(nextMonth.millisecondsSinceEpoch) &
-                  t.direction.equals('debit') &
                   t.isAnalyticsExcluded.equals(false) &
                   t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
-                  t.duplicateOfTxnId.isNull(),
+                  t.duplicateOfTxnId.isNull() &
+                  t.lifecycleState.equals('settled') &
+                  t.direction.equals('debit'),
             ))
           .get();
       final categories = {
         for (final row in await _database.select(_database.categories).get())
           row.id: row.name,
       };
+      final categoryIsSpending = {
+        for (final row in await _database.select(_database.categories).get())
+          row.id: row.isSpending,
+      };
+      final transactions = candidates
+          .where(
+            (transaction) => FinancialEligibility.includesSpendingDebit(
+              transaction,
+              categoryIsSpending:
+                  categoryIsSpending[transaction.categoryId] ?? true,
+            ),
+          )
+          .toList(growable: false);
 
       final specs = <_InsightSpec>[
         ..._duplicateSubscriptions(period, recurring),
@@ -189,7 +211,8 @@ class InsightsEngine {
   ) sync* {
     for (final series in recurring) {
       final diff = (series.lastAmount - series.expectedAmount).abs();
-      final relChange = series.expectedAmount > 0 ? diff / series.expectedAmount : 0.0;
+      final relChange =
+          series.expectedAmount > 0 ? diff / series.expectedAmount : 0.0;
       if (series.amountTrend == 'rising' || relChange > 0.05) {
         yield _InsightSpec(
           id: 'price_creep:$period:${series.id}',
@@ -212,10 +235,11 @@ class InsightsEngine {
     for (final txn in transactions) {
       final categoryId = txn.categoryId;
       if (categoryId == null) continue;
-      final date = _date(txn);
-      final target = !date.isBefore(currentStart) && date.isBefore(nextMonth)
-          ? current
-          : previous;
+      final instant = _date(txn);
+      final target =
+          !instant.isBefore(currentStart) && instant.isBefore(nextMonth)
+              ? current
+              : previous;
       target[categoryId] = (target[categoryId] ?? 0) + txn.amount;
     }
     final ids = {...current.keys, ...previous.keys}.toList()..sort();
@@ -260,7 +284,8 @@ class InsightsEngine {
         'label': series.label,
         'expected_amount': series.expectedAmount,
         'last_amount': series.lastAmount,
-        'summary': '${series.label} ₹${series.expectedAmount.round()} → ₹${series.lastAmount.round()}',
+        'summary':
+            '${series.label} ₹${series.expectedAmount.round()} → ₹${series.lastAmount.round()}',
         'next_expected_date': series.nextExpectedDate.toIso8601String(),
         'kind': series.kind,
       };
@@ -274,7 +299,4 @@ class InsightsEngine {
 
   DateTime _date(Transaction txn) =>
       DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true);
-
-  String _monthKey(DateTime month) =>
-      '${month.year}-${month.month.toString().padLeft(2, '0')}';
 }

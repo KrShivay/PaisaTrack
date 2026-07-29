@@ -97,6 +97,31 @@ void main() {
     expect(snapshot.trendByMonth['2026-07'], 100);
   });
 
+  test('dashboard excludes non-settled debits from every spending aggregate',
+      () async {
+    await insert('settled', DateTime(2026, 7, 10), 100);
+    await insert('pending', DateTime(2026, 7, 11), 900);
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('pending')))
+        .write(const TransactionsCompanion(lifecycleState: Value('pending')));
+
+    final snapshot = await DashboardRepository(database).load(
+      DashboardQueryWindow(
+        start: DateTime(2026, 7),
+        end: DateTime(2026, 8),
+        previousStart: DateTime(2026, 6),
+        previousEnd: DateTime(2026, 7),
+        trendStart: DateTime(2026, 2),
+        trendEnd: DateTime(2026, 8),
+      ),
+    );
+
+    expect(snapshot.debitTotal, 100);
+    expect(snapshot.categories.single.total, 100);
+    expect(snapshot.merchants.single.total, 100);
+    expect(snapshot.trendByMonth['2026-07'], 100);
+  });
+
   test('transaction feed enforces limit and optional date bounds', () async {
     for (var day = 1; day <= 5; day++) {
       await insert('txn_$day', DateTime(2026, 7, day), day.toDouble());

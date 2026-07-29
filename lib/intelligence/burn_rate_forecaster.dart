@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../core/financial_calendar.dart';
+import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
 
 /// Deterministic month-end spending projection from three trailing months.
@@ -29,23 +31,27 @@ class BurnRateForecast {
 
 /// Computes PLAN §7.8 burn rate and persists material deviations as insights.
 class BurnRateForecaster {
-  const BurnRateForecaster(this._database);
+  const BurnRateForecaster(this._database, {FinancialCalendar? calendar})
+      : _calendar = calendar;
 
   static const trailingMonths = 3;
   static const insightDeviationThreshold = 0.10;
 
   final AppDatabase _database;
+  final FinancialCalendar? _calendar;
 
-  /// Forecasts the UTC month containing [today].
+  /// Forecasts the local calendar month containing [today].
   ///
   /// Historical daily medians use only months in which that calendar day
   /// exists, so a missing February 30/31 is not mistaken for zero spending.
   Future<BurnRateForecast> run({DateTime? today}) {
-    final now = (today ?? DateTime.now()).toUtc();
+    final calendar = _calendar ?? FinancialCalendar();
+    final now = calendar.localDate(today ?? DateTime.now());
     return _database.transaction(() async {
-      final currentStart = DateTime.utc(now.year, now.month);
-      final nextMonth = DateTime.utc(now.year, now.month + 1);
-      final historyStart = DateTime.utc(now.year, now.month - trailingMonths);
+      final currentPeriod = calendar.monthContaining(today ?? DateTime.now());
+      final nextMonth = currentPeriod.end;
+      final historyStart = DateTime.utc(now.year, now.month - trailingMonths)
+          .subtract(calendar.timeZoneOffset);
       final rows = await (_database.select(_database.transactions)
             ..where(
               (t) =>
@@ -53,30 +59,46 @@ class BurnRateForecaster {
                     historyStart.millisecondsSinceEpoch,
                   ) &
                   t.ts.isSmallerThanValue(nextMonth.millisecondsSinceEpoch) &
-                  t.direction.equals('debit') &
                   t.isAnalyticsExcluded.equals(false) &
                   t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
-                  t.duplicateOfTxnId.isNull(),
+                  t.duplicateOfTxnId.isNull() &
+                  t.lifecycleState.equals('settled') &
+                  t.direction.equals('debit'),
             ))
           .get();
 
+      final categoryIsSpending = {
+        for (final category
+            in await _database.select(_database.categories).get())
+          category.id: category.isSpending,
+      };
+      final eligible = rows
+          .where(
+            (transaction) => FinancialEligibility.includesSpendingDebit(
+              transaction,
+              categoryIsSpending:
+                  categoryIsSpending[transaction.categoryId] ?? true,
+            ),
+          )
+          .toList(growable: false);
+
       final dailySpend = <String, double>{};
-      for (final transaction in rows) {
-        final date = DateTime.fromMillisecondsSinceEpoch(
-          transaction.ts,
-          isUtc: true,
+      for (final transaction in eligible) {
+        final date = calendar.localDate(
+          DateTime.fromMillisecondsSinceEpoch(transaction.ts, isUtc: true),
         );
         final key = _dateKey(date);
         dailySpend[key] = (dailySpend[key] ?? 0) + transaction.amount;
       }
 
-      final currentSpend = rows.fold<double>(0, (sum, transaction) {
-        final date = DateTime.fromMillisecondsSinceEpoch(
+      final currentSpend = eligible.fold<double>(0, (sum, transaction) {
+        final instant = DateTime.fromMillisecondsSinceEpoch(
           transaction.ts,
           isUtc: true,
         );
-        return !date.isBefore(currentStart) && date.day <= now.day
+        return currentPeriod.contains(instant) &&
+                calendar.localDate(instant).day <= now.day
             ? sum + transaction.amount
             : sum;
       });
@@ -91,7 +113,7 @@ class BurnRateForecaster {
           historicalTotals.reduce((a, b) => a + b) / trailingMonths;
 
       var remainingMedianSpend = 0.0;
-      final lastCurrentDay = nextMonth.subtract(const Duration(days: 1)).day;
+      final lastCurrentDay = DateTime.utc(now.year, now.month + 1, 0).day;
       for (var day = now.day + 1; day <= lastCurrentDay; day++) {
         final samples = <double>[];
         for (final month in historyMonths) {
@@ -108,7 +130,7 @@ class BurnRateForecaster {
           : (projectedSpend - trailingAverage) / trailingAverage;
       final insightEmitted =
           deviationFraction.abs() > insightDeviationThreshold;
-      final period = _monthKey(currentStart);
+      final period = calendar.monthKey(today ?? DateTime.now());
       final insightId = 'forecast:$period';
       if (insightEmitted) {
         await _database.into(_database.insights).insertOnConflictUpdate(

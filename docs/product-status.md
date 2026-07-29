@@ -1,7 +1,8 @@
 # Product Status
 
-Status date: 2026-07-29
-Code baseline: current `main` worktree, including T-156a dialog consolidation
+Status date: 2026-07-30
+Code baseline: current `main` worktree, including T-126 calendar/eligibility
+semantics and T-156a dialog consolidation
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -15,10 +16,10 @@ categorization, recurring detection, deterministic analytics, grounded
 assistant, backup, and most Bloom UI paths are implemented and covered by a
 large host-side test suite.
 
-The completed P0 fixes (T-121–T-125) removed fabricated dashboard guidance,
+The completed P0 fixes (T-121–T-126) removed fabricated dashboard guidance,
 permission/key-loss recovery failures, optimistic Sort completion, incomplete
 local erasure/key persistence, and unsafe release signing defaults. It is not
-production-ready: calendar/eligibility semantics, capture retry diagnostics,
+production-ready: capture retry diagnostics,
 backup bounds, accessibility/device acceptance, and release/device evidence
 remain open.
 
@@ -44,8 +45,8 @@ normative boundaries.
 | Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm and generic coverage exist | Unknown-sender drops are not measurable; real-bank breadth remains incomplete |
 | Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI | Activity searches only the loaded 100-row window and converts query failures to empty state |
 | Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates | Queue remains capped at 100; cursor/persistence work is T-153 |
-| Dashboard | SQL aggregates, period selector, truthful guidance, global monthly budget prototype, recurring totals | Calendar boundary and eligibility semantics remain inconsistent (T-126) |
-| Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Error states and period semantics are incomplete; eligibility diagnostics are absent |
+| Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful guidance, global monthly budget prototype, recurring totals | Error states remain incomplete |
+| Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Eligibility diagnostics are absent |
 | Categories and identities | Category manager, payee labels, payment-source naming/ownership/exclusion | Payee aggregation remains unbounded; several secondary screens retain legacy surfaces |
 | Assistant | Deterministic intents and queries with guarded local-model fallback | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
 | Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, durable key persistence, typed recovery | Backup/import remains memory-bound (T-127) |
@@ -63,9 +64,8 @@ net-spending contract.
 
 1. **P1 — Error truthfulness:** never map loading/query errors to empty or zero
    financial state.
-2. **P1 — Data correctness:** unify local calendar boundaries and the
-   analytics-eligibility predicate across dashboard, forecasts, anomalies,
-   insights, and ask-budget calculations.
+2. **P1 — Data correctness:** retain parity tests for the shared local calendar
+   and analytics-eligibility contract as future analytics paths are added.
 3. **P1 — Scale:** move Activity/Review/Payee search and paging to SQL; stream
    backups; replace quadratic owned-transfer reconciliation.
 4. **P1 — Privacy:** exclude expired/raw SMS from backups, protect lock-screen

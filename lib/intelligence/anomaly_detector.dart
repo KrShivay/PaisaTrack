@@ -3,37 +3,43 @@ import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 
+import '../core/financial_calendar.dart';
+import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
 import '../data/repositories/feature_flag_repository.dart';
 
 /// Incremental weekly-category and monthly-merchant anomaly scanner.
 class AnomalyDetector {
-  const AnomalyDetector(this._database);
+  const AnomalyDetector(this._database, {FinancialCalendar? calendar})
+      : _calendar = calendar;
 
   static const minimumBaselinePeriods = 8;
   static const sigmaThreshold = 2.5;
   static const defaultAmountFloor = 500.0;
 
   final AppDatabase _database;
+  final FinancialCalendar? _calendar;
 
-  /// Processes the UTC week/month containing [today] exactly once per key.
+  /// Processes the local week/month containing [today] exactly once per key.
   Future<int> run({DateTime? today}) async {
-    final now = (today ?? DateTime.now()).toUtc();
+    final calendar = _calendar ?? FinancialCalendar();
+    final instant = today ?? DateTime.now();
+    final now = calendar.localDate(instant);
     final flagsRepo = FeatureFlagRepository(_database);
     final flagsState = await flagsRepo.getFlags();
 
     return _database.transaction(() async {
-      final weekStart = _weekStart(now);
-      final monthStart = DateTime.utc(now.year, now.month);
+      final weekStart = _weekStart(now).subtract(calendar.timeZoneOffset);
+      final monthStart = calendar.monthContaining(instant).start;
       final nextWeek = weekStart.add(const Duration(days: 7));
-      final nextMonth = DateTime.utc(now.year, now.month + 1);
+      final nextMonth = calendar.monthContaining(instant).end;
       var flags = 0;
       flags += await _processPeriod(
         keyPrefix: 'cat:',
         suffix: ':week',
         start: weekStart,
         end: nextWeek,
-        period: _dateKey(weekStart),
+        period: _dateKey(calendar.localDate(weekStart)),
         identityOf: (txn) => txn.categoryId,
         flagsState: flagsState,
       );
@@ -42,7 +48,7 @@ class AnomalyDetector {
         suffix: ':month',
         start: monthStart,
         end: nextMonth,
-        period: '${now.year}-${now.month.toString().padLeft(2, '0')}',
+        period: calendar.monthKey(instant),
         identityOf: (txn) => txn.merchantId,
         flagsState: flagsState,
       );
@@ -59,7 +65,7 @@ class AnomalyDetector {
     required String? Function(Transaction txn) identityOf,
     required FeatureFlagsState flagsState,
   }) async {
-    final rows = await (_database.select(_database.transactions)
+    final candidates = await (_database.select(_database.transactions)
           ..where(
             (t) =>
                 t.ts.isBiggerOrEqualValue(start.millisecondsSinceEpoch) &
@@ -67,9 +73,24 @@ class AnomalyDetector {
                 t.isAnalyticsExcluded.equals(false) &
                 t.ownedTransferId.isNull() &
                 t.isDeleted.equals(false) &
-                t.duplicateOfTxnId.isNull(),
+                t.duplicateOfTxnId.isNull() &
+                t.lifecycleState.equals('settled') &
+                t.direction.equals('debit'),
           ))
         .get();
+    final categoryIsSpending = {
+      for (final category in await _database.select(_database.categories).get())
+        category.id: category.isSpending,
+    };
+    final rows = candidates
+        .where(
+          (transaction) => FinancialEligibility.includesSpendingDebit(
+            transaction,
+            categoryIsSpending:
+                categoryIsSpending[transaction.categoryId] ?? true,
+          ),
+        )
+        .toList(growable: false);
     final groups = <String, List<Transaction>>{};
     for (final txn in rows) {
       final identity = identityOf(txn);

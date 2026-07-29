@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../analytics/financial_eligibility.dart';
 import '../db/database.dart';
 
 class DashboardQueryWindow {
@@ -113,11 +114,7 @@ SELECT
       AND COALESCE(c.is_spending, 1) = 1 THEN t.amount ELSE 0 END), 0) AS previous
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
-WHERE t.is_deleted = 0
-  AND t.duplicate_of_txn_id IS NULL
-  AND t.is_analytics_excluded = 0
-  AND t.owned_transfer_id IS NULL
-  AND t.lifecycle_state = 'settled'
+WHERE ${FinancialEligibility.baseSql}
 ''',
       variables: [
         Variable.withInt(window.start.millisecondsSinceEpoch),
@@ -146,14 +143,7 @@ SELECT t.category_id, COALESCE(c.name, 'Uncategorised') AS name, c.icon,
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
-  AND t.direction = 'debit'
-  AND COALESCE(c.is_spending, 1) = 1
-  AND t.is_deleted = 0
-  AND t.duplicate_of_txn_id IS NULL
-  AND t.is_analytics_excluded = 0
-  AND t.owned_transfer_id IS NULL
-  AND t.lifecycle_state = 'settled'
-  AND (t.merchant_raw IS NULL OR (UPPER(t.merchant_raw) NOT LIKE '%CREDIT CARD%' AND UPPER(t.merchant_raw) NOT LIKE '%CARD BILL%' AND UPPER(t.merchant_raw) NOT LIKE '%ATM%'))
+  AND ${FinancialEligibility.spendingDebitSql}
 GROUP BY t.category_id, c.name, c.icon
 ORDER BY total DESC, name ASC
 ''',
@@ -186,13 +176,7 @@ FROM transactions t
 LEFT JOIN merchants m ON m.id = t.merchant_id
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
-  AND t.direction = 'debit'
-  AND COALESCE(c.is_spending, 1) = 1
-  AND t.is_deleted = 0
-  AND t.duplicate_of_txn_id IS NULL
-  AND t.is_analytics_excluded = 0
-  AND t.owned_transfer_id IS NULL
-  AND t.lifecycle_state = 'settled'
+  AND ${FinancialEligibility.spendingDebitSql}
 GROUP BY name
 ORDER BY total DESC, name ASC
 LIMIT 5
@@ -227,13 +211,7 @@ SELECT strftime('%Y-%m', t.ts / 1000, 'unixepoch', 'localtime') AS month_key,
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
-  AND t.direction = 'debit'
-  AND COALESCE(c.is_spending, 1) = 1
-  AND t.is_deleted = 0
-  AND t.duplicate_of_txn_id IS NULL
-  AND t.is_analytics_excluded = 0
-  AND t.owned_transfer_id IS NULL
-  AND t.lifecycle_state = 'settled'
+  AND ${FinancialEligibility.spendingDebitSql}
 GROUP BY month_key
 ''',
       variables: [

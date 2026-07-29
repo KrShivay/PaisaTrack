@@ -12,6 +12,7 @@ import 'package:paisatrack/capture/sms_ingestion.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/core/result.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -263,6 +264,42 @@ void main() {
           ..where((row) => row.id.equals('txn_sms_budget_full')))
         .getSingle();
     expect(txn.status, 'needs_review');
+  });
+
+  test('daily ask quota resets at the injected local midnight boundary',
+      () async {
+    const calendar = FinancialCalendar.fixed(
+      Duration(hours: 5, minutes: 30),
+    );
+    final now = DateTime.utc(2026, 7, 5, 18, 31);
+    for (final id in [
+      'txn_asked_before_midnight_1',
+      'txn_asked_before_midnight_2',
+      'txn_familiar_before_midnight_1',
+      'txn_familiar_before_midnight_2',
+      'txn_familiar_before_midnight_3',
+    ]) {
+      await _insertTransaction(
+        database,
+        id: id,
+        status: id.startsWith('txn_asked') ? 'asked' : 'auto',
+        createdAt: DateTime.utc(2026, 7, 5, 18, 29),
+        merchantRaw: 'AMZN*MKTPLC',
+      );
+    }
+
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(amount: 49),
+      now: () => now,
+      financialCalendar: calendar,
+    );
+    await ingestor.ingest(_message('sms_after_local_midnight'));
+
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_sms_after_local_midnight')))
+        .getSingle();
+    expect(transaction.status, 'asked');
   });
 
   test('decision policy asks for familiar merchant at medium confidence',
@@ -659,6 +696,7 @@ SmsIngestor _ingestorFor(
   NormalizedTransactionRecord? record, {
   Map<String, NormalizedTransactionRecord>? recordsById,
   DateTime Function()? now,
+  FinancialCalendar? financialCalendar,
 }) {
   return SmsIngestor(
     database: database,
@@ -670,6 +708,7 @@ SmsIngestor _ingestorFor(
       seedMap: SeedCategoryMap.fromJson('{"amzn":"shopping"}'),
     ),
     now: now,
+    financialCalendar: financialCalendar,
   );
 }
 
