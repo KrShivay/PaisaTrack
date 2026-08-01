@@ -1,6 +1,8 @@
 import 'package:drift/native.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
+import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_backfill.dart';
 import 'package:paisatrack/capture/sms_import_state.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
@@ -34,11 +36,16 @@ void main() {
   SmsBackfiller backfiller(
     SmsInboxReader reader, {
     Set<String> throwIds = const {},
+    Set<String> unparsedIds = const {},
   }) {
     return SmsBackfiller(
       ingestor: SmsIngestor(
         database: database,
-        parser: FakeParserCascade(_sampleRecord, throwIds: throwIds),
+        parser: FakeParserCascade(
+          _sampleRecord,
+          throwIds: throwIds,
+          unparsedIds: unparsedIds,
+        ),
       ),
       reader: reader,
       pageSize: 2,
@@ -60,12 +67,98 @@ void main() {
 
     expect(result.processed, 2);
     expect(result.failed, 0);
+    expect(result.transactionsFound, 2);
+    expect(result.alreadyKnown, 0);
     expect(reader.requestedCursors, [null, cursor]);
     final transactions = await database.select(database.transactions).get();
     expect(
       transactions.map((row) => row.id),
       containsAll(['txn_sms_current', 'txn_sms_2022']),
     );
+  });
+
+  test('aggregates privacy-safe outcome counts across pages', () async {
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: [message('sms_parsed')],
+        scanned: 3,
+        filterRejected: 1,
+        unknownSender: 1,
+        accepted: 1,
+        nextCursor: const SmsInboxCursor(beforeEpochMillis: 900, beforeId: 9),
+      ),
+      SmsInboxPage(
+        messages: [message('sms_unparsed')],
+        scanned: 2,
+        filterRejected: 1,
+        accepted: 1,
+      ),
+    ]);
+
+    final result = await backfiller(
+      reader,
+      unparsedIds: {'sms_unparsed'},
+    ).run();
+
+    expect(result.scanned, 5);
+    expect(result.filterRejected, 2);
+    expect(result.unknownSender, 1);
+    expect(result.accepted, 2);
+    expect(result.parsed, 1);
+    expect(result.unparsed, 1);
+    expect(result.transactionsFound, 1);
+    expect(result.alreadyKnown, 0);
+  });
+
+  test('decodes native inbox outcome counts without raw-content fields',
+      () async {
+    const channel = MethodChannel('com.paisatrack/sms_backfill_test');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      return <String, Object?>{
+        'messages': [
+          <String, Object?>{
+            'id': 'sms_native',
+            'sender': 'VK-HDFCBK',
+            'body': 'Spent Rs 449',
+            'receivedAtEpochMillis': 1777713300000,
+          },
+        ],
+        'hasMore': false,
+        'scanned': 4,
+        'filterRejected': 2,
+        'unknownSender': 1,
+        'accepted': 1,
+      };
+    });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    final page = await const PlatformSmsInboxReader(channel: channel).readPage(
+      limit: 10,
+    );
+
+    expect(page.scanned, 4);
+    expect(page.filterRejected, 2);
+    expect(page.unknownSender, 1);
+    expect(page.accepted, 1);
+    expect(page.messages.single.id, 'sms_native');
+  });
+
+  test('reports new and already-known transactions separately', () async {
+    final first = await backfiller(
+      FakeInboxReader.single([message('sms_known')]),
+    ).run();
+    final second = await backfiller(
+      FakeInboxReader.single([message('sms_known')]),
+    ).run();
+
+    expect(first.transactionsFound, 1);
+    expect(first.alreadyKnown, 0);
+    expect(second.transactionsFound, 0);
+    expect(second.alreadyKnown, 1);
   });
 
   test('SmsBackfillStatusNotifier updates progress state and stage', () {
@@ -283,6 +376,35 @@ void main() {
     expect(transactionIds, isNot(contains('txn_sms_outside_overlap')));
   });
 
+  test('incremental catch-up retries retained failures after parser upgrade',
+      () async {
+    await SmsIngestor(
+      database: database,
+      parser: FakeParserCascade(
+        _sampleRecord,
+        unparsedIds: {'sms_failed'},
+      ),
+    ).ingest(message('sms_failed'));
+
+    final reader = FakeInboxReader.single([message('sms_failed')]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+        parserVersion: smsParserVersion + 1,
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 1);
+    expect(result.failed, 0);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+  });
+
   test('incremental catch-up queries only IDs in the current inbox page',
       () async {
     for (var index = 0; index < 500; index++) {
@@ -441,17 +563,24 @@ class FakeBackfillMarker implements BackfillMarker {
 }
 
 class FakeParserCascade extends ParserCascade {
-  FakeParserCascade(this._record, {this.throwIds = const {}})
-      : super(templateMatcher: const TemplateMatcher(registries: []));
+  FakeParserCascade(
+    this._record, {
+    this.throwIds = const {},
+    this.unparsedIds = const {},
+  }) : super(templateMatcher: const TemplateMatcher(registries: []));
 
   final NormalizedTransactionRecord _record;
   final Set<String> throwIds;
+  final Set<String> unparsedIds;
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
     RawSms sms,
   ) async {
     if (throwIds.contains(sms.id)) throw StateError('simulated parse failure');
+    if (unparsedIds.contains(sms.id)) {
+      return const Err(ParseFailure.unparsed);
+    }
     var resRecord = _record;
     if (resRecord.evidence == null || resRecord.evidence!.isEmpty) {
       final amountStr = resRecord.amount == resRecord.amount.toInt()

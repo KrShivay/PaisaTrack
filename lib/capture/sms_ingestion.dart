@@ -25,6 +25,7 @@ import 'duplicate_suppressor.dart';
 import 'llm_field_locator.dart';
 import 'message_kind_classifier.dart';
 import 'parser_cascade.dart';
+import 'parser_version.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
 import 'span_verifier.dart';
@@ -132,12 +133,16 @@ class SmsBatchIngestResult {
     required this.failed,
     this.createdTxnIds = const {},
     this.alreadyKnownIds = const {},
+    this.parsedIds = const {},
+    this.unparsedIds = const {},
     this.failedIds = const {},
   });
 
   final Set<String> succeededIds;
   final Set<String> createdTxnIds;
   final Set<String> alreadyKnownIds;
+  final Set<String> parsedIds;
+  final Set<String> unparsedIds;
   final Set<String> failedIds;
   final int failed;
 }
@@ -161,6 +166,7 @@ class SmsIngestor {
     MessageKindClassifier? messageKindClassifier,
     ExpectedEventRepository? expectedEventRepository,
     FinancialCalendar? financialCalendar,
+    int parserVersion = smsParserVersion,
   })  : _database = database,
         _parser = parser,
         _categorizer = categorizer,
@@ -176,6 +182,7 @@ class SmsIngestor {
         _expectedEventRepository =
             expectedEventRepository ?? ExpectedEventRepository(database),
         _financialCalendar = financialCalendar,
+        _parserVersion = parserVersion,
         _now = now ?? DateTime.now;
 
   final AppDatabase _database;
@@ -192,7 +199,10 @@ class SmsIngestor {
   final MessageKindClassifier? _messageKindClassifier;
   final ExpectedEventRepository _expectedEventRepository;
   final FinancialCalendar? _financialCalendar;
+  final int _parserVersion;
   final DateTime Function() _now;
+
+  int get parserVersion => _parserVersion;
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
   Future<void> ingest(RawSms sms) async {
@@ -203,144 +213,174 @@ class SmsIngestor {
     final flagsRepo = FeatureFlagRepository(_database);
     final flagsState = await flagsRepo.getFlags();
 
-    await _database.transaction(() async {
-      final existingTransaction = await (_database.select(
-        _database.transactions,
-      )..where((row) => row.id.equals(transactionId)))
-          .getSingleOrNull();
-      if (existingTransaction != null) return;
+    try {
+      await _database.transaction(() async {
+        final existingTransaction = await (_database.select(
+          _database.transactions,
+        )..where((row) => row.id.equals(transactionId)))
+            .getSingleOrNull();
+        if (existingTransaction != null) return;
 
-      await _database.into(_database.rawSms).insertOnConflictUpdate(
-            RawSmsCompanion.insert(
-              id: sms.id,
-              sender: sms.sender,
-              body: sms.body,
-              receivedAt: sms.receivedAt,
-              purgeAfter: sms.receivedAt.add(
-                Duration(days: flagsState.rawSmsRetentionDays),
-              ),
-            ),
-          );
-
-      final kind = _messageKindClassifier?.classify(sms.body) ??
-          MessageKind.settledDebit;
-
-      if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
-        final parseResult = await _parser.parse(sms);
-        int amountPaise = 0;
-        int? amountLowPaise;
-        int? amountHighPaise;
-        String label = sms.sender;
-        String? counterpartyId;
-
-        if (parseResult is Ok<NormalizedTransactionRecord, ParseFailure>) {
-          amountPaise = (parseResult.value.amount * 100).round();
-          label = parseResult.value.merchantRaw ?? sms.sender;
-          counterpartyId = parseResult.value.counterpartyVpa;
-        } else {
-          final amtMatch = RegExp(
-            r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)',
-            caseSensitive: false,
-          ).firstMatch(sms.body);
-          if (amtMatch != null) {
-            final amt = double.tryParse(amtMatch.group(1)!) ?? 0.0;
-            amountPaise = (amt * 100).round();
-          }
-          final rangeMatch = RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false)
-              .firstMatch(sms.body);
-          if (rangeMatch != null) {
-            amountLowPaise = (double.parse(rangeMatch.group(1)!) * 100).round();
-            amountHighPaise =
-                (double.parse(rangeMatch.group(2)!) * 100).round();
-          }
+        final existingRaw = await (_database.select(_database.rawSms)
+              ..where((row) => row.id.equals(sms.id)))
+            .getSingleOrNull();
+        if (existingRaw?.processed == true ||
+            (existingRaw?.parserVersion != null &&
+                existingRaw!.parserVersion! >= _parserVersion)) {
+          return;
         }
 
-        await _expectedEventRepository.recordExpectedEvent(
-          source: 'sms_${kind.name}',
-          originSmsId: sms.id,
-          counterpartyId: counterpartyId,
-          label: label,
-          expectedAmountPaise: amountPaise,
-          amountLowPaise: amountLowPaise,
-          amountHighPaise: amountHighPaise,
-          expectedDate: sms.receivedAt,
-          confidence: 0.95,
-        );
-
-        await _markRawSmsProcessed(sms.id, processed: true);
-        return;
-      }
-
-      final (lifecycleState, lifecycleReason) = switch (kind) {
-        MessageKind.settledDebit || MessageKind.settledCredit => (
-            'settled',
-            null
-          ),
-        MessageKind.pendingAuth => ('pending', 'authorized'),
-        MessageKind.failed => ('failed', 'declined'),
-        MessageKind.reversal => ('reversed', 'refund_or_reversal'),
-        _ => ('settled', null),
-      };
-
-      final parseResult = await _parser.parse(sms);
-      switch (parseResult) {
-        case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
-          final duplicateOfTxnId = await _findDuplicateOfExisting(value);
-          final merchant = await _merchantResolver?.resolve(value);
-          final categorization = await _categorizer?.categorize(
-            value,
-            merchantEmbedding: merchant?.embedding,
-          );
-          final initialStatus = duplicateOfTxnId != null
-              ? DecisionStatus.auto
-              : _fixedStatus ??
-                  (merchant?.needsReview == true
-                      ? DecisionStatus.needsReview
-                      : await _decideStatus(
-                          value,
-                          categorization: categorization,
-                        ));
-          final status = SpanVerifier.enforceWriteGuard(
-            body: sms.body,
-            record: value,
-            requestedStatus: initialStatus,
-          );
-          await _database.into(_database.transactions).insertOnConflictUpdate(
-                _transactionCompanionFor(
-                  smsId: sms.id,
-                  record: value,
-                  duplicateOfTxnId: duplicateOfTxnId,
-                  categorization: categorization,
-                  merchant: merchant,
-                  status: status,
-                  messageKind: kind,
-                  lifecycleState: lifecycleState,
-                  lifecycleReason: lifecycleReason,
+        await _database.into(_database.rawSms).insertOnConflictUpdate(
+              RawSmsCompanion.insert(
+                id: sms.id,
+                sender: sms.sender,
+                body: sms.body,
+                receivedAt: sms.receivedAt,
+                parserVersion: Value(_parserVersion),
+                failureReason: const Value<String?>(null),
+                purgeAfter: sms.receivedAt.add(
+                  Duration(days: flagsState.rawSmsRetentionDays),
                 ),
-              );
-          if (duplicateOfTxnId != null) {
-            await _database
-                .into(_database.transactionLinks)
-                .insertOnConflictUpdate(
-                  TransactionLinksCompanion.insert(
-                    id: 'link_${sms.id}_$duplicateOfTxnId',
-                    fromTxnId: 'txn_${sms.id}',
-                    toTxnId: duplicateOfTxnId,
-                    linkType: 'echo',
-                    basis: 'duplicate_suppressor',
-                    createdAt: DateTime.now().toUtc().millisecondsSinceEpoch,
+              ),
+            );
+
+        final kind = _messageKindClassifier?.classify(sms.body) ??
+            MessageKind.settledDebit;
+
+        if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
+          final parseResult = await _parser.parse(sms);
+          int amountPaise = 0;
+          int? amountLowPaise;
+          int? amountHighPaise;
+          String label = sms.sender;
+          String? counterpartyId;
+
+          if (parseResult is Ok<NormalizedTransactionRecord, ParseFailure>) {
+            amountPaise = (parseResult.value.amount * 100).round();
+            label = parseResult.value.merchantRaw ?? sms.sender;
+            counterpartyId = parseResult.value.counterpartyVpa;
+          } else {
+            final amtMatch = RegExp(
+              r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)',
+              caseSensitive: false,
+            ).firstMatch(sms.body);
+            if (amtMatch != null) {
+              final amt = double.tryParse(amtMatch.group(1)!) ?? 0.0;
+              amountPaise = (amt * 100).round();
+            }
+            final rangeMatch =
+                RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false)
+                    .firstMatch(sms.body);
+            if (rangeMatch != null) {
+              amountLowPaise =
+                  (double.parse(rangeMatch.group(1)!) * 100).round();
+              amountHighPaise =
+                  (double.parse(rangeMatch.group(2)!) * 100).round();
+            }
+          }
+
+          await _expectedEventRepository.recordExpectedEvent(
+            source: 'sms_${kind.name}',
+            originSmsId: sms.id,
+            counterpartyId: counterpartyId,
+            label: label,
+            expectedAmountPaise: amountPaise,
+            amountLowPaise: amountLowPaise,
+            amountHighPaise: amountHighPaise,
+            expectedDate: sms.receivedAt,
+            confidence: 0.95,
+          );
+
+          await _markRawSmsOutcome(
+            sms.id,
+            processed: true,
+            failureReason: null,
+          );
+          return;
+        }
+
+        final (lifecycleState, lifecycleReason) = switch (kind) {
+          MessageKind.settledDebit || MessageKind.settledCredit => (
+              'settled',
+              null
+            ),
+          MessageKind.pendingAuth => ('pending', 'authorized'),
+          MessageKind.failed => ('failed', 'declined'),
+          MessageKind.reversal => ('reversed', 'refund_or_reversal'),
+          _ => ('settled', null),
+        };
+
+        final parseResult = await _parser.parse(sms);
+        switch (parseResult) {
+          case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
+            final duplicateOfTxnId = await _findDuplicateOfExisting(value);
+            final merchant = await _merchantResolver?.resolve(value);
+            final categorization = await _categorizer?.categorize(
+              value,
+              merchantEmbedding: merchant?.embedding,
+            );
+            final initialStatus = duplicateOfTxnId != null
+                ? DecisionStatus.auto
+                : _fixedStatus ??
+                    (merchant?.needsReview == true
+                        ? DecisionStatus.needsReview
+                        : await _decideStatus(
+                            value,
+                            categorization: categorization,
+                          ));
+            final status = SpanVerifier.enforceWriteGuard(
+              body: sms.body,
+              record: value,
+              requestedStatus: initialStatus,
+            );
+            await _database.into(_database.transactions).insertOnConflictUpdate(
+                  _transactionCompanionFor(
+                    smsId: sms.id,
+                    record: value,
+                    duplicateOfTxnId: duplicateOfTxnId,
+                    categorization: categorization,
+                    merchant: merchant,
+                    status: status,
+                    messageKind: kind,
+                    lifecycleState: lifecycleState,
+                    lifecycleReason: lifecycleReason,
                   ),
                 );
-          }
-          if (categorization?.ruleId != null) {
-            await RuleRepository(_database)
-                .incrementHitCount(categorization!.ruleId!);
-          }
-          await _markRawSmsProcessed(sms.id, processed: true);
-        case Err<NormalizedTransactionRecord, ParseFailure>():
-          await _markRawSmsProcessed(sms.id, processed: false);
-      }
-    });
+            if (duplicateOfTxnId != null) {
+              await _database
+                  .into(_database.transactionLinks)
+                  .insertOnConflictUpdate(
+                    TransactionLinksCompanion.insert(
+                      id: 'link_${sms.id}_$duplicateOfTxnId',
+                      fromTxnId: 'txn_${sms.id}',
+                      toTxnId: duplicateOfTxnId,
+                      linkType: 'echo',
+                      basis: 'duplicate_suppressor',
+                      createdAt: DateTime.now().toUtc().millisecondsSinceEpoch,
+                    ),
+                  );
+            }
+            if (categorization?.ruleId != null) {
+              await RuleRepository(_database)
+                  .incrementHitCount(categorization!.ruleId!);
+            }
+            await _markRawSmsOutcome(
+              sms.id,
+              processed: true,
+              failureReason: null,
+            );
+          case Err<NormalizedTransactionRecord, ParseFailure>():
+            await _markRawSmsOutcome(
+              sms.id,
+              processed: false,
+              failureReason: SmsFailureReason.unparsed,
+            );
+        }
+      });
+    } catch (_) {
+      await _recordProcessingFailure(sms, flagsState);
+      rethrow;
+    }
   }
 
   /// Imports one inbox page under a single outer transaction so Drift emits
@@ -349,18 +389,94 @@ class SmsIngestor {
   Future<SmsBatchIngestResult> ingestBatch(List<RawSms> messages) {
     return _database.transaction(() async {
       final succeededIds = <String>{};
+      final createdTxnIds = <String>{};
+      final alreadyKnownIds = <String>{};
+      final parsedIds = <String>{};
+      final unparsedIds = <String>{};
+      final failedIds = <String>{};
+      final attemptedSmsIds = <String>{};
+      final smsIds = messages.map((sms) => sms.id).toList(growable: false);
+      final existingSmsIds = <String>{};
+      if (smsIds.isNotEmpty) {
+        final smsId = _database.transactions.smsId;
+        final rows = await (_database.selectOnly(_database.transactions)
+              ..addColumns([smsId])
+              ..where(smsId.isIn(smsIds)))
+            .get();
+        existingSmsIds.addAll(rows.map((row) => row.read(smsId)!));
+      }
+      final existingRawById = <String, RawSm>{};
+      if (smsIds.isNotEmpty) {
+        final rows = await (_database.select(_database.rawSms)
+              ..where((row) => row.id.isIn(smsIds)))
+            .get();
+        for (final row in rows) {
+          existingRawById[row.id] = row;
+        }
+      }
       var failed = 0;
       for (final sms in messages) {
+        if (existingSmsIds.contains(sms.id)) {
+          succeededIds.add(sms.id);
+          alreadyKnownIds.add(sms.id);
+          continue;
+        }
+        final existingRaw = existingRawById[sms.id];
+        if (existingRaw?.processed == true ||
+            (existingRaw?.parserVersion != null &&
+                existingRaw!.parserVersion! >= _parserVersion)) {
+          succeededIds.add(sms.id);
+          continue;
+        }
+        attemptedSmsIds.add(sms.id);
         try {
           await ingest(sms);
           succeededIds.add(sms.id);
         } catch (_) {
           failed++;
+          failedIds.add(sms.id);
+        }
+      }
+      if (smsIds.isNotEmpty) {
+        final transactionId = _database.transactions.id;
+        final smsId = _database.transactions.smsId;
+        final rows = await (_database.selectOnly(_database.transactions)
+              ..addColumns([transactionId, smsId])
+              ..where(smsId.isIn(smsIds)))
+            .get();
+        for (final row in rows) {
+          final knownSmsId = row.read(smsId)!;
+          if (!existingSmsIds.contains(knownSmsId)) {
+            createdTxnIds.add(row.read(transactionId)!);
+          }
+        }
+
+        final rawId = _database.rawSms.id;
+        final processed = _database.rawSms.processed;
+        final failureReason = _database.rawSms.failureReason;
+        final rawRows = attemptedSmsIds.isEmpty
+            ? const <TypedResult>[]
+            : await (_database.selectOnly(_database.rawSms)
+                  ..addColumns([rawId, processed, failureReason])
+                  ..where(rawId.isIn(attemptedSmsIds)))
+                .get();
+        for (final row in rawRows) {
+          final smsIdValue = row.read(rawId)!;
+          if (row.read(processed) == true) {
+            parsedIds.add(smsIdValue);
+          } else if (row.read(failureReason) == SmsFailureReason.unparsed) {
+            unparsedIds.add(smsIdValue);
+          }
         }
       }
       return SmsBatchIngestResult(
         succeededIds: succeededIds,
         failed: failed,
+        createdTxnIds: createdTxnIds,
+        alreadyKnownIds: alreadyKnownIds,
+        parsedIds: parsedIds,
+        unparsedIds: unparsedIds,
+        failedIds: failedIds,
       );
     });
   }
@@ -577,12 +693,38 @@ class SmsIngestor {
     );
   }
 
-  Future<void> _markRawSmsProcessed(
+  Future<void> _markRawSmsOutcome(
     String smsId, {
     required bool processed,
+    required String? failureReason,
   }) {
     return (_database.update(_database.rawSms)
           ..where((row) => row.id.equals(smsId)))
-        .write(RawSmsCompanion(processed: Value(processed)));
+        .write(
+      RawSmsCompanion(
+        processed: Value(processed),
+        parserVersion: Value(_parserVersion),
+        failureReason: Value(failureReason),
+      ),
+    );
+  }
+
+  Future<void> _recordProcessingFailure(
+    RawSms sms,
+    FeatureFlagsState flagsState,
+  ) async {
+    await _database.into(_database.rawSms).insertOnConflictUpdate(
+          RawSmsCompanion.insert(
+            id: sms.id,
+            sender: sms.sender,
+            body: sms.body,
+            receivedAt: sms.receivedAt,
+            parserVersion: Value(_parserVersion),
+            failureReason: const Value(SmsFailureReason.processingError),
+            purgeAfter: sms.receivedAt.add(
+              Duration(days: flagsState.rawSmsRetentionDays),
+            ),
+          ),
+        );
   }
 }

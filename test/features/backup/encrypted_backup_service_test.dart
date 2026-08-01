@@ -7,6 +7,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/features/backup/encrypted_backup_service.dart';
 
 void main() {
@@ -103,6 +104,71 @@ void main() {
 
     final after = await database.select(database.categories).get();
     expect(after.map((row) => row.toJson()), before.map((row) => row.toJson()));
+  });
+
+  test('raw SMS parser metadata round-trips and accepts legacy rows', () async {
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_failed',
+            sender: 'VK-HDFCBK',
+            body: 'Sensitive body retained only for the retention window',
+            receivedAt: DateTime.utc(2026, 7, 16),
+            processed: const Value(false),
+            parserVersion: const Value(smsParserVersion),
+            failureReason: const Value(SmsFailureReason.unparsed),
+            purgeAfter: DateTime.utc(2026, 8, 15),
+          ),
+        );
+
+    final bytes = await service().exportBytes(
+      passphrase: 'raw-sms-metadata-passphrase',
+    );
+    await database.delete(database.rawSms).go();
+    await service().importBytes(
+      bytes: bytes,
+      passphrase: 'raw-sms-metadata-passphrase',
+    );
+
+    final restored = (await database.select(database.rawSms).get()).single;
+    expect(restored.parserVersion, smsParserVersion);
+    expect(restored.failureReason, SmsFailureReason.unparsed);
+
+    final legacy = RawSm.fromJson({
+      'id': 'sms_legacy',
+      'sender': 'VK-HDFCBK',
+      'body': 'Legacy body',
+      'receivedAt': DateTime.utc(2026, 7, 16).toIso8601String(),
+      'processed': false,
+      'purgeAfter': DateTime.utc(2026, 8, 15).toIso8601String(),
+    });
+    expect(legacy.parserVersion == null, isTrue);
+    expect(legacy.failureReason == null, isTrue);
+  });
+
+  test('backup restore rejects non-allowlisted raw SMS failure reasons',
+      () async {
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_invalid_reason',
+            sender: 'VK-HDFCBK',
+            body: 'Synthetic test body',
+            receivedAt: DateTime.utc(2026, 7, 16),
+            failureReason: const Value('private parser detail'),
+            purgeAfter: DateTime.utc(2026, 8, 15),
+          ),
+        );
+    final bytes = await service().exportBytes(
+      passphrase: 'invalid-reason-passphrase',
+    );
+    await database.delete(database.rawSms).go();
+
+    await expectLater(
+      service().importBytes(
+        bytes: bytes,
+        passphrase: 'invalid-reason-passphrase',
+      ),
+      throwsA(isA<EncryptedBackupException>()),
+    );
   });
 
   test('import derives with the bounded KDF parameters stored in the payload',

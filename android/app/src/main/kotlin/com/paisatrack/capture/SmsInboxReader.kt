@@ -57,10 +57,20 @@ class SmsInboxReader(context: Context) {
             projection,
             queryArgs,
             null,
-        ) ?: return mapOf("messages" to emptyList<Map<String, Any>>(), "hasMore" to false)
+        ) ?: return mapOf(
+            "messages" to emptyList<Map<String, Any>>(),
+            "hasMore" to false,
+            "scanned" to 0,
+            "filterRejected" to 0,
+            "unknownSender" to 0,
+            "accepted" to 0,
+        )
 
         val results = mutableListOf<Map<String, Any>>()
         var scanned = 0
+        var filterRejected = 0
+        var unknownSender = 0
+        var accepted = 0
         var lastDate: Long? = null
         var lastId: Long? = null
         var hasMore = false
@@ -76,28 +86,40 @@ class SmsInboxReader(context: Context) {
                 val receivedAtEpochMillis = rows.getLong(dateIndex)
                 lastId = inboxId
                 lastDate = receivedAtEpochMillis
-                val sender = rows.getString(addressIndex) ?: continue
-                val body = rows.getString(bodyIndex) ?: continue
-                if (!SmsFilter.isAllowed(sender, body)) continue
-
-                results.add(
-                    mapOf(
-                        "id" to CapturedSmsId.forMessage(
-                            sender = sender,
-                            body = body,
-                            receivedAtEpochMillis = receivedAtEpochMillis,
-                        ),
-                        "sender" to sender,
-                        "body" to body,
-                        "receivedAtEpochMillis" to receivedAtEpochMillis,
-                    ),
-                )
+                when (classifyInboxAdmission(
+                    rows.getString(addressIndex),
+                    rows.getString(bodyIndex),
+                )) {
+                    SmsInboxAdmission.FILTER_REJECTED -> filterRejected++
+                    SmsInboxAdmission.UNKNOWN_SENDER -> unknownSender++
+                    SmsInboxAdmission.ACCEPTED -> {
+                        accepted++
+                        val sender = rows.getString(addressIndex)!!
+                        val body = rows.getString(bodyIndex)!!
+                        results.add(
+                            mapOf(
+                                "id" to CapturedSmsId.forMessage(
+                                    sender = sender,
+                                    body = body,
+                                    receivedAtEpochMillis = receivedAtEpochMillis,
+                                ),
+                                "sender" to sender,
+                                "body" to body,
+                                "receivedAtEpochMillis" to receivedAtEpochMillis,
+                            ),
+                        )
+                    }
+                }
             }
             hasMore = rows.moveToNext()
         }
         return mutableMapOf<String, Any>(
             "messages" to results,
             "hasMore" to hasMore,
+            "scanned" to scanned,
+            "filterRejected" to filterRejected,
+            "unknownSender" to unknownSender,
+            "accepted" to accepted,
         ).apply {
             if (hasMore && lastDate != null && lastId != null) {
                 put("nextBeforeEpochMillis", checkNotNull(lastDate))
@@ -108,5 +130,26 @@ class SmsInboxReader(context: Context) {
 
     private companion object {
         const val MaxPageSize = 500
+    }
+}
+
+internal enum class SmsInboxAdmission {
+    FILTER_REJECTED,
+    UNKNOWN_SENDER,
+    ACCEPTED,
+}
+
+internal fun classifyInboxAdmission(sender: String?, body: String?): SmsInboxAdmission {
+    if (sender == null) return SmsInboxAdmission.UNKNOWN_SENDER
+    if (body == null) return SmsInboxAdmission.FILTER_REJECTED
+
+    val unknownBefore = SmsFilter.batchUnknownSenderDropCount.get()
+    val allowed = SmsFilter.isAllowed(sender, body, isBatch = true)
+    val unknownAfter = SmsFilter.batchUnknownSenderDropCount.get()
+    if (allowed) return SmsInboxAdmission.ACCEPTED
+    return if (unknownAfter > unknownBefore) {
+        SmsInboxAdmission.UNKNOWN_SENDER
+    } else {
+        SmsInboxAdmission.FILTER_REJECTED
     }
 }

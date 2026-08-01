@@ -22,6 +22,8 @@ void main() {
             sender: 'BANK',
             body: 'old',
             receivedAt: DateTime.utc(2025),
+            parserVersion: const Value(1),
+            failureReason: const Value('processing_error'),
             purgeAfter: DateTime.utc(2025, 1, 31),
           ),
         );

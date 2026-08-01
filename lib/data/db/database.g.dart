@@ -3124,6 +3124,18 @@ class $RawSmsTable extends RawSms with TableInfo<$RawSmsTable, RawSm> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("processed" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _parserVersionMeta =
+      const VerificationMeta('parserVersion');
+  @override
+  late final GeneratedColumn<int> parserVersion = GeneratedColumn<int>(
+      'parser_version', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _failureReasonMeta =
+      const VerificationMeta('failureReason');
+  @override
+  late final GeneratedColumn<String> failureReason = GeneratedColumn<String>(
+      'failure_reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _purgeAfterMeta =
       const VerificationMeta('purgeAfter');
   @override
@@ -3131,8 +3143,16 @@ class $RawSmsTable extends RawSms with TableInfo<$RawSmsTable, RawSm> {
       'purge_after', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, sender, body, receivedAt, processed, purgeAfter];
+  List<GeneratedColumn> get $columns => [
+        id,
+        sender,
+        body,
+        receivedAt,
+        processed,
+        parserVersion,
+        failureReason,
+        purgeAfter
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3172,6 +3192,18 @@ class $RawSmsTable extends RawSms with TableInfo<$RawSmsTable, RawSm> {
       context.handle(_processedMeta,
           processed.isAcceptableOrUnknown(data['processed']!, _processedMeta));
     }
+    if (data.containsKey('parser_version')) {
+      context.handle(
+          _parserVersionMeta,
+          parserVersion.isAcceptableOrUnknown(
+              data['parser_version']!, _parserVersionMeta));
+    }
+    if (data.containsKey('failure_reason')) {
+      context.handle(
+          _failureReasonMeta,
+          failureReason.isAcceptableOrUnknown(
+              data['failure_reason']!, _failureReasonMeta));
+    }
     if (data.containsKey('purge_after')) {
       context.handle(
           _purgeAfterMeta,
@@ -3199,6 +3231,10 @@ class $RawSmsTable extends RawSms with TableInfo<$RawSmsTable, RawSm> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}received_at'])!,
       processed: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}processed'])!,
+      parserVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}parser_version']),
+      failureReason: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}failure_reason']),
       purgeAfter: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}purge_after'])!,
     );
@@ -3216,6 +3252,8 @@ class RawSm extends DataClass implements Insertable<RawSm> {
   final String body;
   final DateTime receivedAt;
   final bool processed;
+  final int? parserVersion;
+  final String? failureReason;
   final DateTime purgeAfter;
   const RawSm(
       {required this.id,
@@ -3223,6 +3261,8 @@ class RawSm extends DataClass implements Insertable<RawSm> {
       required this.body,
       required this.receivedAt,
       required this.processed,
+      this.parserVersion,
+      this.failureReason,
       required this.purgeAfter});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3232,6 +3272,12 @@ class RawSm extends DataClass implements Insertable<RawSm> {
     map['body'] = Variable<String>(body);
     map['received_at'] = Variable<DateTime>(receivedAt);
     map['processed'] = Variable<bool>(processed);
+    if (!nullToAbsent || parserVersion != null) {
+      map['parser_version'] = Variable<int>(parserVersion);
+    }
+    if (!nullToAbsent || failureReason != null) {
+      map['failure_reason'] = Variable<String>(failureReason);
+    }
     map['purge_after'] = Variable<DateTime>(purgeAfter);
     return map;
   }
@@ -3243,6 +3289,12 @@ class RawSm extends DataClass implements Insertable<RawSm> {
       body: Value(body),
       receivedAt: Value(receivedAt),
       processed: Value(processed),
+      parserVersion: parserVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parserVersion),
+      failureReason: failureReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failureReason),
       purgeAfter: Value(purgeAfter),
     );
   }
@@ -3256,6 +3308,8 @@ class RawSm extends DataClass implements Insertable<RawSm> {
       body: serializer.fromJson<String>(json['body']),
       receivedAt: serializer.fromJson<DateTime>(json['receivedAt']),
       processed: serializer.fromJson<bool>(json['processed']),
+      parserVersion: serializer.fromJson<int?>(json['parserVersion']),
+      failureReason: serializer.fromJson<String?>(json['failureReason']),
       purgeAfter: serializer.fromJson<DateTime>(json['purgeAfter']),
     );
   }
@@ -3268,6 +3322,8 @@ class RawSm extends DataClass implements Insertable<RawSm> {
       'body': serializer.toJson<String>(body),
       'receivedAt': serializer.toJson<DateTime>(receivedAt),
       'processed': serializer.toJson<bool>(processed),
+      'parserVersion': serializer.toJson<int?>(parserVersion),
+      'failureReason': serializer.toJson<String?>(failureReason),
       'purgeAfter': serializer.toJson<DateTime>(purgeAfter),
     };
   }
@@ -3278,6 +3334,8 @@ class RawSm extends DataClass implements Insertable<RawSm> {
           String? body,
           DateTime? receivedAt,
           bool? processed,
+          Value<int?> parserVersion = const Value.absent(),
+          Value<String?> failureReason = const Value.absent(),
           DateTime? purgeAfter}) =>
       RawSm(
         id: id ?? this.id,
@@ -3285,6 +3343,10 @@ class RawSm extends DataClass implements Insertable<RawSm> {
         body: body ?? this.body,
         receivedAt: receivedAt ?? this.receivedAt,
         processed: processed ?? this.processed,
+        parserVersion:
+            parserVersion.present ? parserVersion.value : this.parserVersion,
+        failureReason:
+            failureReason.present ? failureReason.value : this.failureReason,
         purgeAfter: purgeAfter ?? this.purgeAfter,
       );
   @override
@@ -3295,14 +3357,16 @@ class RawSm extends DataClass implements Insertable<RawSm> {
           ..write('body: $body, ')
           ..write('receivedAt: $receivedAt, ')
           ..write('processed: $processed, ')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('failureReason: $failureReason, ')
           ..write('purgeAfter: $purgeAfter')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, sender, body, receivedAt, processed, purgeAfter);
+  int get hashCode => Object.hash(id, sender, body, receivedAt, processed,
+      parserVersion, failureReason, purgeAfter);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3312,6 +3376,8 @@ class RawSm extends DataClass implements Insertable<RawSm> {
           other.body == this.body &&
           other.receivedAt == this.receivedAt &&
           other.processed == this.processed &&
+          other.parserVersion == this.parserVersion &&
+          other.failureReason == this.failureReason &&
           other.purgeAfter == this.purgeAfter);
 }
 
@@ -3321,6 +3387,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
   final Value<String> body;
   final Value<DateTime> receivedAt;
   final Value<bool> processed;
+  final Value<int?> parserVersion;
+  final Value<String?> failureReason;
   final Value<DateTime> purgeAfter;
   final Value<int> rowid;
   const RawSmsCompanion({
@@ -3329,6 +3397,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
     this.body = const Value.absent(),
     this.receivedAt = const Value.absent(),
     this.processed = const Value.absent(),
+    this.parserVersion = const Value.absent(),
+    this.failureReason = const Value.absent(),
     this.purgeAfter = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3338,6 +3408,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
     required String body,
     required DateTime receivedAt,
     this.processed = const Value.absent(),
+    this.parserVersion = const Value.absent(),
+    this.failureReason = const Value.absent(),
     required DateTime purgeAfter,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -3351,6 +3423,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
     Expression<String>? body,
     Expression<DateTime>? receivedAt,
     Expression<bool>? processed,
+    Expression<int>? parserVersion,
+    Expression<String>? failureReason,
     Expression<DateTime>? purgeAfter,
     Expression<int>? rowid,
   }) {
@@ -3360,6 +3434,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
       if (body != null) 'body': body,
       if (receivedAt != null) 'received_at': receivedAt,
       if (processed != null) 'processed': processed,
+      if (parserVersion != null) 'parser_version': parserVersion,
+      if (failureReason != null) 'failure_reason': failureReason,
       if (purgeAfter != null) 'purge_after': purgeAfter,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3371,6 +3447,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
       Value<String>? body,
       Value<DateTime>? receivedAt,
       Value<bool>? processed,
+      Value<int?>? parserVersion,
+      Value<String?>? failureReason,
       Value<DateTime>? purgeAfter,
       Value<int>? rowid}) {
     return RawSmsCompanion(
@@ -3379,6 +3457,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
       body: body ?? this.body,
       receivedAt: receivedAt ?? this.receivedAt,
       processed: processed ?? this.processed,
+      parserVersion: parserVersion ?? this.parserVersion,
+      failureReason: failureReason ?? this.failureReason,
       purgeAfter: purgeAfter ?? this.purgeAfter,
       rowid: rowid ?? this.rowid,
     );
@@ -3402,6 +3482,12 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
     if (processed.present) {
       map['processed'] = Variable<bool>(processed.value);
     }
+    if (parserVersion.present) {
+      map['parser_version'] = Variable<int>(parserVersion.value);
+    }
+    if (failureReason.present) {
+      map['failure_reason'] = Variable<String>(failureReason.value);
+    }
     if (purgeAfter.present) {
       map['purge_after'] = Variable<DateTime>(purgeAfter.value);
     }
@@ -3419,6 +3505,8 @@ class RawSmsCompanion extends UpdateCompanion<RawSm> {
           ..write('body: $body, ')
           ..write('receivedAt: $receivedAt, ')
           ..write('processed: $processed, ')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('failureReason: $failureReason, ')
           ..write('purgeAfter: $purgeAfter, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9415,6 +9503,8 @@ typedef $$RawSmsTableInsertCompanionBuilder = RawSmsCompanion Function({
   required String body,
   required DateTime receivedAt,
   Value<bool> processed,
+  Value<int?> parserVersion,
+  Value<String?> failureReason,
   required DateTime purgeAfter,
   Value<int> rowid,
 });
@@ -9424,6 +9514,8 @@ typedef $$RawSmsTableUpdateCompanionBuilder = RawSmsCompanion Function({
   Value<String> body,
   Value<DateTime> receivedAt,
   Value<bool> processed,
+  Value<int?> parserVersion,
+  Value<String?> failureReason,
   Value<DateTime> purgeAfter,
   Value<int> rowid,
 });
@@ -9452,6 +9544,8 @@ class $$RawSmsTableTableManager extends RootTableManager<
             Value<String> body = const Value.absent(),
             Value<DateTime> receivedAt = const Value.absent(),
             Value<bool> processed = const Value.absent(),
+            Value<int?> parserVersion = const Value.absent(),
+            Value<String?> failureReason = const Value.absent(),
             Value<DateTime> purgeAfter = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -9461,6 +9555,8 @@ class $$RawSmsTableTableManager extends RootTableManager<
             body: body,
             receivedAt: receivedAt,
             processed: processed,
+            parserVersion: parserVersion,
+            failureReason: failureReason,
             purgeAfter: purgeAfter,
             rowid: rowid,
           ),
@@ -9470,6 +9566,8 @@ class $$RawSmsTableTableManager extends RootTableManager<
             required String body,
             required DateTime receivedAt,
             Value<bool> processed = const Value.absent(),
+            Value<int?> parserVersion = const Value.absent(),
+            Value<String?> failureReason = const Value.absent(),
             required DateTime purgeAfter,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -9479,6 +9577,8 @@ class $$RawSmsTableTableManager extends RootTableManager<
             body: body,
             receivedAt: receivedAt,
             processed: processed,
+            parserVersion: parserVersion,
+            failureReason: failureReason,
             purgeAfter: purgeAfter,
             rowid: rowid,
           ),
@@ -9522,6 +9622,16 @@ class $$RawSmsTableFilterComposer
 
   ColumnFilters<bool> get processed => $state.composableBuilder(
       column: $state.table.processed,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get parserVersion => $state.composableBuilder(
+      column: $state.table.parserVersion,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get failureReason => $state.composableBuilder(
+      column: $state.table.failureReason,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -9569,6 +9679,16 @@ class $$RawSmsTableOrderingComposer
 
   ColumnOrderings<bool> get processed => $state.composableBuilder(
       column: $state.table.processed,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get parserVersion => $state.composableBuilder(
+      column: $state.table.parserVersion,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get failureReason => $state.composableBuilder(
+      column: $state.table.failureReason,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

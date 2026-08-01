@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../capture/parser_version.dart';
 
 const encryptedBackupFileName = 'paisatrack_export.ptrack';
 const _argon2MinMemoryKiB = 8;
@@ -171,7 +172,15 @@ class EncryptedBackupService {
             );
       }
       for (final row in _tableRows(tables, 'raw_sms')) {
-        await database.into(database.rawSms).insert(RawSm.fromJson(row));
+        final rawSms = RawSm.fromJson(row);
+        if (rawSms.failureReason != null &&
+            rawSms.failureReason != SmsFailureReason.unparsed &&
+            rawSms.failureReason != SmsFailureReason.processingError) {
+          throw const EncryptedBackupException(
+            'Malformed archive table row: invalid raw SMS failure reason',
+          );
+        }
+        await database.into(database.rawSms).insert(rawSms);
       }
       for (final row in _tableRows(tables, 'merchant_aliases')) {
         await database

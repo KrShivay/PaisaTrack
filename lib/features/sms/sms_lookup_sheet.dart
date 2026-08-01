@@ -230,6 +230,7 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
         );
 
       case SmsLookupState.scanning:
+        final progress = _progress;
         final checked = _progress?.processed ?? 0;
         final total = _progress?.totalMessages;
         final found = _progress?.transactionsFound ?? 0;
@@ -307,6 +308,19 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
                   ),
                 ],
               ),
+              if (progress != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _scanOutcomeSummary(progress),
+                  style: AppTheme.bloomMono(
+                    11,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextTertiary
+                        : AppColorTokens.inkTertiary,
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -314,9 +328,6 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
       case SmsLookupState.complete:
         final res = _lastResult;
         final found = res?.transactionsFound ?? 0;
-        final processed = res?.processed ?? 0;
-        final known = res?.alreadyKnown ?? 0;
-        final failed = res?.failed ?? 0;
 
         return _buildCard(
           isDark: isDark,
@@ -326,15 +337,13 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
           icon: Icons.check_circle_rounded,
           iconColor: AppColorTokens.emerald,
           title: found > 0 ? '$found transactions found' : "You're up to date",
-          subtitle: found > 0
-              ? '$processed checked · $known already known · $failed failed'
-              : 'No new financial transactions were found.',
+          subtitle: res == null
+              ? 'No scan result available.'
+              : _scanOutcomeSummary(res),
         );
 
       case SmsLookupState.partialFailure:
         final res = _lastResult;
-        final found = res?.transactionsFound ?? 0;
-        final processed = res?.processed ?? 0;
         final failed = res?.failed ?? 0;
 
         return _buildCard(
@@ -345,8 +354,9 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
           icon: Icons.warning_amber_rounded,
           iconColor: AppColorTokens.warningDark,
           title: 'Scan finished with some gaps',
-          subtitle:
-              '$processed checked · $found found · $failed could not be read',
+          subtitle: res == null
+              ? 'No scan result available.'
+              : '${_scanOutcomeSummary(res)}\n$failed could not be read',
         );
 
       case SmsLookupState.error:
@@ -362,6 +372,13 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
               _errorMessage ?? 'An error occurred while reading messages.',
         );
     }
+  }
+
+  String _scanOutcomeSummary(SmsImportProgress result) {
+    return '${result.scanned} scanned · ${result.filterRejected} rejected · '
+        '${result.unknownSender} unknown sender · ${result.accepted} accepted\n'
+        '${result.parsed} parsed · ${result.unparsed} unparsed · '
+        '${result.transactionsFound} created · ${result.alreadyKnown} already known';
   }
 
   Widget _buildCard({

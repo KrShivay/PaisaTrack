@@ -79,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -168,6 +168,35 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 13) {
           await migrator.createTable(featureFlags);
+        }
+        if (from < 14) {
+          final rawSmsTables = await customSelect(
+            'SELECT name FROM sqlite_master WHERE type = ? AND name = ?',
+            variables: [
+              Variable.withString('table'),
+              Variable.withString('raw_sms'),
+            ],
+          ).get();
+          if (rawSmsTables.isEmpty) {
+            // raw_sms was introduced after some of the legacy schemas. Create
+            // the complete current table for those installs; adding columns
+            // to a table that does not exist would abort the whole upgrade.
+            await migrator.createTable(rawSms);
+          } else {
+            final rawSmsColumns = await customSelect(
+              'PRAGMA table_info(raw_sms)',
+            ).get();
+            final columnNames = <String>{};
+            for (final row in rawSmsColumns) {
+              columnNames.add(row.data['name'] as String);
+            }
+            if (!columnNames.contains('parser_version')) {
+              await migrator.addColumn(rawSms, rawSms.parserVersion);
+            }
+            if (!columnNames.contains('failure_reason')) {
+              await migrator.addColumn(rawSms, rawSms.failureReason);
+            }
+          }
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

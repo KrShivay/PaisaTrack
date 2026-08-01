@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:paisatrack/capture/captured_sms_source.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
+import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
@@ -440,6 +441,63 @@ void main() {
     expect(transactions, isEmpty);
   });
 
+  test('persists an unparsed reason and skips same-version retry', () async {
+    final parser = FakeParserCascade.ok(_sampleRecord())
+      ..setError(ParseFailure.unparsed);
+    final ingestor = SmsIngestor(database: database, parser: parser);
+    final sms = _message('sms_unparsed_reason');
+
+    await ingestor.ingest(sms);
+    final first = (await database.select(database.rawSms).get()).single;
+    expect(first.parserVersion, smsParserVersion);
+    expect(first.failureReason, SmsFailureReason.unparsed);
+    expect(first.failureReason, isNot(contains(sms.body)));
+    expect(parser.parseCalls, 1);
+
+    await ingestor.ingest(sms);
+
+    expect(parser.parseCalls, 1);
+  });
+
+  test('retries a retained failure after a parser-version upgrade', () async {
+    final parser = FakeParserCascade.ok(_sampleRecord())
+      ..setError(ParseFailure.unparsed);
+    final sms = _message('sms_retry_after_upgrade');
+    await SmsIngestor(database: database, parser: parser).ingest(sms);
+
+    parser.setError(null);
+    final upgraded = SmsIngestor(
+      database: database,
+      parser: parser,
+      parserVersion: smsParserVersion + 1,
+    );
+    await upgraded.ingest(sms);
+
+    final raw = (await database.select(database.rawSms).get()).single;
+    expect(raw.parserVersion, smsParserVersion + 1);
+    expect(raw.failureReason, isNull);
+    expect(raw.processed, isTrue);
+    expect(parser.parseCalls, 2);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+  });
+
+  test('persists processing errors without exception text', () async {
+    final parser = FakeParserCascade.ok(_sampleRecord())
+      ..setProcessingError(StateError('private parser detail'));
+    final sms = _message('sms_processing_error');
+
+    await expectLater(
+      SmsIngestor(database: database, parser: parser).ingest(sms),
+      throwsA(isA<StateError>()),
+    );
+
+    final raw = (await database.select(database.rawSms).get()).single;
+    expect(raw.parserVersion, smsParserVersion);
+    expect(raw.failureReason, SmsFailureReason.processingError);
+    expect(raw.failureReason, isNot(contains('private parser detail')));
+    expect(raw.failureReason, isNot(contains(sms.body)));
+  });
+
   test('reprocessing the same SMS id is idempotent (no duplicate rows)',
       () async {
     final controller = StreamController<Object?>();
@@ -813,13 +871,22 @@ class FakeParserCascade extends ParserCascade {
         );
 
   final NormalizedTransactionRecord? _record;
-  final ParseFailure? _error;
+  ParseFailure? _error;
   final Map<String, NormalizedTransactionRecord>? _recordsById;
+  Object? _processingError;
+  int parseCalls = 0;
+
+  void setError(ParseFailure? error) => _error = error;
+
+  void setProcessingError(Object error) => _processingError = error;
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
     RawSms sms,
   ) async {
+    parseCalls++;
+    if (_processingError != null) throw _processingError!;
+    if (_error != null) return Err(_error!);
     final recordsById = _recordsById;
     var resRecord = recordsById != null ? recordsById[sms.id] : _record;
     if (resRecord != null) {

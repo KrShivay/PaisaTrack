@@ -42,10 +42,21 @@ class SmsInboxCursor {
 }
 
 class SmsInboxPage {
-  const SmsInboxPage({required this.messages, this.nextCursor});
+  const SmsInboxPage({
+    required this.messages,
+    this.nextCursor,
+    this.scanned = 0,
+    this.filterRejected = 0,
+    this.unknownSender = 0,
+    this.accepted = 0,
+  });
 
   final List<RawSms> messages;
   final SmsInboxCursor? nextCursor;
+  final int scanned;
+  final int filterRejected;
+  final int unknownSender;
+  final int accepted;
 }
 
 /// Reads filter-approved SMS in bounded pages until the inbox is exhausted.
@@ -91,6 +102,10 @@ class PlatformSmsInboxReader implements SmsInboxReader {
       throw const FormatException('Invalid SMS inbox messages payload');
     }
     final hasMore = response['hasMore'] == true;
+    final scanned = _readCount(response, 'scanned');
+    final filterRejected = _readCount(response, 'filterRejected');
+    final unknownSender = _readCount(response, 'unknownSender');
+    final accepted = _readCount(response, 'accepted');
     SmsInboxCursor? nextCursor;
     if (hasMore) {
       if (response
@@ -110,7 +125,19 @@ class PlatformSmsInboxReader implements SmsInboxReader {
     return SmsInboxPage(
       messages: payloads.map(decodeRawSmsPayload).toList(growable: false),
       nextCursor: nextCursor,
+      scanned: scanned,
+      filterRejected: filterRejected,
+      unknownSender: unknownSender,
+      accepted: accepted,
     );
+  }
+
+  int _readCount(Map<Object?, Object?> response, String key) {
+    final value = response[key];
+    if (value is! int || value < 0) {
+      throw FormatException('Invalid SMS inbox $key count');
+    }
+    return value;
   }
 }
 
@@ -125,6 +152,12 @@ class SmsImportProgress {
     required this.failed,
     this.transactionsFound = 0,
     this.alreadyKnown = 0,
+    this.scanned = 0,
+    this.filterRejected = 0,
+    this.unknownSender = 0,
+    this.accepted = 0,
+    this.parsed = 0,
+    this.unparsed = 0,
     this.totalMessages,
   });
 
@@ -132,6 +165,12 @@ class SmsImportProgress {
   final int failed;
   final int transactionsFound;
   final int alreadyKnown;
+  final int scanned;
+  final int filterRejected;
+  final int unknownSender;
+  final int accepted;
+  final int parsed;
+  final int unparsed;
   final int? totalMessages;
 }
 
@@ -141,6 +180,12 @@ class SmsImportResult extends SmsImportProgress {
     required super.failed,
     super.transactionsFound = 0,
     super.alreadyKnown = 0,
+    super.scanned = 0,
+    super.filterRejected = 0,
+    super.unknownSender = 0,
+    super.accepted = 0,
+    super.parsed = 0,
+    super.unparsed = 0,
     super.totalMessages,
     this.skipped = false,
   });
@@ -174,13 +219,42 @@ class SmsBackfiller {
   }) async {
     var processed = 0;
     var failed = 0;
+    var transactionsFound = 0;
+    var alreadyKnown = 0;
+    var scanned = 0;
+    var filterRejected = 0;
+    var unknownSender = 0;
+    var accepted = 0;
+    var parsed = 0;
+    var unparsed = 0;
     var cursor = initialCursor;
     do {
       final page = await _reader.readPage(before: cursor, limit: _pageSize);
       final batch = await _ingestor.ingestBatch(page.messages);
       failed += batch.failed;
       processed += page.messages.length;
-      onProgress?.call(SmsImportProgress(processed: processed, failed: failed));
+      transactionsFound += batch.createdTxnIds.length;
+      alreadyKnown += batch.alreadyKnownIds.length;
+      scanned += page.scanned;
+      filterRejected += page.filterRejected;
+      unknownSender += page.unknownSender;
+      accepted += page.accepted;
+      parsed += batch.parsedIds.length;
+      unparsed += batch.unparsedIds.length;
+      onProgress?.call(
+        SmsImportProgress(
+          processed: processed,
+          failed: failed,
+          transactionsFound: transactionsFound,
+          alreadyKnown: alreadyKnown,
+          scanned: scanned,
+          filterRejected: filterRejected,
+          unknownSender: unknownSender,
+          accepted: accepted,
+          parsed: parsed,
+          unparsed: unparsed,
+        ),
+      );
       if (page.nextCursor != null && page.nextCursor == cursor) {
         throw StateError('SMS inbox pagination did not advance');
       }
@@ -190,7 +264,18 @@ class SmsBackfiller {
       cursor = page.nextCursor;
       await Future<void>.delayed(Duration.zero);
     } while (cursor != null);
-    return SmsImportResult(processed: processed, failed: failed);
+    return SmsImportResult(
+      processed: processed,
+      failed: failed,
+      transactionsFound: transactionsFound,
+      alreadyKnown: alreadyKnown,
+      scanned: scanned,
+      filterRejected: filterRejected,
+      unknownSender: unknownSender,
+      accepted: accepted,
+      parsed: parsed,
+      unparsed: unparsed,
+    );
   }
 }
 
@@ -233,11 +318,22 @@ class SmsIncrementalCatchUp {
       final knownIds = <String>{};
       if (pageIds.isNotEmpty) {
         final rawId = _database.rawSms.id;
+        final rawProcessed = _database.rawSms.processed;
+        final rawParserVersion = _database.rawSms.parserVersion;
         final rawRows = await (_database.selectOnly(_database.rawSms)
-              ..addColumns([rawId])
+              ..addColumns([rawId, rawProcessed, rawParserVersion])
               ..where(rawId.isIn(pageIds)))
             .get();
-        knownIds.addAll(rawRows.map((row) => row.read(rawId)!));
+        for (final row in rawRows) {
+          final id = row.read(rawId)!;
+          final processed = row.read(rawProcessed) ?? false;
+          final parserVersion = row.read(rawParserVersion);
+          if (processed ||
+              (parserVersion != null &&
+                  parserVersion >= _ingestor.parserVersion)) {
+            knownIds.add(id);
+          }
+        }
 
         final transactionSmsId = _database.transactions.smsId;
         final transactionRows = await (_database.selectOnly(

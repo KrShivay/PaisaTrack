@@ -10,6 +10,8 @@ class RawSms extends Table {
   TextColumn get body => text()();
   DateTimeColumn get receivedAt => dateTime()();
   BoolColumn get processed => boolean().withDefault(const Constant(false))();
+  IntColumn get parserVersion => integer().nullable()();
+  TextColumn get failureReason => text().nullable()();
   DateTimeColumn get purgeAfter => dateTime()();
 
   @override
