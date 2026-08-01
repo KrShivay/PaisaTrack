@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/capture/permissions/sms_permission.dart';
+import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/data/repositories/budget_repository.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/settings/settings_screen.dart';
+
+import '../../support/fake_sms_permission_gate.dart';
 
 class FakeAppSettingsController extends AppSettingsController {
   @override
@@ -28,6 +32,9 @@ void main() {
           monthlyBudgetProvider.overrideWith((ref) async => null),
           appSettingsControllerProvider
               .overrideWith(() => FakeAppSettingsController()),
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
         ],
         child: MaterialApp(
           builder: (context, child) => MediaQuery(
@@ -45,6 +52,7 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('APPEARANCE'), findsOneWidget);
     expect(find.text('Show paise'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Export backup'), 300);
     expect(find.text('Export backup'), findsOneWidget);
     expect(find.text('Import backup'), findsOneWidget);
 

@@ -12,6 +12,7 @@ import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../sms/sms_lookup_sheet.dart';
+import '../sms/sms_permission_status_card.dart';
 import 'manual_entry_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'transactions_providers.dart';
@@ -280,6 +281,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 ],
               ),
             ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: SmsPermissionStatusCard(),
+            ),
+            const SizedBox(height: 12),
 
             // Search Bar
             Padding(
@@ -742,94 +749,101 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFiltered = query.isNotEmpty;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isFiltered
-                  ? Icons.search_off_rounded
-                  : Icons.receipt_long_outlined,
-              size: 48,
-              color: isDark
-                  ? AppColorTokens.bloomDarkTextTertiary
-                  : AppColorTokens.inkTertiary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              isFiltered
-                  ? 'No transactions matching "$query"'
-                  : 'No transactions found',
-              style: AppTheme.bloomDisplay(
-                15,
-                FontWeight.w600,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextPrimary
-                    : AppColorTokens.ink,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              isFiltered
-                  ? 'Try clearing your search or filter keywords'
-                  : 'Scan your SMS inbox for payment alerts or add a transaction manually.',
-              style: AppTheme.bloomDisplay(
-                12,
-                FontWeight.w400,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextSecondary
-                    : AppColorTokens.inkSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            if (isFiltered)
-              OutlinedButton(
-                onPressed: onClearFilters,
-                child: const Text('Clear filters'),
-              )
-            else
-              Column(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FilledButton.icon(
-                    icon: const Icon(Icons.sms_rounded, size: 18),
-                    label: const Text('Find transactions from SMS'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColorTokens.violetPrimary,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
+                  Icon(
+                    isFiltered
+                        ? Icons.search_off_rounded
+                        : Icons.receipt_long_outlined,
+                    size: 48,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextTertiary
+                        : AppColorTokens.inkTertiary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isFiltered
+                        ? 'No transactions matching "$query"'
+                        : 'No transactions found',
+                    style: AppTheme.bloomDisplay(
+                      15,
+                      FontWeight.w600,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextPrimary
+                          : AppColorTokens.ink,
                     ),
-                    onPressed: () {
-                      showBloomModalSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => const SmsLookupSheet(),
-                      );
-                    },
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 10),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Add one manually'),
-                    onPressed: () {
-                      showBloomModalSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => const FractionallySizedBox(
-                          heightFactor: 0.88,
-                          child: ManualEntryScreen(),
+                  const SizedBox(height: 6),
+                  Text(
+                    isFiltered
+                        ? 'Try clearing your search or filter keywords'
+                        : 'Scan your SMS inbox for payment alerts or add a transaction manually.',
+                    style: AppTheme.bloomDisplay(
+                      12,
+                      FontWeight.w400,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : AppColorTokens.inkSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  if (isFiltered)
+                    OutlinedButton(
+                      onPressed: onClearFilters,
+                      child: const Text('Clear filters'),
+                    )
+                  else
+                    Column(
+                      children: [
+                        FilledButton.icon(
+                          icon: const Icon(Icons.sms_rounded, size: 18),
+                          label: const Text('Find transactions from SMS'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColorTokens.violetPrimary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () {
+                            showBloomModalSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => const SmsLookupSheet(),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Add one manually'),
+                          onPressed: () {
+                            showBloomModalSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => const FractionallySizedBox(
+                                heightFactor: 0.88,
+                                child: ManualEntryScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                 ],
               ),
-          ],
+            ),
+          ),
         ),
       ),
     );

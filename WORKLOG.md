@@ -3,6 +3,22 @@
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
 
+## 2026-08-02 — T-161d implemented: SMS permission refresh and status cards
+
+- Added an app-root lifecycle refresher that re-reads SMS permission on every
+  resume, including after Android app settings changes.
+- Added one shared permission-status card to Settings and Activity. It shows
+  granted, denied, permanently denied, unavailable, and checking states, with
+  the matching runtime-request, app-settings, or recheck action.
+- Reconciled the stale T-129 parent: T-161a–c now cover its durable
+  capture/diagnostic scope, so T-129 was removed from `TASKS.md`; T-161d is
+  the only implementation item in progress.
+- Verification: focused provider/card/lifecycle/Settings/Activity suite
+  **19/19**; full Flutter suite **630/631**, with only the known
+  `test/features/transactions/exclusion_explanation_test.dart` failure
+  (expected 500, actual 5500); analyzer clean, format and diff checks clean,
+  and GitNexus refreshed with task-scoped change detection before commit.
+
 ## 2026-08-02 — T-161c implemented: user-facing unreadable-message status
 
 - Added `RawSmsRepository.watchRetainedFailures`, which selects only

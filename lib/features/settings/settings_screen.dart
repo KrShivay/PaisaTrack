@@ -13,6 +13,7 @@ import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
 import '../sms/sms_lookup_sheet.dart';
+import '../sms/sms_permission_status_card.dart';
 import '../sms/unreadable_sms_screen.dart';
 import '../transactions/transactions_providers.dart';
 import 'app_data_reset_service.dart';
@@ -61,6 +62,8 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             // App Banner Card
             _AppBannerCard(isDark: isDark),
+            const SizedBox(height: 24),
+            const SmsPermissionStatusCard(),
             const SizedBox(height: 24),
 
             // Appearance Section

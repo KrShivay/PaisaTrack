@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/capture/permissions/sms_permission.dart';
+import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
 import '../../support/fake_activity_transaction_page_controller.dart';
+import '../../support/fake_sms_permission_gate.dart';
 
 void main() {
   TransactionListItem item({
@@ -63,6 +66,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
           activityTransactionPageProvider.overrideWith(
             () => FakeActivityTransactionPageController(
               ActivityTransactionPage(rows: transactions, hasMore: hasMore),

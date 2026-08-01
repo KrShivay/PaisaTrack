@@ -10,16 +10,15 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
+<!-- Empty: T-161d is under review below. -->
+
+## In Review
+
+<!-- Empty: T-161d passed independent local review and is complete. -->
+
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
-- [ ] T-129 (@codex) [P1] Add durable capture retry and privacy-safe diagnostics.
-      Module: SMS backfill/ingestion, Android filter, SMS lookup/dev diagnostics.
-      Depends: versioned retry reason/state.
-      Gap: failed/unparsed rows count as known, import is marked complete after
-      row failures, and live errors/unknown senders are not durably measurable.
-      Next: persist content-free reason codes and retry version, retry bounded
-      failures after parser upgrades, and expose accepted/rejected/failed counts.
 - [ ] T-108 (@codex) [P2] Measure and extend bank sender/template coverage.
       Module: Android SMS filter, template registry, developer diagnostics.
       Depends: T-129 content-free native rejection counters.
@@ -236,7 +235,6 @@ reviews, and close the parent only after every child has verification evidence.
 #### Capture correctness and observability
 
 - [ ] T-160d [P1] Extract reusable paged-list controller/state from Activity without changing review-queue behavior; characterize loading, error, retry, and exhaustion states first.
-- [ ] T-161d [P1] Recheck SMS permission on app resume and make Settings/Activity status cards reflect granted, denied, and permanently denied states immediately.
 - [ ] T-161e [P1] Add end-to-end tests for scan outcomes: newly created, already known, parsed-but-duplicate, unparsed, individual failure, and native rejection.
 - [ ] T-162b [P1] Define sender-onboarding evidence format (header, template fingerprint, fixture, expected result) and add a review gate before expanding `SmsFilter` allowlist.
 - [ ] T-162c [P1] Add unsupported-sender telemetry aggregated only by safe reason/category; prove personal-number bodies and identifiers are never persisted or logged.

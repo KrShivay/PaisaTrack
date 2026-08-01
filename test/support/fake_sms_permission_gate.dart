@@ -6,11 +6,13 @@ class FakeSmsPermissionGate implements SmsPermissionGate {
     this.initialStatus = SmsPermissionStatus.denied,
     SmsPermissionStatus? requestResult,
     this.throwOnStatus = false,
-  }) : requestResult = requestResult ?? SmsPermissionStatus.granted;
+  })  : requestResult = requestResult ?? SmsPermissionStatus.granted,
+        currentStatus = initialStatus;
 
   final SmsPermissionStatus initialStatus;
   final SmsPermissionStatus requestResult;
   final bool throwOnStatus;
+  SmsPermissionStatus currentStatus;
 
   int statusCalls = 0;
   int requestCalls = 0;
@@ -23,7 +25,7 @@ class FakeSmsPermissionGate implements SmsPermissionGate {
     if (throwOnStatus) {
       throw StateError('status unavailable');
     }
-    return initialStatus;
+    return currentStatus;
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'capture/permissions/sms_permission.dart';
+import 'capture/permissions/sms_permission_lifecycle.dart';
 import 'capture/permissions/sms_permission_provider.dart';
 import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
@@ -51,12 +52,15 @@ class PaisaTrackApp extends ConsumerWidget {
       _ => const _StartupScreen(),
     };
 
-    return MaterialApp(
-      title: 'PaisaTrack',
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: settings.valueOrNull?.themeChoice.themeMode ?? ThemeMode.dark,
-      home: homeWidget,
+    return SmsPermissionLifecycleRefresher(
+      child: MaterialApp(
+        title: 'PaisaTrack',
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode:
+            settings.valueOrNull?.themeChoice.themeMode ?? ThemeMode.dark,
+        home: homeWidget,
+      ),
     );
   }
 }

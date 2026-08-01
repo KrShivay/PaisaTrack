@@ -60,6 +60,26 @@ void main() {
     );
   });
 
+  test('recheckStatus publishes a permission change made in system settings',
+      () async {
+    final gate = FakeSmsPermissionGate(
+      initialStatus: SmsPermissionStatus.permanentlyDenied,
+    );
+    final container = containerWith(gate);
+    await container.read(smsPermissionControllerProvider.future);
+
+    gate.currentStatus = SmsPermissionStatus.granted;
+    await container
+        .read(smsPermissionControllerProvider.notifier)
+        .recheckStatus();
+
+    expect(
+      container.read(smsPermissionControllerProvider).value,
+      SmsPermissionStatus.granted,
+    );
+    expect(gate.statusCalls, 2);
+  });
+
   test('build error is captured as AsyncError, not a crash', () async {
     final gate = FakeSmsPermissionGate(throwOnStatus: true);
     final container = containerWith(gate);

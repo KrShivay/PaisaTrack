@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/capture/permissions/sms_permission.dart';
+import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
@@ -10,6 +12,7 @@ import 'package:paisatrack/features/transactions/manual_entry_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
 import '../../support/fake_activity_transaction_page_controller.dart';
+import '../../support/fake_sms_permission_gate.dart';
 
 void main() {
   late AppDatabase database;
@@ -207,6 +210,9 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
           transactionListProvider.overrideWith(
             (ref) => Stream.value(const <TransactionListItem>[]),
           ),
