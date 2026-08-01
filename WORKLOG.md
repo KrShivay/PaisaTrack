@@ -1,5 +1,21 @@
 # Current Handoff
 
+## 2026-08-02 — T-127 bounded encrypted backup slice
+
+- Added explicit 32 MiB encrypted-file, 16 MiB decoded-payload, 50,000-row
+  per-table, and 200,000-row total ceilings. File length is checked before
+  reading a selected file; ciphertext and archive row counts are checked
+  before KDF derivation or database mutation.
+- Restricted imports/exports to the shipped Argon2id profile
+  (19,456 KiB / parallelism 1 / iterations 2 / 32-byte hash). Export now
+  filters raw SMS at the captured `purge_after` boundary, and restore skips
+  expired rows. Archive versions 1–3 and rows without parser metadata remain
+  compatible.
+- Added ADR 0008 plus backup/privacy/product-status documentation and
+  non-vacuous tests for size, KDF, row-limit, retention, and legacy metadata
+  behavior. Chunked authenticated streaming remains the next T-127 slice.
+
+
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
 

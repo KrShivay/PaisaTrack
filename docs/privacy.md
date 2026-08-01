@@ -12,9 +12,12 @@ PaisaTrack is local-first:
   newer than the first known SMS. Live receiver and catch-up paths share the
   same on-device parser and encrypted store.
 - On-device `raw_sms` retention is capped by
-  `AppConstants.rawSmsRetentionDays`. Current encrypted backups include
-  `raw_sms`, so exported archives can retain bodies beyond that window; T-127
-  must exclude/scrub them before the retention claim covers backups.
+  `AppConstants.rawSmsRetentionDays`. Encrypted backups now include only raw
+  SMS rows whose `purge_after` is still in the future; expired rows are also
+  skipped if encountered during restore. Backup files are capped at 32 MiB,
+  decoded ciphertext/plaintext at 16 MiB, and rows at 50,000 per table and
+  200,000 per archive. The archive remains materialized in memory; T-127's
+  future streaming slice must preserve these limits.
 - The user-facing "Messages we couldn't read" surface reads only allowlisted
   failure reasons and expiry metadata. It reports retained counts without
   loading bodies, senders, or identifiers, and excludes rows past their expiry

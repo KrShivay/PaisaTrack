@@ -10,7 +10,12 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
-<!-- Empty. -->
+- [ ] T-127 (@codex) [P1] Stream and bound encrypted backup/import.
+      Current slice: enforce a 32 MiB encrypted-file ceiling, 16 MiB decoded
+      ciphertext/plaintext ceiling, 50,000 rows per table, 200,000 rows per
+      archive, and the shipped Argon2id profile; export/import only retains
+      non-expired raw SMS. Remaining scope is chunked authenticated streaming
+      with progress and picker compatibility.
 
 ## In Review
 
@@ -22,15 +27,6 @@ later hardening.
 
 ### Scale, privacy, and maintainability
 
-- [ ] T-127 (@codex) [P1] Stream and bound encrypted backup/import.
-      Module: backup service, document gateway, privacy.
-      Depends: vNext archive format.
-      Gap: picker and backup hold full ciphertext/plaintext/table copies in
-      memory; KDF input allows 256 MiB before authentication; raw SMS can live
-      indefinitely in backups.
-      Next: enforce file/row/ciphertext limits now, accept known KDF profiles,
-      exclude expired/raw SMS, then design chunked authenticated streaming with
-      progress and compatibility tests.
 - [ ] T-115 (@codex) [P1] Profile startup, import, and model memory.
       Module: bootstrap, capture, LiteRT-LM.
       Depends: signed profile/release build and target device.

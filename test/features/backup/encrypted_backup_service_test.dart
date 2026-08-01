@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -31,12 +31,7 @@ void main() {
     return EncryptedBackupService(
       database: database,
       random: Random(7),
-      kdf: Argon2id(
-        memory: 8,
-        parallelism: 1,
-        iterations: 1,
-        hashLength: 32,
-      ),
+      clock: () => DateTime.utc(2026, 8, 2),
     );
   }
 
@@ -145,6 +140,65 @@ void main() {
     expect(legacy.failureReason == null, isTrue);
   });
 
+  test('archive round-trips a raw SMS row without parser metadata', () async {
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_legacy_archive',
+            sender: 'VK-HDFCBK',
+            body: 'Legacy body',
+            receivedAt: DateTime.utc(2026, 7, 16),
+            purgeAfter: DateTime.utc(2026, 8, 15),
+          ),
+        );
+
+    final bytes = await service().exportBytes(
+      passphrase: 'legacy-archive-passphrase',
+    );
+    await database.delete(database.rawSms).go();
+    await service().importBytes(
+      bytes: bytes,
+      passphrase: 'legacy-archive-passphrase',
+    );
+
+    final restored = (await database.select(database.rawSms).get()).single;
+    expect(restored.id, 'sms_legacy_archive');
+    expect(restored.parserVersion, isNull);
+    expect(restored.failureReason, isNull);
+  });
+
+  test('export excludes expired raw SMS while retaining active rows', () async {
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_active',
+            sender: 'VK-HDFCBK',
+            body: 'Active body',
+            receivedAt: DateTime.utc(2026, 7, 16),
+            purgeAfter: DateTime.utc(2026, 8, 3),
+          ),
+        );
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_expired',
+            sender: 'VK-HDFCBK',
+            body: 'Expired body',
+            receivedAt: DateTime.utc(2026, 7, 1),
+            purgeAfter: DateTime.utc(2026, 8, 2),
+          ),
+        );
+
+    final bytes = await service().exportBytes(
+      passphrase: 'retention-boundary-passphrase',
+    );
+    await database.delete(database.rawSms).go();
+    await service().importBytes(
+      bytes: bytes,
+      passphrase: 'retention-boundary-passphrase',
+    );
+
+    final restored = await database.select(database.rawSms).get();
+    expect(restored.map((row) => row.id), ['sms_active']);
+  });
+
   test('backup restore rejects non-allowlisted raw SMS failure reasons',
       () async {
     await database.into(database.rawSms).insert(
@@ -178,8 +232,8 @@ void main() {
         await service().exportBytes(passphrase: 'payload-kdf-passphrase');
     final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     final kdf = payload['kdf'] as Map<String, dynamic>;
-    expect(kdf['memory'], 8);
-    expect(kdf['iterations'], 1);
+    expect(kdf['memory'], 19456);
+    expect(kdf['iterations'], 2);
 
     await database.delete(database.categories).go();
     final importer = EncryptedBackupService(
@@ -207,6 +261,7 @@ void main() {
 
     for (final mutation in <void Function(Map<String, dynamic>)>[
       (payload) => (payload['kdf'] as Map<String, dynamic>)['name'] = 'argon2i',
+      (payload) => (payload['kdf'] as Map<String, dynamic>)['memory'] = 32768,
       (payload) =>
           (payload['cipher'] as Map<String, dynamic>)['name'] = 'aes-128-gcm',
     ]) {
@@ -228,6 +283,162 @@ void main() {
         ),
       );
     }
+  });
+
+  test('export rejects an unsupported configured KDF profile', () async {
+    final unsupported = EncryptedBackupService(
+      database: database,
+      random: Random(9),
+      clock: () => DateTime.utc(2026, 8, 2),
+      kdf: Argon2id(
+        memory: 32768,
+        parallelism: 1,
+        iterations: 2,
+        hashLength: 32,
+      ),
+    );
+
+    await expectLater(
+      unsupported.exportBytes(passphrase: 'unsupported-kdf-passphrase'),
+      throwsA(
+        isA<EncryptedBackupException>().having(
+          (error) => error.message,
+          'message',
+          'Unsupported backup KDF profile',
+        ),
+      ),
+    );
+  });
+
+  test('rejects oversized files and ciphertext before restoring', () async {
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: 'size-boundary-passphrase',
+    );
+    final bytes = await file.readAsBytes();
+    final limited = EncryptedBackupService(
+      database: database,
+      random: Random(10),
+      clock: () => DateTime.utc(2026, 8, 2),
+      limits: const EncryptedBackupLimits(
+        maxEncryptedBytes: 1,
+        maxCiphertextBytes: 1,
+      ),
+    );
+
+    final expected = throwsA(
+      isA<EncryptedBackupException>().having(
+        (error) => error.message,
+        'message',
+        'Encrypted backup exceeds the maximum file size',
+      ),
+    );
+    await expectLater(
+      limited.importFromFile(
+        file: file,
+        passphrase: 'size-boundary-passphrase',
+      ),
+      expected,
+    );
+    await expectLater(
+      limited.importBytes(
+        bytes: bytes,
+        passphrase: 'size-boundary-passphrase',
+      ),
+      expected,
+    );
+
+    final ciphertextLimited = EncryptedBackupService(
+      database: database,
+      random: Random(11),
+      clock: () => DateTime.utc(2026, 8, 2),
+      limits: const EncryptedBackupLimits(maxCiphertextBytes: 1),
+    );
+    await expectLater(
+      ciphertextLimited.importBytes(
+        bytes: bytes,
+        passphrase: 'size-boundary-passphrase',
+      ),
+      throwsA(
+        isA<EncryptedBackupException>().having(
+          (error) => error.message,
+          'message',
+          'Encrypted backup payload exceeds the maximum size',
+        ),
+      ),
+    );
+  });
+
+  test('rejects malformed JSON before restoring', () async {
+    final before = await database.select(database.categories).get();
+
+    await expectLater(
+      service().importBytes(
+        bytes: Uint8List.fromList(utf8.encode('[]')),
+        passphrase: 'malformed-json-passphrase',
+      ),
+      throwsA(
+        isA<EncryptedBackupException>().having(
+          (error) => error.message,
+          'message',
+          'Invalid encrypted export',
+        ),
+      ),
+    );
+
+    final after = await database.select(database.categories).get();
+    expect(after.map((row) => row.toJson()), before.map((row) => row.toJson()));
+  });
+
+  test('enforces per-table and total archive row limits before restore',
+      () async {
+    final bytes = await service().exportBytes(
+      passphrase: 'row-boundary-passphrase',
+    );
+    final before = await database.select(database.categories).get();
+
+    final tableLimited = EncryptedBackupService(
+      database: database,
+      random: Random(12),
+      clock: () => DateTime.utc(2026, 8, 2),
+      limits: const EncryptedBackupLimits(maxRowsPerTable: 1),
+    );
+    await expectLater(
+      tableLimited.importBytes(
+        bytes: bytes,
+        passphrase: 'row-boundary-passphrase',
+      ),
+      throwsA(
+        isA<EncryptedBackupException>().having(
+          (error) => error.message,
+          'message',
+          contains('table categories exceeds'),
+        ),
+      ),
+    );
+
+    final totalLimited = EncryptedBackupService(
+      database: database,
+      random: Random(13),
+      clock: () => DateTime.utc(2026, 8, 2),
+      limits: const EncryptedBackupLimits(maxRowsTotal: 1),
+    );
+    await expectLater(
+      totalLimited.importBytes(
+        bytes: bytes,
+        passphrase: 'row-boundary-passphrase',
+      ),
+      throwsA(
+        isA<EncryptedBackupException>().having(
+          (error) => error.message,
+          'message',
+          'Encrypted backup exceeds the maximum row count',
+        ),
+      ),
+    );
+
+    final after = await database.select(database.categories).get();
+    expect(after.map((row) => row.toJson()), before.map((row) => row.toJson()));
   });
 
   test('import rejects excessive Argon2 parameters before key derivation',

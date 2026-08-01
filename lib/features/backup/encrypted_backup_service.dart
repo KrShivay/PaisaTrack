@@ -12,12 +12,33 @@ import '../../data/db/database_provider.dart';
 import '../../capture/parser_version.dart';
 
 const encryptedBackupFileName = 'paisatrack_export.ptrack';
-const _argon2MinMemoryKiB = 8;
-const _argon2MaxMemoryKiB = 256 * 1024;
+const encryptedBackupMaxBytes = 32 * 1024 * 1024;
+const encryptedBackupMaxCiphertextBytes = 16 * 1024 * 1024;
+const encryptedBackupMaxRowsPerTable = 50 * 1000;
+const encryptedBackupMaxRowsTotal = 200 * 1000;
+const _argon2MemoryKiB = 19456;
+const _argon2Parallelism = 1;
+const _argon2Iterations = 2;
+const _argon2HashLength = 32;
 const _argon2MaxParallelism = 4;
 const _argon2MaxIterations = 10;
 const _aes256KeyLength = 32;
 const _aesGcmMacLength = 16;
+
+/// Resource ceilings applied before archive parsing/restoration.
+class EncryptedBackupLimits {
+  const EncryptedBackupLimits({
+    this.maxEncryptedBytes = encryptedBackupMaxBytes,
+    this.maxCiphertextBytes = encryptedBackupMaxCiphertextBytes,
+    this.maxRowsPerTable = encryptedBackupMaxRowsPerTable,
+    this.maxRowsTotal = encryptedBackupMaxRowsTotal,
+  });
+
+  final int maxEncryptedBytes;
+  final int maxCiphertextBytes;
+  final int maxRowsPerTable;
+  final int maxRowsTotal;
+}
 
 class EncryptedBackupException implements Exception {
   const EncryptedBackupException(this.message);
@@ -34,22 +55,28 @@ class EncryptedBackupService {
     Random? random,
     Argon2id? kdf,
     AesGcm? cipher,
+    DateTime Function()? clock,
+    EncryptedBackupLimits limits = const EncryptedBackupLimits(),
   })  : _database = database,
         _random = random ?? Random.secure(),
         _kdf = kdf ??
             Argon2id(
-              memory: 19456,
-              parallelism: 1,
-              iterations: 2,
-              hashLength: 32,
+              memory: _argon2MemoryKiB,
+              parallelism: _argon2Parallelism,
+              iterations: _argon2Iterations,
+              hashLength: _argon2HashLength,
             ),
-        _cipher = cipher ?? AesGcm.with256bits();
+        _cipher = cipher ?? AesGcm.with256bits(),
+        _clock = clock ?? DateTime.now,
+        _limits = limits;
 
   final AppDatabase _database;
   final Random _random;
   final Argon2id _kdf;
   static const minimumPassphraseLength = 12;
   final AesGcm _cipher;
+  final DateTime Function() _clock;
+  final EncryptedBackupLimits _limits;
 
   Future<File> exportToFile({
     required Directory directory,
@@ -65,12 +92,17 @@ class EncryptedBackupService {
   /// Builds the encrypted archive in memory for a system document destination.
   Future<Uint8List> exportBytes({required String passphrase}) async {
     _assertExportPassphrase(passphrase);
+    _assertKnownKdfProfile(_kdf);
     final archive = await _readArchive();
+    final plaintext = utf8.encode(jsonEncode(archive));
+    _assertCiphertextSize(plaintext.length);
     final payload = await _encrypt(
-      utf8.encode(jsonEncode(archive)),
+      plaintext,
       passphrase: passphrase,
     );
-    return Uint8List.fromList(utf8.encode(jsonEncode(payload)));
+    final encodedPayload = utf8.encode(jsonEncode(payload));
+    _assertEncryptedSize(encodedPayload.length);
+    return Uint8List.fromList(encodedPayload);
   }
 
   void _assertExportPassphrase(String passphrase) {
@@ -89,10 +121,9 @@ class EncryptedBackupService {
       throw const EncryptedBackupException('Encrypted export file not found');
     }
 
-    await importBytes(
-      bytes: await file.readAsBytes(),
-      passphrase: passphrase,
-    );
+    final length = await file.length();
+    _assertEncryptedSize(length);
+    await importBytes(bytes: await file.readAsBytes(), passphrase: passphrase);
   }
 
   /// Restores an encrypted archive selected through the system picker.
@@ -103,49 +134,87 @@ class EncryptedBackupService {
     if (passphrase.isEmpty) {
       throw const EncryptedBackupException('Passphrase is required');
     }
-    final payload = jsonDecode(utf8.decode(bytes)) as Map<String, Object?>;
+    _assertEncryptedSize(bytes.length);
+    final payload = _decodeJsonMap(bytes);
     final plaintext = await _decrypt(payload, passphrase: passphrase);
-    final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, Object?>;
+    _assertCiphertextSize(plaintext.length);
+    final archive = _decodeJsonMap(plaintext);
     _validateArchive(archive);
 
     try {
-      await _restoreArchive(archive);
+      await _restoreArchive(archive, now: _clock().toUtc());
     } on TypeError catch (e) {
       throw EncryptedBackupException('Malformed archive table row: $e');
     }
   }
 
   Future<Map<String, Object?>> _readArchive() async {
-    return {
+    final archive = {
       'version': 3,
       'tables': {
-        'categories': await _rows(_database.categories),
-        'merchants': await _rows(_database.merchants),
-        'raw_sms': await _rows(_database.rawSms),
-        'merchant_aliases': await _rows(_database.merchantAliases),
-        'payment_sources': await _rows(_database.paymentSources),
-        'transactions': await _rows(_database.transactions),
-        'rules': await _rows(_database.rules),
-        'feedback': await _rows(_database.feedback),
-        'baselines': await _rows(_database.baselines),
-        'insights': await _rows(_database.insights),
-        'model_meta': await _rows(_database.modelMeta),
-        'recurring_series': await _rows(_database.recurringSeries),
+        'categories':
+            await _rows(_database.categories, tableName: 'categories'),
+        'merchants': await _rows(_database.merchants, tableName: 'merchants'),
+        'raw_sms': await _retainedRawSmsRows(_clock().toUtc()),
+        'merchant_aliases': await _rows(
+          _database.merchantAliases,
+          tableName: 'merchant_aliases',
+        ),
+        'payment_sources':
+            await _rows(_database.paymentSources, tableName: 'payment_sources'),
+        'transactions':
+            await _rows(_database.transactions, tableName: 'transactions'),
+        'rules': await _rows(_database.rules, tableName: 'rules'),
+        'feedback': await _rows(_database.feedback, tableName: 'feedback'),
+        'baselines': await _rows(_database.baselines, tableName: 'baselines'),
+        'insights': await _rows(_database.insights, tableName: 'insights'),
+        'model_meta': await _rows(_database.modelMeta, tableName: 'model_meta'),
+        'recurring_series': await _rows(
+          _database.recurringSeries,
+          tableName: 'recurring_series',
+        ),
       },
     };
+    _validateArchive(archive);
+    return archive;
   }
 
   Future<List<Map<String, Object?>>> _rows<T extends DataClass>(
-    TableInfo<Table, T> table,
-  ) async {
-    final rows = await _database.select(table).get();
+    TableInfo<Table, T> table, {
+    required String tableName,
+  }) async {
+    final rows = await (_database.select(table)
+          ..limit(_limits.maxRowsPerTable + 1))
+        .get();
+    return _serializeRows(rows, tableName);
+  }
+
+  Future<List<Map<String, Object?>>> _retainedRawSmsRows(DateTime now) async {
+    final rows = await (_database.select(_database.rawSms)
+          ..where(
+            (row) =>
+                row.purgeAfter.isNull() | row.purgeAfter.isBiggerThanValue(now),
+          )
+          ..limit(_limits.maxRowsPerTable + 1))
+        .get();
+    return _serializeRows(rows, 'raw_sms');
+  }
+
+  List<Map<String, Object?>> _serializeRows<T extends DataClass>(
+    List<T> rows,
+    String tableName,
+  ) {
+    _assertTableRowCount(rows.length, tableName);
     return rows
         .map((row) => row.toJson())
         .cast<Map<String, Object?>>()
         .toList(growable: false);
   }
 
-  Future<void> _restoreArchive(Map<String, Object?> archive) async {
+  Future<void> _restoreArchive(
+    Map<String, Object?> archive, {
+    required DateTime now,
+  }) async {
     final tables = archive['tables']! as Map<String, Object?>;
     final database = _database;
 
@@ -179,6 +248,9 @@ class EncryptedBackupService {
           throw const EncryptedBackupException(
             'Malformed archive table row: invalid raw SMS failure reason',
           );
+        }
+        if (!rawSms.purgeAfter.isAfter(now)) {
+          continue;
         }
         await database.into(database.rawSms).insert(rawSms);
       }
@@ -237,6 +309,7 @@ class EncryptedBackupService {
     if (value is! List) {
       throw EncryptedBackupException('Archive missing table $name');
     }
+    _assertTableRowCount(value.length, name);
     return value
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList(growable: false);
@@ -251,6 +324,7 @@ class EncryptedBackupService {
     if (value is! List) {
       throw EncryptedBackupException('Invalid table $name');
     }
+    _assertTableRowCount(value.length, name);
     return value
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList(growable: false);
@@ -258,9 +332,37 @@ class EncryptedBackupService {
 
   void _validateArchive(Map<String, Object?> archive) {
     final version = archive['version'];
-    if ((version != 1 && version != 2 && version != 3) ||
-        archive['tables'] is! Map<String, Object?>) {
+    final rawTables = archive['tables'];
+    if ((version != 1 && version != 2 && version != 3) || rawTables is! Map) {
       throw const EncryptedBackupException('Unsupported encrypted export');
+    }
+    var totalRows = 0;
+    for (final entry in rawTables.entries) {
+      final value = entry.value;
+      if (value is! List) {
+        throw EncryptedBackupException('Invalid archive table ${entry.key}');
+      }
+      _assertTableRowCount(value.length, entry.key.toString());
+      totalRows += value.length;
+    }
+    if (totalRows > _limits.maxRowsTotal) {
+      throw const EncryptedBackupException(
+        'Encrypted backup exceeds the maximum row count',
+      );
+    }
+  }
+
+  Map<String, Object?> _decodeJsonMap(List<int> bytes) {
+    try {
+      final decoded = jsonDecode(utf8.decode(bytes));
+      if (decoded is! Map) {
+        throw const EncryptedBackupException('Invalid encrypted export');
+      }
+      return Map<String, Object?>.from(decoded);
+    } on FormatException {
+      throw const EncryptedBackupException('Invalid encrypted export');
+    } on TypeError {
+      throw const EncryptedBackupException('Invalid encrypted export');
     }
   }
 
@@ -268,6 +370,7 @@ class EncryptedBackupService {
     List<int> plaintext, {
     required String passphrase,
   }) async {
+    _assertKnownKdfProfile(_kdf);
     final salt = _randomBytes(16);
     final nonce = _randomBytes(AesGcm.defaultNonceLength);
     final key = await _deriveKey(passphrase, salt);
@@ -310,8 +413,8 @@ class EncryptedBackupService {
       }
       final memory = _boundedInt(
         kdf['memory'],
-        min: _argon2MinMemoryKiB,
-        max: _argon2MaxMemoryKiB,
+        min: _argon2MemoryKiB,
+        max: _argon2MemoryKiB,
       );
       final parallelism = _boundedInt(
         kdf['parallelism'],
@@ -328,12 +431,24 @@ class EncryptedBackupService {
         min: _aes256KeyLength,
         max: _aes256KeyLength,
       );
+      if (memory != _argon2MemoryKiB ||
+          parallelism != _argon2Parallelism ||
+          iterations != _argon2Iterations ||
+          hashLength != _argon2HashLength) {
+        throw const EncryptedBackupException('Invalid encrypted export');
+      }
       if (memory < 8 * parallelism) {
         throw const EncryptedBackupException('Invalid encrypted export');
       }
       final salt = base64Decode(kdf['salt']! as String);
       final nonce = base64Decode(cipher['nonce']! as String);
       final mac = base64Decode(cipher['mac']! as String);
+      final ciphertextEncoded = cipher['ciphertext'];
+      if (ciphertextEncoded is! String) {
+        throw const EncryptedBackupException('Invalid encrypted export');
+      }
+      final ciphertext = base64Decode(ciphertextEncoded);
+      _assertCiphertextSize(ciphertext.length);
       if (salt.length < 16 ||
           salt.length > 64 ||
           nonce.length != AesGcm.defaultNonceLength ||
@@ -348,7 +463,7 @@ class EncryptedBackupService {
       );
       final key = await _deriveKey(passphrase, salt, kdf: payloadKdf);
       final box = SecretBox(
-        base64Decode(cipher['ciphertext']! as String),
+        ciphertext,
         nonce: nonce,
         mac: Mac(mac),
       );
@@ -382,6 +497,39 @@ class EncryptedBackupService {
       throw const EncryptedBackupException('Invalid encrypted export');
     }
     return value;
+  }
+
+  void _assertKnownKdfProfile(Argon2id kdf) {
+    if (kdf.memory != _argon2MemoryKiB ||
+        kdf.parallelism != _argon2Parallelism ||
+        kdf.iterations != _argon2Iterations ||
+        kdf.hashLength != _argon2HashLength) {
+      throw const EncryptedBackupException('Unsupported backup KDF profile');
+    }
+  }
+
+  void _assertEncryptedSize(int length) {
+    if (length > _limits.maxEncryptedBytes) {
+      throw const EncryptedBackupException(
+        'Encrypted backup exceeds the maximum file size',
+      );
+    }
+  }
+
+  void _assertCiphertextSize(int length) {
+    if (length > _limits.maxCiphertextBytes) {
+      throw const EncryptedBackupException(
+        'Encrypted backup payload exceeds the maximum size',
+      );
+    }
+  }
+
+  void _assertTableRowCount(int length, String tableName) {
+    if (length > _limits.maxRowsPerTable) {
+      throw EncryptedBackupException(
+        'Encrypted backup table $tableName exceeds the maximum row count',
+      );
+    }
   }
 
   List<int> _randomBytes(int length) {

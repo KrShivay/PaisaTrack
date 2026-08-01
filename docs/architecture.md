@@ -46,7 +46,11 @@ events, not relax the transaction parser's future-event rejection.
 - `raw_sms` is retention-limited; normalized transactions persist.
 - Original merchant text, VPA, references, source, and confidence evidence are
   preserved separately from user corrections and future labels.
-- Backup files are passphrase-encrypted before leaving app memory.
+- Backup files are passphrase-encrypted before leaving app memory. The current
+  archive enforces 32 MiB encrypted-file, 16 MiB decoded-payload, 50,000-row
+  per-table, and 200,000-row total ceilings, accepts only the shipped Argon2id
+  profile, and excludes expired raw SMS. Chunked authenticated streaming and
+  progress remain T-127 follow-up work.
 - Delete-everything closes the database, removes DB/key/settings/import state,
   and recreates only default categories.
 
@@ -103,7 +107,8 @@ Current boundaries that must be preserved while fixing the UI:
 
 Known scale limits are the 100-row Activity and Review windows, client-side
 payee aggregation, quadratic owned-transfer reconciliation, and whole-archive
-backup materialization. Their fixes are mapped in `TASKS.md`.
+backup materialization. The backup resource ceilings are now enforced; its
+streaming replacement remains mapped to T-127 in `TASKS.md`.
 
 Refund links, source inclusion rules, and statement reconciliation must feed a
 single explained spending-total contract before budgets consume those totals.
