@@ -19,6 +19,21 @@ This is a rolling handoff, not a project history. Current product state is in
   (expected 500, actual 5500); analyzer clean, format and diff checks clean,
   and GitNexus refreshed with task-scoped change detection before commit.
 
+## 2026-08-02 — T-108 slice implemented: native SMS filter counters
+
+- Added a content-free diagnostics channel for native live/batch filter
+  rejections and unknown-sender drops; the existing developer Unparsed SMS
+  screen displays the four counters and states their process-lifetime scope.
+- Kept the sender allowlist unchanged: additional bank coverage still requires
+  sanitized evidence and exact parser assertions.
+- Verification: focused Dart diagnostics/backfill suite **33/33**, diagnostics
+  screen suite **13/13**, Android `:app:testDebugUnitTest` **passed**, full
+  Flutter suite **633/634** with only the known
+  `test/features/transactions/exclusion_explanation_test.dart` failure
+  (expected 500, actual 5500), analyzer clean, and Dart format clean.
+  GitNexus impact was LOW before edits; final change detection and commit
+  remain required.
+
 ## 2026-08-02 — T-161c implemented: user-facing unreadable-message status
 
 - Added `RawSmsRepository.watchRetainedFailures`, which selects only

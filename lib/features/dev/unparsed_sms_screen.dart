@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/sms_filter_diagnostics.dart';
 import '../../capture/generic_transaction_parser.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
 import '../../core/widgets/bloom/bloom_dialog.dart';
@@ -20,6 +21,7 @@ class UnparsedSmsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unparsed = ref.watch(unparsedSmsListProvider);
+    final nativeCounters = ref.watch(smsFilterCountersProvider);
     final trustAlerts = ref.watch(templateTrustAlertsProvider).valueOrNull ??
         const <TemplateTrustEntry>[];
 
@@ -35,6 +37,7 @@ class UnparsedSmsScreen extends ConsumerWidget {
       body: Column(
         children: [
           if (trustAlerts.isNotEmpty) _TemplateTrustAlert(entries: trustAlerts),
+          _NativeFilterCounters(counters: nativeCounters),
           const _UnrecognizedSendersSummary(),
           const _UnparsedReasonSummary(),
           Expanded(
@@ -51,6 +54,48 @@ class UnparsedSmsScreen extends ConsumerWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NativeFilterCounters extends StatelessWidget {
+  const _NativeFilterCounters({required this.counters});
+
+  final AsyncValue<SmsFilterCounters> counters;
+
+  @override
+  Widget build(BuildContext context) {
+    return counters.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (value) => Card(
+        margin: const EdgeInsets.all(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Native capture counters',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Live: ${value.liveUnknownSender} unknown sender · '
+                '${value.liveFilterRejected} filtered\n'
+                'History scan: ${value.batchUnknownSender} unknown sender · '
+                '${value.batchFilterRejected} filtered',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Counts reset when the app process restarts; no message content is retained.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

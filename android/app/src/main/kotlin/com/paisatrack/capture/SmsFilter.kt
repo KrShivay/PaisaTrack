@@ -51,6 +51,14 @@ object SmsFilter {
         batchUnknownSenderDropCount.set(0)
     }
 
+    /** Returns content-free counters for developer diagnostics. */
+    fun counters(): SmsFilterCounters = SmsFilterCounters(
+        liveFilterRejected = liveFilterDropCount.get(),
+        batchFilterRejected = batchFilterDropCount.get(),
+        liveUnknownSender = liveUnknownSenderDropCount.get(),
+        batchUnknownSender = batchUnknownSenderDropCount.get(),
+    )
+
     /**
      * Returns true only for messages that look like transactional bank/UPI
      * alerts from a known sender and are not OTP or promotional.
@@ -129,3 +137,9 @@ object SmsFilter {
     }
 }
 
+data class SmsFilterCounters(
+    val liveFilterRejected: Long,
+    val batchFilterRejected: Long,
+    val liveUnknownSender: Long,
+    val batchUnknownSender: Long,
+)

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/raw_sms_repository.dart';
+import 'package:paisatrack/capture/sms_filter_diagnostics.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_providers.dart';
 import 'package:paisatrack/features/dev/unparsed_sms_screen.dart';
@@ -16,6 +17,7 @@ void main() {
     WidgetTester tester,
     List<UnparsedSms> messages, {
     List<TemplateTrustEntry> trustAlerts = const [],
+    SmsFilterCounters nativeCounters = const SmsFilterCounters.zero(),
     Future<bool> Function()? exportTransactions,
     SmsFixtureCopier? copyFixture,
   }) async {
@@ -27,6 +29,9 @@ void main() {
           ),
           templateTrustAlertsProvider.overrideWith(
             (ref) => Stream.value(trustAlerts),
+          ),
+          smsFilterCountersProvider.overrideWith(
+            (ref) async => nativeCounters,
           ),
           if (exportTransactions != null)
             transactionJsonExportProvider.overrideWith(
@@ -46,6 +51,29 @@ void main() {
     await pumpScreen(tester, const []);
 
     expect(find.text('No unparsed messages'), findsOneWidget);
+  });
+
+  testWidgets('shows content-free native capture counters', (tester) async {
+    await pumpScreen(
+      tester,
+      const [],
+      nativeCounters: const SmsFilterCounters(
+        liveFilterRejected: 2,
+        batchFilterRejected: 3,
+        liveUnknownSender: 4,
+        batchUnknownSender: 5,
+      ),
+    );
+
+    expect(find.text('Native capture counters'), findsOneWidget);
+    expect(
+      find.textContaining('Live: 4 unknown sender · 2 filtered'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('History scan: 5 unknown sender · 3 filtered'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('lists unprocessed raw sms rows', (tester) async {

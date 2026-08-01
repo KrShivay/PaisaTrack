@@ -156,5 +156,20 @@ class SmsFilterTest {
         assertEquals(1L, SmsFilter.liveUnknownSenderDropCount.get())
         assertEquals(1L, SmsFilter.batchUnknownSenderDropCount.get())
     }
-}
 
+    @Test
+    fun exposesContentFreeCounterSnapshot() {
+        SmsFilter.isAllowed("AD-SHOPXY", "Rs 999 debited for your order.")
+        SmsFilter.isAllowed("AD-SHOPXY", "Rs 999 debited for your order.", isBatch = true)
+
+        assertEquals(
+            SmsFilterCounters(
+                liveFilterRejected = 0,
+                batchFilterRejected = 0,
+                liveUnknownSender = 1,
+                batchUnknownSender = 1,
+            ),
+            SmsFilter.counters(),
+        )
+    }
+}

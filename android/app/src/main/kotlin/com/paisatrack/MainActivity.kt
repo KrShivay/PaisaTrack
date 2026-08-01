@@ -145,6 +145,26 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.paisatrack/sms_diagnostics",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "filterCounters" -> {
+                    val counters = com.paisatrack.capture.SmsFilter.counters()
+                    result.success(
+                        mapOf(
+                            "liveFilterRejected" to counters.liveFilterRejected,
+                            "batchFilterRejected" to counters.batchFilterRejected,
+                            "liveUnknownSender" to counters.liveUnknownSender,
+                            "batchUnknownSender" to counters.batchUnknownSender,
+                        ),
+                    )
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         EventChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "com.paisatrack/sms_events",

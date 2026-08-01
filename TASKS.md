@@ -10,7 +10,14 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
-<!-- Empty: T-161d is under review below. -->
+- [ ] T-108 (@codex) [P2] Measure and extend bank sender/template coverage.
+      Current slice: expose native live/batch filter-rejection and unknown-sender
+      counters in developer diagnostics without retaining bodies, senders, or
+      identifiers; do not expand the allowlist without sanitized evidence.
+      Acceptance: counters are content-free, distinguish live from batch, and
+      are visible in the existing Unparsed SMS developer screen; native and
+      channel tests cover zero and non-zero values. Remaining gap: evidence-
+      backed fixtures and exact parser assertions for additional banks.
 
 ## In Review
 
@@ -19,15 +26,6 @@ later hardening.
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
-- [ ] T-108 (@codex) [P2] Measure and extend bank sender/template coverage.
-      Module: Android SMS filter, template registry, developer diagnostics.
-      Depends: T-129 content-free native rejection counters.
-      Implemented: HDFC/ICICI deterministic templates, sender allowlist entries,
-      and sanitized tests are complete.
-      Gap: senders rejected natively are invisible to Dart, and additional banks
-      require evidence-backed fixtures.
-      Next: expose unknown-sender counts without bodies/identifiers, then add
-      bank coverage only from sanitized fixtures with exact parser assertions.
 
 ### Scale, privacy, and maintainability
 
