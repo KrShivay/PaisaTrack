@@ -15,6 +15,10 @@ PaisaTrack is local-first:
   `AppConstants.rawSmsRetentionDays`. Current encrypted backups include
   `raw_sms`, so exported archives can retain bodies beyond that window; T-127
   must exclude/scrub them before the retention claim covers backups.
+- The user-facing "Messages we couldn't read" surface reads only allowlisted
+  failure reasons and expiry metadata. It reports retained counts without
+  loading bodies, senders, or identifiers, and excludes rows past their expiry
+  even before nightly cleanup runs.
 - There is no cloud inference path (ADR 0002). No network call ever carries user
   data; the only permitted network use is the optional one-time download of
   open-weight model files. All intelligence — parsing, classification,

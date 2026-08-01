@@ -1,6 +1,6 @@
 # Product Status
 
-Status date: 2026-07-30
+Status date: 2026-08-01
 Code baseline: current `main` worktree, including T-126 calendar/eligibility
 semantics and T-156a dialog consolidation
 
@@ -23,6 +23,37 @@ production-ready: capture retry diagnostics,
 backup bounds, accessibility/device acceptance, and release/device evidence
 remain open.
 
+## Product-value review snapshot
+
+The 2026-08 review is documented in
+[`docs/product-value-review-2026-08.md`](product-value-review-2026-08.md), with
+the synthetic local-only corpus at
+`test/fixtures/product_review/corpus.json` and the release cadence at
+[`docs/product-quality-review.md`](product-quality-review.md).
+
+The evidence-backed priority is trust first: full-history discoverability,
+truthful aggregate error/completeness state, privacy-safe capture outcomes,
+cross-surface lifecycle explanations, and complete reset/backup boundaries.
+Salary reporting, accessibility/device acceptance, recurring planning,
+category budgets, and the data-footprint screen follow as P1 work. Cloud sync,
+account aggregation, and opaque AI coaching are explicitly deferred or rejected
+under the local-first product direction.
+
+T-172e is **CLOSED WITH WAIVER** for this review: the product owner marked an
+external representative participant session and interactive accessibility
+acceptance not required, so no further T-172e pickup is planned. This does not
+convert the operator smoke record into human evidence.
+A non-destructive device check on 2026-08-01 reached the wireless Motorola edge
+50 pro and confirmed the app process was alive; `READ_SMS`/`RECEIVE_SMS` were
+granted and notifications were denied. A follow-up smoke run visited Home,
+Activity, Sort, and Trends without changing app data, then restored Trends.
+The tabs and primary controls rendered, but the persistent bottom navigation
+covered lower content on all three content-heavy screens; the same overlap
+reproduced at font scale 1.3 on Home, Activity, and Trends. A read-only
+Activity-to-detail route opened and returned successfully, while a `DEBUG`
+ribbon remained visible. This is device screen-smoke evidence, not a TalkBack,
+large-text acceptance, or participant pass.
+
 ## Current architecture
 
 | Layer | Implemented state | Primary source |
@@ -41,9 +72,9 @@ normative boundaries.
 | Product area | Actual state | Important gap |
 | --- | --- | --- |
 | Onboarding and SMS permission | Implemented; users may continue without SMS and can open app settings after permanent denial | Device acceptance for permission/recovery remains |
-| Live/history/resume SMS capture | Implemented, local, paged, and idempotent | Failed/unparsed rows lack a durable automatic retry contract; device acceptance remains |
-| Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm and generic coverage exist | Unknown-sender drops are not measurable; real-bank breadth remains incomplete |
-| Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI | Activity searches only the loaded 100-row window and converts query failures to empty state |
+| Live/history/resume SMS capture | Implemented, local, paged, idempotent, and manual scans report scanned/rejected/unknown/accepted/parsed/unparsed/created/already-known counts; retained failures store only an allowlisted reason and parser version, suppress same-version retries, and retry after parser upgrades; Settings now exposes content-free retained-failure counts, reason buckets, retention disclosure, and inbox-scan retry | Device acceptance remains; targeted retry and live expiry refresh remain future hardening |
+| Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm and generic coverage exist; sanitized salary-credit templates and sender-agnostic fallback are proven end to end | Unknown-sender drops are not measurable; real-bank breadth remains incomplete |
+| Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI, explicit Activity page exhaustion, strict Activity keyset paging, continuation while filtered | Activity search still covers only the loaded page; SQL-backed cross-page search remains future work, and query failures still need actionable error states |
 | Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates | Queue remains capped at 100; cursor/persistence work is T-153 |
 | Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful guidance, global monthly budget prototype, recurring totals | Error states remain incomplete |
 | Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Eligibility diagnostics are absent |

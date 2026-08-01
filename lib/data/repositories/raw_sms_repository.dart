@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/parser_version.dart';
 import '../db/database.dart';
 
 /// A raw SMS that has not yet produced a transaction (parse failure or not
@@ -17,6 +18,20 @@ class UnparsedSms {
   final String sender;
   final String body;
   final DateTime receivedAt;
+}
+
+/// Content-free counts for retained raw SMS rows that could not be processed.
+///
+/// The query that creates this value selects only reason metadata and expiry;
+/// it never loads bodies, senders, or message identifiers.
+class RetainedSmsFailureSummary {
+  const RetainedSmsFailureSummary({required this.reasonCounts});
+
+  final Map<String, int> reasonCounts;
+
+  int get total => reasonCounts.values.fold(0, (sum, count) => sum + count);
+
+  int countFor(String reason) => reasonCounts[reason] ?? 0;
 }
 
 /// Reads raw SMS rows that failed to parse into a transaction.
@@ -43,6 +58,37 @@ class RawSmsRepository {
               )
               .toList(growable: false),
         );
+  }
+
+  /// Watches only unprocessed failures that are still inside raw-SMS
+  /// retention. Expired rows are excluded even if nightly cleanup has not run.
+  Stream<RetainedSmsFailureSummary> watchRetainedFailures({DateTime? now}) {
+    final failureReason = _database.rawSms.failureReason;
+    final query = _database.selectOnly(_database.rawSms)
+      ..addColumns([failureReason])
+      ..where(
+        _database.rawSms.processed.equals(false) &
+            failureReason.isIn(const [
+              SmsFailureReason.unparsed,
+              SmsFailureReason.processingError,
+            ]) &
+            _database.rawSms.purgeAfter
+                .isBiggerThanValue(now ?? DateTime.now()),
+      );
+
+    return query.watch().map((rows) {
+      final counts = <String, int>{
+        SmsFailureReason.unparsed: 0,
+        SmsFailureReason.processingError: 0,
+      };
+      for (final row in rows) {
+        final reason = row.read(failureReason);
+        if (reason != null && counts.containsKey(reason)) {
+          counts[reason] = counts[reason]! + 1;
+        }
+      }
+      return RetainedSmsFailureSummary(reasonCounts: counts);
+    });
   }
 }
 

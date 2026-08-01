@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,7 +23,9 @@ enum SmsLookupState {
 
 /// Dedicated SMS lookup sheet scanning the permitted inbox for financial messages.
 class SmsLookupSheet extends ConsumerStatefulWidget {
-  const SmsLookupSheet({super.key});
+  const SmsLookupSheet({super.key, this.startImmediately = false});
+
+  final bool startImmediately;
 
   @override
   ConsumerState<SmsLookupSheet> createState() => _SmsLookupSheetState();
@@ -48,6 +52,7 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
       setState(() => _state = SmsLookupState.permissionNeeded);
     } else {
       setState(() => _state = SmsLookupState.ready);
+      if (widget.startImmediately) unawaited(_startScan());
     }
   }
 

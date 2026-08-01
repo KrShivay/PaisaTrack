@@ -10,10 +10,6 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
-- [ ] T-161c (@codex) [P1] Add a user-facing “Messages we couldn't read”
-      surface with counts, reason buckets, retention policy, and retry
-      affordance; never expose raw bodies after expiry.
-
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
@@ -213,11 +209,107 @@ Suggested order: T-159a first (safety net) — then T-155/T-156/T-157a/T-158a
 can proceed in any order (independent) — then T-157b — then T-158b/c — then
 T-156c and T-159b/c last.
 
-## In Review
-
 ## Backlog
 
 <!-- Groom future work here before promoting it to Ready. -->
+
+### GPT-5.6 Sol high-thinking delivery queue
+
+Each item is intentionally small enough for one focused implementation pass.
+Before promoting an item to `Ready`, copy it to a task brief with file/symbol
+anchors, acceptance tests, privacy impact, and rollback path. Do not run more
+than one implementation item at once.
+
+#### Luna high-level recursive workstreams
+
+These are parent goals for a recursive Luna agent. They are not implementation
+tasks: select their ordered child tickets below, delegate independent audits and
+reviews, and close the parent only after every child has verification evidence.
+
+- [ ] LUNA-01 [P0] Restore trustworthy transaction visibility: deliver T-160a–d, T-164a–d, and T-164e so the entire non-deleted history is discoverable, consistently dated, correctly filtered, paged without gaps, and explainable when excluded.
+- [ ] LUNA-02 [P0] Make real SMS capture reliable and observable: deliver T-161a–e, T-162a–d, and T-163a–c with privacy-safe counters, supported-sender evidence, salary-credit coverage, permission recovery, and no raw-content leakage.
+- [ ] LUNA-03 [P0] Make navigation predictable and unobstructed: deliver T-167e–j across every root tab, detail route, and sheet, with a shared inset contract, deterministic back behavior, and device/viewport proof that every primary action remains tappable.
+- [ ] LUNA-04 [P1] Harden data correctness and scale: deliver T-165a–d, T-166a–b, and T-170a–d, preserving local-first semantics while proving large histories, income reporting, recovery, and deletion behavior.
+- [ ] LUNA-05 [P1] Complete accessible, maintainable UI: deliver T-167a–d, T-168a–d, and T-169a–b using characterization tests before refactors, shared presentation primitives, and visual/semantics regression coverage.
+- [ ] LUNA-06 [P1] Establish release confidence: deliver T-171a–b plus all unresolved P0/P1 verification evidence; produce a release-readiness report listing device tests, residual risks, privacy posture, and rollback steps.
+
+#### Capture correctness and observability
+
+- [ ] T-160d [P1] Extract reusable paged-list controller/state from Activity without changing review-queue behavior; characterize loading, error, retry, and exhaustion states first.
+- [ ] T-161d [P1] Recheck SMS permission on app resume and make Settings/Activity status cards reflect granted, denied, and permanently denied states immediately.
+- [ ] T-161e [P1] Add end-to-end tests for scan outcomes: newly created, already known, parsed-but-duplicate, unparsed, individual failure, and native rejection.
+- [ ] T-162b [P1] Define sender-onboarding evidence format (header, template fingerprint, fixture, expected result) and add a review gate before expanding `SmsFilter` allowlist.
+- [ ] T-162c [P1] Add unsupported-sender telemetry aggregated only by safe reason/category; prove personal-number bodies and identifiers are never persisted or logged.
+- [ ] T-162d [P2] Add deterministic employer/payroll alias recognition layered after parser evidence verification; require credit direction and account/channel context.
+- [ ] T-163a [P1] Make the SMS scan entry a reusable capture-status component for Activity, Settings, onboarding completion, and empty states.
+- [ ] T-163b [P2] Add scan cancellation/resume semantics with checkpoint preservation and explicit user-visible partial-result state.
+
+#### Product-value research and review
+
+See the completed review package in `docs/product-value-review-2026-08.md`,
+the task brief in `docs/tasks/T-172.md`, the recurring procedure in
+`docs/product-quality-review.md`, and the synthetic corpus in
+`test/fixtures/product_review/corpus.json`. LUNA-07 and T-172e are closed for
+this review by explicit product-owner waiver: participant and interactive
+accessibility evidence is not required and no further T-172e pickup is planned.
+Target-device screen-smoke remains documented as observation, not a human pass.
+
+#### Product-value implementation briefs
+
+The review produced dependency-ordered follow-ons; groom one at a time before
+promoting it to `Ready`. Full contracts, owners, rollback paths, and acceptance
+metrics are in `docs/tasks/T-172.md`.
+
+- [ ] PV-01 [P0] Complete full-history keyset search/filter and timestamp contract. Depends: T-160b–d, T-164a–b, T-164e.
+- [ ] PV-02 [P0] Make dashboard aggregates truthful on loading/error and expose completeness/exclusions. Depends: T-126.
+- [ ] PV-03 [P0] Add privacy-safe capture outcome ledger, reason buckets, and bounded retry. Depends: T-161a–e, T-162a–c.
+- [ ] PV-04 [P0] Unify lifecycle, duplicate, transfer, refund, and excluded-source explanations. Depends: T-164c–d, T-135.
+- [ ] PV-05 [P0] Share correction/undo and complete backup/reset/raw-SMS/native-artifact recovery proof. Depends: T-159a, T-157b, T-170a–b.
+- [ ] PV-06 [P1] Add salary income semantics and reversible source correction. Depends: T-162a, T-166a–b.
+- [ ] PV-07 [P1] Apply the accessible primary-flow contract and device matrix. Depends: T-167a–h.
+- [ ] PV-08 [P1] Add the data-footprint disclosure and release review package. Depends: T-169b, T-171a–b.
+
+#### Transaction integrity, data model, and performance
+
+- [ ] T-164a [P0] Add repository tests for keyset ordering under identical timestamps, deleted rows, duplicate-suppressed rows, and newly inserted rows between pages.
+- [ ] T-164b [P1] Move Activity filtering/search to SQL with indexed fields and paged results; preserve every current filter semantic.
+- [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.
+- [ ] T-164d [P2] Add “show excluded” Activity filter and detail explanation without letting excluded rows alter spending/budget totals.
+- [ ] T-164e [P0] Establish one transaction timestamp-display contract used by list grouping/rows, detail, dashboard, search/date filters, imports, and SMS capture; resolve local-time versus UTC conversion once at the presentation boundary, preserve the stored instant, and add India midnight/DST-equivalent/timezone-change regression tests proving every surface shows the same calendar date and time.
+- [ ] T-165a [P1] Profile 10k/50k transaction Activity rendering and query latency on release hardware; record thresholds and baseline evidence.
+- [ ] T-165b [P1] Replace O(n²) owned-transfer reconciliation with an indexed SQL candidate query and adversarial same-amount/date tests.
+- [ ] T-165c [P2] Plan and ADR an integer-paise migration, including lossless conversion, compatibility, rollback, and migration tests.
+- [ ] T-165d [P2] Split `TransactionRepository` reads/commands/corrections behind domain DTOs; prove existing provider and migration behavior.
+- [ ] T-166a [P1] Implement explicit salary income analytics card and period totals that include credits but never treat transfers/refunds as salary.
+- [ ] T-166b [P2] Add income source review/correction flow with undo and optional historical relabel preview.
+
+#### UI quality, accessibility, and refactoring
+
+- [ ] T-167a [P0] Audit every primary screen for loading, error, empty, and retry states; replace misleading empty states with actionable errors.
+- [ ] T-167b [P0] Add semantic labels, selected state, and 48dp minimum targets to custom Activity, Dashboard, Settings, and Review controls.
+- [ ] T-167c [P1] Add 1.5x/2x text and narrow/wide viewport widget tests for all primary transaction flows.
+- [ ] T-167d [P1] Replace bespoke gesture-only controls with semantic Material controls or equivalent explicit semantics.
+- [ ] T-167e [P0] Audit every root-tab screen, nested sheet, and detail route for FAB/action-button overlap with the bottom navigator, gesture area, keyboard, or system navigation inset; record viewport screenshots and exact affected widgets.
+- [ ] T-167f [P0] Introduce one shared safe-area/FAB placement contract that reserves bottom-navigation height, system gesture insets, keyboard insets, and minimum touch clearance; migrate Dashboard, Activity, Review, Insights, Settings, and all nested action sheets without per-screen magic offsets.
+- [ ] T-167g [P1] Add behavioral widget tests at small Android, gesture-navigation, keyboard-open, large-text, and landscape viewports proving every primary FAB/button is visible, tappable, and not hit-tested beneath bottom navigation.
+- [ ] T-167h [P1] Add golden/regression coverage for root navigation plus floating actions in light/dark themes; fail on visual intersection or <48dp exposed tap target.
+- [ ] T-167i [P2] Standardize bottom-sheet action bars and scroll padding on the same inset contract, including long forms, validation errors, and hardware-keyboard layouts.
+- [ ] T-167j [P0] Define and implement one app-wide back-navigation contract: Android back button, predictive-back gesture, and in-app back controls dismiss transient UI first, then pop every previously visited route one by one; once on a root tab, return to Home; once on Home, show an accessible “Press back again to exit” snackbar and exit only on a second back action within a documented timeout. Preserve tab history deliberately, avoid accidental exit, and add widget/integration tests for sheets, nested details, all root tabs, Home fallback, timeout expiry, keyboard-open state, and gesture/button parity.
+- [ ] T-168a [P1] Extract `TransactionDetailScreen` pure presentation helpers and subwidgets behind characterization tests (T-159a prerequisite).
+- [ ] T-168b [P1] Consolidate repeated category correction + undo flows into one controller; prove behavior parity for detail and weekly review.
+- [ ] T-168c [P2] Route remaining bespoke sheets/dialogs through Bloom helpers and add API-level presentation tests.
+- [ ] T-168d [P2] Establish a visual-regression golden suite for Activity, SMS scan, salary income, errors, and dark/light themes.
+- [ ] T-169a [P1] Add a dedicated transaction-import progress model shared by onboarding, Settings, and Activity; remove duplicated display counters.
+- [ ] T-169b [P2] Add a privacy/data-footprint screen explaining local SMS retention, parse status, backup inclusion, and safe deletion.
+
+#### Reliability, privacy, and release readiness
+
+- [ ] T-170a [P0] Add fault-injection tests for database-write, parser, channel, lifecycle, and native inbox query failures; prove retries are bounded and idempotent.
+- [ ] T-170b [P1] Verify raw-SMS expiry, backup exclusion, deletion, and recovery behavior with device-backed acceptance evidence.
+- [ ] T-170c [P1] Add release-build smoke tests for permission recovery, first import, resume catch-up, 10k history paging, and salary credit visibility.
+- [ ] T-170d [P2] Create a manual QA matrix for supported senders/templates, unsupported-sender telemetry, and false-positive privacy checks.
+- [ ] T-171a [P1] Add CI shards for Flutter unit/widget, Android unit, migration, and fixture-contract tests with deterministic failure artifacts.
+- [ ] T-171b [P2] Publish performance and accessibility acceptance budgets in docs, then gate release candidates on measured evidence.
 
 ## Board rules
 

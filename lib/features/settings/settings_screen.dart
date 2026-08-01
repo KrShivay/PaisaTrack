@@ -13,6 +13,7 @@ import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
 import '../sms/sms_lookup_sheet.dart';
+import '../sms/unreadable_sms_screen.dart';
 import '../transactions/transactions_providers.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
@@ -315,6 +316,19 @@ class SettingsScreen extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: _SmsImportTile(isDark: isDark),
+                  ),
+                  const Divider(height: 1),
+                  _TileRow(
+                    icon: Icons.sms_failed_outlined,
+                    title: "Messages we couldn't read",
+                    subtitle:
+                        'See privacy-safe counts and retry retained messages',
+                    isDark: isDark,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const UnreadableSmsScreen(),
+                      ),
+                    ),
                   ),
                 ],
               ),
