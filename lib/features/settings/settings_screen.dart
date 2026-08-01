@@ -472,12 +472,12 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
       final service = await ref.read(encryptedBackupServiceProvider.future);
-      final bytes = await service.exportBytes(passphrase: passphrase);
       final gateway = ref.read(systemDocumentGatewayProvider);
-      final success = await gateway.saveDocument(
+      final success = await service.exportToDocument(
+        gateway: gateway,
         suggestedName: 'paisatrack_backup.ptrack',
         mimeType: 'application/octet-stream',
-        bytes: bytes,
+        passphrase: passphrase,
       );
       if (context.mounted && success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -496,10 +496,6 @@ class SettingsScreen extends ConsumerWidget {
   static Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
     try {
       final gateway = ref.read(systemDocumentGatewayProvider);
-      final bytes =
-          await gateway.openDocument(mimeType: 'application/octet-stream');
-      if (bytes == null || !context.mounted) return;
-
       final passphrase = await _promptPassphrase(
         context: context,
         title: 'Import Encrypted Backup',
@@ -508,7 +504,12 @@ class SettingsScreen extends ConsumerWidget {
       if (passphrase == null || !context.mounted) return;
 
       final service = await ref.read(encryptedBackupServiceProvider.future);
-      await service.importBytes(bytes: bytes, passphrase: passphrase);
+      final imported = await service.importFromDocument(
+        gateway: gateway,
+        mimeType: 'application/octet-stream',
+        passphrase: passphrase,
+      );
+      if (!imported || !context.mounted) return;
 
       // Invalidate dependent providers upon restore success.
       ref.invalidate(appDatabaseProvider);

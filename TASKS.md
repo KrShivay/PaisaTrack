@@ -8,18 +8,12 @@ later hardening.
 
 ## In Progress
 
-<!-- Keep at most one implementation task here. -->
-
-- [ ] T-127 (@codex) [P1] Stream and bound encrypted backup/import.
-      Current slice: enforce a 32 MiB encrypted-file ceiling, 16 MiB decoded
-      ciphertext/plaintext ceiling, 50,000 rows per table, 200,000 rows per
-      archive, and the shipped Argon2id profile; export/import only retains
-      non-expired raw SMS. Remaining scope is chunked authenticated streaming
-      with progress and picker compatibility.
+<!-- Keep at most one implementation task here. T-127's implementation is
+     complete; physical SAF acceptance is release evidence tracked separately. -->
 
 ## In Review
 
-<!-- Empty: T-108 passed bounded local review and is complete. -->
+<!-- Empty: T-127 and T-108 passed bounded local review and are complete. -->
 
 ## Ready
 

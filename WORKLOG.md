@@ -1,5 +1,21 @@
 # Current Handoff
 
+## 2026-08-02 — T-127 streaming backup/import complete
+
+- Added an additive authenticated v2 binary envelope with 60 KiB data chunks,
+  unique per-chunk nonces, AAD binding, and a final manifest binding chunk and
+  byte counts. Existing v1 JSON/AES-GCM imports remain supported.
+- Export now pages Drift rows into newline-delimited records; import authenticates
+  and restores those rows inside one transaction, with rollback on corruption,
+  cancellation, expiry violations, or row/size limits.
+- Replaced the Settings backup path with bounded Android document sessions and
+  progress/cancellation callbacks. The native gateway never retains the full
+  backup or calls `readBytes()` for the production backup path.
+- Added protocol-integrity, progress, cancellation, document-session, and
+  transactional restore coverage. Focused backup/gateway suites and Android
+  app unit tests pass; physical SAF/provider acceptance remains release evidence
+  under T-170b/T-171.
+
 ## 2026-08-02 — T-127 bounded encrypted backup slice
 
 - Added explicit 32 MiB encrypted-file, 16 MiB decoded-payload, 50,000-row
@@ -13,7 +29,8 @@
   compatible.
 - Added ADR 0008 plus backup/privacy/product-status documentation and
   non-vacuous tests for size, KDF, row-limit, retention, and legacy metadata
-  behavior. Chunked authenticated streaming remains the next T-127 slice.
+  behavior. This bounded slice was followed by the completed streaming envelope
+  and session gateway implementation above.
 
 
 This is a rolling handoff, not a project history. Current product state is in

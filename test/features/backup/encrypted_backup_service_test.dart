@@ -8,6 +8,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/capture/parser_version.dart';
+import 'package:paisatrack/core/platform/system_document_gateway.dart';
 import 'package:paisatrack/features/backup/encrypted_backup_service.dart';
 
 void main() {
@@ -54,7 +55,10 @@ void main() {
       passphrase: 'correct horse battery staple',
     );
 
-    expect(await file.readAsString(), isNot(contains(before.first.name)));
+    expect(
+      utf8.decode(await file.readAsBytes(), allowMalformed: true),
+      isNot(contains(before.first.name)),
+    );
 
     await database.delete(database.categories).go();
     await service().importFromFile(
@@ -67,6 +71,132 @@ void main() {
     final restoredSource =
         await database.select(database.paymentSources).getSingle();
     expect(restoredSource.nickname, 'Daily card');
+  });
+
+  test('chunked file export reports monotonic progress and finalizes',
+      () async {
+    final progress = <EncryptedBackupProgress>[];
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: 'chunked-progress-passphrase',
+      onProgress: progress.add,
+    );
+    final bytes = await file.readAsBytes();
+
+    expect(bytes.sublist(0, 4), [0x50, 0x54, 0x52, 0x4b]);
+    expect(bytes[4], 2);
+    expect(
+      progress.map((event) => event.phase),
+      contains(
+        EncryptedBackupProgressPhase.encrypting,
+      ),
+    );
+    expect(progress.last.phase, EncryptedBackupProgressPhase.completed);
+    expect(progress.last.processedRows, progress.last.totalRows);
+    expect(
+      progress.map((event) => event.processedBytes).toList(),
+      orderedEquals(
+        progress.map((event) => event.processedBytes).toList()..sort(),
+      ),
+    );
+  });
+
+  test('chunked envelope rejects tampering, reordering, and truncation',
+      () async {
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_large_chunked',
+            sender: 'VK-HDFCBK',
+            body: 'Sensitive body ' * 10000,
+            receivedAt: DateTime.utc(2026, 7, 16),
+            purgeAfter: DateTime.utc(2026, 8, 15),
+          ),
+        );
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: 'chunked-integrity-passphrase',
+    );
+    final original = await file.readAsBytes();
+    final headerLength = _readUint32(original, 5);
+    final recordStarts = <int>[];
+    var offset = 9 + headerLength;
+    while (offset < original.length) {
+      recordStarts.add(offset);
+      final length = _readUint32(original, offset + 1);
+      offset += 1 + 4 + length + 16;
+    }
+    expect(recordStarts.length, greaterThanOrEqualTo(3));
+
+    final tampered = Uint8List.fromList(original);
+    tampered[recordStarts.first + 5] ^= 0x01;
+    final reordered = Uint8List.fromList(original);
+    final first = _recordLength(reordered, recordStarts[0]);
+    final second = _recordLength(reordered, recordStarts[1]);
+    final firstRecord =
+        reordered.sublist(recordStarts[0], recordStarts[0] + first);
+    final secondRecord =
+        reordered.sublist(recordStarts[1], recordStarts[1] + second);
+    reordered.setRange(recordStarts[0], recordStarts[0] + second, secondRecord);
+    reordered.setRange(
+      recordStarts[0] + second,
+      recordStarts[0] + second + first,
+      firstRecord,
+    );
+    final truncated =
+        Uint8List.fromList(original.sublist(0, original.length - 1));
+    final unsupported = Uint8List.fromList(original)..[4] = 9;
+
+    for (final bytes in [tampered, reordered, truncated, unsupported]) {
+      await expectLater(
+        service().importBytes(
+          bytes: bytes,
+          passphrase: 'chunked-integrity-passphrase',
+        ),
+        throwsA(isA<EncryptedBackupException>()),
+      );
+    }
+  });
+
+  test('chunked export cancellation removes the partial destination', () async {
+    final cancellation = EncryptedBackupCancellation()..cancel();
+    final file = File('${directory.path}/cancelled.ptrack');
+
+    await expectLater(
+      service().exportToFile(
+        directory: directory,
+        passphrase: 'chunked-cancellation-passphrase',
+        cancellation: cancellation,
+      ),
+      throwsA(
+        isA<EncryptedBackupException>().having(
+          (error) => error.message,
+          'message',
+          'Backup operation cancelled',
+        ),
+      ),
+    );
+    expect(await file.exists(), isFalse);
+  });
+
+  test('document export/import uses bounded gateway sessions', () async {
+    final gateway = _MemoryDocumentGateway();
+    final exported = await service().exportToDocument(
+      gateway: gateway,
+      suggestedName: 'paisatrack_backup.ptrack',
+      mimeType: 'application/octet-stream',
+      passphrase: 'document-session-passphrase',
+    );
+    expect(exported, isTrue);
+    expect(gateway.maxWrittenChunk, lessThanOrEqualTo(maxDocumentChunkBytes));
+
+    await database.delete(database.categories).go();
+    final imported = await service().importFromDocument(
+      gateway: gateway,
+      mimeType: 'application/octet-stream',
+      passphrase: 'document-session-passphrase',
+    );
+    expect(imported, isTrue);
+    expect(await database.select(database.categories).get(), isNotEmpty);
   });
 
   test('wrong passphrase fails closed and leaves current data untouched',
@@ -565,4 +695,70 @@ void main() {
     expect(await database.select(database.modelMeta).get(), hasLength(1));
     expect(await database.select(database.recurringSeries).get(), hasLength(1));
   });
+}
+
+int _readUint32(List<int> bytes, int offset) =>
+    (bytes[offset] << 24) |
+    (bytes[offset + 1] << 16) |
+    (bytes[offset + 2] << 8) |
+    bytes[offset + 3];
+
+int _recordLength(List<int> bytes, int offset) =>
+    1 + 4 + _readUint32(bytes, offset + 1) + 16;
+
+class _MemoryDocumentGateway extends SystemDocumentGateway {
+  _MemoryDocumentGateway() : super();
+
+  final _written = <int>[];
+  var _readOffset = 0;
+  var maxWrittenChunk = 0;
+
+  Uint8List get _source => Uint8List.fromList(_written);
+
+  @override
+  Future<String?> beginSaveDocument({
+    required String suggestedName,
+    required String mimeType,
+  }) async {
+    _written.clear();
+    return 'save';
+  }
+
+  @override
+  Future<bool> writeDocumentChunk({
+    required String sessionId,
+    required Uint8List bytes,
+  }) async {
+    maxWrittenChunk = max(maxWrittenChunk, bytes.length);
+    _written.addAll(bytes);
+    return true;
+  }
+
+  @override
+  Future<bool> finishDocument({required String sessionId}) async => true;
+
+  @override
+  Future<void> cancelDocument({required String sessionId}) async {}
+
+  @override
+  Future<String?> beginOpenDocument({required String mimeType}) async {
+    _readOffset = 0;
+    return 'open';
+  }
+
+  @override
+  Future<Uint8List?> readDocumentChunk({
+    required String sessionId,
+    int maxBytes = maxDocumentChunkBytes,
+  }) async {
+    final source = _source;
+    if (_readOffset >= source.length) return null;
+    final end = min(_readOffset + maxBytes, source.length);
+    final result = source.sublist(_readOffset, end);
+    _readOffset = end;
+    return result;
+  }
+
+  @override
+  Future<void> closeDocument({required String sessionId}) async {}
 }

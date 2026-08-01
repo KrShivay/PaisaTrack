@@ -16,8 +16,10 @@ PaisaTrack is local-first:
   SMS rows whose `purge_after` is still in the future; expired rows are also
   skipped if encountered during restore. Backup files are capped at 32 MiB,
   decoded ciphertext/plaintext at 16 MiB, and rows at 50,000 per table and
-  200,000 per archive. The archive remains materialized in memory; T-127's
-  future streaming slice must preserve these limits.
+  200,000 per archive. Settings transfers bounded authenticated chunks through
+  the Android document picker; Drift rows are paged on export and restored
+  transactionally on import. No plaintext archive temp file is created, and a
+  cancelled or incomplete destination is never reported as a completed backup.
 - The user-facing "Messages we couldn't read" surface reads only allowlisted
   failure reasons and expiry metadata. It reports retained counts without
   loading bodies, senders, or identifiers, and excludes rows past their expiry
@@ -51,10 +53,10 @@ PaisaTrack is local-first:
   notifications, or downloaded/partial model files. Until T-124 lands, the UI
   must not promise complete device erasure.
 - User-facing backup export/import writes `paisatrack_export.ptrack`, a
-  passphrase-encrypted JSON archive using Argon2id and AES-GCM. Plaintext domain
-  JSON is kept in memory only and is never written as a temp file. Android's
-  Storage Access Framework writes/reads only the document the user selects and
-  requires no broad storage permission.
+  passphrase-encrypted archive using Argon2id and AES-GCM. New document flows
+  use authenticated chunked records and a final manifest; v1 JSON/AES-GCM
+  imports remain supported. Android's Storage Access Framework writes/reads
+  only the document the user selects and requires no broad storage permission.
 - User labels and payment-source nicknames are local metadata. Only masked
   source identifiers are stored; excluding a source or owned transfer from
   analytics does not delete its underlying transaction evidence.

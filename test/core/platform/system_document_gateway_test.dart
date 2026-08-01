@@ -74,4 +74,88 @@ void main() {
       isNull,
     );
   });
+
+  test('streaming sessions keep chunks bounded and expose picker lifecycle',
+      () async {
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      switch (call.method) {
+        case 'beginSaveDocument':
+          return 'save-1';
+        case 'writeDocumentChunk':
+          return true;
+        case 'finishDocument':
+          return true;
+        case 'beginOpenDocument':
+          return 'open-1';
+        case 'readDocumentChunk':
+          return calls
+                      .where((call) => call.method == 'readDocumentChunk')
+                      .length ==
+                  1
+              ? Uint8List.fromList([7, 8])
+              : null;
+        default:
+          return null;
+      }
+    });
+
+    final saveSession = await gateway.beginSaveDocument(
+      suggestedName: 'paisatrack_export.ptrack',
+      mimeType: 'application/octet-stream',
+    );
+    expect(saveSession, 'save-1');
+    expect(
+      await gateway.writeDocumentChunk(
+        sessionId: saveSession!,
+        bytes: Uint8List.fromList([1, 2, 3]),
+      ),
+      isTrue,
+    );
+    expect(await gateway.finishDocument(sessionId: saveSession), isTrue);
+
+    final openSession =
+        await gateway.beginOpenDocument(mimeType: 'application/octet-stream');
+    expect(openSession, 'open-1');
+    expect(
+      await gateway.readDocumentChunk(sessionId: openSession!),
+      [7, 8],
+    );
+    expect(
+      await gateway.readDocumentChunk(sessionId: openSession),
+      isNull,
+    );
+    await gateway.closeDocument(sessionId: openSession);
+
+    expect(
+      calls.map((call) => call.method),
+      containsAll(<String>[
+        'beginSaveDocument',
+        'writeDocumentChunk',
+        'finishDocument',
+        'beginOpenDocument',
+        'readDocumentChunk',
+        'closeDocument',
+      ]),
+    );
+  });
+
+  test('streaming gateway rejects chunks above the platform ceiling', () async {
+    await expectLater(
+      gateway.writeDocumentChunk(
+        sessionId: 'save-1',
+        bytes: Uint8List(maxDocumentChunkBytes + 1),
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      gateway.readDocumentChunk(
+        sessionId: 'open-1',
+        maxBytes: maxDocumentChunkBytes + 1,
+      ),
+      throwsArgumentError,
+    );
+  });
 }

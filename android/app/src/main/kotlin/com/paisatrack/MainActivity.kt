@@ -29,6 +29,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.UUID
 
 class MainActivity : FlutterActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
@@ -46,6 +49,7 @@ class MainActivity : FlutterActivity() {
     private var activityResumed = false
     private var llmBridge: LlmBridge? = null
     private var pendingDocumentRequest: PendingDocumentRequest? = null
+    private val documentSessions = mutableMapOf<String, DocumentSession>()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -265,6 +269,13 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "saveDocument" -> saveDocument(call, result)
                 "openDocument" -> openDocument(call, result)
+                "beginSaveDocument" -> beginSaveDocument(call, result)
+                "writeDocumentChunk" -> writeDocumentChunk(call, result)
+                "finishDocument" -> finishDocument(call, result)
+                "cancelDocument" -> cancelDocument(call, result)
+                "beginOpenDocument" -> beginOpenDocument(call, result)
+                "readDocumentChunk" -> readDocumentChunk(call, result)
+                "closeDocument" -> closeDocument(call, result)
                 else -> result.notImplemented()
             }
         }
@@ -358,6 +369,8 @@ class MainActivity : FlutterActivity() {
             null,
         )
         pendingDocumentRequest = null
+        documentSessions.values.forEach { session -> runCatching { session.close() } }
+        documentSessions.clear()
         if (CapturedSmsSink.current === capturedSmsBridge) {
             CapturedSmsSink.current = CapturedSmsSink { }
         }
@@ -406,6 +419,143 @@ class MainActivity : FlutterActivity() {
             type = mimeType
         }
         launchDocumentPicker(intent, OpenDocumentRequestCode, result)
+    }
+
+    private fun beginSaveDocument(call: MethodCall, result: MethodChannel.Result) {
+        val suggestedName = call.argument<String>("suggestedName")
+        val mimeType = call.argument<String>("mimeType")
+        if (suggestedName == null || mimeType == null) {
+            result.error("invalid_arguments", "Missing document save arguments.", null)
+            return
+        }
+        if (documentSessions.isNotEmpty()) {
+            result.error("busy", "A document session is already open.", null)
+            return
+        }
+        if (!reserveDocumentRequest(PendingDocumentRequest.SaveStream(result))) return
+
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeType
+            putExtra(Intent.EXTRA_TITLE, suggestedName)
+        }
+        launchDocumentPicker(intent, SaveDocumentRequestCode, result)
+    }
+
+    private fun writeDocumentChunk(call: MethodCall, result: MethodChannel.Result) {
+        val sessionId = call.argument<String>("sessionId")
+        val bytes = call.argument<ByteArray>("bytes")
+        if (sessionId == null || bytes == null || bytes.size > MaxDocumentChunkBytes) {
+            result.error("invalid_arguments", "Invalid document chunk.", null)
+            return
+        }
+        val session = documentSessions[sessionId]
+        val output = session?.output
+        if (output == null) {
+            result.error("invalid_session", "Document session is not open.", null)
+            return
+        }
+        try {
+            output.write(bytes)
+            output.flush()
+            result.success(true)
+        } catch (_: Exception) {
+            result.error("document_io", "Could not write document chunk.", null)
+        }
+    }
+
+    private fun finishDocument(call: MethodCall, result: MethodChannel.Result) {
+        val sessionId = call.argument<String>("sessionId")
+        if (sessionId == null) {
+            result.error("invalid_arguments", "Missing document session.", null)
+            return
+        }
+        val session = documentSessions.remove(sessionId)
+        if (session == null || session.output == null) {
+            result.error("invalid_session", "Document session is not open.", null)
+            return
+        }
+        try {
+            session.close()
+            result.success(true)
+        } catch (_: Exception) {
+            result.error("document_io", "Could not finish document.", null)
+        }
+    }
+
+    private fun cancelDocument(call: MethodCall, result: MethodChannel.Result) {
+        val sessionId = call.argument<String>("sessionId")
+        if (sessionId == null) {
+            result.error("invalid_arguments", "Missing document session.", null)
+            return
+        }
+        val session = documentSessions.remove(sessionId)
+        if (session == null) {
+            result.success(false)
+            return
+        }
+        runCatching { session.close() }
+        result.success(true)
+    }
+
+    private fun beginOpenDocument(call: MethodCall, result: MethodChannel.Result) {
+        val mimeType = call.argument<String>("mimeType")
+        if (mimeType == null) {
+            result.error("invalid_arguments", "Missing document MIME type.", null)
+            return
+        }
+        if (documentSessions.isNotEmpty()) {
+            result.error("busy", "A document session is already open.", null)
+            return
+        }
+        if (!reserveDocumentRequest(PendingDocumentRequest.OpenStream(result))) return
+
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeType
+        }
+        launchDocumentPicker(intent, OpenDocumentRequestCode, result)
+    }
+
+    private fun readDocumentChunk(call: MethodCall, result: MethodChannel.Result) {
+        val sessionId = call.argument<String>("sessionId")
+        val maxBytes = call.argument<Number>("maxBytes")?.toInt()
+        if (sessionId == null ||
+            maxBytes == null ||
+            maxBytes <= 0 ||
+            maxBytes > MaxDocumentChunkBytes
+        ) {
+            result.error("invalid_arguments", "Invalid document read size.", null)
+            return
+        }
+        val session = documentSessions[sessionId]
+        val input = session?.input
+        if (input == null) {
+            result.error("invalid_session", "Document session is not open.", null)
+            return
+        }
+        try {
+            val buffer = ByteArray(maxBytes)
+            val read = input.read(buffer)
+            result.success(if (read < 0) null else buffer.copyOf(read))
+        } catch (_: Exception) {
+            result.error("document_io", "Could not read document chunk.", null)
+        }
+    }
+
+    private fun closeDocument(call: MethodCall, result: MethodChannel.Result) {
+        val sessionId = call.argument<String>("sessionId")
+        if (sessionId == null) {
+            result.error("invalid_arguments", "Missing document session.", null)
+            return
+        }
+        val session = documentSessions.remove(sessionId)
+        if (session == null) {
+            result.success(false)
+            return
+        }
+        runCatching { session.close() }
+        result.success(true)
     }
 
     private fun reserveDocumentRequest(request: PendingDocumentRequest): Boolean {
@@ -462,9 +612,23 @@ class MainActivity : FlutterActivity() {
                     }
                     request.result.success(bytes)
                 }
+                is PendingDocumentRequest.SaveStream -> {
+                    val stream = contentResolver.openOutputStream(uri, "w")
+                    checkNotNull(stream) { "Could not open the selected document." }
+                    val sessionId = UUID.randomUUID().toString()
+                    documentSessions[sessionId] = DocumentSession(output = stream)
+                    request.result.success(sessionId)
+                }
+                is PendingDocumentRequest.OpenStream -> {
+                    val stream = contentResolver.openInputStream(uri)
+                    checkNotNull(stream) { "Could not open the selected document." }
+                    val sessionId = UUID.randomUUID().toString()
+                    documentSessions[sessionId] = DocumentSession(input = stream)
+                    request.result.success(sessionId)
+                }
             }
-        } catch (error: Exception) {
-            request.result.error("document_io", error.message, null)
+        } catch (_: Exception) {
+            request.result.error("document_io", "Could not access selected document.", null)
         }
     }
 
@@ -621,6 +785,7 @@ class MainActivity : FlutterActivity() {
         const val STATUS_DENIED = "denied"
         const val STATUS_PERMANENTLY_DENIED = "permanentlyDenied"
         const val LlmIdleCloseDelaySeconds = 60L
+        const val MaxDocumentChunkBytes = 64 * 1024
     }
 }
 
@@ -633,6 +798,24 @@ private sealed class PendingDocumentRequest(open val result: MethodChannel.Resul
     data class Open(
         override val result: MethodChannel.Result,
     ) : PendingDocumentRequest(result)
+
+    data class SaveStream(
+        override val result: MethodChannel.Result,
+    ) : PendingDocumentRequest(result)
+
+    data class OpenStream(
+        override val result: MethodChannel.Result,
+    ) : PendingDocumentRequest(result)
+}
+
+private data class DocumentSession(
+    val input: InputStream? = null,
+    val output: OutputStream? = null,
+) {
+    fun close() {
+        input?.close()
+        output?.close()
+    }
 }
 
 private data class PendingAskNowRequest(
