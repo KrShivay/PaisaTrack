@@ -3,14 +3,17 @@
 ## Implemented registries
 
 Bundled deterministic templates currently include SBI, Axis, Central Bank,
-Kotak, HDFC, ICICI, IndusInd, and Paytm sender families. HDFC and ICICI have
-sanitized fixture coverage under `test/fixtures/sms/hdfcbk/` and
-`test/fixtures/sms/icicib/`.
+Kotak, HDFC, ICICI, IndusInd, Paytm, and Punjab National Bank sender
+families. HDFC and ICICI have sanitized fixture coverage under
+`test/fixtures/sms/hdfcbk/` and `test/fixtures/sms/icicib/`; PNB has a public,
+sanitized fixture matrix under `test/fixtures/sms/pnb/` with an exact-parse
+coverage gate.
 
-Sender recognition is still incomplete: Android filters unknown senders before
-Dart sees them, and no release-safe unknown-sender counter exists yet. T-108's
-remaining scope is diagnostics and additional evidence-backed bank coverage,
-not the already-landed HDFC/ICICI templates.
+Android sender filtering now exposes content-free live/batch rejection and
+unknown-sender counters in developer diagnostics. Sender recognition remains
+deliberately evidence-led: add a bank token or template only with sanitized
+fixtures and exact parser assertions. PNB's public fixtures are capped at 0.85
+confidence until device confirmations promote them through the trust ledger.
 
 Templates live in `assets/templates/*.json`. Do not invent formats; add only
 sanitized, real fixture-backed variants (`test/fixtures/sms/<bank>/`).
@@ -53,6 +56,22 @@ SMS datasets and retain a source URL in each expected JSON file.
 - KYC completion is a same-sender negative fixture.
 
 All Central Bank templates carry public provenance and the 0.85 confidence cap.
+
+## Punjab National Bank (`assets/templates/pnb.json`)
+
+Sender patterns cover `ONE-PNB` and PNB/PNBSMS DLT variants. The public fixture
+matrix is derived from sanitized examples in the [TRAI RTI SMS
+annex](https://cms.trai.gov.in/sites/default/files/rti/RTI_Aug_18092025.pdf)
+and records that source URL in every expected JSON file.
+
+- `pnb_upi_credit_v1` — dated account credit with UPI reference and balance.
+- `pnb_upi_debit_v1` — dated UPI debit with optional time, reference, and balance.
+- `pnb_credit_compact_v1` — compact dated credit alert, optionally with UPI
+  reference.
+
+All PNB templates carry public provenance and the 0.85 confidence cap. Further
+bank expansion still requires the same evidence threshold; no sender is added
+from an unsourced pattern guess.
 
 ## IndusInd Bank (`assets/templates/indusind.json`)
 

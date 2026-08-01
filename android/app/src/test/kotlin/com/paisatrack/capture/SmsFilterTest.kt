@@ -33,6 +33,25 @@ class SmsFilterTest {
     }
 
     @Test
+    fun allowsPnbSenderVariants() {
+        val body = "Your a/c XX5788 is credited for INR 20.00 on 05-06-25"
+
+        assertTrue(SmsFilter.isAllowed("ONE-PNB", body))
+        assertTrue(SmsFilter.isAllowed("AD-PNB-S", body))
+        assertTrue(SmsFilter.isAllowed("VM-PNBSMS", body))
+    }
+
+    @Test
+    fun rejectsPnbNearMatch() {
+        assertFalse(
+            SmsFilter.isAllowed(
+                "AD-PNBX-S",
+                "Your a/c XX5788 is credited for INR 20.00 on 05-06-25",
+            ),
+        )
+    }
+
+    @Test
     fun allowsTransactionWithSecurityFooterNoComma() {
         assertTrue(
             SmsFilter.isAllowed(

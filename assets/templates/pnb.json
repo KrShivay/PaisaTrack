@@ -1,0 +1,29 @@
+{
+  "sender_patterns": ["^(?:[A-Z]{2}-)?PNB(?:SMS)?(?:-[A-Z])?$", "^ONE-PNB(?:-[A-Z])?$"],
+  "templates": [
+    {
+      "id": "pnb_upi_credit_v1",
+      "regex": "Your a/c XX(?<account>\\d{4,6}) is credited for INR (?<amount>[\\d,]+(?:\\.\\d+)?) on (?<date>\\d{2}-\\d{2}-\\d{2}).*?UPI(?:\\s+UPI)?\\s+(?<ref>\\d{12}).*?Bal INR (?<balance>[\\d,]+(?:\\.\\d+)?)",
+      "direction": "credit",
+      "channel": "upi",
+      "date_format": "dd-MM-yy",
+      "provenance": "public"
+    },
+    {
+      "id": "pnb_upi_debit_v1",
+      "regex": "A/c XX(?<account>\\d{4,6}) debited INR (?<amount>[\\d,]+(?:\\.\\d+)?) Dt (?<date>\\d{2}-\\d{2}-\\d{2})(?: \\d{2}:\\d{2}:\\d{2})?.*?UPI:(?<ref>\\d{12}).*?Bal INR (?<balance>[\\d,]+(?:\\.\\d+)?)",
+      "direction": "debit",
+      "channel": "upi",
+      "date_format": "dd-MM-yy",
+      "provenance": "public"
+    },
+    {
+      "id": "pnb_credit_compact_v1",
+      "regex": "Ac X+(?<account>\\d{4,6}) Credited with Rs\\.(?<amount>[\\d,]+(?:\\.\\d+)?)[, ]+(?<date>\\d{2}-\\d{2}-\\d{4})(?: through UPI \\(UPI Ref ID:(?<ref>\\d+)\\))?\\s*CR\\s*$",
+      "direction": "credit",
+      "channel": "unknown",
+      "date_format": "dd-MM-yyyy",
+      "provenance": "public"
+    }
+  ]
+}

@@ -10,18 +10,11 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
-- [ ] T-108 (@codex) [P2] Measure and extend bank sender/template coverage.
-      Current slice: expose native live/batch filter-rejection and unknown-sender
-      counters in developer diagnostics without retaining bodies, senders, or
-      identifiers; do not expand the allowlist without sanitized evidence.
-      Acceptance: counters are content-free, distinguish live from batch, and
-      are visible in the existing Unparsed SMS developer screen; native and
-      channel tests cover zero and non-zero values. Remaining gap: evidence-
-      backed fixtures and exact parser assertions for additional banks.
+<!-- Empty. -->
 
 ## In Review
 
-<!-- Empty: T-161d passed independent local review and is complete. -->
+<!-- Empty: T-108 passed bounded local review and is complete. -->
 
 ## Ready
 

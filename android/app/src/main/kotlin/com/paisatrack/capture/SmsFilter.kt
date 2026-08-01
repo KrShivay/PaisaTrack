@@ -17,7 +17,7 @@ object SmsFilter {
      */
     private val bankTokens = setOf(
         "HDFCBK", "ICICIB", "ICICIT", "SBIINB", "SBICRD", "SBIUPI", "AXISBK",
-        "KOTAKB", "PNBSMS", "CANBNK", "BOIIND", "YESBNK", "IDFCFB", "INDUSB",
+        "KOTAKB", "PNBSMS", "PNB", "CANBNK", "BOIIND", "YESBNK", "IDFCFB", "INDUSB",
         "CENTBK", "UNIONB", "BOBSMS", "RBLBNK", "AUBANK", "FEDBNK", "IDBIBK",
         "PAYTMB", "PHONPE", "GPAYUP", "AMZNUP", "MOBKWK", "SLICEIT",
     )

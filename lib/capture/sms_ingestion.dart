@@ -45,6 +45,7 @@ final templateMatcherProvider = FutureProvider<TemplateMatcher>((ref) async {
       'assets/templates/indusind.json',
       'assets/templates/kotak.json',
       'assets/templates/paytmb.json',
+      'assets/templates/pnb.json',
       'assets/templates/sbi.json',
     ].map((path) async {
       final source = await rootBundle.loadString(path);

@@ -34,6 +34,29 @@ This is a rolling handoff, not a project history. Current product state is in
   GitNexus impact was LOW before edits; final change detection and commit
   remain required.
 
+## 2026-08-02 — T-108 evidence-backed bank coverage added
+
+- Added PNB/PNBSMS/`ONE-PNB` sender recognition and loaded
+  `assets/templates/pnb.json` into the live template matcher. The registry
+  covers dated UPI credits, dated UPI debits with optional time, and compact
+  dated credits.
+- Added seven sanitized public-source fixtures derived from the TRAI RTI SMS
+  annex, each retaining only masked account suffixes and transaction fields;
+  every expected result records public provenance and the source URL. The
+  dedicated T-108 gate requires at least seven positives and >=90% exact
+  normalized output, while the shared fixture suite checks all-bank coverage.
+  Public reference IDs in the committed fixtures are deterministic sanitized
+  values rather than copied identifiers from the source examples.
+- Luna's bounded audit initially requested reference-ID sanitization, a tighter
+  compact-credit boundary, and native sender-header tests; the follow-up audit
+  approved all three fixes. Product-review/docs changes remained untouched.
+- Verification: fixture suite **9/9**; Android `:app:testDebugUnitTest`
+  **passed**; full Flutter suite **634/635**, with only the known
+  `test/features/transactions/exclusion_explanation_test.dart` failure
+  (expected 500, actual 5500); analyzer clean, format clean, and
+  `git diff --check` clean. GitNexus refresh and staged change detection are
+  completed before the task-scoped commit.
+
 ## 2026-08-02 — T-161c implemented: user-facing unreadable-message status
 
 - Added `RawSmsRepository.watchRetainedFailures`, which selects only
