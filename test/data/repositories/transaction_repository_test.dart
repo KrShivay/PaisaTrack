@@ -47,13 +47,16 @@ Future<String> _seedMerchant(AppDatabase database, String canonicalName) {
 Future<void> _insertTxn(
   AppDatabase database, {
   required String id,
+  DateTime? ts,
   String? merchantId,
   String? merchantRaw,
   String? counterpartyVpa,
   String status = 'asked',
   String categoryId = 'other',
+  bool isDeleted = false,
+  String? duplicateOfTxnId,
 }) {
-  final now = DateTime.utc(2026, 7, 8, 9);
+  final now = ts ?? DateTime.utc(2026, 7, 8, 9);
   return database.into(database.transactions).insert(
         TransactionsCompanion.insert(
           id: id,
@@ -65,6 +68,8 @@ Future<void> _insertTxn(
           merchantRaw: Value(merchantRaw),
           counterpartyVpa: Value(counterpartyVpa),
           categoryId: Value(categoryId),
+          isDeleted: Value(isDeleted),
+          duplicateOfTxnId: Value(duplicateOfTxnId),
           parseSource: 'template',
           confidenceJson: '{"parser":{"c":0.74,"src":"template"}}',
           status: status,
@@ -107,6 +112,116 @@ void main() {
     expect(summary.amount, 31250);
     expect(summary.merchantCount, 4);
     expect(summary.highestImpactLabel, isNotEmpty);
+  });
+
+  test('Activity page does not report more for exactly 100 visible rows',
+      () async {
+    for (var index = 0; index < 100; index++) {
+      await _insertTxn(database, id: 'activity_$index');
+    }
+
+    final page = await TransactionRepository(database)
+        .watchTransactionPage(limit: 100)
+        .first;
+
+    expect(page.rows, hasLength(100));
+    expect(page.hasMore, isFalse);
+    expect(page.nextCursor == null, isTrue);
+  });
+
+  test('Activity page reports more only when a look-ahead row exists',
+      () async {
+    for (var index = 0; index < 101; index++) {
+      await _insertTxn(database, id: 'activity_$index');
+    }
+
+    final page = await TransactionRepository(database)
+        .watchTransactionPage(limit: 100)
+        .first;
+
+    expect(page.rows, hasLength(100));
+    expect(page.hasMore, isTrue);
+    expect(page.nextCursor != null, isTrue);
+    expect(page.nextCursor?.id, page.rows.last.id);
+    expect(page.nextCursor?.ts, page.rows.last.ts.millisecondsSinceEpoch);
+  });
+
+  test('Activity page excludes deleted and duplicate-suppressed rows',
+      () async {
+    await _insertTxn(database, id: 'activity_visible');
+    await _insertTxn(database, id: 'activity_deleted', isDeleted: true);
+    await _insertTxn(
+      database,
+      id: 'activity_suppressed',
+      duplicateOfTxnId: 'activity_visible',
+    );
+
+    final page = await TransactionRepository(database)
+        .watchTransactionPage(limit: 10)
+        .first;
+
+    expect(page.rows.map((row) => row.id), ['activity_visible']);
+    expect(page.hasMore, isFalse);
+  });
+
+  test(
+      'Activity cursor pages cover mixed timestamps once despite intervening inserts',
+      () async {
+    final base = DateTime.utc(2026, 1, 1);
+    final visibleIds = <String>{};
+    for (var index = 0; index < 1000; index++) {
+      final id = 'keyset_${index.toString().padLeft(4, '0')}';
+      visibleIds.add(id);
+      await _insertTxn(
+        database,
+        id: id,
+        ts: base.add(
+          Duration(days: index % 31, minutes: index % 7),
+        ),
+      );
+    }
+    for (var index = 0; index < 25; index++) {
+      await _insertTxn(
+        database,
+        id: 'keyset_deleted_$index',
+        ts: base.add(const Duration(days: 60)),
+        isDeleted: true,
+      );
+      await _insertTxn(
+        database,
+        id: 'keyset_suppressed_$index',
+        ts: base.add(const Duration(days: 61)),
+        duplicateOfTxnId: 'keyset_${index.toString().padLeft(4, '0')}',
+      );
+    }
+
+    final repository = TransactionRepository(database);
+    var page = await repository.watchTransactionPage(limit: 100).first;
+    final seenIds = <String>{...page.rows.map((row) => row.id)};
+
+    // A new newest row must not appear in pages continuing from the old
+    // boundary; keyset predicates make the result independent of this insert.
+    await _insertTxn(
+      database,
+      id: 'keyset_inserted_between_pages',
+      ts: base.add(const Duration(days: 90)),
+    );
+
+    while (page.hasMore) {
+      final cursor = page.nextCursor;
+      expect(cursor != null, isTrue);
+      page = await repository
+          .watchTransactionPage(limit: 100, cursor: cursor)
+          .first;
+      final ids = page.rows.map((row) => row.id).toList();
+      expect(ids.where(seenIds.contains), isEmpty);
+      expect(ids, isNot(contains('keyset_inserted_between_pages')));
+      seenIds.addAll(ids);
+    }
+
+    expect(seenIds, equals(visibleIds));
+    expect(seenIds, hasLength(1000));
+    expect(page.nextCursor == null, isTrue);
   });
 
   group('correctWithRule', () {

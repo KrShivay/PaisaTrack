@@ -6,6 +6,7 @@ import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
+import '../../support/fake_activity_transaction_page_controller.dart';
 
 void main() {
   TransactionListItem item({
@@ -48,8 +49,10 @@ void main() {
 
   Future<void> pumpScreen(
     WidgetTester tester,
-    List<TransactionListItem> transactions,
-  ) async {
+    List<TransactionListItem> transactions, {
+    bool hasMore = false,
+    ActivityTransactionPage? nextPage,
+  }) async {
     tester.view.physicalSize = const Size(402, 874);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -60,8 +63,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionListProvider.overrideWith(
-            (ref) => Stream.value(transactions),
+          activityTransactionPageProvider.overrideWith(
+            () => FakeActivityTransactionPageController(
+              ActivityTransactionPage(rows: transactions, hasMore: hasMore),
+              nextPage: nextPage,
+            ),
           ),
         ],
         child: const MaterialApp(home: TransactionsScreen()),
@@ -103,6 +109,51 @@ void main() {
     expect(find.byType(BloomAmount), findsWidgets);
   });
 
+  testWidgets('keeps SMS import available after transactions exist',
+      (tester) async {
+    await pumpScreen(tester, [
+      item(
+        id: 'existing',
+        ts: DateTime.utc(2026, 7, 6, 9),
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Existing payment',
+      ),
+    ]);
+
+    expect(find.byTooltip('Scan SMS inbox'), findsOneWidget);
+  });
+
+  testWidgets('hides the continuation action when the page is terminal',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    final transaction = item(
+      id: 'page-row',
+      ts: now,
+      amount: 100,
+      direction: TransactionDirection.debit,
+      displayName: 'Page row',
+    );
+
+    await pumpScreen(tester, [transaction]);
+    expect(find.text('Load more transactions'), findsNothing);
+  });
+
+  testWidgets('shows the continuation action when the page has more',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    final transaction = item(
+      id: 'page-row',
+      ts: now,
+      amount: 100,
+      direction: TransactionDirection.debit,
+      displayName: 'Page row',
+    );
+
+    await pumpScreen(tester, [transaction], hasMore: true);
+    expect(find.text('Load more transactions'), findsOneWidget);
+  });
+
   testWidgets('search filters the list by merchant name', (tester) async {
     final now = DateTime.utc(2026, 7, 6, 9);
     await pumpScreen(tester, [
@@ -128,5 +179,54 @@ void main() {
 
     expect(find.text('Amazon'), findsWidgets);
     expect(find.text('Salary Inc'), findsNothing);
+  });
+
+  testWidgets(
+      'keeps paging available when the search match is on an older page',
+      (tester) async {
+    final now = DateTime.utc(2026, 7, 6, 9);
+    final olderMatch = item(
+      id: 'older_salary',
+      ts: now.subtract(const Duration(days: 2)),
+      amount: 50000,
+      direction: TransactionDirection.credit,
+      displayName: 'Salary Inc',
+    );
+    await pumpScreen(
+      tester,
+      [
+        item(
+          id: 'current',
+          ts: now,
+          amount: 100,
+          direction: TransactionDirection.debit,
+          displayName: 'Coffee Shop',
+        ),
+      ],
+      hasMore: true,
+      nextPage: ActivityTransactionPage(
+        rows: [olderMatch],
+        hasMore: false,
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'Salary');
+    await tester.pump();
+
+    expect(find.text('No transactions matching "Salary"'), findsOneWidget);
+    expect(find.text('Load more transactions'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'Salary',
+    );
+
+    await tester.tap(find.text('Load more transactions'));
+    await tester.pump();
+
+    expect(find.text('Salary Inc'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'Salary',
+    );
   });
 }

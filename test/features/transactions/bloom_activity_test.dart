@@ -6,6 +6,7 @@ import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
+import '../../support/fake_activity_transaction_page_controller.dart';
 
 TransactionListItem testItem({
   required String id,
@@ -43,7 +44,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionListProvider.overrideWith((ref) => Stream.value(items)),
+          activityTransactionPageProvider.overrideWith(
+            () => FakeActivityTransactionPageController(
+              ActivityTransactionPage(rows: items, hasMore: false),
+            ),
+          ),
         ],
         child: const MaterialApp(
           home: BloomUndoToastHost(

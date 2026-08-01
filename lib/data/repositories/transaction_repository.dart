@@ -91,6 +91,38 @@ class TransactionListItem {
   final bool categoryIsSpending;
 }
 
+/// Stable continuation identity for Activity pages.
+///
+/// T-160b applies this cursor to the SQL predicate. Keeping it in the page
+/// contract now prevents the UI from inventing continuation state from the
+/// number of rows currently materialized.
+class ActivityTransactionCursor {
+  const ActivityTransactionCursor({required this.ts, required this.id});
+
+  final int ts;
+  final String id;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ActivityTransactionCursor && other.ts == ts && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(ts, id);
+}
+
+/// A bounded Activity result with explicit continuation state.
+class ActivityTransactionPage {
+  const ActivityTransactionPage({
+    required this.rows,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final List<TransactionListItem> rows;
+  final bool hasMore;
+  final ActivityTransactionCursor? nextCursor;
+}
+
 /// Review/ask queue row with enough context to render review surfaces and build
 /// notification payloads.
 class TransactionReviewItem {
@@ -166,7 +198,27 @@ class TransactionRepository {
     DateTime? start,
     DateTime? end,
   }) {
+    return watchTransactionPage(limit: limit, start: start, end: end)
+        .map((page) => page.rows);
+  }
+
+  /// Watches one bounded Activity page and reports whether another page exists.
+  ///
+  /// The extra look-ahead row is never exposed to callers. It is used only to
+  /// derive `hasMore`, so a terminal history whose size equals `limit` cannot
+  /// display a misleading continuation action.
+  Stream<ActivityTransactionPage> watchTransactionPage({
+    int limit = 100,
+    DateTime? start,
+    DateTime? end,
+    ActivityTransactionCursor? cursor,
+  }) {
     assert(limit > 0);
+    final cursorPredicate = cursor == null
+        ? const Constant(true)
+        : _database.transactions.ts.isSmallerThanValue(cursor.ts) |
+            (_database.transactions.ts.equals(cursor.ts) &
+                _database.transactions.id.isSmallerThanValue(cursor.id));
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
         _database.merchants,
@@ -194,14 +246,32 @@ class TransactionRepository {
                 ? const Constant(true)
                 : _database.transactions.ts.isSmallerThanValue(
                     end.millisecondsSinceEpoch,
-                  )),
+                  )) &
+            cursorPredicate,
       )
-      ..orderBy([OrderingTerm.desc(_database.transactions.ts)])
-      ..limit(limit);
+      ..orderBy([
+        OrderingTerm.desc(_database.transactions.ts),
+        OrderingTerm.desc(_database.transactions.id),
+      ])
+      ..limit(limit + 1);
 
     return query.watch().map(
-          (rows) => rows.map(_toListItem).toList(growable: false),
+      (rows) {
+        final hasMore = rows.length > limit;
+        final visibleRows =
+            rows.take(limit).map(_toListItem).toList(growable: false);
+        return ActivityTransactionPage(
+          rows: visibleRows,
+          hasMore: hasMore,
+          nextCursor: hasMore && visibleRows.isNotEmpty
+              ? ActivityTransactionCursor(
+                  ts: visibleRows.last.ts.millisecondsSinceEpoch,
+                  id: visibleRows.last.id,
+                )
+              : null,
         );
+      },
+    );
   }
 
   /// Watches transactions that need the weekly review batch flow.

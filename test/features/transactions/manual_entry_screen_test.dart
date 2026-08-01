@@ -9,6 +9,7 @@ import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/manual_entry_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
+import '../../support/fake_activity_transaction_page_controller.dart';
 
 void main() {
   late AppDatabase database;
@@ -208,6 +209,11 @@ void main() {
           appDatabaseProvider.overrideWith((ref) async => database),
           transactionListProvider.overrideWith(
             (ref) => Stream.value(const <TransactionListItem>[]),
+          ),
+          activityTransactionPageProvider.overrideWith(
+            () => FakeActivityTransactionPageController(
+              const ActivityTransactionPage(rows: [], hasMore: false),
+            ),
           ),
         ],
         child: const MaterialApp(home: TransactionsScreen()),

@@ -40,6 +40,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   String _query = '';
   ActivityFilterChoice _activeFilter = ActivityFilterChoice.all;
 
+  void _loadMoreTransactions() {
+    ref.read(activityTransactionPageProvider.notifier).loadMore();
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -194,8 +198,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final rawListAsync = ref.watch(transactionListProvider);
-    final items = rawListAsync.valueOrNull ?? const [];
+    final pageAsync = ref.watch(activityTransactionPageProvider);
+    final page = pageAsync.valueOrNull;
+    final items = page?.rows ?? const <TransactionListItem>[];
+    final hasMore = page?.hasMore ?? false;
     final filtered = _filterItems(items);
     final grouped = _groupByDay(filtered);
 
@@ -206,7 +212,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         bottom: false,
         child: Column(
           children: [
-            // Top Header: Title + Add button
+            // Top Header: title, SMS import, and manual entry actions.
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Row(
@@ -223,35 +229,53 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           : AppColorTokens.ink,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _openManualEntry,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Scan SMS inbox',
+                        onPressed: () => showBloomModalSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (_) => const SmsLookupSheet(),
+                        ),
+                        icon: const Icon(Icons.sms_outlined),
                       ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColorTokens.violetPrimary
-                            : AppColorTokens.ink,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.add, size: 16, color: Colors.white),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Add',
-                            style: AppTheme.bloomDisplay(
-                              13,
-                              FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                      GestureDetector(
+                        onTap: _openManualEntry,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
                           ),
-                        ],
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColorTokens.violetPrimary
+                                : AppColorTokens.ink,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.add,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Add',
+                                style: AppTheme.bloomDisplay(
+                                  13,
+                                  FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -335,24 +359,34 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
             // Transaction List grouped by day
             Expanded(
-              child: rawListAsync.isLoading && filtered.isEmpty
+              child: pageAsync.isLoading && filtered.isEmpty
                   ? const Center(child: BloomSkeleton(width: 280, height: 160))
                   : filtered.isEmpty
-                      ? _EmptyState(
-                          isDark: isDark,
-                          query: _query,
-                          onClearFilters: () {
-                            setState(() {
-                              _query = '';
-                              _searchController.clear();
-                              _activeFilter = ActivityFilterChoice.all;
-                            });
-                          },
+                      ? Column(
+                          children: [
+                            Expanded(
+                              child: _EmptyState(
+                                isDark: isDark,
+                                query: _query,
+                                onClearFilters: () {
+                                  setState(() {
+                                    _query = '';
+                                    _searchController.clear();
+                                    _activeFilter = ActivityFilterChoice.all;
+                                  });
+                                },
+                              ),
+                            ),
+                            if (hasMore) _loadMoreButton(),
+                          ],
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
-                          itemCount: grouped.length,
+                          itemCount: grouped.length + (hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
+                            if (index == grouped.length) {
+                              return _loadMoreButton();
+                            }
                             final group = grouped[index];
                             return _DayGroupSection(
                               header: group.header,
@@ -379,6 +413,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ActivityFilterChoice.transfers => 'Transfers',
         ActivityFilterChoice.unsorted => 'Unsorted',
       };
+
+  Widget _loadMoreButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: OutlinedButton(
+        onPressed: _loadMoreTransactions,
+        child: const Text('Load more transactions'),
+      ),
+    );
+  }
 
   List<_DayGroup> _groupByDay(List<TransactionListItem> items) {
     final Map<String, List<TransactionListItem>> map = {};
