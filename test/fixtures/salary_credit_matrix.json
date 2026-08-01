@@ -1,0 +1,28 @@
+[
+  {
+    "id": "hdfc_salary_template",
+    "sender": "VK-HDFCBK",
+    "body": "Rs.75,000.00 credited to HDFC Bank A/C x1234 on 01-Jul-26 by SALARY.",
+    "receivedAt": "2026-07-01T10:00:00Z",
+    "amount": 75000.0,
+    "parser": "template",
+    "templateId": "hdfc_account_credit_v1"
+  },
+  {
+    "id": "icici_salary_template",
+    "sender": "DM-ICICIB",
+    "body": "Dear Customer, A/C X4321 credited with INR 125,000.00 on 02-Jul-26 by SALARY.",
+    "receivedAt": "2026-07-02T10:00:00Z",
+    "amount": 125000.0,
+    "parser": "template",
+    "templateId": "icici_account_credit_v1"
+  },
+  {
+    "id": "generic_salary_credit",
+    "sender": "ZZ-PAYROLL",
+    "body": "Your account XX8765 has been credited with INR 42,000.00 as salary for July 2026 via NEFT.",
+    "receivedAt": "2026-07-03T10:00:00Z",
+    "amount": 42000.0,
+    "parser": "generic"
+  }
+]

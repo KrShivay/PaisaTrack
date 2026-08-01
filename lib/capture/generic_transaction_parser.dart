@@ -55,6 +55,7 @@ class GenericTransactionParser {
     r'\b(?:at|to|from|towards)\s+(.{1,40}?)(?=\s+(?:on|ref)\b|[.,]|$)',
     caseSensitive: false,
   );
+  static final RegExp _salary = RegExp(r'\bsalary\b', caseSensitive: false);
   static final RegExp _hardReject = RegExp(
     r'\b(?:otp|one time password|verification code|cashback offer|pre-approved|apply now|discount coupon|limited period offer|is due|due on|payment due|bill due|minimum amount due|statement|statement.*generated|e-statement|monthly statement|account statement|available balance|bal in a/c|clear balance|current balance|ac bal)\b',
     caseSensitive: false,
@@ -116,7 +117,9 @@ class GenericTransactionParser {
       return (record: null, rejection: GenericParseRejection.noContextSignal);
     }
 
-    final merchant = _merchant.firstMatch(body)?.group(1)?.trim();
+    final merchant = _salary.hasMatch(body)
+        ? 'Salary'
+        : _merchant.firstMatch(body)?.group(1)?.trim();
     final evidence = <FieldEvidence>[
       FieldEvidence(
         field: 'amount',
@@ -163,8 +166,20 @@ class GenericTransactionParser {
     );
   }
 
-  ({TransactionDirection value, int index, int start, int end, String verbatim})? _direction(String body) {
-    ({TransactionDirection value, int index, int start, int end, String verbatim})? earliest;
+  ({
+    TransactionDirection value,
+    int index,
+    int start,
+    int end,
+    String verbatim
+  })? _direction(String body) {
+    ({
+      TransactionDirection value,
+      int index,
+      int start,
+      int end,
+      String verbatim
+    })? earliest;
 
     for (final entry in <({TransactionDirection value, RegExp pattern})>[
       (

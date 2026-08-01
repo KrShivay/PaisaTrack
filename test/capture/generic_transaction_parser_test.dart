@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/generic_transaction_parser.dart';
+import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
 
 void main() {
@@ -83,5 +84,15 @@ void main() {
 
     expect(upi?.counterpartyVpa, 'friend@okaxis');
     expect(email?.counterpartyVpa, isNull);
+  });
+
+  test('marks an account credit described as salary for income categorization',
+      () {
+    final record = parser.parse(
+      sms('INR 50,000 salary credited to A/c XX1234 via NEFT.'),
+    );
+
+    expect(record?.direction, TransactionDirection.credit);
+    expect(record?.merchantRaw, 'Salary');
   });
 }
