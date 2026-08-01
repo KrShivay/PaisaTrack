@@ -10,6 +10,10 @@ later hardening.
 
 <!-- Keep at most one implementation task here. -->
 
+- [ ] T-161c (@codex) [P1] Add a user-facing “Messages we couldn't read”
+      surface with counts, reason buckets, retention policy, and retry
+      affordance; never expose raw bodies after expiry.
+
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
