@@ -82,3 +82,7 @@ Rationale: doc §section — only when the "why" is non-obvious
 | T-158 | Split transaction_detail_screen.dart | 4 | [T-158.md](T-158.md) |
 | T-159 | Correction/detail regression coverage | 3 | [T-159.md](T-159.md) |
 | T-117 | SQL payee identity index | 1 | [T-117.md](T-117.md) |
+| T-160 | Activity pagination correctness | 2 | [T-160.md](T-160.md) |
+| T-161 | SMS capture outcome counts | 1 | [T-161.md](T-161.md) |
+| T-162 | Salary-credit ingestion coverage | 1 | [T-162.md](T-162.md) |
+| T-172 | Product-value review and release cadence | 7 | [T-172.md](T-172.md) |

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Synthetic, local-only product-value review corpus. No real names, account identifiers, phone numbers, senders, or message bodies are included.",
+  "asOf": "2026-08-01T12:00:00+05:30",
+  "scenarios": [
+    {"id": "sparse", "description": "One manual debit and no derived data."},
+    {"id": "typical", "description": "Mixed settled spending across categories and payment sources."},
+    {"id": "noisy", "description": "Low-confidence parse, uncategorized merchant, duplicate echo, and rejected message."},
+    {"id": "long_history", "description": "125 synthetic settled rows spanning 2025-08-01 through 2026-07-31, including identical timestamps."},
+    {"id": "salary", "description": "Salary credit plus a non-salary credit and a transfer."},
+    {"id": "transfers", "description": "Two owned transfer legs and one card bill payment."},
+    {"id": "refunds", "description": "Full merchant refund and partial reimbursement linked to expenses."},
+    {"id": "lifecycle", "description": "Pending authorization, reversed debit, and failed debit."},
+    {"id": "multi_source", "description": "SMS, manual, and statement-shaped records with the same merchant and amount."}
+  ],
+  "categories": [
+    {"id": "cat_food", "name": "Food"},
+    {"id": "cat_transport", "name": "Transport"},
+    {"id": "cat_housing", "name": "Housing"},
+    {"id": "cat_income_salary", "name": "Salary", "semantic": "income_salary"},
+    {"id": "cat_uncategorized", "name": "Uncategorized"}
+  ],
+  "paymentSources": [
+    {"id": "src_bank_a", "label": "Bank A"},
+    {"id": "src_card_a", "label": "Card A"},
+    {"id": "src_manual", "label": "Manual"}
+  ],
+  "transactions": [
+    {"id": "txn_manual_food_01", "scenario": "sparse", "ts": "2026-07-31T12:30:00+05:30", "amountPaise": 45000, "direction": "debit", "categoryId": "cat_food", "channel": "manual", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_manual"},
+    {"id": "txn_food_01", "scenario": "typical", "ts": "2026-07-04T12:30:00+05:30", "amountPaise": 85000, "direction": "debit", "categoryId": "cat_food", "channel": "upi", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a"},
+    {"id": "txn_transport_01", "scenario": "typical", "ts": "2026-07-08T08:10:00+05:30", "amountPaise": 22000, "direction": "debit", "categoryId": "cat_transport", "channel": "card", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_card_a"},
+    {"id": "txn_rent_01", "scenario": "typical", "ts": "2026-07-01T09:00:00+05:30", "amountPaise": 2800000, "direction": "debit", "categoryId": "cat_housing", "channel": "bank", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a"},
+    {"id": "txn_salary_01", "scenario": "salary", "ts": "2026-07-01T10:00:00+05:30", "amountPaise": 12500000, "direction": "credit", "categoryId": "cat_income_salary", "channel": "bank", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a", "messageKind": "salary_credit"},
+    {"id": "txn_cashback_01", "scenario": "salary", "ts": "2026-07-10T10:00:00+05:30", "amountPaise": 12000, "direction": "credit", "categoryId": "cat_food", "channel": "card", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_card_a", "messageKind": "cashback"},
+    {"id": "txn_transfer_out", "scenario": "transfers", "ts": "2026-07-05T11:00:00+05:30", "amountPaise": 150000, "direction": "debit", "categoryId": null, "channel": "upi", "status": "confirmed", "lifecycleState": "settled", "ownedTransferId": "transfer_01", "paymentSourceId": "src_bank_a"},
+    {"id": "txn_transfer_in", "scenario": "transfers", "ts": "2026-07-05T11:01:00+05:30", "amountPaise": 150000, "direction": "credit", "categoryId": null, "channel": "bank", "status": "confirmed", "lifecycleState": "settled", "ownedTransferId": "transfer_01", "paymentSourceId": "src_card_a"},
+    {"id": "txn_card_bill", "scenario": "transfers", "ts": "2026-07-06T11:00:00+05:30", "amountPaise": 400000, "direction": "debit", "categoryId": null, "channel": "bank", "status": "confirmed", "lifecycleState": "settled", "isAnalyticsExcluded": true, "paymentSourceId": "src_bank_a"},
+    {"id": "txn_purchase_refund", "scenario": "refunds", "ts": "2026-07-12T12:00:00+05:30", "amountPaise": 100000, "direction": "debit", "categoryId": "cat_food", "channel": "card", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_card_a", "linkId": "link_refund_01"},
+    {"id": "txn_refund", "scenario": "refunds", "ts": "2026-07-15T12:00:00+05:30", "amountPaise": 100000, "direction": "credit", "categoryId": "cat_food", "channel": "card", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_card_a", "linkId": "link_refund_01"},
+    {"id": "txn_reimbursed_expense", "scenario": "refunds", "ts": "2026-07-18T12:00:00+05:30", "amountPaise": 300000, "direction": "debit", "categoryId": "cat_food", "channel": "upi", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a", "linkId": "link_repay_01"},
+    {"id": "txn_reimbursement", "scenario": "refunds", "ts": "2026-07-20T12:00:00+05:30", "amountPaise": 150000, "direction": "credit", "categoryId": "cat_food", "channel": "upi", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a", "linkId": "link_repay_01"},
+    {"id": "txn_pending", "scenario": "lifecycle", "ts": "2026-07-22T14:00:00+05:30", "amountPaise": 200000, "direction": "debit", "categoryId": "cat_food", "channel": "card", "status": "pending", "lifecycleState": "pending", "paymentSourceId": "src_card_a"},
+    {"id": "txn_reversed", "scenario": "lifecycle", "ts": "2026-07-23T14:00:00+05:30", "amountPaise": 90000, "direction": "debit", "categoryId": "cat_transport", "channel": "card", "status": "confirmed", "lifecycleState": "reversed", "lifecycleReason": "refund_or_reversal", "paymentSourceId": "src_card_a"},
+    {"id": "txn_failed", "scenario": "lifecycle", "ts": "2026-07-24T14:00:00+05:30", "amountPaise": 70000, "direction": "debit", "categoryId": null, "channel": "upi", "status": "failed", "lifecycleState": "failed", "lifecycleReason": "declined", "paymentSourceId": "src_bank_a"},
+    {"id": "txn_low_trust", "scenario": "noisy", "ts": "2026-07-25T15:00:00+05:30", "amountPaise": 99900, "direction": "debit", "categoryId": "cat_uncategorized", "channel": "sms", "status": "needsReview", "lifecycleState": "settled", "paymentSourceId": "src_bank_a", "parseSource": "generic_fallback"},
+    {"id": "txn_duplicate_echo", "scenario": "noisy", "ts": "2026-07-25T15:00:01+05:30", "amountPaise": 99900, "direction": "debit", "categoryId": "cat_uncategorized", "channel": "sms", "status": "auto", "lifecycleState": "settled", "duplicateOfTxnId": "txn_low_trust", "paymentSourceId": "src_bank_a"},
+    {"id": "txn_same_timestamp_a", "scenario": "long_history", "ts": "2026-07-30T12:00:00+05:30", "amountPaise": 11100, "direction": "debit", "categoryId": "cat_food", "channel": "statement", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a"},
+    {"id": "txn_same_timestamp_b", "scenario": "long_history", "ts": "2026-07-30T12:00:00+05:30", "amountPaise": 22200, "direction": "debit", "categoryId": "cat_transport", "channel": "statement", "status": "confirmed", "lifecycleState": "settled", "paymentSourceId": "src_bank_a"}
+  ],
+  "rawSmsSummaries": [
+    {"id": "sms_salary_01", "scenario": "salary", "senderClass": "supported_bank_header", "bodyPolicy": "synthetic_template_only", "expected": "credit + income_salary"},
+    {"id": "sms_noise_01", "scenario": "noisy", "senderClass": "unsupported_sender", "bodyPolicy": "not-retained", "expected": "rejected with reason only"},
+    {"id": "sms_pending_01", "scenario": "lifecycle", "senderClass": "supported_bank_header", "bodyPolicy": "synthetic_template_only", "expected": "pending authorization"}
+  ],
+  "recurringSeries": [
+    {"id": "series_rent", "label": "Housing", "cadence": "monthly", "state": "active", "expectedAmountPaise": 2800000},
+    {"id": "series_unknown", "label": "Uncategorized", "cadence": "monthly", "state": "price_changed", "expectedAmountPaise": 99900}
+  ],
+  "expectedEvents": [
+    {"id": "event_bill_due_01", "kind": "bill_due", "state": "expected", "amountLowPaise": 150000, "amountHighPaise": 180000},
+    {"id": "event_mandate_01", "kind": "mandate", "state": "missed", "amountLowPaise": 50000, "amountHighPaise": 60000}
+  ],
+  "links": [
+    {"id": "link_refund_01", "type": "refund", "from": "txn_purchase_refund", "to": "txn_refund"},
+    {"id": "link_repay_01", "type": "repayment", "from": "txn_reimbursement", "to": "txn_reimbursed_expense"},
+    {"id": "transfer_01", "type": "owned_transfer", "from": "txn_transfer_out", "to": "txn_transfer_in"}
+  ],
+  "expectedContracts": {
+    "settledSpendingPaise": 3485200,
+    "analyticsExcludedIds": ["txn_transfer_out", "txn_transfer_in", "txn_card_bill", "txn_pending", "txn_reversed", "txn_failed", "txn_duplicate_echo"],
+    "salaryCreditIds": ["txn_salary_01"],
+    "nonSalaryCreditIds": ["txn_cashback_01", "txn_transfer_in", "txn_refund", "txn_reimbursement"],
+    "pageOrder": "ts descending, then id descending",
+    "privacyAssertions": [
+      "Unsupported sender is represented by safe reason/category only.",
+      "No fixture contains a phone number, VPA, account number, or real person/merchant name.",
+      "Export and delete scenarios require explicit confirmation and post-action verification."
+    ]
+  }
+}

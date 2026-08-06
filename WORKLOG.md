@@ -1,5 +1,16 @@
 # Current Handoff
 
+## 2026-08-01 — T-172 product-value review package complete
+
+- Added the synthetic local-only review corpus, capability inventory, decision
+  matrix, moderated QA script, dependency-ordered PV-01–PV-08 briefs, and
+  recurring PR/weekly/release-candidate cadence.
+- Recorded the product-owner waiver for participant and interactive TalkBack
+  evidence without presenting the target-device smoke observation as a human
+  acceptance pass.
+- Verification: corpus JSON parses; documentation diff is clean; no runtime or
+  financial data was added.
+
 ## 2026-08-02 — T-117 SQL payee identity index complete
 
 - Added schema-15 payee_evidence, rebuildable from authoritative transaction
