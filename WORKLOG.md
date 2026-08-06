@@ -1,5 +1,16 @@
 # Current Handoff
 
+## 2026-08-07 — T-151a assistant sheet conformance complete
+
+- Replaced the route-level `Scaffold`/`AppBar` with one custom assistant header:
+  34px mascot, single title, emerald on-device subtitle, close affordance, and
+  divider. The Ask orb now opens the existing full-height draggable sheet with
+  a fixed `#0E0C1A` surface in both themes.
+- Added a custom-header hook to the shared Bloom sheet scaffold so the assistant
+  does not render duplicate title/close controls.
+- Verification: analyzer clean; focused assistant, navigation, accessibility,
+  and full-screen-sheet suite **20/20**; full Flutter suite pending.
+
 ## 2026-08-06 — T-150b searchable prompt catalogue complete
 
 - Replaced the four-preset assistant empty state with a searchable view of all

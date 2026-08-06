@@ -15,6 +15,7 @@ class BloomSheetScaffold extends StatelessWidget {
     this.onClose,
     this.backgroundColor,
     this.actions,
+    this.headerBuilder,
   });
 
   final Widget child;
@@ -30,6 +31,7 @@ class BloomSheetScaffold extends StatelessWidget {
   final VoidCallback? onClose;
   final Color? backgroundColor;
   final List<Widget>? actions;
+  final WidgetBuilder? headerBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +62,9 @@ class BloomSheetScaffold extends StatelessWidget {
               ),
             ),
           ),
-          if (title != null ||
+          if (headerBuilder != null)
+            headerBuilder!(context)
+          else if (title != null ||
               showBack ||
               showClose ||
               (actions != null && actions!.isNotEmpty)) ...[

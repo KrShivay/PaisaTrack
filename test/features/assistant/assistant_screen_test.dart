@@ -60,7 +60,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('Ask PaisaTrack'), findsWidgets);
+    expect(find.text('Ask PaisaTrack'), findsOneWidget);
     expect(find.text('What would you like to know?'), findsOneWidget);
     expect(find.text(assistantPromptQuestions.first), findsOneWidget);
     expect(
@@ -68,6 +68,24 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(TextField), findsNWidgets(2));
+  });
+
+  testWidgets('uses one dark sheet header in a light theme', (tester) async {
+    await tester.pumpWidget(
+      createWidget(tester),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Ask PaisaTrack'), findsOneWidget);
+    expect(find.byType(Scaffold), findsNothing);
+    expect(
+      tester.widget<Material>(
+        find.byKey(const ValueKey('assistant_sheet_surface')),
+      ).color,
+      const Color(0xFF0E0C1A),
+    );
+    expect(find.byTooltip('Close'), findsOneWidget);
   });
 
   testWidgets('searches the catalogue by group or question text',

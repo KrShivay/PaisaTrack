@@ -19,7 +19,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Ask PaisaTrack'), findsNWidgets(2));
+    expect(find.text('Ask PaisaTrack'), findsOneWidget);
     expect(find.text('On-device · no internet used'), findsOneWidget);
     expect(find.text('What would you like to know?'), findsOneWidget);
   });

@@ -12,15 +12,20 @@ Future<T?> showBloomFullScreenSheet<T>({
   bool showClose = false,
   VoidCallback? onBack,
   VoidCallback? onClose,
+  WidgetBuilder? headerBuilder,
+  Color? backgroundColor,
 }) {
   assert(
-    showBack || showClose,
+    showBack || showClose || headerBuilder != null,
     'T-152a: No screen built on this route can be reached without an exit affordance.',
   );
 
   final disableAnimations = MediaQuery.of(context).disableAnimations;
   final controller = disableAnimations
-      ? (AnimationController(vsync: Navigator.of(context), duration: Duration.zero)..value = 1.0)
+      ? (AnimationController(
+          vsync: Navigator.of(context),
+          duration: Duration.zero,
+        )..value = 1.0)
       : null;
 
   final result = showModalBottomSheet<T>(
@@ -43,12 +48,14 @@ Future<T?> showBloomFullScreenSheet<T>({
           showClose: showClose,
           onBack: onBack,
           onClose: onClose,
+          headerBuilder: headerBuilder,
+          backgroundColor: backgroundColor,
           child: builder(context),
         ),
       );
     },
   );
-  
+
   if (controller != null) {
     result.whenComplete(() => controller.dispose());
   }

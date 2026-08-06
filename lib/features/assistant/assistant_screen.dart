@@ -27,7 +27,12 @@ class AssistantMessage {
 
 /// Redesigned Bloom Ask PaisaTrack assistant sheet.
 class AssistantScreen extends ConsumerStatefulWidget {
-  const AssistantScreen({super.key});
+  const AssistantScreen({super.key, this.showSheetHeader = true});
+
+  final bool showSheetHeader;
+
+  static Widget sheetHeader(BuildContext context) =>
+      const _AssistantSheetHeader();
 
   @override
   ConsumerState<AssistantScreen> createState() => _AssistantScreenState();
@@ -87,127 +92,13 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor:
-          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Row(
-          children: [
-            const BloomMascot(
-              size: 28,
-              bob: true,
-              pulseRing: false,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Ask PaisaTrack',
-                style: AppTheme.bloomDisplay(
-                  18,
-                  FontWeight.w700,
-                  color: isDark
-                      ? AppColorTokens.bloomDarkTextPrimary
-                      : AppColorTokens.ink,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SafeArea(
+    return Material(
+      key: const ValueKey('assistant_sheet_surface'),
+      color: AppColorTokens.bloomDarkBase,
+      child: SafeArea(
         child: Column(
           children: [
-            // Header Row with Mascot
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  const BloomMascot(
-                    size: 32,
-                    bob: true,
-                    pulseRing: false,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ask PaisaTrack',
-                          style: AppTheme.bloomDisplay(
-                            16,
-                            FontWeight.w700,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          'Natural language financial search',
-                          style: AppTheme.bloomDisplay(
-                            11,
-                            FontWeight.w400,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextTertiary
-                                : AppColorTokens.inkTertiary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // On-device privacy badge
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomEmerald.withValues(alpha: 0.15)
-                      : const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.shield_outlined,
-                      size: 14,
-                      color: AppColorTokens.bloomEmerald,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'On-device · no internet used',
-                        style: AppTheme.bloomDisplay(
-                          11,
-                          FontWeight.w500,
-                          color: AppColorTokens.bloomEmerald,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Divider(height: 1),
+            if (widget.showSheetHeader) const _AssistantSheetHeader(),
 
             // Message Thread / Presets
             Expanded(
@@ -297,6 +188,59 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AssistantSheetHeader extends StatelessWidget {
+  const _AssistantSheetHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+          child: Row(
+            children: [
+              const BloomMascot(size: 34, bob: true, pulseRing: false),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ask PaisaTrack',
+                      style: TextStyle(
+                        color: AppColorTokens.bloomDarkTextPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'On-device · no internet used',
+                      style: TextStyle(
+                        color: AppColorTokens.bloomEmerald,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Close',
+                icon: const Icon(
+                  Icons.close,
+                  color: AppColorTokens.bloomDarkTextSecondary,
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: Color(0xFF1E1B33)),
+      ],
     );
   }
 }

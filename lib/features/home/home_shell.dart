@@ -108,14 +108,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _openAskPaisaTrack() {
-    showBloomModalSheet(
+    showBloomFullScreenSheet(
       context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      builder: (context) => const FractionallySizedBox(
-        heightFactor: 0.92,
-        child: AssistantScreen(),
-      ),
+      showBack: false,
+      showClose: false,
+      backgroundColor: AppColorTokens.bloomDarkBase,
+      headerBuilder: AssistantScreen.sheetHeader,
+      builder: (_) => const AssistantScreen(showSheetHeader: false),
     );
   }
 

@@ -28,7 +28,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Ask PaisaTrack'), findsNWidgets(2));
+    expect(find.text('Ask PaisaTrack'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

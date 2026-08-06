@@ -41,7 +41,7 @@ void main() {
         (tester) async {
       await pumpAssistant(tester);
 
-      expect(find.text('Ask PaisaTrack'), findsWidgets);
+      expect(find.text('Ask PaisaTrack'), findsOneWidget);
       expect(find.text(assistantPromptQuestions.first), findsOneWidget);
       expect(find.text(assistantPromptQuestions.take(4).last), findsOneWidget);
       expect(find.byType(BloomMascot), findsWidgets);
