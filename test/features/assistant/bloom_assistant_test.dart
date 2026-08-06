@@ -6,6 +6,7 @@ import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/features/assistant/assistant_screen.dart';
+import 'package:paisatrack/intelligence/assistant/prompt_catalogue.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -41,8 +42,8 @@ void main() {
       await pumpAssistant(tester);
 
       expect(find.text('Ask PaisaTrack'), findsWidgets);
-      expect(find.text('How much on Swiggy this month?'), findsOneWidget);
-      expect(find.text("What's my burn rate?"), findsOneWidget);
+      expect(find.text(assistantPromptQuestions.first), findsOneWidget);
+      expect(find.text(assistantPromptQuestions.take(4).last), findsOneWidget);
       expect(find.byType(BloomMascot), findsWidgets);
     });
 

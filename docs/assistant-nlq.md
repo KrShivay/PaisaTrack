@@ -14,6 +14,11 @@ question
   → AnswerRenderer
 ```
 
+Curated suggestions are defined in
+`lib/intelligence/assistant/prompt_catalogue.dart`. The catalogue is shared by
+the assistant UI and its contract test, which classifies and validates every
+question before it can ship.
+
 The model never writes SQL and never answers directly.
 
 ## Supported intents

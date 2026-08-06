@@ -127,7 +127,6 @@ T-154a.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| **T-150a** | P2 | ~M | Extract prompt catalogue; test against validator | — |
 | **T-150b** | P2 | ~M | Searchable, grouped empty state | T-150a |
 | **T-150c** | P3 | ~S | Rotating composer chips | T-150a, T-151c |
 | **T-151a** | P2 | ~M | Sheet presentation; remove the duplicate title | — |
@@ -150,7 +149,7 @@ board rules below.
 
 #### Suggested order
 
-Ship first (small, independent, high visibility): T-150a.
+Ship next (small, dependent, high visibility): T-150b.
 Then the foundations everything else waits on: T-143a/b, T-131b/c, T-132a-c.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`

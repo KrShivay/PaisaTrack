@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database_provider.dart';
 import '../../intelligence/assistant/assistant_controller.dart';
+import '../../intelligence/assistant/prompt_catalogue.dart';
 import '../../intelligence/llm/llm_runtime.dart';
 
 final assistantControllerProvider =
@@ -311,12 +312,7 @@ class _PresetQuestions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final presets = [
-      'How much on Swiggy this month?',
-      'Can I afford a ₹5,000 dinner?',
-      'Show food vs shopping',
-      "What's my burn rate?",
-    ];
+    final presets = assistantPromptQuestions.take(4);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

@@ -1,5 +1,14 @@
 # Current Handoff
 
+## 2026-08-06 — T-150a prompt catalogue complete
+
+- Extracted the curated assistant questions into a shared seven-group catalogue
+  and removed the two hardcoded suggestions that had no supported intent.
+- The empty state now reads from the catalogue; a contract test runs every
+  question through the deterministic classifier and `IntentValidator`.
+- Verification: analyzer clean; focused assistant/catalogue suite **16/16**;
+  catalogue contains **44** questions; no validator or query semantics changed.
+
 ## 2026-08-01 — T-172 product-value review package complete
 
 - Added the synthetic local-only review corpus, capability inventory, decision

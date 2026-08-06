@@ -6,6 +6,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/features/assistant/assistant_screen.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
+import 'package:paisatrack/intelligence/assistant/prompt_catalogue.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 
 class _StubAssistantController extends AssistantController {
@@ -61,7 +62,7 @@ void main() {
 
     expect(find.text('Ask PaisaTrack'), findsWidgets);
     expect(find.text('What would you like to know?'), findsOneWidget);
-    expect(find.text('How much on Swiggy this month?'), findsOneWidget);
+    expect(find.text(assistantPromptQuestions.first), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
   });
 }
