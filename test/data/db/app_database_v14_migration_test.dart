@@ -18,7 +18,18 @@ void main() {
 
     final version =
         await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data['user_version'], 14);
+    expect(version.data['user_version'], 15);
+    final payeeEvidence =
+        await database.customSelect('PRAGMA table_info(payee_evidence)').get();
+    expect(
+      payeeEvidence.map((row) => row.data['name']),
+      containsAll([
+        'transaction_id',
+        'evidence_type',
+        'normalized_key',
+        'display_value',
+      ]),
+    );
     final columns =
         await database.customSelect('PRAGMA table_info(raw_sms)').get();
     expect(

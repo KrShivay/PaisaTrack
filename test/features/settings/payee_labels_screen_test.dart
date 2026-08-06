@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/repositories/payee_label_repository.dart';
 import 'package:paisatrack/features/settings/payee_labels_screen.dart';
 
+import 'payee_test_helpers.dart';
+
 void main() {
   testWidgets('filters payee identities by search query and unlabeled filter',
       (tester) async {
@@ -25,11 +27,14 @@ void main() {
         transactionCount: 2,
       ),
     ];
+    final database = newPayeeTestDatabase();
+    addTearDown(database.close);
+    final repository = FakePayeeLabelRepository(database, items: items);
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          payeeIdentitiesProvider.overrideWith((ref) => Stream.value(items)),
+          payeeLabelRepositoryProvider.overrideWith((ref) async => repository),
         ],
         child: const MaterialApp(home: PayeeLabelsScreen()),
       ),
@@ -86,11 +91,14 @@ void main() {
         transactionCount: 2,
       ),
     ];
+    final database = newPayeeTestDatabase();
+    addTearDown(database.close);
+    final repository = FakePayeeLabelRepository(database, items: items);
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          payeeIdentitiesProvider.overrideWith((ref) => Stream.value(items)),
+          payeeLabelRepositoryProvider.overrideWith((ref) async => repository),
         ],
         child: const MaterialApp(home: PayeeLabelsScreen()),
       ),

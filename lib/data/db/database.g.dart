@@ -6442,6 +6442,284 @@ class ModelMetaCompanion extends UpdateCompanion<ModelMetaData> {
   }
 }
 
+class $PayeeEvidenceTable extends PayeeEvidence
+    with TableInfo<$PayeeEvidenceTable, PayeeEvidenceData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PayeeEvidenceTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _transactionIdMeta =
+      const VerificationMeta('transactionId');
+  @override
+  late final GeneratedColumn<String> transactionId = GeneratedColumn<String>(
+      'transaction_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES transactions (id)'));
+  static const VerificationMeta _evidenceTypeMeta =
+      const VerificationMeta('evidenceType');
+  @override
+  late final GeneratedColumn<String> evidenceType = GeneratedColumn<String>(
+      'evidence_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _normalizedKeyMeta =
+      const VerificationMeta('normalizedKey');
+  @override
+  late final GeneratedColumn<String> normalizedKey = GeneratedColumn<String>(
+      'normalized_key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _displayValueMeta =
+      const VerificationMeta('displayValue');
+  @override
+  late final GeneratedColumn<String> displayValue = GeneratedColumn<String>(
+      'display_value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [transactionId, evidenceType, normalizedKey, displayValue];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'payee_evidence';
+  @override
+  VerificationContext validateIntegrity(Insertable<PayeeEvidenceData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('transaction_id')) {
+      context.handle(
+          _transactionIdMeta,
+          transactionId.isAcceptableOrUnknown(
+              data['transaction_id']!, _transactionIdMeta));
+    } else if (isInserting) {
+      context.missing(_transactionIdMeta);
+    }
+    if (data.containsKey('evidence_type')) {
+      context.handle(
+          _evidenceTypeMeta,
+          evidenceType.isAcceptableOrUnknown(
+              data['evidence_type']!, _evidenceTypeMeta));
+    } else if (isInserting) {
+      context.missing(_evidenceTypeMeta);
+    }
+    if (data.containsKey('normalized_key')) {
+      context.handle(
+          _normalizedKeyMeta,
+          normalizedKey.isAcceptableOrUnknown(
+              data['normalized_key']!, _normalizedKeyMeta));
+    } else if (isInserting) {
+      context.missing(_normalizedKeyMeta);
+    }
+    if (data.containsKey('display_value')) {
+      context.handle(
+          _displayValueMeta,
+          displayValue.isAcceptableOrUnknown(
+              data['display_value']!, _displayValueMeta));
+    } else if (isInserting) {
+      context.missing(_displayValueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {transactionId, evidenceType};
+  @override
+  PayeeEvidenceData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PayeeEvidenceData(
+      transactionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}transaction_id'])!,
+      evidenceType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}evidence_type'])!,
+      normalizedKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}normalized_key'])!,
+      displayValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}display_value'])!,
+    );
+  }
+
+  @override
+  $PayeeEvidenceTable createAlias(String alias) {
+    return $PayeeEvidenceTable(attachedDatabase, alias);
+  }
+}
+
+class PayeeEvidenceData extends DataClass
+    implements Insertable<PayeeEvidenceData> {
+  final String transactionId;
+  final String evidenceType;
+  final String normalizedKey;
+  final String displayValue;
+  const PayeeEvidenceData(
+      {required this.transactionId,
+      required this.evidenceType,
+      required this.normalizedKey,
+      required this.displayValue});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['transaction_id'] = Variable<String>(transactionId);
+    map['evidence_type'] = Variable<String>(evidenceType);
+    map['normalized_key'] = Variable<String>(normalizedKey);
+    map['display_value'] = Variable<String>(displayValue);
+    return map;
+  }
+
+  PayeeEvidenceCompanion toCompanion(bool nullToAbsent) {
+    return PayeeEvidenceCompanion(
+      transactionId: Value(transactionId),
+      evidenceType: Value(evidenceType),
+      normalizedKey: Value(normalizedKey),
+      displayValue: Value(displayValue),
+    );
+  }
+
+  factory PayeeEvidenceData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PayeeEvidenceData(
+      transactionId: serializer.fromJson<String>(json['transactionId']),
+      evidenceType: serializer.fromJson<String>(json['evidenceType']),
+      normalizedKey: serializer.fromJson<String>(json['normalizedKey']),
+      displayValue: serializer.fromJson<String>(json['displayValue']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'transactionId': serializer.toJson<String>(transactionId),
+      'evidenceType': serializer.toJson<String>(evidenceType),
+      'normalizedKey': serializer.toJson<String>(normalizedKey),
+      'displayValue': serializer.toJson<String>(displayValue),
+    };
+  }
+
+  PayeeEvidenceData copyWith(
+          {String? transactionId,
+          String? evidenceType,
+          String? normalizedKey,
+          String? displayValue}) =>
+      PayeeEvidenceData(
+        transactionId: transactionId ?? this.transactionId,
+        evidenceType: evidenceType ?? this.evidenceType,
+        normalizedKey: normalizedKey ?? this.normalizedKey,
+        displayValue: displayValue ?? this.displayValue,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('PayeeEvidenceData(')
+          ..write('transactionId: $transactionId, ')
+          ..write('evidenceType: $evidenceType, ')
+          ..write('normalizedKey: $normalizedKey, ')
+          ..write('displayValue: $displayValue')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(transactionId, evidenceType, normalizedKey, displayValue);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PayeeEvidenceData &&
+          other.transactionId == this.transactionId &&
+          other.evidenceType == this.evidenceType &&
+          other.normalizedKey == this.normalizedKey &&
+          other.displayValue == this.displayValue);
+}
+
+class PayeeEvidenceCompanion extends UpdateCompanion<PayeeEvidenceData> {
+  final Value<String> transactionId;
+  final Value<String> evidenceType;
+  final Value<String> normalizedKey;
+  final Value<String> displayValue;
+  final Value<int> rowid;
+  const PayeeEvidenceCompanion({
+    this.transactionId = const Value.absent(),
+    this.evidenceType = const Value.absent(),
+    this.normalizedKey = const Value.absent(),
+    this.displayValue = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PayeeEvidenceCompanion.insert({
+    required String transactionId,
+    required String evidenceType,
+    required String normalizedKey,
+    required String displayValue,
+    this.rowid = const Value.absent(),
+  })  : transactionId = Value(transactionId),
+        evidenceType = Value(evidenceType),
+        normalizedKey = Value(normalizedKey),
+        displayValue = Value(displayValue);
+  static Insertable<PayeeEvidenceData> custom({
+    Expression<String>? transactionId,
+    Expression<String>? evidenceType,
+    Expression<String>? normalizedKey,
+    Expression<String>? displayValue,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (transactionId != null) 'transaction_id': transactionId,
+      if (evidenceType != null) 'evidence_type': evidenceType,
+      if (normalizedKey != null) 'normalized_key': normalizedKey,
+      if (displayValue != null) 'display_value': displayValue,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PayeeEvidenceCompanion copyWith(
+      {Value<String>? transactionId,
+      Value<String>? evidenceType,
+      Value<String>? normalizedKey,
+      Value<String>? displayValue,
+      Value<int>? rowid}) {
+    return PayeeEvidenceCompanion(
+      transactionId: transactionId ?? this.transactionId,
+      evidenceType: evidenceType ?? this.evidenceType,
+      normalizedKey: normalizedKey ?? this.normalizedKey,
+      displayValue: displayValue ?? this.displayValue,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (transactionId.present) {
+      map['transaction_id'] = Variable<String>(transactionId.value);
+    }
+    if (evidenceType.present) {
+      map['evidence_type'] = Variable<String>(evidenceType.value);
+    }
+    if (normalizedKey.present) {
+      map['normalized_key'] = Variable<String>(normalizedKey.value);
+    }
+    if (displayValue.present) {
+      map['display_value'] = Variable<String>(displayValue.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PayeeEvidenceCompanion(')
+          ..write('transactionId: $transactionId, ')
+          ..write('evidenceType: $evidenceType, ')
+          ..write('normalizedKey: $normalizedKey, ')
+          ..write('displayValue: $displayValue, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RecurringSeriesTable extends RecurringSeries
     with TableInfo<$RecurringSeriesTable, RecurringSery> {
   @override
@@ -7947,6 +8225,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MerchantAliasesTable merchantAliases =
       $MerchantAliasesTable(this);
   late final $ModelMetaTable modelMeta = $ModelMetaTable(this);
+  late final $PayeeEvidenceTable payeeEvidence = $PayeeEvidenceTable(this);
   late final $RecurringSeriesTable recurringSeries =
       $RecurringSeriesTable(this);
   late final $RulesTable rules = $RulesTable(this);
@@ -7957,6 +8236,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxPaymentSourcesIdentity = Index(
       'idx_payment_sources_identity',
       'CREATE UNIQUE INDEX idx_payment_sources_identity ON payment_sources (kind, masked_identifier)');
+  late final Index idxPayeeEvidenceTransactionId = Index(
+      'idx_payee_evidence_transaction_id',
+      'CREATE INDEX idx_payee_evidence_transaction_id ON payee_evidence (transaction_id)');
+  late final Index idxPayeeEvidenceNormalizedKey = Index(
+      'idx_payee_evidence_normalized_key',
+      'CREATE INDEX idx_payee_evidence_normalized_key ON payee_evidence (normalized_key)');
   late final Index idxRecurringSeriesMerchantId = Index(
       'idx_recurring_series_merchant_id',
       'CREATE INDEX idx_recurring_series_merchant_id ON recurring_series (merchant_id)');
@@ -8003,11 +8288,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         insights,
         merchantAliases,
         modelMeta,
+        payeeEvidence,
         recurringSeries,
         rules,
         transactionLinks,
         idxInsightsPeriod,
         idxPaymentSourcesIdentity,
+        idxPayeeEvidenceTransactionId,
+        idxPayeeEvidenceNormalizedKey,
         idxRecurringSeriesMerchantId,
         idxRecurringSeriesNextExpectedDate,
         idxTransactionsTs,
@@ -10112,6 +10400,19 @@ class $$TransactionsTableFilterComposer
     return f(composer);
   }
 
+  ComposableFilter payeeEvidenceRefs(
+      ComposableFilter Function($$PayeeEvidenceTableFilterComposer f) f) {
+    final $$PayeeEvidenceTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $state.db.payeeEvidence,
+        getReferencedColumn: (t) => t.transactionId,
+        builder: (joinBuilder, parentComposers) =>
+            $$PayeeEvidenceTableFilterComposer(ComposerState($state.db,
+                $state.db.payeeEvidence, joinBuilder, parentComposers)));
+    return f(composer);
+  }
+
   ComposableFilter rulesRefs(
       ComposableFilter Function($$RulesTableFilterComposer f) f) {
     final $$RulesTableFilterComposer composer = $state.composerBuilder(
@@ -11137,6 +11438,147 @@ class $$ModelMetaTableOrderingComposer
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
+typedef $$PayeeEvidenceTableInsertCompanionBuilder = PayeeEvidenceCompanion
+    Function({
+  required String transactionId,
+  required String evidenceType,
+  required String normalizedKey,
+  required String displayValue,
+  Value<int> rowid,
+});
+typedef $$PayeeEvidenceTableUpdateCompanionBuilder = PayeeEvidenceCompanion
+    Function({
+  Value<String> transactionId,
+  Value<String> evidenceType,
+  Value<String> normalizedKey,
+  Value<String> displayValue,
+  Value<int> rowid,
+});
+
+class $$PayeeEvidenceTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PayeeEvidenceTable,
+    PayeeEvidenceData,
+    $$PayeeEvidenceTableFilterComposer,
+    $$PayeeEvidenceTableOrderingComposer,
+    $$PayeeEvidenceTableProcessedTableManager,
+    $$PayeeEvidenceTableInsertCompanionBuilder,
+    $$PayeeEvidenceTableUpdateCompanionBuilder> {
+  $$PayeeEvidenceTableTableManager(_$AppDatabase db, $PayeeEvidenceTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$PayeeEvidenceTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$PayeeEvidenceTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$PayeeEvidenceTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> transactionId = const Value.absent(),
+            Value<String> evidenceType = const Value.absent(),
+            Value<String> normalizedKey = const Value.absent(),
+            Value<String> displayValue = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PayeeEvidenceCompanion(
+            transactionId: transactionId,
+            evidenceType: evidenceType,
+            normalizedKey: normalizedKey,
+            displayValue: displayValue,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String transactionId,
+            required String evidenceType,
+            required String normalizedKey,
+            required String displayValue,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PayeeEvidenceCompanion.insert(
+            transactionId: transactionId,
+            evidenceType: evidenceType,
+            normalizedKey: normalizedKey,
+            displayValue: displayValue,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$PayeeEvidenceTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $PayeeEvidenceTable,
+    PayeeEvidenceData,
+    $$PayeeEvidenceTableFilterComposer,
+    $$PayeeEvidenceTableOrderingComposer,
+    $$PayeeEvidenceTableProcessedTableManager,
+    $$PayeeEvidenceTableInsertCompanionBuilder,
+    $$PayeeEvidenceTableUpdateCompanionBuilder> {
+  $$PayeeEvidenceTableProcessedTableManager(super.$state);
+}
+
+class $$PayeeEvidenceTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $PayeeEvidenceTable> {
+  $$PayeeEvidenceTableFilterComposer(super.$state);
+  ColumnFilters<String> get evidenceType => $state.composableBuilder(
+      column: $state.table.evidenceType,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get normalizedKey => $state.composableBuilder(
+      column: $state.table.normalizedKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get displayValue => $state.composableBuilder(
+      column: $state.table.displayValue,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  $$TransactionsTableFilterComposer get transactionId {
+    final $$TransactionsTableFilterComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.transactionId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableFilterComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return composer;
+  }
+}
+
+class $$PayeeEvidenceTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $PayeeEvidenceTable> {
+  $$PayeeEvidenceTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get evidenceType => $state.composableBuilder(
+      column: $state.table.evidenceType,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get normalizedKey => $state.composableBuilder(
+      column: $state.table.normalizedKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get displayValue => $state.composableBuilder(
+      column: $state.table.displayValue,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  $$TransactionsTableOrderingComposer get transactionId {
+    final $$TransactionsTableOrderingComposer composer = $state.composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.transactionId,
+        referencedTable: $state.db.transactions,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder, parentComposers) =>
+            $$TransactionsTableOrderingComposer(ComposerState($state.db,
+                $state.db.transactions, joinBuilder, parentComposers)));
+    return composer;
+  }
+}
+
 typedef $$RecurringSeriesTableInsertCompanionBuilder = RecurringSeriesCompanion
     Function({
   required String id,
@@ -11891,6 +12333,8 @@ class _$AppDatabaseManager {
       $$MerchantAliasesTableTableManager(_db, _db.merchantAliases);
   $$ModelMetaTableTableManager get modelMeta =>
       $$ModelMetaTableTableManager(_db, _db.modelMeta);
+  $$PayeeEvidenceTableTableManager get payeeEvidence =>
+      $$PayeeEvidenceTableTableManager(_db, _db.payeeEvidence);
   $$RecurringSeriesTableTableManager get recurringSeries =>
       $$RecurringSeriesTableTableManager(_db, _db.recurringSeries);
   $$RulesTableTableManager get rules =>

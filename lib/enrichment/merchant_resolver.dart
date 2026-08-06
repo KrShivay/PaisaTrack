@@ -8,6 +8,7 @@ import '../data/db/database.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../intelligence/models/embedder.dart';
 import 'counterparty_key.dart';
+import 'payee_identity_key.dart';
 
 /// Result of resolving parser text to a canonical merchant (PLAN §7.3).
 class MerchantResolution {
@@ -152,8 +153,7 @@ class MerchantResolver {
     );
   }
 
-  static String normalizeAlias(String value) =>
-      value.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+  static String normalizeAlias(String value) => PayeeIdentityKey.normalize(value);
 
   static double cosineSimilarity(Float32List a, Float32List b) {
     if (a.isEmpty || a.length != b.length) return -1;

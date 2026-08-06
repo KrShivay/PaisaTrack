@@ -1,5 +1,19 @@
 # Current Handoff
 
+## 2026-08-02 — T-117 SQL payee identity index complete
+
+- Added schema-15 payee_evidence, rebuildable from authoritative transaction
+  evidence, with ingestion/correction hooks and backup-restore rebuilds.
+- Replaced unbounded Dart payee grouping/search with SQL aggregation, alias
+  filtering, unresolved/unlabeled filters, two-query alias loading, and
+  keyset paging. Duplicate suggestions are review-only and do not merge data.
+- Added repository, migration, realistic-volume, paging, and UI coverage.
+- Verification: analyzer clean; focused T-117 suite **12/12**; GitNexus
+  refreshed to **7,893 nodes / 16,893 edges / 252 flows** and final change
+  detection completed. The full Flutter suite remains **1 failure** in the
+  unrelated `exclusion_explanation_test.dart` baseline (expected 500, actual
+  5500).
+
 ## 2026-08-02 — T-127 streaming backup/import complete
 
 - Added an additive authenticated v2 binary envelope with 60 KiB data chunks,

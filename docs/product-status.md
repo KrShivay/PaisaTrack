@@ -78,7 +78,7 @@ normative boundaries.
 | Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates | Queue remains capped at 100; cursor/persistence work is T-153 |
 | Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful guidance, global monthly budget prototype, recurring totals | Error states remain incomplete |
 | Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Eligibility diagnostics are absent |
-| Categories and identities | Category manager, payee labels, payment-source naming/ownership/exclusion | Payee aggregation remains unbounded; several secondary screens retain legacy surfaces |
+| Categories and identities | Category manager, SQL-backed paged payee labels/search, payment-source naming/ownership/exclusion | Duplicate suggestions remain review-only; several secondary screens retain legacy surfaces |
 | Assistant | Deterministic intents and queries with guarded local-model fallback | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
 | Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, durable key persistence, typed recovery | Physical-device backup/SAF acceptance remains release evidence |
 | Backup/import | v3 archive compatibility plus authenticated v2 chunked document envelope; paged row serialization, transactional restore, progress/cancellation, bounded 32 MiB encrypted file, 16 MiB payload, 50,000-row/table and 200,000-row/archive limits; only non-expired raw SMS is exported/restored; shipped Argon2id profile is required | Physical SAF/provider acceptance and release evidence remain T-170b/T-171 |

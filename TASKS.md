@@ -8,8 +8,7 @@ later hardening.
 
 ## In Progress
 
-<!-- Keep at most one implementation task here. T-127's implementation is
-     complete; physical SAF acceptance is release evidence tracked separately. -->
+<!-- Empty: T-117 is implemented; verification evidence is in WORKLOG.md. -->
 
 ## In Review
 
@@ -26,13 +25,6 @@ later hardening.
       Depends: signed profile/release build and target device.
       Next: record cold start, 10k-message import, baseline/navigation/model PSS,
       native/GPU caches, and idle/background release evidence.
-- [ ] T-117 (@codex) [P2] Move payee-label aggregation/search to SQL.
-      Module: payee label repository/UI.
-      Depends: paged identity query.
-      Gap: UI search exists, but the repository watches and groups the complete
-      transaction history in Dart.
-      Next: add SQL aggregation, unresolved/search filters, paging, and duplicate
-      suggestions with realistic-volume tests.
 - [ ] T-118 (@codex) [P2] Explain recurring ineligibility.
       Module: recurring detector/repository/UI.
       Depends: structured eligibility reason model.

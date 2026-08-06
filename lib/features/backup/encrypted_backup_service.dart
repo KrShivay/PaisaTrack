@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../data/repositories/payee_evidence_repository.dart';
 import '../../capture/parser_version.dart';
 import '../../core/platform/system_document_gateway.dart';
 
@@ -739,6 +740,7 @@ class EncryptedBackupService {
           throw const EncryptedBackupException('Invalid encrypted export');
         }
         await restorer.finish();
+        await PayeeEvidenceRepository(_database).rebuild();
       });
 
       if (finalManifest == null || chunkCount == 0) {
@@ -1102,6 +1104,7 @@ class EncryptedBackupService {
       await database.delete(database.feedback).go();
       await database.delete(database.rules).go();
       await database.delete(database.merchantAliases).go();
+      await database.delete(database.payeeEvidence).go();
       await database.delete(database.transactions).go();
       await database.delete(database.paymentSources).go();
       await database.delete(database.rawSms).go();
@@ -1174,6 +1177,7 @@ class EncryptedBackupService {
             .into(database.recurringSeries)
             .insert(RecurringSery.fromJson(row));
       }
+      await PayeeEvidenceRepository(database).rebuild();
     });
   }
 
@@ -1583,6 +1587,7 @@ class _ChunkedArchiveRestorer {
     await database.delete(database.feedback).go();
     await database.delete(database.rules).go();
     await database.delete(database.merchantAliases).go();
+    await database.delete(database.payeeEvidence).go();
     await database.delete(database.transactions).go();
     await database.delete(database.paymentSources).go();
     await database.delete(database.rawSms).go();

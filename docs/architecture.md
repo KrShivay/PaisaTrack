@@ -46,6 +46,10 @@ events, not relax the transaction parser's future-event rejection.
 - `raw_sms` is retention-limited; normalized transactions persist.
 - Original merchant text, VPA, references, source, and confidence evidence are
   preserved separately from user corrections and future labels.
+- Payee labels use a rebuildable SQL evidence index: aggregation, search,
+  unresolved filtering, and keyset paging happen in the database while the
+  original merchant/VPA fields remain authoritative. Duplicate suggestions are
+  read-only until the user confirms a merge.
 - Backup files are passphrase-encrypted before leaving app memory. The archive
   enforces 32 MiB encrypted-file, 16 MiB decoded-payload, 50,000-row per-table,
   and 200,000-row total ceilings, accepts only the shipped Argon2id profile,

@@ -12,6 +12,7 @@ import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
+import '../data/repositories/payee_evidence_repository.dart';
 import '../data/repositories/expected_event_repository.dart';
 import '../data/repositories/feature_flag_repository.dart';
 import '../data/repositories/rule_repository.dart';
@@ -345,8 +346,13 @@ class SmsIngestor {
                     messageKind: kind,
                     lifecycleState: lifecycleState,
                     lifecycleReason: lifecycleReason,
-                  ),
-                );
+                ),
+              );
+            await PayeeEvidenceRepository(_database).replaceForTransaction(
+              transactionId: transactionId,
+              merchantRaw: value.merchantRaw,
+              counterpartyVpa: value.counterpartyVpa,
+            );
             if (duplicateOfTxnId != null) {
               await _database
                   .into(_database.transactionLinks)

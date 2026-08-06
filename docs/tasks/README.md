@@ -81,3 +81,4 @@ Rationale: doc §section — only when the "why" is non-obvious
 | T-157 | Riverpod boundary hardening | 3 | [T-157.md](T-157.md) |
 | T-158 | Split transaction_detail_screen.dart | 4 | [T-158.md](T-158.md) |
 | T-159 | Correction/detail regression coverage | 3 | [T-159.md](T-159.md) |
+| T-117 | SQL payee identity index | 1 | [T-117.md](T-117.md) |

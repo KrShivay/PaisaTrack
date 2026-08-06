@@ -8,6 +8,7 @@ import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
 import '../models/transaction_confidence_trail.dart';
 import 'category_correction.dart';
+import 'payee_evidence_repository.dart';
 import 'rule_repository.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
 import '../../enrichment/merchant_resolver.dart';
@@ -528,6 +529,13 @@ WHERE t.status = 'needs_review'
       await (_database.update(_database.transactions)
             ..where((t) => t.id.equals(txnId)))
           .write(companion);
+      if (merchantRaw.present && merchantRaw.value != row.merchantRaw) {
+        await PayeeEvidenceRepository(_database).replaceForTransaction(
+          transactionId: txnId,
+          merchantRaw: merchantRaw.value,
+          counterpartyVpa: row.counterpartyVpa,
+        );
+      }
       for (final feedbackRow in feedbackRows) {
         await _database.into(_database.feedback).insert(feedbackRow);
       }

@@ -10,6 +10,9 @@ The executable source of truth is the Drift schema under
   exclusion state.
 - `raw_sms`: retained source messages and processing state.
 - `merchants` / `merchant_aliases`: canonical identity, user labels, and aliases.
+- `payee_evidence`: derived, rebuildable normalized merchant/VPA evidence used
+  by SQL payee aggregation and keyset search; original transaction fields stay
+  authoritative.
 - `payment_sources`: masked accounts/cards/wallets, nicknames, institution,
   ownership, active state, and analytics inclusion.
 - `categories`, `rules`, `feedback`: taxonomy and learning inputs.
@@ -75,3 +78,8 @@ Schema v12 adds `expected_events` (id, source, origin_sms_id, series_id, counter
 
 Schema v13 adds `feature_flags` (key primary key, value, updated_at) table (T-143a) to store dynamic behavioral thresholds and flags with `AppConstants` acting as static fallbacks. Regression fixture:
 `test/data/db/app_database_v13_migration_test.dart`.
+
+Schema v15 adds `payee_evidence` for T-117. It stores one derived row per
+non-empty merchant/VPA evidence field and indexes transaction and normalized
+identity lookups. Existing transactions are backfilled without changing their
+source fields; the index is also rebuilt after an encrypted archive restore.

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/constants.dart';
 import '../dedup/duplicate_match_rule.dart';
+import '../../enrichment/payee_identity_key.dart';
 import 'tables/baselines_table.dart';
 import 'tables/categories_table.dart';
 import 'tables/counterparties_table.dart';
@@ -18,6 +19,7 @@ import 'tables/merchant_aliases_table.dart';
 import 'tables/merchants_table.dart';
 import 'tables/model_meta_table.dart';
 import 'tables/payment_sources_table.dart';
+import 'tables/payee_evidence_table.dart';
 import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
@@ -44,6 +46,7 @@ part 'database.g.dart';
     Merchants,
     ModelMeta,
     PaymentSources,
+    PayeeEvidence,
     RawSms,
     RecurringSeries,
     Rules,
@@ -79,7 +82,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -198,6 +201,10 @@ class AppDatabase extends _$AppDatabase {
             }
           }
         }
+        if (from < 15) {
+          await migrator.createTable(payeeEvidence);
+          await _backfillPayeeEvidence();
+        }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.
         if (from < 2) await _backfillDuplicateLinks();
@@ -219,6 +226,49 @@ class AppDatabase extends _$AppDatabase {
         }
         await _ensurePaymentSourceTrigger();
       },
+    );
+  }
+
+  Future<void> _backfillPayeeEvidence() async {
+    final rows = await select(transactions).get();
+    final evidence = <PayeeEvidenceCompanion>[];
+    for (final transaction in rows) {
+      _addPayeeEvidence(
+        evidence,
+        transactionId: transaction.id,
+        evidenceType: 'merchant_raw',
+        value: transaction.merchantRaw,
+      );
+      _addPayeeEvidence(
+        evidence,
+        transactionId: transaction.id,
+        evidenceType: 'counterparty_vpa',
+        value: transaction.counterpartyVpa,
+      );
+    }
+    if (evidence.isEmpty) return;
+    await batch((batch) {
+      batch.insertAll(payeeEvidence, evidence);
+    });
+  }
+
+  void _addPayeeEvidence(
+    List<PayeeEvidenceCompanion> rows, {
+    required String transactionId,
+    required String evidenceType,
+    required String? value,
+  }) {
+    final displayValue = value?.trim();
+    if (displayValue == null || displayValue.isEmpty) return;
+    final normalizedKey = PayeeIdentityKey.normalize(displayValue);
+    if (normalizedKey.isEmpty) return;
+    rows.add(
+      PayeeEvidenceCompanion.insert(
+        transactionId: transactionId,
+        evidenceType: evidenceType,
+        normalizedKey: normalizedKey,
+        displayValue: displayValue,
+      ),
     );
   }
 
