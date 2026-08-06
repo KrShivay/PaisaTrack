@@ -127,12 +127,12 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               child: Container(
-                height: 48,
+                key: const ValueKey('assistant_composer'),
+                height: 52,
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomDarkCard
-                      : const Color(0xFFF1EFFB),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColorTokens.bloomDarkCard,
+                  border: Border.all(color: AppColorTokens.bloomDarkOutline),
+                  borderRadius: BorderRadius.circular(26),
                 ),
                 child: Row(
                   children: [
@@ -144,18 +144,14 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                         style: AppTheme.bloomDisplay(
                           14,
                           FontWeight.w400,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextPrimary
-                              : AppColorTokens.ink,
+                          color: AppColorTokens.bloomDarkTextPrimary,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Ask anything about your money...',
+                          hintText: 'Ask anything about your money…',
                           hintStyle: AppTheme.bloomDisplay(
                             14,
                             FontWeight.w400,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextTertiary
-                                : AppColorTokens.inkTertiary,
+                            color: const Color(0xFF6F6A92),
                           ),
                           border: InputBorder.none,
                         ),
@@ -163,24 +159,30 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
+                      key: const ValueKey('assistant_send_button'),
                       onTap: _send,
                       child: Container(
-                        width: 36,
-                        height: 36,
-                        margin: const EdgeInsets.only(right: 6),
+                        width: 40,
+                        height: 40,
                         decoration: const BoxDecoration(
-                          color: AppColorTokens.violetPrimary,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColorTokens.bloomEmerald,
+                              AppColorTokens.bloomEmeraldDeep,
+                            ],
+                          ),
                           shape: BoxShape.circle,
                         ),
                         child: const Center(
                           child: Icon(
                             Icons.arrow_upward_rounded,
                             size: 20,
-                            color: Colors.white,
+                            color: AppColorTokens.bloomDarkBase,
                           ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 6),
                   ],
                 ),
               ),

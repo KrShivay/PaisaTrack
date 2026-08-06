@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/theme/app_tokens.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -50,8 +51,61 @@ void main() {
     testWidgets('renders bottom input bar with send button', (tester) async {
       await pumpAssistant(tester);
 
-      expect(find.text('Ask anything about your money...'), findsOneWidget);
+      expect(find.text('Ask anything about your money…'), findsOneWidget);
       expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+
+      final composer = tester.widget<Container>(
+        find.byKey(const ValueKey('assistant_composer')),
+      );
+      final composerDecoration = composer.decoration! as BoxDecoration;
+      expect(composerDecoration.color, AppColorTokens.bloomDarkCard);
+      expect(
+        composerDecoration.border,
+        Border.all(color: AppColorTokens.bloomDarkOutline),
+      );
+      expect(
+        tester.getSize(find.byKey(const ValueKey('assistant_composer'))).height,
+        52,
+      );
+
+      final sendButton = tester.widget<Container>(
+        find.descendant(
+          of: find.byKey(const ValueKey('assistant_send_button')),
+          matching: find.byType(Container),
+        ),
+      );
+      final sendDecoration = sendButton.decoration! as BoxDecoration;
+      expect(
+        tester
+            .getSize(
+              find.descendant(
+                of: find.byKey(const ValueKey('assistant_send_button')),
+                matching: find.byType(Container),
+              ),
+            )
+            .width,
+        40,
+      );
+      expect(
+        tester
+            .getSize(
+              find.descendant(
+                of: find.byKey(const ValueKey('assistant_send_button')),
+                matching: find.byType(Container),
+              ),
+            )
+            .height,
+        40,
+      );
+      expect(
+        sendDecoration.gradient,
+        const LinearGradient(
+          colors: [
+            AppColorTokens.bloomEmerald,
+            AppColorTokens.bloomEmeraldDeep,
+          ],
+        ),
+      );
     });
   });
 }

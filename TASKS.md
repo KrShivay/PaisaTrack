@@ -129,7 +129,6 @@ T-154a.
 |---|---|---|---|---|
 | **T-150c** | P3 | ~S | Rotating composer chips | T-150a, T-151c |
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
-| **T-151c** | P2 | ~S | Composer styling | T-151a |
 | **T-151d** | P2 | ~M | Thinking, model-missing, no-answer states | T-151b |
 | **T-151e** | P3 | ~M | Inline charts and follow-up chips | T-151b |
 | **T-153a** | P2 | ~M | Ordered queue + cursor replaces the skip filter | — |
@@ -147,7 +146,8 @@ board rules below.
 
 #### Suggested order
 
-Ship next: T-151b, then T-151c; T-150c follows once the composer is complete.
+Ship next: T-150c. T-151b remains open pending a supported affordability intent
+and deterministic verdict contract.
 Then the foundations everything else waits on: T-143a/b, T-131b/c, T-132a-c.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`
