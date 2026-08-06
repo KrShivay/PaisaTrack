@@ -63,6 +63,33 @@ void main() {
     expect(find.text('Ask PaisaTrack'), findsWidgets);
     expect(find.text('What would you like to know?'), findsOneWidget);
     expect(find.text(assistantPromptQuestions.first), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('assistant_prompt_search_field')),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsNWidgets(2));
+  });
+
+  testWidgets('searches the catalogue by group or question text',
+      (tester) async {
+    await tester.pumpWidget(createWidget(tester));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Spending'), findsOneWidget);
+
+    final search = find.byKey(
+      const ValueKey('assistant_prompt_search_field'),
+    );
+    await tester.enterText(search, 'subscription');
+    await tester.pump();
+
+    expect(find.text('Subscriptions & Bills'), findsOneWidget);
+    expect(find.text('What subscriptions renew this week?'), findsOneWidget);
+    expect(find.text('Spending'), findsNothing);
+
+    await tester.enterText(search, 'no matching question');
+    await tester.pump();
+    expect(find.text('No matching questions.'), findsOneWidget);
   });
 }

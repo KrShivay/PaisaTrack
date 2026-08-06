@@ -127,7 +127,6 @@ T-154a.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| **T-150b** | P2 | ~M | Searchable, grouped empty state | T-150a |
 | **T-150c** | P3 | ~S | Rotating composer chips | T-150a, T-151c |
 | **T-151a** | P2 | ~M | Sheet presentation; remove the duplicate title | — |
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
@@ -149,7 +148,7 @@ board rules below.
 
 #### Suggested order
 
-Ship next (small, dependent, high visibility): T-150b.
+Ship next (small, dependent, high visibility): T-150c when T-151c is complete.
 Then the foundations everything else waits on: T-143a/b, T-131b/c, T-132a-c.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`

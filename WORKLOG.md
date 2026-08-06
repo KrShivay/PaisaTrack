@@ -1,5 +1,15 @@
 # Current Handoff
 
+## 2026-08-06 — T-150b searchable prompt catalogue complete
+
+- Replaced the four-preset assistant empty state with a searchable view of all
+  44 validated questions, grouped under their catalogue headers. Search matches
+  group labels and question text case-insensitively, with an explicit no-match
+  state.
+- Verification: analyzer clean; focused assistant/catalogue suite **6/6**;
+  full Flutter suite retains the unrelated `exclusion_explanation_test.dart`
+  baseline failure (expected 500, actual 5500).
+
 ## 2026-08-06 — T-150a prompt catalogue complete
 
 - Extracted the curated assistant questions into a shared seven-group catalogue

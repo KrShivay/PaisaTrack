@@ -212,7 +212,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             // Message Thread / Presets
             Expanded(
               child: _messages.isEmpty
-                  ? _PresetQuestions(
+                  ? _PromptCatalogueEmptyState(
                       isDark: isDark,
                       onSelect: _askSuggestion,
                     )
@@ -301,8 +301,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   }
 }
 
-class _PresetQuestions extends StatelessWidget {
-  const _PresetQuestions({
+class _PromptCatalogueEmptyState extends StatefulWidget {
+  const _PromptCatalogueEmptyState({
     required this.isDark,
     required this.onSelect,
   });
@@ -311,74 +311,140 @@ class _PresetQuestions extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
-  Widget build(BuildContext context) {
-    final presets = assistantPromptQuestions.take(4);
+  State<_PromptCatalogueEmptyState> createState() =>
+      _PromptCatalogueEmptyStateState();
+}
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Center(
-                child: BloomMascot(
-                  size: 54,
-                  bob: true,
-                  pulseRing: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'What would you like to know?',
-                style: AppTheme.bloomDisplay(
-                  16,
-                  FontWeight.w600,
-                  color: isDark
-                      ? AppColorTokens.bloomDarkTextPrimary
-                      : AppColorTokens.ink,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              for (final q in presets) ...[
-                GestureDetector(
-                  onTap: () => onSelect(q),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+class _PromptCatalogueEmptyStateState
+    extends State<_PromptCatalogueEmptyState> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<AssistantPromptGroup> get _visibleGroups {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return assistantPromptCatalogue;
+    return [
+      for (final group in assistantPromptCatalogue)
+        if (group.label.toLowerCase().contains(query))
+          group
+        else
+          AssistantPromptGroup(
+            id: group.id,
+            label: group.label,
+            icon: group.icon,
+            questions: [
+              for (final question in group.questions)
+                if (question.toLowerCase().contains(query)) question,
+            ],
+          ),
+    ].where((group) => group.questions.isNotEmpty).toList(growable: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _visibleGroups;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      children: [
+        const Center(
+          child: BloomMascot(
+            size: 54,
+            bob: true,
+            pulseRing: true,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'What would you like to know?',
+          style: AppTheme.bloomDisplay(
+            16,
+            FontWeight.w600,
+            color: widget.isDark
+                ? AppColorTokens.bloomDarkTextPrimary
+                : AppColorTokens.ink,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          key: const ValueKey('assistant_prompt_search_field'),
+          controller: _searchController,
+          onChanged: (value) => setState(() => _query = value),
+          decoration: const InputDecoration(
+            hintText: 'Search questions...',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (groups.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('No matching questions.')),
+          )
+        else
+          for (final group in groups) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    group.icon,
+                    size: 18,
+                    color: widget.isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    group.label,
+                    style: AppTheme.bloomDisplay(
+                      13,
+                      FontWeight.w700,
+                      color: widget.isDark
+                          ? AppColorTokens.bloomDarkTextPrimary
+                          : AppColorTokens.ink,
                     ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkCard
-                          : AppColorTokens.bloomCard,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColorTokens.bloomDarkOutline
-                            : AppColorTokens.bloomChip,
-                      ),
+                  ),
+                ],
+              ),
+            ),
+            for (final question in group.questions)
+              Card(
+                color: widget.isDark
+                    ? AppColorTokens.bloomDarkCard
+                    : AppColorTokens.bloomCard,
+                margin: const EdgeInsets.only(bottom: 6),
+                child: InkWell(
+                  onTap: () => widget.onSelect(question),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 11,
                     ),
                     child: Text(
-                      q,
+                      question,
                       style: AppTheme.bloomDisplay(
                         13,
                         FontWeight.w500,
-                        color: isDark
+                        color: widget.isDark
                             ? AppColorTokens.bloomDarkTextSecondary
                             : AppColorTokens.inkSecondary,
                       ),
                     ),
                   ),
                 ),
-                if (q != presets.last) const SizedBox(height: 10),
-              ],
-            ],
-          ),
-        ),
-      ),
+              ),
+          ],
+      ],
     );
   }
 }
