@@ -224,4 +224,57 @@ void main() {
       expect(find.text('Inbox Zero!'), findsNothing);
     });
   });
+
+  group('T-153b — back navigation', () {
+    testWidgets('skip then back returns the same card', (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+        testReviewItem(
+          id: '2',
+          name: 'Swiggy',
+          amount: 300.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+      expect(find.text('Zomato'), findsOneWidget);
+
+      // Skip Zomato → cursor advances to Swiggy
+      await tester.tap(find.byIcon(Icons.skip_next_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('Swiggy'), findsOneWidget);
+
+      // Tap back → cursor retreats to Zomato
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('Zomato'), findsOneWidget);
+    });
+
+    testWidgets('back at cursor 0 is a no-op and does not crash', (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+      expect(find.text('1 of 1'), findsOneWidget);
+
+      // Back at cursor 0 — should not crash, card unchanged
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Zomato'), findsOneWidget);
+      expect(find.text('1 of 1'), findsOneWidget);
+    });
+  });
 }

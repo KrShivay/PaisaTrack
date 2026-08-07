@@ -168,7 +168,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                     },
                     onPanEnd: (details) {
                       if (_dragDx > 100) {
-                        _confirmItem(item);
+                        _goBack();
                       } else if (_dragDx < -100) {
                         _recategorizeItem(item);
                       }
@@ -190,10 +190,23 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Action Buttons Row (Change category / Skip / Keep)
+              // Action Buttons Row (Back / Change category / Skip / Keep)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  // Back button — moves cursor to previous card (no-op at 0)
+                  _ActionButton(
+                    icon: Icons.arrow_back_rounded,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                    bgColor: isDark
+                        ? AppColorTokens.bloomDarkCard
+                        : AppColorTokens.bloomChip,
+                    onTap: _goBack,
+                    isDark: isDark,
+                    size: 46,
+                  ),
                   // Change category button (Gold)
                   _ActionButton(
                     icon: Icons.sell_outlined,
@@ -235,6 +248,12 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         ),
       ),
     );
+  }
+
+  void _goBack() {
+    setState(() {
+      if (_cursor > 0) _cursor--;
+    });
   }
 
   void _skipItem(TransactionReviewItem item) {
@@ -510,16 +529,33 @@ class _SortCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColorTokens.bloomEmerald,
+                color: isDark
+                    ? AppColorTokens.bloomDarkCard
+                    : AppColorTokens.bloomChip,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Text(
-                'KEEP',
-                style: AppTheme.bloomDisplay(
-                  14,
-                  FontWeight.w700,
-                  color: Colors.white,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.arrow_back_rounded,
+                    size: 14,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'BACK',
+                    style: AppTheme.bloomDisplay(
+                      14,
+                      FontWeight.w700,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : AppColorTokens.inkSecondary,
+                    ),
+                  ),
+                ],
               ),
             )
           else if (isSwipingLeft)
