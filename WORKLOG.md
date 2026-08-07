@@ -1,5 +1,14 @@
 # Current Handoff
 
+## 2026-08-07 — T-143c2 shadow diff computation complete
+
+- Added a pure comparator for normalized production and shadow snapshots. It
+  deterministically reports gained/lost records, amount deltas, and label
+  disagreements, with stable source ordering and no database writes.
+- Verification: analyzer clean; shadow/migration/diff focused suite **4/4**;
+  full Flutter suite **663 tests** with the known unrelated
+  `exclusion_explanation_test.dart` failure (expected 500, actual 5500).
+
 ## 2026-08-07 — T-143c1 shadow storage and runner complete
 
 - Added schema v16 `shadow_transactions` storage and an isolated runner for
@@ -19,16 +28,6 @@
   **659 tests** with the known unrelated `exclusion_explanation_test.dart`
   failure (expected 500, actual 5500). Edits persist through the reactive
   provider without an app restart.
-
-## 2026-08-07 — T-143b sequence and adversarial fixtures complete
-
-- Added ordered two-message fixtures and expected event graphs for auth→settle,
-  debit→reversal, expense→refund, reminder→fulfilment, and bank+wallet echo.
-  Added sanitized extraction-bait fixtures whose plausible numbers must remain
-  non-amounts. The support export exposes both shapes without changing legacy
-  single-message loading.
-- Verification: analyzer clean; fixture-loader suite **5/5**; all fixture
-  provenance is `device` and no raw personal identifiers are committed.
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.

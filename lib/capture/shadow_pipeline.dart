@@ -50,6 +50,126 @@ class ShadowRunResult {
   final int errors;
 }
 
+class ShadowSnapshot {
+  const ShadowSnapshot({
+    required this.sourceId,
+    required this.outcome,
+    this.amountPaise,
+    this.direction,
+    this.merchantKey,
+    this.categoryId,
+    this.updatedAt,
+  });
+
+  final String sourceId;
+  final ShadowOutcome outcome;
+  final int? amountPaise;
+  final String? direction;
+  final String? merchantKey;
+  final String? categoryId;
+  final DateTime? updatedAt;
+}
+
+class ProductionSnapshot {
+  const ProductionSnapshot({
+    required this.sourceId,
+    required this.amountPaise,
+    required this.direction,
+    this.merchantKey,
+    this.categoryId,
+  });
+
+  final String sourceId;
+  final int amountPaise;
+  final String direction;
+  final String? merchantKey;
+  final String? categoryId;
+}
+
+enum ShadowDifferenceKind { gained, lost, amountDelta, labelDisagreement }
+
+class ShadowDifference {
+  const ShadowDifference({required this.sourceId, required this.kinds});
+
+  final String sourceId;
+  final Set<ShadowDifferenceKind> kinds;
+}
+
+class ShadowDiff {
+  const ShadowDiff(this.differences);
+
+  final List<ShadowDifference> differences;
+
+  int get gained => _count(ShadowDifferenceKind.gained);
+  int get lost => _count(ShadowDifferenceKind.lost);
+  int get amountDeltas => _count(ShadowDifferenceKind.amountDelta);
+  int get labelDisagreements => _count(ShadowDifferenceKind.labelDisagreement);
+  bool get isEmpty => differences.isEmpty;
+
+  int _count(ShadowDifferenceKind kind) =>
+      differences.where((difference) => difference.kinds.contains(kind)).length;
+}
+
+/// Compares one shadow result per source with the current production snapshot.
+///
+/// The comparator is pure: callers can load rows from Drift, but no database
+/// writes or current-pipeline assumptions are hidden in the calculation.
+class ShadowDiffCalculator {
+  const ShadowDiffCalculator();
+
+  ShadowDiff compare({
+    required Iterable<ShadowSnapshot> shadow,
+    required Iterable<ProductionSnapshot> production,
+  }) {
+    final shadowBySource = <String, ShadowSnapshot>{};
+    for (final row in shadow) {
+      final prior = shadowBySource[row.sourceId];
+      if (prior == null ||
+          (row.updatedAt != null &&
+              (prior.updatedAt == null ||
+                  row.updatedAt!.isAfter(prior.updatedAt!)))) {
+        shadowBySource[row.sourceId] = row;
+      }
+    }
+    final productionBySource = {
+      for (final row in production) row.sourceId: row,
+    };
+    final sourceIds = {
+      ...shadowBySource.keys,
+      ...productionBySource.keys,
+    }.toList()
+      ..sort();
+    final differences = <ShadowDifference>[];
+    for (final sourceId in sourceIds) {
+      final shadowRow = shadowBySource[sourceId];
+      final productionRow = productionBySource[sourceId];
+      final kinds = <ShadowDifferenceKind>{};
+      if (shadowRow?.outcome == ShadowOutcome.parsed && productionRow == null) {
+        kinds.add(ShadowDifferenceKind.gained);
+      }
+      if (productionRow != null && shadowRow?.outcome != ShadowOutcome.parsed) {
+        kinds.add(ShadowDifferenceKind.lost);
+      }
+      if (shadowRow?.outcome == ShadowOutcome.parsed && productionRow != null) {
+        if (shadowRow!.amountPaise != productionRow.amountPaise) {
+          kinds.add(ShadowDifferenceKind.amountDelta);
+        }
+        if (shadowRow.direction != productionRow.direction ||
+            shadowRow.merchantKey != productionRow.merchantKey ||
+            shadowRow.categoryId != productionRow.categoryId) {
+          kinds.add(ShadowDifferenceKind.labelDisagreement);
+        }
+      }
+      if (kinds.isNotEmpty) {
+        differences.add(
+          ShadowDifference(sourceId: sourceId, kinds: Set.unmodifiable(kinds)),
+        );
+      }
+    }
+    return ShadowDiff(List.unmodifiable(differences));
+  }
+}
+
 /// Runs a candidate pipeline into shadow storage without touching production
 /// transaction rows. Scheduling and comparison are separate follow-up slices.
 class ShadowPipelineRunner {
