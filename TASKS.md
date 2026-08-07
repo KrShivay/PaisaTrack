@@ -177,7 +177,7 @@ T-157b starts — it is the safety net for the riskiest extraction here.
 | **T-158b** | P2 | ~M | Extract `TransactionDetailController` | T-157b |
 | **T-158c** | P2 | ~M | Extract sub-widgets into `detail/` | T-158a |
 | **T-158d** | P3 | ~S | Verify exclusion-reason parity (UI vs. analytics SQL) | T-158a |
-| **T-159a** | P1 | ~M | Characterize correction/undo behavior before extraction | — |
+| ~~**T-159a**~~ | ~~P1~~ | ~~~M~~ | ~~Characterize correction/undo behavior before extraction~~ | ~~—~~ |
 | **T-159b** | P2 | ~S | Unit tests for extracted pure functions | T-158a |
 | **T-159c** | P3 | ~M | Convert remaining shallow render tests to behavioral | T-158c |
 
