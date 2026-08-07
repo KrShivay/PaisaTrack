@@ -111,7 +111,6 @@ Phase A blocks B; B blocks C and D.
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
 | **T-143c1** | P1 | ~M | Shadow table and isolated runner | T-143a/b |
-| **T-143c3** | P1 | ~M | Dev metrics presentation and export | T-143c2 |
 | **T-133a** | P1 | ~L | Shape scoring and quarantine store | T-129 |
 | **T-133b** | P1 | ~M | "Messages we couldn't read" + retry on upgrade | T-133a |
 
@@ -144,7 +143,7 @@ board rules below.
 
 #### Suggested order
 
-Ship next: T-143c3. T-151b remains open pending a supported affordability
+Ship next: T-153a. T-151b remains open pending a supported affordability
 intent and deterministic verdict contract.
 Then the foundations everything else waits on: T-131b/c, T-132a-c.
 

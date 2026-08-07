@@ -1,5 +1,14 @@
 # Current Handoff
 
+## 2026-08-07 — T-143c3 shadow metrics surface complete
+
+- Added a local developer metrics screen for shadow/production counts and the
+  four diff categories. The report copy action is explicit and exports counts
+  only; no source ids or message bodies leave the screen.
+- Verification: analyzer clean; shadow metrics/diff/runner focused suite **5/5**;
+  full Flutter suite **665 tests** with the known unrelated
+  `exclusion_explanation_test.dart` failure (expected 500, actual 5500).
+
 ## 2026-08-07 — T-143c2 shadow diff computation complete
 
 - Added a pure comparator for normalized production and shadow snapshots. It
@@ -18,16 +27,6 @@
 - Verification: analyzer clean; shadow runner and v16 migration suite **2/2**;
   full Flutter suite **661 tests** with the known unrelated
   `exclusion_explanation_test.dart` failure (expected 500, actual 5500).
-
-## 2026-08-07 — T-143a feature flags complete
-
-- Seeded the local `feature_flags` table idempotently from typed defaults,
-  preserving existing overrides. Added a typed developer editor for all 19
-  flags, linked from Settings, with reactive edits and per-row/all reset.
-- Verification: analyzer clean; focused flag suite **9/9**; full Flutter suite
-  **659 tests** with the known unrelated `exclusion_explanation_test.dart`
-  failure (expected 500, actual 5500). Edits persist through the reactive
-  provider without an app restart.
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.

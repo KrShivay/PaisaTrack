@@ -13,6 +13,7 @@ import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
 import '../dev/feature_flags_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
+import '../dev/shadow_metrics_screen.dart';
 import '../sms/sms_lookup_sheet.dart';
 import '../sms/sms_permission_status_card.dart';
 import '../sms/unreadable_sms_screen.dart';
@@ -921,6 +922,18 @@ class _DeveloperOptionsSection extends StatelessWidget {
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => const FeatureFlagsScreen(),
+            ),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.compare_arrows_outlined),
+          title: const Text('Shadow metrics'),
+          subtitle: const Text('Compare experimental and production output'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ShadowMetricsScreen(),
             ),
           ),
         ),
