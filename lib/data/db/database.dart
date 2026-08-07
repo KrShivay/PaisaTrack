@@ -23,6 +23,7 @@ import 'tables/payee_evidence_table.dart';
 import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
+import 'tables/shadow_transactions_table.dart';
 import 'tables/transaction_links_table.dart';
 import 'tables/transactions_table.dart';
 
@@ -50,6 +51,7 @@ part 'database.g.dart';
     RawSms,
     RecurringSeries,
     Rules,
+    ShadowTransactions,
     TransactionLinks,
     Transactions,
   ],
@@ -104,7 +106,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -226,6 +228,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 15) {
           await migrator.createTable(payeeEvidence);
           await _backfillPayeeEvidence();
+        }
+        if (from < 16) {
+          await migrator.createTable(shadowTransactions);
         }
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.

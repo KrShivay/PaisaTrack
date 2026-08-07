@@ -7783,6 +7783,511 @@ class RulesCompanion extends UpdateCompanion<Rule> {
   }
 }
 
+class $ShadowTransactionsTable extends ShadowTransactions
+    with TableInfo<$ShadowTransactionsTable, ShadowTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShadowTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceIdMeta =
+      const VerificationMeta('sourceId');
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+      'source_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _pipelineVersionMeta =
+      const VerificationMeta('pipelineVersion');
+  @override
+  late final GeneratedColumn<String> pipelineVersion = GeneratedColumn<String>(
+      'pipeline_version', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _outcomeMeta =
+      const VerificationMeta('outcome');
+  @override
+  late final GeneratedColumn<String> outcome = GeneratedColumn<String>(
+      'outcome', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _amountPaiseMeta =
+      const VerificationMeta('amountPaise');
+  @override
+  late final GeneratedColumn<int> amountPaise = GeneratedColumn<int>(
+      'amount_paise', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _directionMeta =
+      const VerificationMeta('direction');
+  @override
+  late final GeneratedColumn<String> direction = GeneratedColumn<String>(
+      'direction', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _merchantKeyMeta =
+      const VerificationMeta('merchantKey');
+  @override
+  late final GeneratedColumn<String> merchantKey = GeneratedColumn<String>(
+      'merchant_key', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _categoryIdMeta =
+      const VerificationMeta('categoryId');
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+      'category_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _observedAtMeta =
+      const VerificationMeta('observedAt');
+  @override
+  late final GeneratedColumn<DateTime> observedAt = GeneratedColumn<DateTime>(
+      'observed_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        sourceId,
+        pipelineVersion,
+        outcome,
+        amountPaise,
+        direction,
+        merchantKey,
+        categoryId,
+        observedAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shadow_transactions';
+  @override
+  VerificationContext validateIntegrity(Insertable<ShadowTransaction> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(_sourceIdMeta,
+          sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta));
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('pipeline_version')) {
+      context.handle(
+          _pipelineVersionMeta,
+          pipelineVersion.isAcceptableOrUnknown(
+              data['pipeline_version']!, _pipelineVersionMeta));
+    } else if (isInserting) {
+      context.missing(_pipelineVersionMeta);
+    }
+    if (data.containsKey('outcome')) {
+      context.handle(_outcomeMeta,
+          outcome.isAcceptableOrUnknown(data['outcome']!, _outcomeMeta));
+    } else if (isInserting) {
+      context.missing(_outcomeMeta);
+    }
+    if (data.containsKey('amount_paise')) {
+      context.handle(
+          _amountPaiseMeta,
+          amountPaise.isAcceptableOrUnknown(
+              data['amount_paise']!, _amountPaiseMeta));
+    }
+    if (data.containsKey('direction')) {
+      context.handle(_directionMeta,
+          direction.isAcceptableOrUnknown(data['direction']!, _directionMeta));
+    }
+    if (data.containsKey('merchant_key')) {
+      context.handle(
+          _merchantKeyMeta,
+          merchantKey.isAcceptableOrUnknown(
+              data['merchant_key']!, _merchantKeyMeta));
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+          _categoryIdMeta,
+          categoryId.isAcceptableOrUnknown(
+              data['category_id']!, _categoryIdMeta));
+    }
+    if (data.containsKey('observed_at')) {
+      context.handle(
+          _observedAtMeta,
+          observedAt.isAcceptableOrUnknown(
+              data['observed_at']!, _observedAtMeta));
+    } else if (isInserting) {
+      context.missing(_observedAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ShadowTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShadowTransaction(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      sourceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source_id'])!,
+      pipelineVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}pipeline_version'])!,
+      outcome: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}outcome'])!,
+      amountPaise: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}amount_paise']),
+      direction: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}direction']),
+      merchantKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}merchant_key']),
+      categoryId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category_id']),
+      observedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}observed_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $ShadowTransactionsTable createAlias(String alias) {
+    return $ShadowTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class ShadowTransaction extends DataClass
+    implements Insertable<ShadowTransaction> {
+  final String id;
+  final String sourceId;
+  final String pipelineVersion;
+  final String outcome;
+  final int? amountPaise;
+  final String? direction;
+  final String? merchantKey;
+  final String? categoryId;
+  final DateTime observedAt;
+  final DateTime updatedAt;
+  const ShadowTransaction(
+      {required this.id,
+      required this.sourceId,
+      required this.pipelineVersion,
+      required this.outcome,
+      this.amountPaise,
+      this.direction,
+      this.merchantKey,
+      this.categoryId,
+      required this.observedAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source_id'] = Variable<String>(sourceId);
+    map['pipeline_version'] = Variable<String>(pipelineVersion);
+    map['outcome'] = Variable<String>(outcome);
+    if (!nullToAbsent || amountPaise != null) {
+      map['amount_paise'] = Variable<int>(amountPaise);
+    }
+    if (!nullToAbsent || direction != null) {
+      map['direction'] = Variable<String>(direction);
+    }
+    if (!nullToAbsent || merchantKey != null) {
+      map['merchant_key'] = Variable<String>(merchantKey);
+    }
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    map['observed_at'] = Variable<DateTime>(observedAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ShadowTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return ShadowTransactionsCompanion(
+      id: Value(id),
+      sourceId: Value(sourceId),
+      pipelineVersion: Value(pipelineVersion),
+      outcome: Value(outcome),
+      amountPaise: amountPaise == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amountPaise),
+      direction: direction == null && nullToAbsent
+          ? const Value.absent()
+          : Value(direction),
+      merchantKey: merchantKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(merchantKey),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      observedAt: Value(observedAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ShadowTransaction.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShadowTransaction(
+      id: serializer.fromJson<String>(json['id']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      pipelineVersion: serializer.fromJson<String>(json['pipelineVersion']),
+      outcome: serializer.fromJson<String>(json['outcome']),
+      amountPaise: serializer.fromJson<int?>(json['amountPaise']),
+      direction: serializer.fromJson<String?>(json['direction']),
+      merchantKey: serializer.fromJson<String?>(json['merchantKey']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      observedAt: serializer.fromJson<DateTime>(json['observedAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'pipelineVersion': serializer.toJson<String>(pipelineVersion),
+      'outcome': serializer.toJson<String>(outcome),
+      'amountPaise': serializer.toJson<int?>(amountPaise),
+      'direction': serializer.toJson<String?>(direction),
+      'merchantKey': serializer.toJson<String?>(merchantKey),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'observedAt': serializer.toJson<DateTime>(observedAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ShadowTransaction copyWith(
+          {String? id,
+          String? sourceId,
+          String? pipelineVersion,
+          String? outcome,
+          Value<int?> amountPaise = const Value.absent(),
+          Value<String?> direction = const Value.absent(),
+          Value<String?> merchantKey = const Value.absent(),
+          Value<String?> categoryId = const Value.absent(),
+          DateTime? observedAt,
+          DateTime? updatedAt}) =>
+      ShadowTransaction(
+        id: id ?? this.id,
+        sourceId: sourceId ?? this.sourceId,
+        pipelineVersion: pipelineVersion ?? this.pipelineVersion,
+        outcome: outcome ?? this.outcome,
+        amountPaise: amountPaise.present ? amountPaise.value : this.amountPaise,
+        direction: direction.present ? direction.value : this.direction,
+        merchantKey: merchantKey.present ? merchantKey.value : this.merchantKey,
+        categoryId: categoryId.present ? categoryId.value : this.categoryId,
+        observedAt: observedAt ?? this.observedAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('ShadowTransaction(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('pipelineVersion: $pipelineVersion, ')
+          ..write('outcome: $outcome, ')
+          ..write('amountPaise: $amountPaise, ')
+          ..write('direction: $direction, ')
+          ..write('merchantKey: $merchantKey, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('observedAt: $observedAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, sourceId, pipelineVersion, outcome,
+      amountPaise, direction, merchantKey, categoryId, observedAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShadowTransaction &&
+          other.id == this.id &&
+          other.sourceId == this.sourceId &&
+          other.pipelineVersion == this.pipelineVersion &&
+          other.outcome == this.outcome &&
+          other.amountPaise == this.amountPaise &&
+          other.direction == this.direction &&
+          other.merchantKey == this.merchantKey &&
+          other.categoryId == this.categoryId &&
+          other.observedAt == this.observedAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ShadowTransactionsCompanion extends UpdateCompanion<ShadowTransaction> {
+  final Value<String> id;
+  final Value<String> sourceId;
+  final Value<String> pipelineVersion;
+  final Value<String> outcome;
+  final Value<int?> amountPaise;
+  final Value<String?> direction;
+  final Value<String?> merchantKey;
+  final Value<String?> categoryId;
+  final Value<DateTime> observedAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ShadowTransactionsCompanion({
+    this.id = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.pipelineVersion = const Value.absent(),
+    this.outcome = const Value.absent(),
+    this.amountPaise = const Value.absent(),
+    this.direction = const Value.absent(),
+    this.merchantKey = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.observedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ShadowTransactionsCompanion.insert({
+    required String id,
+    required String sourceId,
+    required String pipelineVersion,
+    required String outcome,
+    this.amountPaise = const Value.absent(),
+    this.direction = const Value.absent(),
+    this.merchantKey = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    required DateTime observedAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        sourceId = Value(sourceId),
+        pipelineVersion = Value(pipelineVersion),
+        outcome = Value(outcome),
+        observedAt = Value(observedAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<ShadowTransaction> custom({
+    Expression<String>? id,
+    Expression<String>? sourceId,
+    Expression<String>? pipelineVersion,
+    Expression<String>? outcome,
+    Expression<int>? amountPaise,
+    Expression<String>? direction,
+    Expression<String>? merchantKey,
+    Expression<String>? categoryId,
+    Expression<DateTime>? observedAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceId != null) 'source_id': sourceId,
+      if (pipelineVersion != null) 'pipeline_version': pipelineVersion,
+      if (outcome != null) 'outcome': outcome,
+      if (amountPaise != null) 'amount_paise': amountPaise,
+      if (direction != null) 'direction': direction,
+      if (merchantKey != null) 'merchant_key': merchantKey,
+      if (categoryId != null) 'category_id': categoryId,
+      if (observedAt != null) 'observed_at': observedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ShadowTransactionsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? sourceId,
+      Value<String>? pipelineVersion,
+      Value<String>? outcome,
+      Value<int?>? amountPaise,
+      Value<String?>? direction,
+      Value<String?>? merchantKey,
+      Value<String?>? categoryId,
+      Value<DateTime>? observedAt,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return ShadowTransactionsCompanion(
+      id: id ?? this.id,
+      sourceId: sourceId ?? this.sourceId,
+      pipelineVersion: pipelineVersion ?? this.pipelineVersion,
+      outcome: outcome ?? this.outcome,
+      amountPaise: amountPaise ?? this.amountPaise,
+      direction: direction ?? this.direction,
+      merchantKey: merchantKey ?? this.merchantKey,
+      categoryId: categoryId ?? this.categoryId,
+      observedAt: observedAt ?? this.observedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (pipelineVersion.present) {
+      map['pipeline_version'] = Variable<String>(pipelineVersion.value);
+    }
+    if (outcome.present) {
+      map['outcome'] = Variable<String>(outcome.value);
+    }
+    if (amountPaise.present) {
+      map['amount_paise'] = Variable<int>(amountPaise.value);
+    }
+    if (direction.present) {
+      map['direction'] = Variable<String>(direction.value);
+    }
+    if (merchantKey.present) {
+      map['merchant_key'] = Variable<String>(merchantKey.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (observedAt.present) {
+      map['observed_at'] = Variable<DateTime>(observedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShadowTransactionsCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('pipelineVersion: $pipelineVersion, ')
+          ..write('outcome: $outcome, ')
+          ..write('amountPaise: $amountPaise, ')
+          ..write('direction: $direction, ')
+          ..write('merchantKey: $merchantKey, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('observedAt: $observedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $TransactionLinksTable extends TransactionLinks
     with TableInfo<$TransactionLinksTable, TransactionLink> {
   @override
@@ -8229,6 +8734,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecurringSeriesTable recurringSeries =
       $RecurringSeriesTable(this);
   late final $RulesTable rules = $RulesTable(this);
+  late final $ShadowTransactionsTable shadowTransactions =
+      $ShadowTransactionsTable(this);
   late final $TransactionLinksTable transactionLinks =
       $TransactionLinksTable(this);
   late final Index idxInsightsPeriod = Index('idx_insights_period',
@@ -8291,6 +8798,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         payeeEvidence,
         recurringSeries,
         rules,
+        shadowTransactions,
         transactionLinks,
         idxInsightsPeriod,
         idxPaymentSourcesIdentity,
@@ -12081,6 +12589,231 @@ class $$RulesTableOrderingComposer
   }
 }
 
+typedef $$ShadowTransactionsTableInsertCompanionBuilder
+    = ShadowTransactionsCompanion Function({
+  required String id,
+  required String sourceId,
+  required String pipelineVersion,
+  required String outcome,
+  Value<int?> amountPaise,
+  Value<String?> direction,
+  Value<String?> merchantKey,
+  Value<String?> categoryId,
+  required DateTime observedAt,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$ShadowTransactionsTableUpdateCompanionBuilder
+    = ShadowTransactionsCompanion Function({
+  Value<String> id,
+  Value<String> sourceId,
+  Value<String> pipelineVersion,
+  Value<String> outcome,
+  Value<int?> amountPaise,
+  Value<String?> direction,
+  Value<String?> merchantKey,
+  Value<String?> categoryId,
+  Value<DateTime> observedAt,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$ShadowTransactionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ShadowTransactionsTable,
+    ShadowTransaction,
+    $$ShadowTransactionsTableFilterComposer,
+    $$ShadowTransactionsTableOrderingComposer,
+    $$ShadowTransactionsTableProcessedTableManager,
+    $$ShadowTransactionsTableInsertCompanionBuilder,
+    $$ShadowTransactionsTableUpdateCompanionBuilder> {
+  $$ShadowTransactionsTableTableManager(
+      _$AppDatabase db, $ShadowTransactionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$ShadowTransactionsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer: $$ShadowTransactionsTableOrderingComposer(
+              ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$ShadowTransactionsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> id = const Value.absent(),
+            Value<String> sourceId = const Value.absent(),
+            Value<String> pipelineVersion = const Value.absent(),
+            Value<String> outcome = const Value.absent(),
+            Value<int?> amountPaise = const Value.absent(),
+            Value<String?> direction = const Value.absent(),
+            Value<String?> merchantKey = const Value.absent(),
+            Value<String?> categoryId = const Value.absent(),
+            Value<DateTime> observedAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ShadowTransactionsCompanion(
+            id: id,
+            sourceId: sourceId,
+            pipelineVersion: pipelineVersion,
+            outcome: outcome,
+            amountPaise: amountPaise,
+            direction: direction,
+            merchantKey: merchantKey,
+            categoryId: categoryId,
+            observedAt: observedAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String id,
+            required String sourceId,
+            required String pipelineVersion,
+            required String outcome,
+            Value<int?> amountPaise = const Value.absent(),
+            Value<String?> direction = const Value.absent(),
+            Value<String?> merchantKey = const Value.absent(),
+            Value<String?> categoryId = const Value.absent(),
+            required DateTime observedAt,
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ShadowTransactionsCompanion.insert(
+            id: id,
+            sourceId: sourceId,
+            pipelineVersion: pipelineVersion,
+            outcome: outcome,
+            amountPaise: amountPaise,
+            direction: direction,
+            merchantKey: merchantKey,
+            categoryId: categoryId,
+            observedAt: observedAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$ShadowTransactionsTableProcessedTableManager
+    extends ProcessedTableManager<
+        _$AppDatabase,
+        $ShadowTransactionsTable,
+        ShadowTransaction,
+        $$ShadowTransactionsTableFilterComposer,
+        $$ShadowTransactionsTableOrderingComposer,
+        $$ShadowTransactionsTableProcessedTableManager,
+        $$ShadowTransactionsTableInsertCompanionBuilder,
+        $$ShadowTransactionsTableUpdateCompanionBuilder> {
+  $$ShadowTransactionsTableProcessedTableManager(super.$state);
+}
+
+class $$ShadowTransactionsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $ShadowTransactionsTable> {
+  $$ShadowTransactionsTableFilterComposer(super.$state);
+  ColumnFilters<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get sourceId => $state.composableBuilder(
+      column: $state.table.sourceId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get pipelineVersion => $state.composableBuilder(
+      column: $state.table.pipelineVersion,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get outcome => $state.composableBuilder(
+      column: $state.table.outcome,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<int> get amountPaise => $state.composableBuilder(
+      column: $state.table.amountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get direction => $state.composableBuilder(
+      column: $state.table.direction,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get merchantKey => $state.composableBuilder(
+      column: $state.table.merchantKey,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get categoryId => $state.composableBuilder(
+      column: $state.table.categoryId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get observedAt => $state.composableBuilder(
+      column: $state.table.observedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$ShadowTransactionsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $ShadowTransactionsTable> {
+  $$ShadowTransactionsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get id => $state.composableBuilder(
+      column: $state.table.id,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get sourceId => $state.composableBuilder(
+      column: $state.table.sourceId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get pipelineVersion => $state.composableBuilder(
+      column: $state.table.pipelineVersion,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get outcome => $state.composableBuilder(
+      column: $state.table.outcome,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get amountPaise => $state.composableBuilder(
+      column: $state.table.amountPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get direction => $state.composableBuilder(
+      column: $state.table.direction,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get merchantKey => $state.composableBuilder(
+      column: $state.table.merchantKey,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get categoryId => $state.composableBuilder(
+      column: $state.table.categoryId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get observedAt => $state.composableBuilder(
+      column: $state.table.observedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get updatedAt => $state.composableBuilder(
+      column: $state.table.updatedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$TransactionLinksTableInsertCompanionBuilder
     = TransactionLinksCompanion Function({
   required String id,
@@ -12339,6 +13072,8 @@ class _$AppDatabaseManager {
       $$RecurringSeriesTableTableManager(_db, _db.recurringSeries);
   $$RulesTableTableManager get rules =>
       $$RulesTableTableManager(_db, _db.rules);
+  $$ShadowTransactionsTableTableManager get shadowTransactions =>
+      $$ShadowTransactionsTableTableManager(_db, _db.shadowTransactions);
   $$TransactionLinksTableTableManager get transactionLinks =>
       $$TransactionLinksTableTableManager(_db, _db.transactionLinks);
 }

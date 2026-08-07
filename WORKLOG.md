@@ -1,5 +1,15 @@
 # Current Handoff
 
+## 2026-08-07 — T-143c1 shadow storage and runner complete
+
+- Added schema v16 `shadow_transactions` storage and an isolated runner for
+  normalized candidate outcomes. It records parsed, unparsed, and error rows
+  idempotently without copying raw message bodies or touching production
+  transactions.
+- Verification: analyzer clean; shadow runner and v16 migration suite **2/2**;
+  full Flutter suite **661 tests** with the known unrelated
+  `exclusion_explanation_test.dart` failure (expected 500, actual 5500).
+
 ## 2026-08-07 — T-143a feature flags complete
 
 - Seeded the local `feature_flags` table idempotently from typed defaults,
@@ -19,16 +29,6 @@
   single-message loading.
 - Verification: analyzer clean; fixture-loader suite **5/5**; all fixture
   provenance is `device` and no raw personal identifiers are committed.
-
-## 2026-08-07 — T-150c rotating composer chips complete
-
-- Added a 30px horizontal chip row above the composer once a conversation has
-  started. It shows three fixed-width catalogue questions at a time, sends a
-  tapped question through the existing path, and rotates deterministically via
-  the refresh control.
-- Verification: analyzer clean; focused assistant/navigation suite **13/13**;
-  full Flutter suite retains the unrelated `exclusion_explanation_test.dart`
-  baseline failure (expected 500, actual 5500).
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
