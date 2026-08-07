@@ -127,4 +127,101 @@ void main() {
       expect(find.byType(WeeklyReviewScreen), findsOneWidget);
     });
   });
+
+  group('T-153a — cursor-based queue', () {
+    testWidgets(
+        'skip advances cursor without removing item — counter shows non-zero position',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+        testReviewItem(
+          id: '2',
+          name: 'Swiggy',
+          amount: 300.0,
+          direction: TransactionDirection.debit,
+        ),
+        testReviewItem(
+          id: '3',
+          name: 'Blinkit',
+          amount: 200.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+
+      // Cursor at 0: counter shows "1 of 3"
+      expect(find.text('1 of 3'), findsOneWidget);
+
+      final skipButton = find.byIcon(Icons.skip_next_rounded);
+
+      // Skip item 1 — cursor advances to 1
+      await tester.tap(skipButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Swiggy'), findsOneWidget);
+      // Counter at non-zero cursor: "2 of 3" — skipped item still in queue
+      expect(find.text('2 of 3'), findsOneWidget);
+
+      // Skip item 2 — cursor advances to 2
+      await tester.tap(skipButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Blinkit'), findsOneWidget);
+      expect(find.text('3 of 3'), findsOneWidget);
+
+      // No Inbox Zero — all 3 still in queue
+      expect(find.text('Inbox Zero!'), findsNothing);
+    });
+
+    testWidgets('resolve removes item — Inbox Zero after confirming the only item',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+      expect(find.text('Zomato'), findsOneWidget);
+
+      // Confirm (keep) the item — removes it from the queue
+      final keepButton = find.byIcon(Icons.check_rounded);
+      await tester.tap(keepButton);
+      await tester.pump();
+
+      expect(find.text('Inbox Zero!'), findsOneWidget);
+    });
+
+    testWidgets(
+        'skip at last item does not crash and stays at last item',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+      expect(find.text('1 of 1'), findsOneWidget);
+
+      // Skip the only item — cursor stays at 0, item remains
+      final skipButton = find.byIcon(Icons.skip_next_rounded);
+      await tester.tap(skipButton);
+      await tester.pumpAndSettle();
+
+      // Still shows the item (not Inbox Zero)
+      expect(find.text('Zomato'), findsOneWidget);
+      expect(find.text('Inbox Zero!'), findsNothing);
+    });
+  });
 }

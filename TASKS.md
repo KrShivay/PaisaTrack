@@ -8,7 +8,9 @@ later hardening.
 
 ## In Progress
 
-<!-- Empty: T-117 is implemented; verification evidence is in WORKLOG.md. -->
+- [ ] T-153a (@claude) [P2] Ordered queue + cursor replaces the skip filter.
+      Module: review/weekly_review_screen.dart.
+      Depends: none.
 
 ## In Review
 

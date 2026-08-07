@@ -28,8 +28,9 @@ class WeeklyReviewScreen extends ConsumerStatefulWidget {
 
 class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   double _dragDx = 0.0;
-  final int _currentIndex = 0;
+  int _cursor = 0;
   final Set<String> _skippedIds = {};
+  List<TransactionReviewItem>? _stableQueue;
 
   @override
   Widget build(BuildContext context) {
@@ -49,18 +50,18 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         onRetry: () => ref.invalidate(reviewQueueProvider),
       ),
       data: (items) {
-        final activeItems =
-            items.where((i) => !_skippedIds.contains(i.id)).toList();
+        _stableQueue ??= List.of(items);
+        final queue = _stableQueue!;
 
-        if (activeItems.isEmpty) {
+        if (queue.isEmpty) {
           return _InboxZeroView(isDark: isDark);
         }
 
-        final safeIndex = _currentIndex.clamp(0, activeItems.length - 1);
+        final safeIndex = _cursor.clamp(0, queue.length - 1);
 
         if (viewState.viewMode == ReviewViewMode.list) {
           return _ListView(
-            items: activeItems,
+            items: queue,
             isDark: isDark,
             onConfirm: _confirmItem,
             onRecategorize: _recategorizeItem,
@@ -68,7 +69,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           );
         }
 
-        return _buildCardView(activeItems, safeIndex, items.length, isDark);
+        return _buildCardView(queue, safeIndex, queue.length, isDark);
       },
     );
   }
@@ -239,12 +240,20 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   void _skipItem(TransactionReviewItem item) {
     setState(() {
       _skippedIds.add(item.id);
+      final len = _stableQueue?.length ?? 0;
+      if (_cursor < len - 1) _cursor++;
     });
   }
 
   Future<void> _confirmItem(TransactionReviewItem item) async {
+    final originalIdx =
+        _stableQueue?.indexWhere((i) => i.id == item.id) ?? -1;
     setState(() {
-      _skippedIds.add(item.id);
+      if (originalIdx != -1) {
+        _stableQueue!.removeAt(originalIdx);
+        _cursor =
+            _cursor.clamp(0, math.max(0, _stableQueue!.length - 1));
+      }
     });
 
     try {
@@ -267,7 +276,10 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
               undoAction: () async {
                 if (mounted) {
                   setState(() {
-                    _skippedIds.remove(item.id);
+                    final insertAt =
+                        originalIdx.clamp(0, _stableQueue!.length);
+                    _stableQueue!.insert(insertAt, item);
+                    _cursor = insertAt;
                   });
                 }
                 if (database != null) {
@@ -284,7 +296,12 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _skippedIds.remove(item.id);
+          if (originalIdx != -1) {
+            final insertAt =
+                originalIdx.clamp(0, _stableQueue!.length);
+            _stableQueue!.insert(insertAt, item);
+            _cursor = insertAt;
+          }
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -308,8 +325,14 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     );
     if (chosen == null || !mounted) return;
 
+    final originalIdx =
+        _stableQueue?.indexWhere((i) => i.id == item.id) ?? -1;
     setState(() {
-      _skippedIds.add(item.id);
+      if (originalIdx != -1) {
+        _stableQueue!.removeAt(originalIdx);
+        _cursor =
+            _cursor.clamp(0, math.max(0, _stableQueue!.length - 1));
+      }
     });
 
     try {
@@ -334,7 +357,10 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
               undoAction: () async {
                 if (mounted) {
                   setState(() {
-                    _skippedIds.remove(item.id);
+                    final insertAt =
+                        originalIdx.clamp(0, _stableQueue!.length);
+                    _stableQueue!.insert(insertAt, item);
+                    _cursor = insertAt;
                   });
                 }
                 if (database != null) {
@@ -351,7 +377,12 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _skippedIds.remove(item.id);
+          if (originalIdx != -1) {
+            final insertAt =
+                originalIdx.clamp(0, _stableQueue!.length);
+            _stableQueue!.insert(insertAt, item);
+            _cursor = insertAt;
+          }
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
