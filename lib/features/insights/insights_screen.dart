@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:drift/drift.dart' show Expression, Value;
+import 'package:drift/drift.dart' show Expression;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +10,7 @@ import '../../core/theme/category_visuals.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../data/repositories/insights_repository.dart';
 import '../dashboard/dashboard_providers.dart';
 import '../dashboard/period_selection_sheet.dart';
 import '../recurring/recurring_screen.dart';
@@ -194,10 +195,8 @@ class InsightsScreen extends ConsumerWidget {
                   insight: insight,
                   isDark: isDark,
                   onDismiss: () async {
-                    final db = await ref.read(appDatabaseProvider.future);
-                    await (db.update(db.insights)
-                          ..where((row) => row.id.equals(insight.id)))
-                        .write(const InsightsCompanion(dismissed: Value(true)));
+                    final repo = await ref.read(insightsRepositoryProvider.future);
+                    await repo.dismiss(id: insight.id);
                   },
                 ),
                 const SizedBox(height: 12),

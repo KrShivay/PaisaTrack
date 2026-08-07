@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show OrderingTerm, Value, leftOuterJoin;
+import 'package:drift/drift.dart' show OrderingTerm, leftOuterJoin;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +8,7 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../data/repositories/recurring_repository.dart';
 import '../transactions/transactions_screen.dart';
 
 class RecurringSeriesItem {
@@ -291,14 +292,8 @@ class RecurringScreen extends ConsumerWidget {
                   title: const Text('Mark as Cancelled'),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    final db = await ref.read(appDatabaseProvider.future);
-                    await (db.update(db.recurringSeries)
-                          ..where((row) => row.id.equals(series.id)))
-                        .write(
-                      const RecurringSeriesCompanion(
-                        status: Value('cancelled'),
-                      ),
-                    );
+                    final repo = await ref.read(recurringRepositoryProvider.future);
+                    await repo.setStatus(seriesId: series.id, status: 'cancelled');
                   },
                 )
               else
@@ -310,14 +305,8 @@ class RecurringScreen extends ConsumerWidget {
                   title: const Text('Reactivate Series'),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    final db = await ref.read(appDatabaseProvider.future);
-                    await (db.update(db.recurringSeries)
-                          ..where((row) => row.id.equals(series.id)))
-                        .write(
-                      const RecurringSeriesCompanion(
-                        status: Value('active'),
-                      ),
-                    );
+                    final repo = await ref.read(recurringRepositoryProvider.future);
+                    await repo.setStatus(seriesId: series.id, status: 'active');
                   },
                 ),
             ],

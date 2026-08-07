@@ -170,7 +170,7 @@ T-157b starts — it is the safety net for the riskiest extraction here.
 |---|---|---|---|---|
 | **T-156b** | P2 | ~M | Route 4 bespoke sheet presenters through Bloom helpers | — |
 | **T-156c** | P2 | ~M | Standardize TransactionDetailScreen's presentation | T-158c |
-| **T-157a** | P2 | ~M | Move raw Drift writes out of recurring/insights screens | — |
+| ~~**T-157a**~~ | ~~P2~~ | ~~~M~~ | ~~Move raw Drift writes out of recurring/insights screens~~ | ~~—~~ |
 | **T-157b** | P2 | ~L | Shared category-correction + undo controller | T-159a |
 | **T-157c** | P3 | ~S | Relocate `suggestedCategoriesProvider` out of the screen | — |
 | **T-158a** | P2 | ~M | Extract pure functions (chip ranking, exclusion, evidence) | — |

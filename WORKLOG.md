@@ -1,5 +1,13 @@
 # Current Handoff
 
+## 2026-08-08 — T-157a raw Drift writes routed through repositories
+
+- Added `RecurringRepository.setStatus` and `InsightsRepository.dismiss`;
+  both screens now call the repository instead of writing directly to the DB.
+  Removed the now-unused `Value` show-imports from both screen files.
+- Repository-level tests: 3 per repo, all against `NativeDatabase.memory()`; 6/6 pass.
+- Analyzer clean. Neither screen calls `db.update(` directly (AC met).
+
 ## 2026-08-08 — T-159a correction/undo characterization tests complete
 
 - Behavioral coverage for all four extraction targets: `_selectCategoryDirectly`
