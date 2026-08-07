@@ -1,0 +1,40 @@
+{
+  "cases": [
+    {
+      "id": "balance_only",
+      "provenance": "device",
+      "message": {
+        "id": "bait_balance_001",
+        "sender": "ZZ-BANK",
+        "body": "Available balance in account XX1234 is INR 42000.00. No transaction was made.",
+        "received_at": 1783209600000
+      },
+      "bait": "42000.00",
+      "expected": {"kind": "balance", "amount": null, "direction": null}
+    },
+    {
+      "id": "reference_looks_like_amount",
+      "provenance": "device",
+      "message": {
+        "id": "bait_reference_001",
+        "sender": "ZZ-BANK",
+        "body": "Transaction reference 20260708123456 acknowledged. No debit or credit was posted.",
+        "received_at": 1783209660000
+      },
+      "bait": "20260708123456",
+      "expected": {"kind": "reference_only", "amount": null, "direction": null}
+    },
+    {
+      "id": "due_date_not_debit",
+      "provenance": "device",
+      "message": {
+        "id": "bait_due_date_001",
+        "sender": "ZZ-BILLER",
+        "body": "SANITIZED BILL is due on 15-Jul-26. Amount will be confirmed after billing.",
+        "received_at": 1783213200000
+      },
+      "bait": "15",
+      "expected": {"kind": "reminder", "amount": null, "direction": null}
+    }
+  ]
+}

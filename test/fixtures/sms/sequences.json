@@ -1,0 +1,139 @@
+{
+  "cases": [
+    {
+      "id": "auth_settle",
+      "provenance": "device",
+      "messages": [
+        {
+          "id": "auth_001",
+          "sender": "ZZ-BANK",
+          "body": "A payment of INR 1250.00 was authorised on your card ending 1234.",
+          "received_at": 1783209600000
+        },
+        {
+          "id": "settle_001",
+          "sender": "ZZ-BANK",
+          "body": "INR 1250.00 spent at SANITIZED STORE on card ending 1234.",
+          "received_at": 1783209660000
+        }
+      ],
+      "expected_graph": {
+        "nodes": [
+          {"id": "auth_001", "kind": "authorization"},
+          {"id": "settle_001", "kind": "settlement"}
+        ],
+        "edges": [
+          {"from": "auth_001", "to": "settle_001", "relation": "auth_settles"}
+        ]
+      }
+    },
+    {
+      "id": "debit_reversal",
+      "provenance": "device",
+      "messages": [
+        {
+          "id": "debit_001",
+          "sender": "ZZ-BANK",
+          "body": "INR 850.00 debited from account XX1234 at SANITIZED MERCHANT.",
+          "received_at": 1783213200000
+        },
+        {
+          "id": "reversal_001",
+          "sender": "ZZ-BANK",
+          "body": "Reversal of INR 850.00 credited to account XX1234.",
+          "received_at": 1783216800000
+        }
+      ],
+      "expected_graph": {
+        "nodes": [
+          {"id": "debit_001", "kind": "debit"},
+          {"id": "reversal_001", "kind": "reversal"}
+        ],
+        "edges": [
+          {"from": "debit_001", "to": "reversal_001", "relation": "reverses"}
+        ]
+      }
+    },
+    {
+      "id": "expense_refund",
+      "provenance": "device",
+      "messages": [
+        {
+          "id": "expense_001",
+          "sender": "ZZ-BANK",
+          "body": "INR 2200.00 paid to SANITIZED MERCHANT using UPI.",
+          "received_at": 1783220400000
+        },
+        {
+          "id": "refund_001",
+          "sender": "ZZ-MERCHANT",
+          "body": "Refund of INR 2200.00 initiated for your order.",
+          "received_at": 1783306800000
+        }
+      ],
+      "expected_graph": {
+        "nodes": [
+          {"id": "expense_001", "kind": "expense"},
+          {"id": "refund_001", "kind": "refund"}
+        ],
+        "edges": [
+          {"from": "refund_001", "to": "expense_001", "relation": "refunds"}
+        ]
+      }
+    },
+    {
+      "id": "reminder_fulfilment",
+      "provenance": "device",
+      "messages": [
+        {
+          "id": "reminder_001",
+          "sender": "ZZ-BILLER",
+          "body": "Your SANITIZED BILL is due on 15-Jul-26. Pay before the due date.",
+          "received_at": 1783335600000
+        },
+        {
+          "id": "fulfilment_001",
+          "sender": "ZZ-BANK",
+          "body": "INR 4500.00 paid to SANITIZED BILLER from account XX1234.",
+          "received_at": 1783422000000
+        }
+      ],
+      "expected_graph": {
+        "nodes": [
+          {"id": "reminder_001", "kind": "reminder"},
+          {"id": "fulfilment_001", "kind": "settled_debit"}
+        ],
+        "edges": [
+          {"from": "reminder_001", "to": "fulfilment_001", "relation": "fulfils"}
+        ]
+      }
+    },
+    {
+      "id": "bank_wallet_echo",
+      "provenance": "device",
+      "messages": [
+        {
+          "id": "bank_001",
+          "sender": "ZZ-BANK",
+          "body": "INR 600.00 debited from account XX1234 to SANITIZED VPA.",
+          "received_at": 1783425600000
+        },
+        {
+          "id": "wallet_001",
+          "sender": "ZZ-WALLET",
+          "body": "Paid INR 600.00 to SANITIZED VPA from your wallet.",
+          "received_at": 1783425660000
+        }
+      ],
+      "expected_graph": {
+        "nodes": [
+          {"id": "bank_001", "kind": "bank_debit"},
+          {"id": "wallet_001", "kind": "wallet_debit"}
+        ],
+        "edges": [
+          {"from": "bank_001", "to": "wallet_001", "relation": "echoes"}
+        ]
+      }
+    }
+  ]
+}

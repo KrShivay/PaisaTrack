@@ -42,6 +42,38 @@ class SmsFixtureRunner {
     return cases;
   }
 
+  /// Loads ordered multi-message event-graph fixtures from [sequences.json].
+  Future<List<SmsSequenceFixture>> loadSequences() async {
+    final file = File('${root.path}/sequences.json');
+    if (!await file.exists()) return const [];
+    final document = jsonDecode(await file.readAsString());
+    if (document is! Map || document['cases'] is! List) {
+      throw const FormatException(
+        'Sequence fixture catalogue must contain cases',
+      );
+    }
+    return [
+      for (final item in document['cases'] as List)
+        SmsSequenceFixture.fromJson((item as Map).cast<String, Object?>()),
+    ];
+  }
+
+  /// Loads extraction-bait fixtures from [adversarial.json].
+  Future<List<SmsAdversarialFixture>> loadAdversarial() async {
+    final file = File('${root.path}/adversarial.json');
+    if (!await file.exists()) return const [];
+    final document = jsonDecode(await file.readAsString());
+    if (document is! Map || document['cases'] is! List) {
+      throw const FormatException(
+        'Adversarial fixture catalogue must contain cases',
+      );
+    }
+    return [
+      for (final item in document['cases'] as List)
+        SmsAdversarialFixture.fromJson((item as Map).cast<String, Object?>()),
+    ];
+  }
+
   Future<SmsFixtureCase> _loadCase(
     Directory bankDirectory,
     File bodyFile,
@@ -103,6 +135,146 @@ class SmsFixtureCase {
       receivedAt: receivedAt,
     );
   }
+}
+
+/// An ordered message sequence with the event graph expected from correlation.
+class SmsSequenceFixture {
+  const SmsSequenceFixture({
+    required this.id,
+    required this.provenance,
+    required this.messages,
+    required this.expectedGraph,
+  });
+
+  factory SmsSequenceFixture.fromJson(Map<String, Object?> json) {
+    final graph = json['expected_graph'];
+    if (graph is! Map) {
+      throw const FormatException('Sequence fixture is missing expected_graph');
+    }
+    return SmsSequenceFixture(
+      id: json['id']! as String,
+      provenance: FixtureProvenance.fromJson(json['provenance'] as String?),
+      messages: [
+        for (final item in json['messages']! as List)
+          SmsFixtureMessage.fromJson(item as Map<String, Object?>),
+      ],
+      expectedGraph: SmsEventGraph.fromJson(graph.cast<String, Object?>()),
+    );
+  }
+
+  final String id;
+  final FixtureProvenance provenance;
+  final List<SmsFixtureMessage> messages;
+  final SmsEventGraph expectedGraph;
+}
+
+/// An SMS where a plausible number is present but must not become an amount.
+class SmsAdversarialFixture {
+  const SmsAdversarialFixture({
+    required this.id,
+    required this.provenance,
+    required this.message,
+    required this.bait,
+    required this.expected,
+  });
+
+  factory SmsAdversarialFixture.fromJson(Map<String, Object?> json) {
+    return SmsAdversarialFixture(
+      id: json['id']! as String,
+      provenance: FixtureProvenance.fromJson(json['provenance'] as String?),
+      message: SmsFixtureMessage.fromJson(
+        (json['message']! as Map).cast<String, Object?>(),
+      ),
+      bait: json['bait']! as String,
+      expected: (json['expected']! as Map).cast<String, Object?>(),
+    );
+  }
+
+  final String id;
+  final FixtureProvenance provenance;
+  final SmsFixtureMessage message;
+  final String bait;
+  final Map<String, Object?> expected;
+}
+
+class SmsFixtureMessage {
+  const SmsFixtureMessage({
+    required this.id,
+    required this.sender,
+    required this.body,
+    required this.receivedAt,
+  });
+
+  factory SmsFixtureMessage.fromJson(Map<String, Object?> json) {
+    return SmsFixtureMessage(
+      id: json['id']! as String,
+      sender: json['sender']! as String,
+      body: json['body']! as String,
+      receivedAt: DateTime.fromMillisecondsSinceEpoch(
+        json['received_at']! as int,
+        isUtc: true,
+      ),
+    );
+  }
+
+  final String id;
+  final String sender;
+  final String body;
+  final DateTime receivedAt;
+}
+
+class SmsEventGraph {
+  const SmsEventGraph({required this.nodes, required this.edges});
+
+  factory SmsEventGraph.fromJson(Map<String, Object?> json) {
+    return SmsEventGraph(
+      nodes: [
+        for (final item in json['nodes']! as List)
+          SmsEventNode.fromJson((item as Map).cast<String, Object?>()),
+      ],
+      edges: [
+        for (final item in json['edges']! as List)
+          SmsEventEdge.fromJson((item as Map).cast<String, Object?>()),
+      ],
+    );
+  }
+
+  final List<SmsEventNode> nodes;
+  final List<SmsEventEdge> edges;
+}
+
+class SmsEventNode {
+  const SmsEventNode({required this.id, required this.kind});
+
+  factory SmsEventNode.fromJson(Map<String, Object?> json) {
+    return SmsEventNode(
+      id: json['id']! as String,
+      kind: json['kind']! as String,
+    );
+  }
+
+  final String id;
+  final String kind;
+}
+
+class SmsEventEdge {
+  const SmsEventEdge({
+    required this.from,
+    required this.to,
+    required this.relation,
+  });
+
+  factory SmsEventEdge.fromJson(Map<String, Object?> json) {
+    return SmsEventEdge(
+      from: json['from']! as String,
+      to: json['to']! as String,
+      relation: json['relation']! as String,
+    );
+  }
+
+  final String from;
+  final String to;
+  final String relation;
 }
 
 /// Fixture evidence tier; missing legacy metadata remains device-grade.

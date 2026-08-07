@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 
-import 'sms_fixture_runner.dart';
+import '../support/fixture_loader.dart';
 
 void main() {
   test('reports no cases for an empty fixture root', () async {
@@ -54,5 +54,50 @@ void main() {
     final cases = await SmsFixtureRunner(root: tempDir).loadCases();
 
     expect(cases.single.provenance, FixtureProvenance.public);
+  });
+
+  test('loads ordered sequence fixtures with expected event graphs', () async {
+    final runner = SmsFixtureRunner(root: Directory('test/fixtures/sms'));
+    final sequences = await runner.loadSequences();
+
+    expect(sequences, hasLength(5));
+    expect(
+      sequences.map((sequence) => sequence.expectedGraph.edges.single.relation),
+      containsAll(<String>[
+        'auth_settles',
+        'reverses',
+        'refunds',
+        'fulfils',
+        'echoes',
+      ]),
+    );
+    for (final sequence in sequences) {
+      expect(sequence.provenance, FixtureProvenance.device);
+      expect(sequence.messages, hasLength(2));
+      expect(
+        sequence.messages.first.receivedAt.isBefore(
+          sequence.messages.last.receivedAt,
+        ),
+        isTrue,
+      );
+      expect(
+        sequence.expectedGraph.nodes.map((node) => node.id),
+        containsAll(sequence.messages.map((message) => message.id)),
+      );
+    }
+  });
+
+  test('loads adversarial fixtures without promoting bait to an amount',
+      () async {
+    final runner = SmsFixtureRunner(root: Directory('test/fixtures/sms'));
+    final adversarial = await runner.loadAdversarial();
+
+    expect(adversarial, hasLength(3));
+    for (final fixture in adversarial) {
+      expect(fixture.provenance, FixtureProvenance.device);
+      expect(fixture.message.body, contains(fixture.bait));
+      expect(fixture.expected['amount'], isNull);
+      expect(fixture.expected['direction'], isNull);
+    }
   });
 }
