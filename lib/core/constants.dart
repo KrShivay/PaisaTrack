@@ -5,6 +5,32 @@
 class AppConstants {
   const AppConstants._();
 
+  /// Persisted defaults for the developer-tunable feature flag table.
+  ///
+  /// Keep these values in sync with the typed accessors below. The database
+  /// stores strings so the table remains simple and forward-compatible.
+  static const featureFlagDefaults = <String, Object>{
+    'enable_local_llm': enableLocalLlm,
+    'enable_narrative_insights': enableNarrativeInsights,
+    'silent_confidence_threshold': silentConfidenceThreshold,
+    'ask_confidence_threshold': askConfidenceThreshold,
+    'ask_now_daily_budget': askNowDailyBudget,
+    'ask_amount_threshold': askAmountThreshold,
+    'ask_merchant_txn_count': askMerchantTxnCount,
+    'raw_sms_retention_days': rawSmsRetentionDays,
+    'sms_history_import_page_size': smsHistoryImportPageSize,
+    'duplicate_pair_window_minutes': duplicatePairWindowMinutes,
+    'merchant_auto_link_threshold': merchantAutoLinkThreshold,
+    'merchant_cluster_suggestion_threshold': merchantClusterSuggestionThreshold,
+    'llm_category_suggestion_cap': llmCategorySuggestionCap,
+    'refund_auto_link_threshold': refundAutoLinkThreshold,
+    'auth_settle_link_threshold': authSettleLinkThreshold,
+    'expected_debit_fulfilment_threshold': expectedDebitFulfilmentThreshold,
+    'anomaly_alert_sigma': anomalyAlertSigma,
+    'anomaly_alert_min_periods': anomalyAlertMinPeriods,
+    'anomaly_alert_floor_amount': anomalyAlertFloorAmount,
+  };
+
   /// Enables on-device LLM parsing once that implementation exists.
   /// All LLM inference is local-only; no cloud path exists (ADR 0002).
   static const enableLocalLlm = true;

@@ -11,6 +11,7 @@ import '../../data/db/database_provider.dart';
 import '../../data/repositories/budget_repository.dart';
 import '../backup/encrypted_backup_service.dart';
 import '../dev/model_metrics_screen.dart';
+import '../dev/feature_flags_screen.dart';
 import '../dev/unparsed_sms_screen.dart';
 import '../sms/sms_lookup_sheet.dart';
 import '../sms/sms_permission_status_card.dart';
@@ -908,6 +909,18 @@ class _DeveloperOptionsSection extends StatelessWidget {
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => const ModelMetricsScreen(),
+            ),
+          ),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.tune_outlined),
+          title: const Text('Feature flags'),
+          subtitle: const Text('Tune local thresholds and fallbacks'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const FeatureFlagsScreen(),
             ),
           ),
         ),

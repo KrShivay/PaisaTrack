@@ -80,6 +80,28 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Seeds the current feature-flag defaults without overwriting overrides.
+  ///
+  /// The values are stored as strings because feature flags are intentionally
+  /// a small key/value surface. Missing rows still resolve through
+  /// [AppConstants] for test databases and older callers.
+  Future<void> seedDefaultFeatureFlags() async {
+    await batch((batch) {
+      batch.insertAll(
+        featureFlags,
+        AppConstants.featureFlagDefaults.entries
+            .map(
+              (entry) => FeatureFlagsCompanion.insert(
+                key: entry.key,
+                value: entry.value.toString(),
+              ),
+            )
+            .toList(growable: false),
+        mode: InsertMode.insertOrIgnore,
+      );
+    });
+  }
+
   /// Current local schema version.
   @override
   int get schemaVersion => 15;

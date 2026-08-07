@@ -110,7 +110,6 @@ Phase A blocks B; B blocks C and D.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| **T-143a** | P1 | ~S | `feature_flags` table | — |
 | **T-143c** | P1 | ~L | Shadow mode and on-device metrics | T-143a/b |
 | **T-133a** | P1 | ~L | Shape scoring and quarantine store | T-129 |
 | **T-133b** | P1 | ~M | "Messages we couldn't read" + retry on upgrade | T-133a |
@@ -144,8 +143,8 @@ board rules below.
 
 #### Suggested order
 
-Ship next: T-143a. T-151b remains open pending a supported affordability
-intent and deterministic verdict contract.
+Ship next: split T-143c before implementation. T-151b remains open pending a
+supported affordability intent and deterministic verdict contract.
 Then the foundations everything else waits on: T-131b/c, T-132a-c.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`

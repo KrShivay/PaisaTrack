@@ -64,6 +64,7 @@ final appDatabaseProvider = FutureProvider<AppDatabase>((ref) async {
     // bundled defaults MUST exist before any ingest runs. Idempotent
     // (insertOrIgnore) and preserves user-edited rows.
     await database.seedDefaultCategories();
+    await database.seedDefaultFeatureFlags();
   } on Object catch (e) {
     await closeAppDatabase(database);
     if (dbExists) {

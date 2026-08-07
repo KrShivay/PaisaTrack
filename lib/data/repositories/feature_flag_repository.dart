@@ -19,15 +19,175 @@ abstract class FeatureFlagKeys {
   static const smsHistoryImportPageSize = 'sms_history_import_page_size';
   static const duplicatePairWindowMinutes = 'duplicate_pair_window_minutes';
   static const merchantAutoLinkThreshold = 'merchant_auto_link_threshold';
-  static const merchantClusterSuggestionThreshold = 'merchant_cluster_suggestion_threshold';
+  static const merchantClusterSuggestionThreshold =
+      'merchant_cluster_suggestion_threshold';
   static const llmCategorySuggestionCap = 'llm_category_suggestion_cap';
   static const refundAutoLinkThreshold = 'refund_auto_link_threshold';
   static const authSettleLinkThreshold = 'auth_settle_link_threshold';
-  static const expectedDebitFulfilmentThreshold = 'expected_debit_fulfilment_threshold';
+  static const expectedDebitFulfilmentThreshold =
+      'expected_debit_fulfilment_threshold';
   static const anomalyAlertSigma = 'anomaly_alert_sigma';
   static const anomalyAlertMinPeriods = 'anomaly_alert_min_periods';
   static const anomalyAlertFloorAmount = 'anomaly_alert_floor_amount';
 }
+
+enum FeatureFlagValueType { boolean, integer, decimal }
+
+/// Metadata used by the developer editor and default seeding checks.
+class FeatureFlagDefinition {
+  const FeatureFlagDefinition({
+    required this.key,
+    required this.label,
+    required this.description,
+    required this.type,
+    required this.defaultValue,
+  });
+
+  final String key;
+  final String label;
+  final String description;
+  final FeatureFlagValueType type;
+  final Object defaultValue;
+
+  String get defaultText => defaultValue.toString();
+}
+
+const featureFlagDefinitions = <FeatureFlagDefinition>[
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.enableLocalLlm,
+    label: 'Local LLM parsing',
+    description: 'Allow on-device language-model parsing when available.',
+    type: FeatureFlagValueType.boolean,
+    defaultValue: AppConstants.enableLocalLlm,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.enableNarrativeInsights,
+    label: 'Narrative insights',
+    description: 'Allow local narrative insight generation when available.',
+    type: FeatureFlagValueType.boolean,
+    defaultValue: AppConstants.enableNarrativeInsights,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.silentConfidenceThreshold,
+    label: 'Silent auto-label',
+    description: 'Minimum confidence for automatic labels without asking.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.silentConfidenceThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.askConfidenceThreshold,
+    label: 'Ask confidence',
+    description: 'Minimum confidence before a transaction can be clarified.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.askConfidenceThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.askNowDailyBudget,
+    label: 'Ask budget',
+    description: 'Maximum clarification prompts per day.',
+    type: FeatureFlagValueType.integer,
+    defaultValue: AppConstants.askNowDailyBudget,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.askAmountThreshold,
+    label: 'Ask amount threshold',
+    description: 'Amount that makes a mid-confidence transaction worth asking.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.askAmountThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.askMerchantTxnCount,
+    label: 'Ask merchant history',
+    description: 'Prior merchant count that makes asking worthwhile.',
+    type: FeatureFlagValueType.integer,
+    defaultValue: AppConstants.askMerchantTxnCount,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.rawSmsRetentionDays,
+    label: 'Raw SMS retention',
+    description: 'Days raw SMS bodies may remain before purge.',
+    type: FeatureFlagValueType.integer,
+    defaultValue: AppConstants.rawSmsRetentionDays,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.smsHistoryImportPageSize,
+    label: 'History import page size',
+    description: 'Raw inbox rows requested per history-import page.',
+    type: FeatureFlagValueType.integer,
+    defaultValue: AppConstants.smsHistoryImportPageSize,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.duplicatePairWindowMinutes,
+    label: 'Duplicate pair window',
+    description: 'Maximum minutes between paired bank and wallet alerts.',
+    type: FeatureFlagValueType.integer,
+    defaultValue: AppConstants.duplicatePairWindowMinutes,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.merchantAutoLinkThreshold,
+    label: 'Merchant auto-link',
+    description: 'Similarity needed to link a merchant automatically.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.merchantAutoLinkThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.merchantClusterSuggestionThreshold,
+    label: 'Merchant cluster suggestion',
+    description: 'Similarity needed to suggest a merchant cluster.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.merchantClusterSuggestionThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.llmCategorySuggestionCap,
+    label: 'LLM category cap',
+    description:
+        'Maximum confidence contributed by an LLM category suggestion.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.llmCategorySuggestionCap,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.refundAutoLinkThreshold,
+    label: 'Refund auto-link',
+    description: 'Confidence needed to link a refund automatically.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.refundAutoLinkThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.authSettleLinkThreshold,
+    label: 'Auth → settle link',
+    description: 'Confidence needed to link authorization and settlement.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.authSettleLinkThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.expectedDebitFulfilmentThreshold,
+    label: 'Expected debit fulfilment',
+    description: 'Confidence needed to fulfil an expected debit event.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.expectedDebitFulfilmentThreshold,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.anomalyAlertSigma,
+    label: 'Anomaly sigma',
+    description: 'Standard-deviation multiplier for anomaly alerts.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.anomalyAlertSigma,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.anomalyAlertMinPeriods,
+    label: 'Anomaly history periods',
+    description: 'Minimum historical periods before anomaly alerts.',
+    type: FeatureFlagValueType.integer,
+    defaultValue: AppConstants.anomalyAlertMinPeriods,
+  ),
+  FeatureFlagDefinition(
+    key: FeatureFlagKeys.anomalyAlertFloorAmount,
+    label: 'Anomaly amount floor',
+    description: 'Minimum aggregate amount for anomaly alerts.',
+    type: FeatureFlagValueType.decimal,
+    defaultValue: AppConstants.anomalyAlertFloorAmount,
+  ),
+];
 
 /// Immutable state containing active feature flags and thresholds.
 ///
@@ -42,6 +202,25 @@ class FeatureFlagsState {
 
   /// Raw overrides map present in the database.
   Map<String, String> get overrides => _overrides;
+
+  /// Returns the typed effective value for a definition.
+  Object valueFor(FeatureFlagDefinition definition) {
+    final raw = _overrides[definition.key];
+    if (raw == null) return definition.defaultValue;
+    return switch (definition.type) {
+      FeatureFlagValueType.boolean => _parseBool(
+          raw,
+          fallback: definition.defaultValue as bool,
+        ),
+      FeatureFlagValueType.integer =>
+        int.tryParse(raw.trim()) ?? definition.defaultValue as int,
+      FeatureFlagValueType.decimal =>
+        double.tryParse(raw.trim()) ?? definition.defaultValue as double,
+    };
+  }
+
+  bool isOverridden(FeatureFlagDefinition definition) =>
+      _overrides.containsKey(definition.key);
 
   bool get enableLocalLlm => getBool(
         FeatureFlagKeys.enableLocalLlm,
@@ -142,10 +321,7 @@ class FeatureFlagsState {
   bool getBool(String key, {required bool defaultValue}) {
     final val = _overrides[key];
     if (val == null) return defaultValue;
-    final lower = val.trim().toLowerCase();
-    if (lower == 'true' || lower == '1') return true;
-    if (lower == 'false' || lower == '0') return false;
-    return defaultValue;
+    return _parseBool(val, fallback: defaultValue);
   }
 
   /// Retrieves an integer flag, falling back to [defaultValue] if missing or unparseable.
@@ -165,6 +341,13 @@ class FeatureFlagsState {
   /// Retrieves a string flag, falling back to [defaultValue] if missing.
   String getString(String key, {required String defaultValue}) {
     return _overrides[key] ?? defaultValue;
+  }
+
+  static bool _parseBool(String value, {required bool fallback}) {
+    final lower = value.trim().toLowerCase();
+    if (lower == 'true' || lower == '1') return true;
+    if (lower == 'false' || lower == '0') return false;
+    return fallback;
   }
 }
 
@@ -201,13 +384,29 @@ class FeatureFlagRepository {
   }
 
   /// Sets a boolean flag.
-  Future<void> setBool(String key, bool value) => setFlag(key, value.toString());
+  Future<void> setBool(String key, bool value) =>
+      setFlag(key, value.toString());
 
   /// Sets an integer flag.
   Future<void> setInt(String key, int value) => setFlag(key, value.toString());
 
   /// Sets a double flag.
-  Future<void> setDouble(String key, double value) => setFlag(key, value.toString());
+  Future<void> setDouble(String key, double value) =>
+      setFlag(key, value.toString());
+
+  /// Validates and stores a value entered by the developer editor.
+  Future<void> setValue(FeatureFlagDefinition definition, String raw) async {
+    final value = raw.trim();
+    final valid = switch (definition.type) {
+      FeatureFlagValueType.boolean => value == 'true' || value == 'false',
+      FeatureFlagValueType.integer => int.tryParse(value) != null,
+      FeatureFlagValueType.decimal => double.tryParse(value) != null,
+    };
+    if (!valid) {
+      throw FormatException('Invalid value for ${definition.label}');
+    }
+    await setFlag(definition.key, value);
+  }
 
   /// Removes a feature flag override from the database, falling back to [AppConstants].
   Future<void> resetFlag(String key) async {
@@ -223,7 +422,8 @@ class FeatureFlagRepository {
 }
 
 /// Riverpod provider for [FeatureFlagRepository].
-final featureFlagRepositoryProvider = FutureProvider<FeatureFlagRepository>((ref) async {
+final featureFlagRepositoryProvider =
+    FutureProvider<FeatureFlagRepository>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return FeatureFlagRepository(db);
 });
@@ -232,7 +432,8 @@ final featureFlagRepositoryProvider = FutureProvider<FeatureFlagRepository>((ref
 ///
 /// Consumers reading this provider should handle `.when(error: ...)` to handle
 /// database initialization failures or underlying stream errors safely.
-final featureFlagsStreamProvider = StreamProvider<FeatureFlagsState>((ref) async* {
+final featureFlagsStreamProvider =
+    StreamProvider<FeatureFlagsState>((ref) async* {
   final repo = await ref.watch(featureFlagRepositoryProvider.future);
   yield* repo.watchFlags();
 });
