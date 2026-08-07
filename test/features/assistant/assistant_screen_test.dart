@@ -80,9 +80,11 @@ void main() {
     expect(find.text('Ask PaisaTrack'), findsOneWidget);
     expect(find.byType(Scaffold), findsNothing);
     expect(
-      tester.widget<Material>(
-        find.byKey(const ValueKey('assistant_sheet_surface')),
-      ).color,
+      tester
+          .widget<Material>(
+            find.byKey(const ValueKey('assistant_sheet_surface')),
+          )
+          .color,
       const Color(0xFF0E0C1A),
     );
     expect(find.byTooltip('Close'), findsOneWidget);
@@ -109,5 +111,36 @@ void main() {
     await tester.enterText(search, 'no matching question');
     await tester.pump();
     expect(find.text('No matching questions.'), findsOneWidget);
+  });
+
+  testWidgets('shows three rotating prompt chips after a conversation starts',
+      (tester) async {
+    await tester.pumpWidget(createWidget(tester));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.enterText(
+      find.byType(TextField).last,
+      'How much did I spend?',
+    );
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.byType(ActionChip), findsNWidgets(3));
+    final firstSet = tester
+        .widgetList<ActionChip>(find.byType(ActionChip))
+        .map((chip) => (chip.label as Text).data)
+        .toList();
+
+    await tester
+        .tap(find.byKey(const ValueKey('assistant_prompt_chip_rotate')));
+    await tester.pump();
+    final secondSet = tester
+        .widgetList<ActionChip>(find.byType(ActionChip))
+        .map((chip) => (chip.label as Text).data)
+        .toList();
+
+    expect(secondSet, isNot(equals(firstSet)));
   });
 }

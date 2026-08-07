@@ -42,6 +42,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   final _inputController = TextEditingController();
   final _messages = <AssistantMessage>[];
   bool _sending = false;
+  int _chipOffset = 0;
 
   @override
   void dispose() {
@@ -54,6 +55,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     if (text.isEmpty || _sending) return;
     setState(() {
       _sending = true;
+      _chipOffset = (_chipOffset + 3) % assistantPromptQuestions.length;
       _messages.add(AssistantMessage(text, fromUser: true));
       _inputController.clear();
     });
@@ -123,6 +125,20 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 child: BloomSkeleton(width: 160, height: 24),
               ),
 
+            if (_messages.isNotEmpty)
+              _ComposerPromptChips(
+                questions: [
+                  for (var index = 0; index < 3; index++)
+                    assistantPromptQuestions[(_chipOffset + index) %
+                        assistantPromptQuestions.length],
+                ],
+                onSelect: _askSuggestion,
+                onRotate: () => setState(() {
+                  _chipOffset =
+                      (_chipOffset + 3) % assistantPromptQuestions.length;
+                }),
+              ),
+
             // Bottom Input Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -189,6 +205,73 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ComposerPromptChips extends StatelessWidget {
+  const _ComposerPromptChips({
+    required this.questions,
+    required this.onSelect,
+    required this.onRotate,
+  });
+
+  final List<String> questions;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onRotate;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const ValueKey('assistant_prompt_chips'),
+      height: 38,
+      child: Row(
+        children: [
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.only(left: 20),
+              scrollDirection: Axis.horizontal,
+              itemCount: questions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                final question = questions[index];
+                return SizedBox(
+                  width: 96,
+                  height: 30,
+                  child: ActionChip(
+                    key: ValueKey('assistant_prompt_chip_$question'),
+                    label: Text(
+                      question,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onPressed: () => onSelect(question),
+                    backgroundColor: AppColorTokens.bloomDarkCard,
+                    side: const BorderSide(
+                      color: AppColorTokens.bloomDarkOutline,
+                    ),
+                    labelStyle: const TextStyle(
+                      color: AppColorTokens.bloomDarkTextSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                );
+              },
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('assistant_prompt_chip_rotate'),
+            tooltip: 'Rotate suggestions',
+            icon: const Icon(Icons.refresh_rounded),
+            color: AppColorTokens.bloomDarkTextSecondary,
+            iconSize: 18,
+            onPressed: onRotate,
+          ),
+        ],
       ),
     );
   }

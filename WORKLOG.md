@@ -1,5 +1,15 @@
 # Current Handoff
 
+## 2026-08-07 — T-150c rotating composer chips complete
+
+- Added a 30px horizontal chip row above the composer once a conversation has
+  started. It shows three fixed-width catalogue questions at a time, sends a
+  tapped question through the existing path, and rotates deterministically via
+  the refresh control.
+- Verification: analyzer clean; focused assistant/navigation suite **13/13**;
+  full Flutter suite retains the unrelated `exclusion_explanation_test.dart`
+  baseline failure (expected 500, actual 5500).
+
 ## 2026-08-07 — T-151c assistant composer styling complete
 
 - Updated the composer to the Bloom handoff: 52px dark pill with `#2E2A4E`
@@ -21,16 +31,6 @@
   and full-screen-sheet suite **20/20**; full Flutter suite retains the
   unrelated `exclusion_explanation_test.dart` baseline failure (expected 500,
   actual 5500).
-
-## 2026-08-06 — T-150b searchable prompt catalogue complete
-
-- Replaced the four-preset assistant empty state with a searchable view of all
-  44 validated questions, grouped under their catalogue headers. Search matches
-  group labels and question text case-insensitively, with an explicit no-match
-  state.
-- Verification: analyzer clean; focused assistant/catalogue suite **6/6**;
-  full Flutter suite retains the unrelated `exclusion_explanation_test.dart`
-  baseline failure (expected 500, actual 5500).
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
