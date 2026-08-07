@@ -8,7 +8,8 @@ later hardening.
 
 ## In Progress
 
-<!-- Empty -->
+- [ ] T-153c (@claude) [P2] End state, persistence, and progress bar.
+      Module: weekly_review_screen.dart + weekly_review_providers.dart.
 
 ## In Review
 
@@ -47,6 +48,20 @@ later hardening.
       and several errors rendered as empty states.
       Next: use semantic Material controls, ≥48dp targets, corrected tokens,
       1.5×/2× and multi-viewport widget tests, then TalkBack acceptance.
+- [ ] T-176 [P1] Apply global bottom-inset contract to all screens.
+      Module: all primary screens (Dashboard, Activity, Review, Insights,
+      Settings, Assistant, Review/Sort card view).
+      Gap: content at the bottom of each screen underlaps the bottom navigation
+      bar; FABs and action button rows are not consistently lifted above it.
+      Next: introduce a shared `kBottomNavHeight` constant (or read it from
+      `MediaQuery`); add `SliverPadding` / `EdgeInsets.only(bottom:)` equal to
+      bottom-nav height + system gesture inset to every scroll body; move each
+      FAB/action-button row up by the same amount so the last content item is
+      always reachable. All primary screens must be scrollable to their last item
+      without any content being occluded.
+      Acceptance: on a device with gesture navigation every screen scrolls its
+      last item fully into view; no FAB or action-button row overlaps the
+      navigation bar or system gesture area.
 - [ ] T-090 (@codex) [P4] App lock.
       Module: app lifecycle/security.
       Depends: T-122/T-124 recovery contracts.
@@ -128,7 +143,6 @@ T-154a.
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
 | **T-151d** | P2 | ~M | Thinking, model-missing, no-answer states | T-151b |
 | **T-151e** | P3 | ~M | Inline charts and follow-up chips | T-151b |
-| **T-153b** | P2 | ~S | Back navigation through seen cards | T-153a |
 | **T-153c** | P2 | ~M | Skipped end state, persistence, progress | T-153a |
 | **T-154a** | P2 | ~M | Open transaction detail from the Sort card | T-153a |
 | **T-154b** | P2 | ~M | Inline corrections + guess refresh before Keep | T-154a |

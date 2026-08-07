@@ -6,6 +6,7 @@ import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/features/review/weekly_review_providers.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
@@ -200,7 +201,7 @@ void main() {
     });
 
     testWidgets(
-        'skip at last item does not crash and stays at last item',
+        'skip at last item shows skipped summary, not Inbox Zero or crash',
         (tester) async {
       final items = [
         testReviewItem(
@@ -214,14 +215,156 @@ void main() {
       await pumpSort(tester, items);
       expect(find.text('1 of 1'), findsOneWidget);
 
-      // Skip the only item — cursor stays at 0, item remains
+      // Skip the only item — T-153c: all items skipped → skipped summary
       final skipButton = find.byIcon(Icons.skip_next_rounded);
       await tester.tap(skipButton);
       await tester.pumpAndSettle();
 
-      // Still shows the item (not Inbox Zero)
-      expect(find.text('Zomato'), findsOneWidget);
+      expect(find.text('1 skipped'), findsOneWidget);
       expect(find.text('Inbox Zero!'), findsNothing);
+    });
+  });
+
+  group('T-153c — end state and progress bar', () {
+    testWidgets('skipping all items shows skipped prompt, not Inbox Zero',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+        testReviewItem(
+          id: '2',
+          name: 'Swiggy',
+          amount: 300.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+
+      final skipButton = find.byIcon(Icons.skip_next_rounded);
+
+      // Skip Zomato
+      await tester.tap(skipButton);
+      await tester.pumpAndSettle();
+
+      // Skip Swiggy (last item, cursor stays)
+      await tester.tap(skipButton);
+      await tester.pumpAndSettle();
+
+      // All items skipped — should show the skipped prompt, not Inbox Zero
+      expect(find.text('Inbox Zero!'), findsNothing);
+      expect(find.text('2 skipped'), findsOneWidget);
+      expect(find.text('Review them now?'), findsOneWidget);
+    });
+
+    testWidgets('skip state persists across provider rebuild (reviewViewProvider)',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+        testReviewItem(
+          id: '2',
+          name: 'Swiggy',
+          amount: 300.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      late ProviderContainer container;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+            categoryListProvider.overrideWith(
+              (ref) => Stream.value([
+                const Category(
+                  id: 'food_dining',
+                  name: 'Food & Dining',
+                  icon: 'restaurant',
+                  isSpending: true,
+                  sortOrder: 10,
+                  isUserCreated: false,
+                ),
+              ]),
+            ),
+            appSettingsControllerProvider
+                .overrideWith(() => FakeAppSettingsController()),
+            undoControllerProvider.overrideWith(() => FakeUndoController()),
+          ],
+          child: Builder(
+            builder: (ctx) {
+              container = ProviderScope.containerOf(ctx);
+              return MaterialApp(
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(disableAnimations: true),
+                  child: child!,
+                ),
+                home: const BloomUndoToastHost(
+                  child: WeeklyReviewScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Skip Zomato via provider directly — simulates a rebuild
+      container.read(reviewViewProvider.notifier).skipItem('1');
+      await tester.pumpAndSettle();
+
+      // Swiggy is now the current card (cursor still 0, skipped ids has '1')
+      // The card at cursor 0 is Zomato (which is skipped); cursor advances
+      // only via _skipItem. Provider skip state is visible to the widget.
+      expect(
+        container.read(reviewViewProvider).skippedIds,
+        contains('1'),
+      );
+    });
+
+    testWidgets('tapping Review skipped resets prompt and shows first card',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+
+      // Skip the only item to trigger skipped-summary state
+      await tester.tap(find.byIcon(Icons.skip_next_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 skipped'), findsOneWidget);
+
+      // Tap "Review skipped"
+      await tester.tap(find.text('Review skipped'));
+      await tester.pumpAndSettle();
+
+      // Back to normal card view
+      expect(find.text('Zomato'), findsOneWidget);
+      expect(find.text('1 skipped'), findsNothing);
     });
   });
 

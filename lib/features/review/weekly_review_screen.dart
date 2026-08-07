@@ -29,8 +29,8 @@ class WeeklyReviewScreen extends ConsumerStatefulWidget {
 class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   double _dragDx = 0.0;
   int _cursor = 0;
-  final Set<String> _skippedIds = {};
   List<TransactionReviewItem>? _stableQueue;
+  int? _totalInitialCount;
 
   @override
   Widget build(BuildContext context) {
@@ -51,13 +51,30 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       ),
       data: (items) {
         _stableQueue ??= List.of(items);
+        _totalInitialCount ??= _stableQueue!.length;
         final queue = _stableQueue!;
+        final skippedIds = viewState.skippedIds;
 
         if (queue.isEmpty) {
           return _InboxZeroView(isDark: isDark);
         }
 
+        // All remaining items are skipped — prompt to review them.
+        if (skippedIds.isNotEmpty &&
+            queue.every((i) => skippedIds.contains(i.id))) {
+          return _SkippedSummaryView(
+            isDark: isDark,
+            skippedCount: skippedIds.length,
+            onReview: () {
+              setState(() => _cursor = 0);
+              ref.read(reviewViewProvider.notifier).clearSkipped();
+            },
+          );
+        }
+
         final safeIndex = _cursor.clamp(0, queue.length - 1);
+        final resolvedCount = _totalInitialCount! - queue.length;
+        final skippedCount = skippedIds.length;
 
         if (viewState.viewMode == ReviewViewMode.list) {
           return _ListView(
@@ -69,7 +86,15 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           );
         }
 
-        return _buildCardView(queue, safeIndex, queue.length, isDark);
+        return _buildCardView(
+          queue,
+          safeIndex,
+          queue.length,
+          isDark,
+          resolvedCount: resolvedCount,
+          skippedCount: skippedCount,
+          totalInitialCount: _totalInitialCount!,
+        );
       },
     );
   }
@@ -78,8 +103,11 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     List<TransactionReviewItem> activeItems,
     int index,
     int totalCount,
-    bool isDark,
-  ) {
+    bool isDark, {
+    required int resolvedCount,
+    required int skippedCount,
+    required int totalInitialCount,
+  }) {
     final item = activeItems[index];
     final remainingCount = activeItems.length;
 
@@ -157,7 +185,14 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+              _SortProgressBar(
+                total: totalInitialCount,
+                resolved: resolvedCount,
+                skipped: skippedCount,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 12),
 
               // Swipeable Card Container
               Expanded(
@@ -257,8 +292,8 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   }
 
   void _skipItem(TransactionReviewItem item) {
+    ref.read(reviewViewProvider.notifier).skipItem(item.id);
     setState(() {
-      _skippedIds.add(item.id);
       final len = _stableQueue?.length ?? 0;
       if (_cursor < len - 1) _cursor++;
     });
@@ -410,6 +445,126 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         );
       }
     }
+  }
+}
+
+// ── Skipped Summary View ──────────────────────────────────────────────
+
+class _SkippedSummaryView extends StatelessWidget {
+  const _SkippedSummaryView({
+    required this.isDark,
+    required this.skippedCount,
+    required this.onReview,
+  });
+
+  final bool isDark;
+  final int skippedCount;
+  final VoidCallback onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.playlist_play_rounded,
+                  size: 56,
+                  color: isDark
+                      ? AppColorTokens.bloomGold
+                      : const Color(0xFF8A5A00),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '$skippedCount skipped',
+                  style: AppTheme.bloomDisplay(
+                    24,
+                    FontWeight.w700,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextPrimary
+                        : AppColorTokens.ink,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Review them now?',
+                  style: AppTheme.bloomDisplay(
+                    14,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: onReview,
+                  child: const Text('Review skipped'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sort Progress Bar ─────────────────────────────────────────────────
+
+class _SortProgressBar extends StatelessWidget {
+  const _SortProgressBar({
+    required this.total,
+    required this.resolved,
+    required this.skipped,
+    required this.isDark,
+  });
+
+  final int total;
+  final int resolved;
+  final int skipped;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    if (total == 0) return const SizedBox.shrink();
+    final remaining = (total - resolved - skipped).clamp(0, total);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: SizedBox(
+        height: 4,
+        child: Row(
+          children: [
+            if (resolved > 0)
+              Expanded(
+                flex: resolved,
+                child: const ColoredBox(color: AppColorTokens.bloomEmerald),
+              ),
+            if (skipped > 0)
+              Expanded(
+                flex: skipped,
+                child: const ColoredBox(color: AppColorTokens.bloomGold),
+              ),
+            if (remaining > 0)
+              Expanded(
+                flex: remaining,
+                child: ColoredBox(
+                  color: isDark
+                      ? AppColorTokens.bloomDarkCard
+                      : AppColorTokens.bloomChip,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
