@@ -1,5 +1,12 @@
 # Current Handoff
 
+## 2026-08-07 — T-153a ordered queue + cursor complete
+
+- Replaced `_skippedIds` filter with a stable `_stableQueue` + mutable `_cursor`.
+  Skip advances the cursor without removing items; confirmed/recategorised items
+  are removed with undo re-insertion. Deleted the dead `_currentIndex = 0` field.
+- Verification: analyzer clean; review focused suite **15/15** pass; commit 635e63d.
+
 ## 2026-08-07 — T-143c3 shadow metrics surface complete
 
 - Added a local developer metrics screen for shadow/production counts and the
@@ -16,16 +23,6 @@
   disagreements, with stable source ordering and no database writes.
 - Verification: analyzer clean; shadow/migration/diff focused suite **4/4**;
   full Flutter suite **663 tests** with the known unrelated
-  `exclusion_explanation_test.dart` failure (expected 500, actual 5500).
-
-## 2026-08-07 — T-143c1 shadow storage and runner complete
-
-- Added schema v16 `shadow_transactions` storage and an isolated runner for
-  normalized candidate outcomes. It records parsed, unparsed, and error rows
-  idempotently without copying raw message bodies or touching production
-  transactions.
-- Verification: analyzer clean; shadow runner and v16 migration suite **2/2**;
-  full Flutter suite **661 tests** with the known unrelated
   `exclusion_explanation_test.dart` failure (expected 500, actual 5500).
 
 This is a rolling handoff, not a project history. Current product state is in

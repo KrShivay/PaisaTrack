@@ -8,9 +8,7 @@ later hardening.
 
 ## In Progress
 
-- [ ] T-153a (@claude) [P2] Ordered queue + cursor replaces the skip filter.
-      Module: review/weekly_review_screen.dart.
-      Depends: none.
+<!-- Empty -->
 
 ## In Review
 
@@ -130,7 +128,6 @@ T-154a.
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
 | **T-151d** | P2 | ~M | Thinking, model-missing, no-answer states | T-151b |
 | **T-151e** | P3 | ~M | Inline charts and follow-up chips | T-151b |
-| **T-153a** | P2 | ~M | Ordered queue + cursor replaces the skip filter | — |
 | **T-153b** | P2 | ~S | Back navigation through seen cards | T-153a |
 | **T-153c** | P2 | ~M | Skipped end state, persistence, progress | T-153a |
 | **T-154a** | P2 | ~M | Open transaction detail from the Sort card | T-153a |
