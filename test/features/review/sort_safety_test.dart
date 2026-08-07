@@ -368,6 +368,52 @@ void main() {
     });
   });
 
+  group('T-154a — detail sheet from card', () {
+    testWidgets('tapping sort card opens a sheet without losing cursor position',
+        (tester) async {
+      final items = [
+        testReviewItem(
+          id: '1',
+          name: 'Zomato',
+          amount: 450.0,
+          direction: TransactionDirection.debit,
+        ),
+        testReviewItem(
+          id: '2',
+          name: 'Swiggy',
+          amount: 300.0,
+          direction: TransactionDirection.debit,
+        ),
+      ];
+
+      await pumpSort(tester, items);
+      expect(find.text('Zomato'), findsOneWidget);
+      expect(find.text('1 of 2'), findsOneWidget);
+
+      // Skip to move cursor to item 2
+      await tester.tap(find.byIcon(Icons.skip_next_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('Swiggy'), findsOneWidget);
+      expect(find.text('2 of 2'), findsOneWidget);
+
+      // Tap the sort card body (the _SortCard GestureDetector)
+      // This opens the detail sheet. The sheet may show an error loading
+      // the DB (no real DB in unit tests), but it must not crash.
+      await tester.tap(find.text('Swiggy'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Dismiss whatever was pushed (press Escape / Navigator.pop)
+      final NavigatorState nav = tester.state(find.byType(Navigator).first);
+      nav.pop();
+      await tester.pumpAndSettle();
+
+      // Cursor must be unchanged — still on Swiggy at position 2 of 2
+      expect(find.text('Swiggy'), findsOneWidget);
+      expect(find.text('2 of 2'), findsOneWidget);
+    });
+  });
+
   group('T-153b — back navigation', () {
     testWidgets('skip then back returns the same card', (tester) async {
       final items = [

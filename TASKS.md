@@ -8,8 +8,8 @@ later hardening.
 
 ## In Progress
 
-- [ ] T-153c (@claude) [P2] End state, persistence, and progress bar.
-      Module: weekly_review_screen.dart + weekly_review_providers.dart.
+- [ ] T-154a (@claude) [P2] Open transaction detail from the Sort card.
+      Module: weekly_review_screen.dart.
 
 ## In Review
 
@@ -143,7 +143,6 @@ T-154a.
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
 | **T-151d** | P2 | ~M | Thinking, model-missing, no-answer states | T-151b |
 | **T-151e** | P3 | ~M | Inline charts and follow-up chips | T-151b |
-| **T-153c** | P2 | ~M | Skipped end state, persistence, progress | T-153a |
 | **T-154a** | P2 | ~M | Open transaction detail from the Sort card | T-153a |
 | **T-154b** | P2 | ~M | Inline corrections + guess refresh before Keep | T-154a |
 | **T-149a** | P3 | ~M | Profile shell and personalisation | — |

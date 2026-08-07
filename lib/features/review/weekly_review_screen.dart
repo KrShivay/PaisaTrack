@@ -13,6 +13,7 @@ import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../settings/app_settings.dart';
+import '../transactions/transaction_detail_screen.dart';
 import '../transactions/transactions_providers.dart';
 import 'weekly_review_providers.dart';
 
@@ -217,6 +218,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                           item: item,
                           dragDx: _dragDx,
                           isDark: isDark,
+                          onTap: () => _openDetailSheet(context, item),
                         ),
                       ),
                     ),
@@ -283,6 +285,28 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openDetailSheet(
+    BuildContext context,
+    TransactionReviewItem item,
+  ) async {
+    await showBloomFullScreenSheet<void>(
+      context: context,
+      showClose: true,
+      builder: (ctx) => TransactionDetailScreen(txnId: item.id),
+    );
+    if (!mounted) return;
+    // Refresh the item in _stableQueue with any edits applied in the detail sheet.
+    final updatedItems = ref.read(reviewQueueProvider).valueOrNull;
+    if (updatedItems == null || _stableQueue == null) return;
+    final idx = _stableQueue!.indexWhere((i) => i.id == item.id);
+    if (idx == -1) return;
+    final updated = updatedItems.firstWhere(
+      (i) => i.id == item.id,
+      orElse: () => _stableQueue![idx],
+    );
+    setState(() => _stableQueue![idx] = updated);
   }
 
   void _goBack() {
@@ -651,11 +675,13 @@ class _SortCard extends StatelessWidget {
     required this.item,
     required this.dragDx,
     required this.isDark,
+    this.onTap,
   });
 
   final TransactionReviewItem item;
   final double dragDx;
   final bool isDark;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -667,7 +693,9 @@ class _SortCard extends StatelessWidget {
     final isSwipingRight = dragDx > 40;
     final isSwipingLeft = dragDx < -40;
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -818,6 +846,7 @@ class _SortCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
         ],
+      ),
       ),
     );
   }
