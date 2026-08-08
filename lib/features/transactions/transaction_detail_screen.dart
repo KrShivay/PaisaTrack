@@ -633,6 +633,7 @@ class _TransactionDetailScreenState
                                       height: 14,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
+                                        semanticsLabel: 'Saving note',
                                       ),
                                     )
                                   : const Text('Save Note'),
