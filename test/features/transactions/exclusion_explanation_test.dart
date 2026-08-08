@@ -55,6 +55,7 @@ void main() {
             confidenceJson: '{}',
             status: 'auto',
             lifecycleState: const Value('settled'),
+            isAnalyticsExcluded: const Value(true),
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
           ),
