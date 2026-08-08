@@ -1,1 +1,4 @@
 ## 2026-08-08 - Semantics label for CircularProgressIndicator\n**Learning:** In Flutter, progress indicators used in dialogs or sheets (like during a save operation) might not be announced meaningfully by screen readers without explicit semantic labels. \n**Action:** Add `semanticsLabel` to `CircularProgressIndicator` instances representing blocking background operations to provide screen reader users with context about the ongoing process.
+## 2026-08-08 - Semantics label for CircularProgressIndicator
+**Learning:** In Flutter, progress indicators used in dialogs or sheets (like during a save operation) might not be announced meaningfully by screen readers without explicit semantic labels.
+**Action:** Add `semanticsLabel` to `CircularProgressIndicator` instances representing blocking background operations to provide screen reader users with context about the ongoing process.
