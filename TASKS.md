@@ -172,13 +172,13 @@ T-157b starts — it is the safety net for the riskiest extraction here.
 | **T-156c** | P2 | ~M | Standardize TransactionDetailScreen's presentation | T-158c |
 | ~~**T-157a**~~ | ~~P2~~ | ~~~M~~ | ~~Move raw Drift writes out of recurring/insights screens~~ | ~~—~~ |
 | **T-157b** | P2 | ~L | Shared category-correction + undo controller | T-159a |
-| **T-157c** | P3 | ~S | Relocate `suggestedCategoriesProvider` out of the screen | — |
+| ~~**T-157c**~~ | ~~P3~~ | ~~~S~~ | ~~Relocate `suggestedCategoriesProvider` out of the screen~~ | ~~—~~ |
 | ~~**T-158a**~~ | ~~P2~~ | ~~~M~~ | ~~Extract pure functions (chip ranking, exclusion, evidence)~~ | ~~—~~ |
 | **T-158b** | P2 | ~M | Extract `TransactionDetailController` | T-157b |
 | **T-158c** | P2 | ~M | Extract sub-widgets into `detail/` | T-158a |
 | **T-158d** | P3 | ~S | Verify exclusion-reason parity (UI vs. analytics SQL) | T-158a |
 | ~~**T-159a**~~ | ~~P1~~ | ~~~M~~ | ~~Characterize correction/undo behavior before extraction~~ | ~~—~~ |
-| **T-159b** | P2 | ~S | Unit tests for extracted pure functions | T-158a |
+| ~~**T-159b**~~ | ~~P2~~ | ~~~S~~ | ~~Unit tests for extracted pure functions~~ | ~~T-158a~~ |
 | **T-159c** | P3 | ~M | Convert remaining shallow render tests to behavioral | T-158c |
 
 Suggested order: T-159a first (safety net) — then T-155/T-156/T-157a/T-158a
