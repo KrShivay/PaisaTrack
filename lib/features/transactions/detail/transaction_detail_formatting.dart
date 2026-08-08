@@ -30,19 +30,14 @@ List<Category> chipCategories(
 
 /// Returns the user-facing reason this transaction is excluded from analytics,
 /// or null if it is included.
+///
+/// Only reflects the two flags that [FinancialEligibility] actually checks in
+/// SQL — [Transaction.ownedTransferId] and [Transaction.isAnalyticsExcluded].
+/// Merchant-name heuristics (credit-card bill, ATM) were removed because they
+/// fired even when neither flag was set, producing a false "excluded" banner.
 String? exclusionReasonFor(Transaction txn) {
   if (txn.ownedTransferId != null) {
     return 'Self-transfer — excluded from totals to prevent double-counting.';
-  }
-  final raw = txn.merchantRaw?.toUpperCase();
-  if (raw != null &&
-      (raw.contains('CREDIT CARD') || raw.contains('CARD BILL'))) {
-    return 'Credit card bill payment — excluded from totals'
-        ' (card purchases are counted individually).';
-  }
-  if (raw != null && (raw.contains('ATM') || raw.contains('WITHDRAWAL'))) {
-    return 'Cash withdrawal — moved to untracked cash'
-        ' (excluded from category spending).';
   }
   if (txn.isAnalyticsExcluded) {
     return 'Excluded from analytics per settings.';

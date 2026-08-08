@@ -105,32 +105,16 @@ void main() {
       );
     });
 
-    test('credit card bill — CREDIT CARD pattern', () {
-      expect(
-        exclusionReasonFor(_txn(merchantRaw: 'HDFC CREDIT CARD PAYMENT')),
-        contains('Credit card bill payment'),
-      );
+    test('credit card bill merchant pattern alone returns null', () {
+      // merchant-pattern heuristics were removed — only ownedTransferId /
+      // isAnalyticsExcluded drive SQL exclusion
+      expect(exclusionReasonFor(_txn(merchantRaw: 'HDFC CREDIT CARD PAYMENT')),
+          isNull);
     });
 
-    test('credit card bill — CARD BILL pattern', () {
-      expect(
-        exclusionReasonFor(_txn(merchantRaw: 'ICICI CARD BILL')),
-        contains('Credit card bill payment'),
-      );
-    });
-
-    test('ATM withdrawal — ATM pattern', () {
-      expect(
-        exclusionReasonFor(_txn(merchantRaw: 'SBI ATM WITHDRAWAL')),
-        contains('Cash withdrawal'),
-      );
-    });
-
-    test('ATM withdrawal — WITHDRAWAL pattern', () {
-      expect(
-        exclusionReasonFor(_txn(merchantRaw: 'CASH WITHDRAWAL')),
-        contains('Cash withdrawal'),
-      );
+    test('ATM withdrawal merchant pattern alone returns null', () {
+      expect(exclusionReasonFor(_txn(merchantRaw: 'SBI ATM WITHDRAWAL')),
+          isNull);
     });
 
     test('analytics excluded flag', () {
@@ -150,11 +134,12 @@ void main() {
       expect(reason, contains('Self-transfer'));
     });
 
-    test('merchant patterns take priority over isAnalyticsExcluded flag', () {
+    test('isAnalyticsExcluded fires even with ATM merchant name', () {
+      // ownedTransferId check happens first, then isAnalyticsExcluded
       final reason = exclusionReasonFor(
         _txn(merchantRaw: 'SBI ATM', isAnalyticsExcluded: true),
       );
-      expect(reason, contains('Cash withdrawal'));
+      expect(reason, contains('Excluded from analytics'));
     });
   });
 
