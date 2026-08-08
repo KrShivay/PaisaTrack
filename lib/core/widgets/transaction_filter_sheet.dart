@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/repositories/transaction_repository.dart';
 import '../theme/app_tokens.dart';
+import 'bloom/bloom_sheet_scaffold.dart';
 
 enum TransactionDirectionFilter { all, spent, received }
 
@@ -176,10 +177,8 @@ Future<TransactionFilters?> showTransactionFilterSheet({
   required TransactionFilters initialFilters,
   required List<TransactionListItem> transactions,
 }) {
-  return showModalBottomSheet<TransactionFilters>(
+  return showBloomModalSheet<TransactionFilters>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
     builder: (context) => TransactionFilterSheet(
       initialFilters: initialFilters,
       transactions: transactions,
@@ -246,16 +245,18 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     }.toList()
       ..sort();
 
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
+    return BloomSheetScaffold(
+      showBack: false,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
@@ -405,6 +406,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                 child: const Text('Clear all'),
               ),
             ],
+            ),
           ),
         ),
       ),

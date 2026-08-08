@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/bloom/bloom_sheet_scaffold.dart';
 import 'transactions_providers.dart';
 
 /// Explicit provenance actions shared by transaction detail and review.
@@ -73,46 +74,47 @@ Future<void> _showSourceSms(
       ? null
       : '${localizations.formatMediumDate(receivedAt.toLocal())} · '
           '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(receivedAt.toLocal()))}';
-  return showModalBottomSheet<void>(
+  return showBloomModalSheet<void>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.screen.left,
-          AppSpacing.sm,
-          AppSpacing.screen.right,
-          AppSpacing.screen.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Source SMS', style: Theme.of(context).textTheme.titleLarge),
-            if (_nonEmpty(sender) case final sender?) ...[
-              const SizedBox(height: AppSpacing.xs),
+    builder: (context) => BloomSheetScaffold(
+      showBack: false,
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.screen.left,
+            AppSpacing.sm,
+            AppSpacing.screen.right,
+            AppSpacing.screen.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Source SMS', style: Theme.of(context).textTheme.titleLarge),
+              if (_nonEmpty(sender) case final sender?) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  [sender, receivedLabel].whereType<String>().join(' · '),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: SelectableText(body),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
               Text(
-                [sender, receivedLabel].whereType<String>().join(' · '),
+                "Raw SMS is available only during the app's retention window.",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
             ],
-            const SizedBox(height: AppSpacing.md),
-            Flexible(
-              child: SingleChildScrollView(
-                child: SelectableText(body),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Raw SMS is available only during the app’s retention window.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
+          ),
         ),
       ),
     ),

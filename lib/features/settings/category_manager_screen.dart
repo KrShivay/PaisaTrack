@@ -314,10 +314,9 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
     CategoryType initialType = CategoryType.spending,
     Set<String> existingNames = const {},
   }) {
-    return showModalBottomSheet<CategoryEditorResult>(
+    return showBloomFullScreenSheet<CategoryEditorResult>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+      showBack: true,
       builder: (context) => CategoryEditorDialog(
         title: title,
         initialValue: initialValue,

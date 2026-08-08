@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/repositories/category_correction.dart';
 import '../theme/app_tokens.dart';
+import 'bloom/bloom_sheet_scaffold.dart';
 
 Future<CorrectionScope?> showCorrectionScopeSheet({
   required BuildContext context,
@@ -13,10 +14,8 @@ Future<CorrectionScope?> showCorrectionScopeSheet({
   final effectiveInitial = availableScopes.contains(initialScope)
       ? initialScope
       : CorrectionScope.thisTransaction;
-  return showModalBottomSheet<CorrectionScope>(
+  return showBloomModalSheet<CorrectionScope>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
     builder: (context) => CorrectionScopeSheet(
       categoryName: categoryName,
       availableScopes: availableScopes,
@@ -52,46 +51,49 @@ class _CorrectionScopeSheetState extends State<CorrectionScopeSheet> {
     final scopes = CorrectionScope.values
         .where(widget.availableScopes.contains)
         .toList(growable: false);
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Apply ${widget.categoryName} to:',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              RadioGroup<CorrectionScope>(
-                groupValue: _scope,
-                onChanged: (value) {
-                  if (value != null) setState(() => _scope = value);
-                },
-                child: Column(
-                  children: [
-                    for (final scope in scopes)
-                      RadioListTile<CorrectionScope>(
-                        contentPadding: EdgeInsets.zero,
-                        value: scope,
-                        title: Text(_scopeLabel(scope, widget.matchingCount)),
-                        subtitle: Text(_scopeExplanation(scope)),
-                      ),
-                  ],
+    return BloomSheetScaffold(
+      showBack: false,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Apply ${widget.categoryName} to:',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, _scope),
-                child: const Text('Apply category'),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.md),
+                RadioGroup<CorrectionScope>(
+                  groupValue: _scope,
+                  onChanged: (value) {
+                    if (value != null) setState(() => _scope = value);
+                  },
+                  child: Column(
+                    children: [
+                      for (final scope in scopes)
+                        RadioListTile<CorrectionScope>(
+                          contentPadding: EdgeInsets.zero,
+                          value: scope,
+                          title: Text(_scopeLabel(scope, widget.matchingCount)),
+                          subtitle: Text(_scopeExplanation(scope)),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, _scope),
+                  child: const Text('Apply category'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
