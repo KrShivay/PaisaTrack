@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/transaction_source_repository.dart';
+import '../../enrichment/local_classifier.dart';
 
 const transactionPageSize = 100;
 const reviewPageSize = 100;
@@ -252,4 +255,49 @@ final categoryListProvider = StreamProvider<List<Category>>((ref) {
     error: (error, stackTrace) =>
         Stream<List<Category>>.error(error, stackTrace),
   );
+});
+
+/// Top-K suggested categories for a transaction, used by the detail sheet's
+/// inline chip row. Defined here (not in transaction_detail_screen.dart) so
+/// tests and sibling providers can import it without pulling in the full screen.
+final suggestedCategoriesProvider =
+    FutureProvider.family<List<String>, String>((ref, txnId) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  final txn = await (db.select(db.transactions)
+        ..where((t) => t.id.equals(txnId)))
+      .getSingle();
+  final merchant = txn.merchantId != null
+      ? await (db.select(db.merchants)
+            ..where((m) => m.id.equals(txn.merchantId!)))
+          .getSingleOrNull()
+      : null;
+  final classifier = LocalClassifier(db);
+
+  final record = NormalizedTransactionRecord(
+    amount: txn.amount,
+    direction: TransactionDirection.values.byName(txn.direction),
+    channel: TransactionChannel.values.byName(txn.channel),
+    merchantRaw: txn.merchantRaw,
+    counterpartyVpa: txn.counterpartyVpa,
+    accountHint: txn.accountHint,
+    balanceAfter: txn.balanceAfter,
+    refId: txn.refId,
+    ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
+    parseSource: ParseSource.values.firstWhere(
+      (source) => source.wireName == txn.parseSource,
+      orElse: () => ParseSource.generic,
+    ),
+    parseConfidence: 1,
+  );
+
+  final blob = merchant?.embedding;
+  final Float32List? vector = blob == null
+      ? null
+      : Float32List.view(
+          blob.buffer, blob.offsetInBytes, blob.lengthInBytes ~/ 4,
+        );
+
+  final predictions =
+      await classifier.predictTopK(record, 5, merchantEmbedding: vector);
+  return predictions.map((p) => p.categoryId).toList();
 });

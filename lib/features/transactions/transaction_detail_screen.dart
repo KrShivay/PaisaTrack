@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -13,41 +12,13 @@ import '../../core/widgets/category_picker_sheet.dart';
 import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
-import '../../data/models/normalized_transaction_record.dart';
+import '../../data/models/normalized_transaction_record.dart' show FieldEvidence;
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
-import '../../enrichment/local_classifier.dart';
 import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
 import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
-
-final suggestedCategoriesProvider = FutureProvider.family<List<String>, String>((ref, txnId) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  final txn = await (db.select(db.transactions)..where((t) => t.id.equals(txnId))).getSingle();
-  final merchant = txn.merchantId != null ? await (db.select(db.merchants)..where((m) => m.id.equals(txn.merchantId!))).getSingleOrNull() : null;
-  final classifier = LocalClassifier(db);
-  
-  final record = NormalizedTransactionRecord(
-    amount: txn.amount,
-    direction: TransactionDirection.values.byName(txn.direction),
-    channel: TransactionChannel.values.byName(txn.channel),
-    merchantRaw: txn.merchantRaw,
-    counterpartyVpa: txn.counterpartyVpa,
-    accountHint: txn.accountHint,
-    balanceAfter: txn.balanceAfter,
-    refId: txn.refId,
-    ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
-    parseSource: ParseSource.values.firstWhere((source) => source.wireName == txn.parseSource, orElse: () => ParseSource.generic),
-    parseConfidence: 1,
-  );
-  
-  final blob = merchant?.embedding;
-  final Float32List? vector = blob == null ? null : Float32List.view(blob.buffer, blob.offsetInBytes, blob.lengthInBytes ~/ 4);
-  
-  final predictions = await classifier.predictTopK(record, 5, merchantEmbedding: vector);
-  return predictions.map((p) => p.categoryId).toList();
-});
 
 /// Redesigned Bloom Transaction Detail sheet with hero amount, category editor,
 /// scope selector, and technical SMS provenance disclosure.

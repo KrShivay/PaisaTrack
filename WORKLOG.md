@@ -1,5 +1,17 @@
 # Current Handoff
 
+## 2026-08-08 — T-158a pure functions extracted from transaction_detail_screen
+
+- Extracted `chipCategories`, `exclusionReasonFor`, `formatDetailDate`,
+  `parserSourceLabel` into new `detail/transaction_detail_formatting.dart`;
+  extracted `buildEvidenceSpans` + `_highlightColorFor` into new
+  `detail/transaction_detail_evidence.dart`.
+- Removed `_formatDate`/`_shortMonth` instance methods from
+  `_TransactionDetailScreenState`; `_SourceMessageEvidenceView.build()` is
+  now a one-liner delegate. All five functions are now unit-testable without
+  pumping the full screen widget.
+- Analyzer clean; 0 affected processes (pure refactor). Commit 834ae42.
+
 ## 2026-08-08 — T-156b bespoke sheet presenters routed through Bloom helpers
 
 - Replaced `showModalBottomSheet` in `showCorrectionScopeSheet`,
@@ -32,13 +44,6 @@
   (picker + scope); `_confirmItem` tests revealed a bug where
   `updateWithFeedback(status:…)` is a no-op (flagged in spawned task).
 - Verification: analyzer clean; T-159a suite **10/10**; commit below.
-
-## 2026-08-08 — T-154a sort card opens detail sheet complete
-
-- `_SortCard` is now a tap target. Tapping opens `TransactionDetailScreen`
-  as a Bloom full-screen sheet. On dismiss, the matching `_stableQueue` entry
-  is refreshed from the provider without resetting the cursor.
-- Verification: analyzer clean; review focused suite **21/21**; commit cc5df62.
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
