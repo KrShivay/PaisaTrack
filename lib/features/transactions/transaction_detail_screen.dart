@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -18,6 +17,8 @@ import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../enrichment/local_classifier.dart';
+import 'detail/transaction_detail_evidence.dart';
+import 'detail/transaction_detail_formatting.dart';
 import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
 
@@ -274,22 +275,7 @@ class _TransactionDetailScreenState
             );
 
             final suggestedIds = ref.watch(suggestedCategoriesProvider(widget.txnId)).valueOrNull ?? [];
-            final chipCategories = <Category>[currentCat];
-            for (final sid in suggestedIds) {
-              if (chipCategories.length >= 3) break;
-              if (sid != currentCat.id && sid != 'uncategorized') {
-                final cat = allCategories.where((c) => c.id == sid).firstOrNull;
-                if (cat != null) chipCategories.add(cat);
-              }
-            }
-            if (chipCategories.length < 3) {
-              for (final c in allCategories) {
-                if (chipCategories.length >= 3) break;
-                if (c.id != currentCat.id && c.id != 'uncategorized' && !chipCategories.any((sc) => sc.id == c.id)) {
-                  chipCategories.add(c);
-                }
-              }
-            }
+            final chips = chipCategories(currentCat, allCategories, suggestedIds);
 
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -321,7 +307,7 @@ class _TransactionDetailScreenState
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _formatDate(date),
+                              formatDetailDate(date),
                               style: AppTheme.bloomDisplay(
                                 12,
                                 FontWeight.w400,
@@ -384,7 +370,7 @@ class _TransactionDetailScreenState
                                     scrollDirection: Axis.horizontal,
                                     child: Row(
                                       children: [
-                                        for (final cat in chipCategories) ...[
+                                        for (final cat in chips) ...[
                                           _InlineCategoryChip(
                                             category: cat,
                                             isSelected: cat.id == currentCatId,
@@ -449,14 +435,7 @@ class _TransactionDetailScreenState
                   const SizedBox(height: 16),
 
                   // Exclusion Explanation Banner (T-135c)
-                  if (txn.ownedTransferId != null ||
-                      (txn.merchantRaw != null &&
-                          (txn.merchantRaw!.toUpperCase().contains('CREDIT CARD') ||
-                              txn.merchantRaw!.toUpperCase().contains('CARD BILL'))) ||
-                      (txn.merchantRaw != null &&
-                          (txn.merchantRaw!.toUpperCase().contains('ATM') ||
-                              txn.merchantRaw!.toUpperCase().contains('WITHDRAWAL'))) ||
-                      txn.isAnalyticsExcluded) ...[
+                  if (exclusionReasonFor(txn) case final reason?) ...[
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -474,23 +453,15 @@ class _TransactionDetailScreenState
                         children: [
                           Icon(
                             Icons.info_outline_rounded,
-                            color: isDark ? const Color(0xFF60A5FA) : Colors.blue.shade700,
+                            color: isDark
+                                ? const Color(0xFF60A5FA)
+                                : Colors.blue.shade700,
                             size: 20,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              txn.ownedTransferId != null
-                                  ? 'Self-transfer — excluded from totals to prevent double-counting.'
-                                  : (txn.merchantRaw != null &&
-                                          (txn.merchantRaw!.toUpperCase().contains('CREDIT CARD') ||
-                                              txn.merchantRaw!.toUpperCase().contains('CARD BILL')))
-                                      ? 'Credit card bill payment — excluded from totals (card purchases are counted individually).'
-                                      : (txn.merchantRaw != null &&
-                                              (txn.merchantRaw!.toUpperCase().contains('ATM') ||
-                                                  txn.merchantRaw!.toUpperCase().contains('WITHDRAWAL')))
-                                          ? 'Cash withdrawal — moved to untracked cash (excluded from category spending).'
-                                          : 'Excluded from analytics per settings.',
+                              reason,
                               style: AppTheme.bloomDisplay(
                                 12,
                                 FontWeight.w500,
@@ -889,29 +860,6 @@ class _TransactionDetailScreenState
     );
   }
 
-  String _formatDate(DateTime date) {
-    final local = date.toLocal();
-    final h =
-        local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
-    final m = local.minute.toString().padLeft(2, '0');
-    final ampm = local.hour >= 12 ? 'pm' : 'am';
-    return '${_shortMonth(local.month)} ${local.day}, ${local.year} · $h:$m $ampm';
-  }
-
-  String _shortMonth(int month) => const [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ][month - 1];
 }
 
 class _SourceMessageEvidenceView extends StatelessWidget {
@@ -930,174 +878,8 @@ class _SourceMessageEvidenceView extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    if (rawSmsBody == null || rawSmsBody!.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColorTokens.bloomDarkCard
-              : AppColorTokens.bloomCard,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          'Source message purged per retention policy',
-          style: AppTheme.bloomDisplay(
-            12,
-            FontWeight.w400,
-            color: isDark
-                ? AppColorTokens.bloomDarkTextTertiary
-                : AppColorTokens.inkTertiary,
-          ),
-        ),
-      );
-    }
-
-    final evList = evidence ?? [];
-    if (evList.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'FIELD EVIDENCE SPANS',
-            style: AppTheme.bloomDisplay(
-              10,
-              FontWeight.w600,
-              letterSpacing: 0.1,
-              color: isDark
-                  ? AppColorTokens.bloomDarkTextTertiary
-                  : AppColorTokens.inkTertiary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SelectableText(
-            rawSmsBody!,
-            style: AppTheme.bloomMono(12, FontWeight.w400),
-          ),
-        ],
-      );
-    }
-
-    // Sort evidence spans by start offset
-    final sorted = [...evList]..sort((a, b) => a.start.compareTo(b.start));
-    final spans = <InlineSpan>[];
-    var currentOffset = 0;
-    final textLength = rawSmsBody!.length;
-
-    for (final ev in sorted) {
-      if (ev.start < currentOffset || ev.start >= textLength) continue;
-      if (ev.start > currentOffset) {
-        spans.add(
-          TextSpan(
-            text: rawSmsBody!.substring(currentOffset, ev.start),
-          ),
-        );
-      }
-      final end = math.min(ev.end, textLength);
-      final verbatimText = rawSmsBody!.substring(ev.start, end);
-      final highlightColor = _highlightColorFor(ev.field, isDark);
-
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: highlightColor,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              verbatimText,
-              style: AppTheme.bloomMono(
-                12,
-                FontWeight.w600,
-                color: isDark ? Colors.white : Colors.black,
-              ),
-            ),
-          ),
-        ),
-      );
-      currentOffset = end;
-    }
-    if (currentOffset < textLength) {
-      spans.add(TextSpan(text: rawSmsBody!.substring(currentOffset)));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'FIELD EVIDENCE SPANS',
-          style: AppTheme.bloomDisplay(
-            10,
-            FontWeight.w600,
-            letterSpacing: 0.1,
-            color: isDark
-                ? AppColorTokens.bloomDarkTextTertiary
-                : AppColorTokens.inkTertiary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        SelectableText.rich(
-          TextSpan(
-            children: spans,
-            style: AppTheme.bloomMono(12, FontWeight.w400),
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Field evidence legend badges with parser & confidence per field
-        Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          children: [
-            for (final ev in evList)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomDarkBase
-                      : const Color(0xFFEFEBFD),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${ev.field}: "${ev.verbatim}" (${ev.extractor}, ${(parseConfidence ?? 1.0) * 100 ~/ 1}%)',
-                  style: AppTheme.bloomMono(
-                    10,
-                    FontWeight.w500,
-                    color: isDark
-                        ? AppColorTokens.bloomDarkTextSecondary
-                        : AppColorTokens.inkSecondary,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Color _highlightColorFor(String field, bool isDark) {
-    switch (field.toLowerCase()) {
-      case 'amount':
-        return isDark
-            ? AppColorTokens.emerald.withValues(alpha: 0.35)
-            : const Color(0xFFD1F4E0);
-      case 'direction':
-        return isDark
-            ? AppColorTokens.violetPrimary.withValues(alpha: 0.35)
-            : const Color(0xFFE2D9F3);
-      case 'date':
-      case 'ts':
-        return isDark
-            ? AppColorTokens.warningDark.withValues(alpha: 0.35)
-            : const Color(0xFFFBE6B5);
-      default:
-        return isDark
-            ? AppColorTokens.royalBlue.withValues(alpha: 0.35)
-            : const Color(0xFFD9EEF9);
-    }
-  }
+  Widget build(BuildContext context) =>
+      buildEvidenceSpans(rawSmsBody, evidence, isDark, parseConfidence);
 }
 
 class _InlineCategoryChip extends StatelessWidget {
@@ -1244,23 +1026,7 @@ class _WhereThisCameFromSection extends StatelessWidget {
     final displayBody = rawSmsBody ??
         'Original message no longer stored — kept for 30 days';
 
-    final parserDisplay = switch (parseSource) {
-      'template' => 'Template match',
-      'generic' => 'Pattern match',
-      'llm' => 'AI model',
-      'manual' => 'Manual entry',
-      final src? => src,
-      null => 'Parsed',
-    };
-
-    final confidencePct = parseConfidence != null
-        ? '${(parseConfidence! * 100).toStringAsFixed(0)}%'
-        : null;
-
-    final infoLine = confidencePct != null
-        ? '$parserDisplay · $confidencePct'
-        : parserDisplay;
-
+    final infoLine = parserSourceLabel(parseSource, parseConfidence);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

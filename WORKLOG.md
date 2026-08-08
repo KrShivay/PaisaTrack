@@ -1,5 +1,18 @@
 # Current Handoff
 
+## 2026-08-08 — T-156b bespoke sheet presenters routed through Bloom helpers
+
+- Replaced `showModalBottomSheet` in `showCorrectionScopeSheet`,
+  `showTransactionFilterSheet`, `_showSourceSms`, and `_askCategory` with
+  `showBloomModalSheet` / `showBloomFullScreenSheet`. Wrapped
+  `CorrectionScopeSheet` and `TransactionFilterSheet` bodies in
+  `BloomSheetScaffold` to surface the Bloom handle. `_askCategory` now uses
+  `showBloomFullScreenSheet(showBack: true)` matching the three other
+  category-editor flows. Also removed `viewInsetsOf` keyboard padding from
+  both sheet bodies since `showBloomModalSheet` handles it.
+- Analyzer clean; 0 `showModalBottomSheet` calls remain in the four files
+  (AC met). Commit 9a68ae2.
+
 ## 2026-08-08 — T-157a raw Drift writes routed through repositories
 
 - Added `RecurringRepository.setStatus` and `InsightsRepository.dismiss`;
@@ -26,13 +39,6 @@
   as a Bloom full-screen sheet. On dismiss, the matching `_stableQueue` entry
   is refreshed from the provider without resetting the cursor.
 - Verification: analyzer clean; review focused suite **21/21**; commit cc5df62.
-
-## 2026-08-07 — T-153c end state, provider persistence, progress bar complete
-
-- Skipping all items now shows "N skipped — review them?" instead of Inbox Zero.
-  Skip state moved to `ReviewViewState` (survives widget disposal). Added
-  `_SortProgressBar` (resolved/skipped/remaining segments) below header counter.
-- Verification: analyzer clean; review focused suite **20/20**; commit ebf62cd.
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.
