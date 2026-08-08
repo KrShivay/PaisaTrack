@@ -75,6 +75,9 @@ counterparties fail closed; seen counterparties rejoin the confidence policy
 and can become automatic. Generic VPA extraction rejects email-domain suffixes.
 Manual entries are confirmed. Category/description corrections write feedback,
 rules, learned aliases, and transaction state in one database transaction.
+`TransactionCorrectionController` owns the shared repository-action → undo-token
+sequencing used by transaction detail and Sort; each screen supplies only its
+optimistic presentation update and inverse callback.
 
 User labels extend canonical merchant/counterparty identity and alias resolution.
 They can map multiple aliases, preview affected history, and refuse conflicting

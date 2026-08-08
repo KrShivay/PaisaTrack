@@ -12,11 +12,13 @@ import '../../core/widgets/category_picker_sheet.dart';
 import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
-import '../../data/models/normalized_transaction_record.dart' show FieldEvidence;
+import '../../data/models/normalized_transaction_record.dart'
+    show FieldEvidence;
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
+import 'transaction_correction_controller.dart';
 import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
 
@@ -86,6 +88,14 @@ class _TransactionDetailScreenState
     }
   }
 
+  TransactionCorrectionController get _correctionController =>
+      TransactionCorrectionController(
+        loadDatabase: () => ref.read(appDatabaseProvider.future),
+        resolveRepository: (database) =>
+            ref.read(transactionRepositoryProvider(database)),
+        undoController: ref.read(undoControllerProvider.notifier),
+      );
+
   Future<void> _changeCategory() async {
     final categories = await ref.read(categoryListProvider.future);
     if (!mounted) return;
@@ -107,8 +117,6 @@ class _TransactionDetailScreenState
     );
     if (scope == null || !mounted) return;
 
-    final database = await ref.read(appDatabaseProvider.future);
-    final repo = ref.read(transactionRepositoryProvider(database));
     final prevCategory = _categoryId;
 
     setState(() {
@@ -116,34 +124,31 @@ class _TransactionDetailScreenState
       _categoryName = chosen.name;
     });
 
-    await repo.correctCategory(
-      txnId: widget.txnId,
-      categoryId: chosen.id,
-      scope: scope,
-      context: 'detail_edit',
-    );
-
-    ref.read(undoControllerProvider.notifier).pushUndo(
-          UndoToken(
-            id: 'cat_detail_${widget.txnId}',
-            message: 'Category updated to ${chosen.name}',
-            undoAction: () async {
-              await repo.updateWithFeedback(
-                txnId: widget.txnId,
-                categoryId: Value(prevCategory),
-                context: 'undo_detail',
-              );
-              if (mounted) {
-                setState(() => _categoryId = prevCategory);
-              }
-            },
-          ),
+    await _correctionController.apply(
+      id: 'cat_detail_${widget.txnId}',
+      message: 'Category updated to ${chosen.name}',
+      action: (repo) async {
+        await repo!.correctCategory(
+          txnId: widget.txnId,
+          categoryId: chosen.id,
+          scope: scope,
+          context: 'detail_edit',
         );
+      },
+      undo: (repo) async {
+        await repo!.updateWithFeedback(
+          txnId: widget.txnId,
+          categoryId: Value(prevCategory),
+          context: 'undo_detail',
+        );
+        if (mounted) {
+          setState(() => _categoryId = prevCategory);
+        }
+      },
+    );
   }
 
   Future<void> _selectCategoryDirectly(Category chosen) async {
-    final database = await ref.read(appDatabaseProvider.future);
-    final repo = ref.read(transactionRepositoryProvider(database));
     final prevCategory = _categoryId;
     final prevCategoryName = _categoryName;
 
@@ -153,11 +158,29 @@ class _TransactionDetailScreenState
     });
 
     try {
-      await repo.correctCategory(
-        txnId: widget.txnId,
-        categoryId: chosen.id,
-        scope: CorrectionScope.thisTransaction,
-        context: 'detail_chip_edit',
+      await _correctionController.apply(
+        id: 'cat_detail_${widget.txnId}',
+        message: 'Category updated to ${chosen.name}',
+        action: (repo) async {
+          await repo!.correctCategory(
+            txnId: widget.txnId,
+            categoryId: chosen.id,
+            scope: CorrectionScope.thisTransaction,
+            context: 'detail_chip_edit',
+          );
+        },
+        undo: (repo) async {
+          if (prevCategory != null) {
+            await repo!.updateWithFeedback(
+              txnId: widget.txnId,
+              categoryId: Value(prevCategory),
+              context: 'undo_detail',
+            );
+            if (mounted) {
+              setState(() => _categoryId = prevCategory);
+            }
+          }
+        },
       );
     } catch (e) {
       if (!mounted) return;
@@ -170,25 +193,6 @@ class _TransactionDetailScreenState
       });
       return;
     }
-
-    ref.read(undoControllerProvider.notifier).pushUndo(
-          UndoToken(
-            id: 'cat_detail_${widget.txnId}',
-            message: 'Category updated to ${chosen.name}',
-            undoAction: () async {
-              if (prevCategory != null) {
-                await repo.updateWithFeedback(
-                  txnId: widget.txnId,
-                  categoryId: Value(prevCategory),
-                  context: 'undo_detail',
-                );
-                if (mounted) {
-                  setState(() => _categoryId = prevCategory);
-                }
-              }
-            },
-          ),
-        );
   }
 
   @override
@@ -224,15 +228,16 @@ class _TransactionDetailScreenState
 
             final txn = detail.txn;
             final isDebit = txn.direction == 'debit';
-            final currentCatId = _categoryId ?? txn.categoryId ?? 'uncategorized';
+            final currentCatId =
+                _categoryId ?? txn.categoryId ?? 'uncategorized';
             final categoryDisplayName =
                 _categoryName ?? detail.categoryName ?? 'Uncategorised';
             final displayName =
                 detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
             final date = DateTime.fromMillisecondsSinceEpoch(txn.ts);
 
-            final allCategories =
-                ref.watch(categoryListProvider).valueOrNull ?? const <Category>[];
+            final allCategories = ref.watch(categoryListProvider).valueOrNull ??
+                const <Category>[];
             final currentCat = allCategories.firstWhere(
               (c) => c.id == currentCatId,
               orElse: () => Category(
@@ -245,8 +250,12 @@ class _TransactionDetailScreenState
               ),
             );
 
-            final suggestedIds = ref.watch(suggestedCategoriesProvider(widget.txnId)).valueOrNull ?? [];
-            final chips = chipCategories(currentCat, allCategories, suggestedIds);
+            final suggestedIds = ref
+                    .watch(suggestedCategoriesProvider(widget.txnId))
+                    .valueOrNull ??
+                [];
+            final chips =
+                chipCategories(currentCat, allCategories, suggestedIds);
 
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -315,13 +324,15 @@ class _TransactionDetailScreenState
                       children: [
                         // Category Row with Inline Chips (T-148b)
                         Semantics(
-                          label: 'Category, $categoryDisplayName, double tap to change',
+                          label:
+                              'Category, $categoryDisplayName, double tap to change',
                           button: true,
                           child: InkWell(
                             onTap: _changeCategory,
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 4.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -830,7 +841,6 @@ class _TransactionDetailScreenState
       ),
     );
   }
-
 }
 
 class _SourceMessageEvidenceView extends StatelessWidget {

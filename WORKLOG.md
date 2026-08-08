@@ -1,5 +1,16 @@
 # Current Handoff
 
+## 2026-08-08 — T-157b shared correction/undo controller
+
+- Added `TransactionCorrectionController` to centralize database resolution,
+  repository mutation, and undo-token registration for transaction detail and
+  Sort. Optimistic queue/category presentation and existing repository contexts
+  remain in the screens through callbacks.
+- Repointed `_changeCategory`, `_selectCategoryDirectly`, `_confirmItem`, and
+  `_recategorizeItem`; cleaned six pre-existing analyzer infos in T-159b tests.
+- Focused Review/Detail correction suite: 20/20 passed. `flutter analyze
+  --no-pub`: no issues found.
+
 ## 2026-08-08 — T-158d exclusionReasonFor parity fix
 
 - Removed 2 merchant-pattern branches (CREDIT CARD/CARD BILL and ATM/WITHDRAWAL)

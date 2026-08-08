@@ -108,13 +108,17 @@ void main() {
     test('credit card bill merchant pattern alone returns null', () {
       // merchant-pattern heuristics were removed — only ownedTransferId /
       // isAnalyticsExcluded drive SQL exclusion
-      expect(exclusionReasonFor(_txn(merchantRaw: 'HDFC CREDIT CARD PAYMENT')),
-          isNull);
+      expect(
+        exclusionReasonFor(_txn(merchantRaw: 'HDFC CREDIT CARD PAYMENT')),
+        isNull,
+      );
     });
 
     test('ATM withdrawal merchant pattern alone returns null', () {
-      expect(exclusionReasonFor(_txn(merchantRaw: 'SBI ATM WITHDRAWAL')),
-          isNull);
+      expect(
+        exclusionReasonFor(_txn(merchantRaw: 'SBI ATM WITHDRAWAL')),
+        isNull,
+      );
     });
 
     test('analytics excluded flag', () {
@@ -181,8 +185,11 @@ void main() {
       ];
       for (var m = 1; m <= 12; m++) {
         final result = formatDetailDate(DateTime(2024, m, 1, 10, 0));
-        expect(result, contains(abbrevs[m - 1]),
-            reason: 'month $m should abbreviate to ${abbrevs[m - 1]}');
+        expect(
+          result,
+          contains(abbrevs[m - 1]),
+          reason: 'month $m should abbreviate to ${abbrevs[m - 1]}',
+        );
       }
     });
   });

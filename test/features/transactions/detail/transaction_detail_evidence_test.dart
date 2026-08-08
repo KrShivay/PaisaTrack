@@ -25,8 +25,10 @@ void main() {
       await tester.pumpWidget(
         _wrap(buildEvidenceSpans(null, null, false, null)),
       );
-      expect(find.text('Source message purged per retention policy'),
-          findsOneWidget);
+      expect(
+        find.text('Source message purged per retention policy'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows purged message when rawSmsBody is empty',
@@ -34,8 +36,10 @@ void main() {
       await tester.pumpWidget(
         _wrap(buildEvidenceSpans('', [], false, null)),
       );
-      expect(find.text('Source message purged per retention policy'),
-          findsOneWidget);
+      expect(
+        find.text('Source message purged per retention policy'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -102,7 +106,7 @@ void main() {
 
     testWidgets('span at end of string — no trailing text error',
         (tester) async {
-      final end = _sms.length;
+      const end = _sms.length;
       // span covers last 7 chars "xx1234)"
       final span = _ev('account', end - 7, end);
       await tester.pumpWidget(

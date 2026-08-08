@@ -75,7 +75,7 @@ normative boundaries.
 | Live/history/resume SMS capture | Implemented, local, paged, idempotent, and manual scans report scanned/rejected/unknown/accepted/parsed/unparsed/created/already-known counts; retained failures store only an allowlisted reason and parser version, suppress same-version retries, and retry after parser upgrades; Settings and Activity now expose shared permission status cards that refresh on app resume, alongside content-free retained-failure counts, reason buckets, retention disclosure, and inbox-scan retry | Device acceptance remains; targeted retry and live expiry refresh remain future hardening |
 | Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm, Punjab National Bank and generic coverage exist; sanitized salary-credit templates and sender-agnostic fallback are proven end to end; PNB has a public-source fixture matrix with an exact-parse gate; developer diagnostics expose content-free native live/batch filter and unknown-sender counters | Public PNB templates remain capped at 0.85 until device confirmation; counters reset with the app process; further bank breadth still requires sanitized evidence and exact parser assertions |
 | Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI, explicit Activity page exhaustion, strict Activity keyset paging, continuation while filtered | Activity search still covers only the loaded page; SQL-backed cross-page search remains future work, and query failures still need actionable error states |
-| Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates | Queue remains capped at 100; cursor/persistence work is T-153 |
+| Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates and shared correction/undo sequencing | Queue remains capped at 100; cursor/persistence work is T-153 |
 | Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful guidance, global monthly budget prototype, recurring totals | Error states remain incomplete |
 | Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Eligibility diagnostics are absent |
 | Categories and identities | Category manager, SQL-backed paged payee labels/search, payment-source naming/ownership/exclusion | Duplicate suggestions remain review-only; several secondary screens retain legacy surfaces |
@@ -138,9 +138,10 @@ Historical full-suite evidence, recorded on 2026-07-26:
 - `flutter analyze --no-pub`: **one lint**, at
   `test/features/insights/insights_recurring_test.dart:102`.
 
-Current workspace verification, 2026-07-29:
+Current workspace verification, 2026-08-08:
 
 - Focused T-155/T-156 regression suite: **25/25 passed**.
+- Focused T-157b Review/Detail correction suite: **20/20 passed**.
 - `flutter analyze --no-pub`: **no issues found**.
 - GitNexus clean rebuild: status confirms the current `main` commit is indexed
   and up to date.

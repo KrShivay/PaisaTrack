@@ -12,7 +12,11 @@ later hardening.
 
 ## In Review
 
-<!-- Empty: T-127 and T-108 passed bounded local review and are complete. -->
+- [ ] T-157b (@codex) [P2] Shared category-correction + undo controller.
+      Verification: focused Review/Detail correction suite 20/20 passed;
+      Flutter analyzer reports no issues; `git diff --check` clean. The four
+      handlers now call `TransactionCorrectionController.apply` and retain
+      their existing optimistic UI, repository contexts, and undo callbacks.
 
 ## Ready
 
