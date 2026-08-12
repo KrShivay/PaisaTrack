@@ -54,6 +54,7 @@ void main() {
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'auto',
+            isAnalyticsExcluded: const Value(true),
             lifecycleState: const Value('settled'),
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
