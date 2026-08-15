@@ -42,6 +42,18 @@ void main() {
           ),
         );
 
+    // Insert a category that is not spending (e.g. transfers/bill payments)
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'cat_transfers',
+            name: 'Transfers',
+            icon: 'sync',
+            isSpending: false,
+            sortOrder: 0,
+            isUserCreated: false,
+          ),
+        );
+
     // Credit Card Bill Payment: Rs 5000 (should NOT be added to category spending)
     await database.into(database.transactions).insert(
           TransactionsCompanion.insert(
@@ -52,6 +64,7 @@ void main() {
             channel: 'netbanking',
             merchantRaw: const Value('HDFC CREDIT CARD PAYMENT'),
             parseSource: 'generic',
+            categoryId: const Value('cat_transfers'),
             confidenceJson: '{}',
             status: 'auto',
             lifecycleState: const Value('settled'),
