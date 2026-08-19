@@ -13,8 +13,9 @@ import 'package:paisatrack/features/transactions/transactions_providers.dart';
 void main() {
   late AppDatabase database;
 
-  setUp(() {
+  setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
+    await database.seedDefaultCategories();
   });
 
   tearDown(() async {
@@ -32,6 +33,7 @@ void main() {
             amount: 500.0,
             direction: 'debit',
             channel: 'card',
+            categoryId: const Value('food_dining'),
             merchantRaw: const Value('Swiggy'),
             parseSource: 'generic',
             confidenceJson: '{}',
@@ -50,6 +52,7 @@ void main() {
             amount: 5000.0,
             direction: 'debit',
             channel: 'netbanking',
+            categoryId: const Value('transfers'), // Use a category that has is_spending: false
             merchantRaw: const Value('HDFC CREDIT CARD PAYMENT'),
             parseSource: 'generic',
             confidenceJson: '{}',
