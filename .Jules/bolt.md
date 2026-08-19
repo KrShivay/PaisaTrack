@@ -1,0 +1,3 @@
+## 2026-07-29 - [Optimized filter in transactions_screen.dart]
+**Learning:** In a list displaying many transactions, eager string formatting/manipulation (like `toLowerCase()`) for fields that might not even be queried can cause unnecessary object allocation and overhead, leading to a performance bottleneck.
+**Action:** Use short-circuiting logic (e.g., `||` over eager formatting) and test the most common or impactful fields (`displayName`, `amount`) first to skip the rest of the checks if a match is found. This also avoids calculating `toLowerCase()` on null fields by combining the null check.
