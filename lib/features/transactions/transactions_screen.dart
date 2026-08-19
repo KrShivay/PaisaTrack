@@ -82,29 +82,24 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           break;
       }
       if (_query.isNotEmpty) {
+        // Bolt performance optimization: Use lazy, short-circuiting logic
+        // instead of eagerly calculating toLowerCase() and allocating memory
+        // for every field before checking for a match. The most common
+        // fields are checked first.
         final q = _query.toLowerCase();
-        final name = item.displayName.toLowerCase();
-        final note = (item.note ?? '').toLowerCase();
-        final amt = item.amount.toString();
-        final channel = item.channel.toLowerCase();
-        final ref = (item.reference ?? '').toLowerCase();
-        final status = item.status.toLowerCase();
-        final account = (item.accountHint ?? '').toLowerCase();
-        final category = (item.categoryName ?? '').toLowerCase();
-        final source = (item.paymentSourceName ?? '').toLowerCase();
-        final merchant = (item.merchantRaw ?? '').toLowerCase();
-        if (!name.contains(q) &&
-            !note.contains(q) &&
-            !amt.contains(q) &&
-            !channel.contains(q) &&
-            !ref.contains(q) &&
-            !status.contains(q) &&
-            !account.contains(q) &&
-            !category.contains(q) &&
-            !source.contains(q) &&
-            !merchant.contains(q)) {
-          return false;
+        if (item.displayName.toLowerCase().contains(q) ||
+            item.amount.toString().contains(q) ||
+            (item.note != null && item.note!.toLowerCase().contains(q)) ||
+            (item.merchantRaw != null && item.merchantRaw!.toLowerCase().contains(q)) ||
+            (item.categoryName != null && item.categoryName!.toLowerCase().contains(q)) ||
+            (item.paymentSourceName != null && item.paymentSourceName!.toLowerCase().contains(q)) ||
+            (item.accountHint != null && item.accountHint!.toLowerCase().contains(q)) ||
+            (item.reference != null && item.reference!.toLowerCase().contains(q)) ||
+            item.channel.toLowerCase().contains(q) ||
+            item.status.toLowerCase().contains(q)) {
+          return true;
         }
+        return false;
       }
       return true;
     }).toList();
