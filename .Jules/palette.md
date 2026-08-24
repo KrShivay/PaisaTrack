@@ -1,0 +1,3 @@
+## 2025-01-20 - Adding Accessibility Semantics to Custom Flutter Nav Bars
+**Learning:** Custom interactive components like floating pill navigation bars built with `GestureDetector` can create significant screen reader noise if the icon and text are read separately, and often completely lack proper "button" semantic roles natively.
+**Action:** Always wrap custom `GestureDetector` instances containing both icons and text with `Semantics(button: true, label: "Your Label", excludeSemantics: true)`. This groups the child elements into a single cohesive, semantically-correct button announcement, vastly improving non-visual navigation.
