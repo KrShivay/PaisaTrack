@@ -36,7 +36,10 @@ class BloomUndoToastHost extends ConsumerWidget {
             duration: AppDurations.fast,
             opacity: token != null ? 1.0 : 0.0,
             child: token != null
-                ? _ToastContent(token: token, isDark: isDark)
+                ? _ToastContent(
+                    token: token,
+                    isDark: isDark,
+                  )
                 : const SizedBox.shrink(),
           ),
         ),
@@ -46,7 +49,10 @@ class BloomUndoToastHost extends ConsumerWidget {
 }
 
 class _ToastContent extends ConsumerWidget {
-  const _ToastContent({required this.token, required this.isDark});
+  const _ToastContent({
+    required this.token,
+    required this.isDark,
+  });
 
   final UndoToken token;
   final bool isDark;
@@ -54,9 +60,8 @@ class _ToastContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.ink;
-    final border = isDark
-        ? Border.all(color: AppColorTokens.bloomDarkOutline)
-        : null;
+    final border =
+        isDark ? Border.all(color: AppColorTokens.bloomDarkOutline) : null;
 
     return Material(
       color: Colors.transparent,
@@ -91,10 +96,8 @@ class _ToastContent extends ConsumerWidget {
                   ref.read(undoControllerProvider.notifier).undo();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColorTokens.bloomEmerald.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(14),

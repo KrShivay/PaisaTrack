@@ -59,7 +59,9 @@ class BloomNotice extends StatelessWidget {
               color: colors.tileBg,
               borderRadius: BorderRadius.circular(AppRadius.bloomIconTile),
             ),
-            child: Center(child: Icon(icon, size: 18, color: colors.iconColor)),
+            child: Center(
+              child: Icon(icon, size: 18, color: colors.iconColor),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -84,9 +86,7 @@ class BloomNotice extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 2,
-                          horizontal: 4,
-                        ),
+                            vertical: 2, horizontal: 4),
                         child: Text(
                           actionLabel!,
                           style: AppTheme.bloomDisplay(
@@ -110,45 +110,45 @@ class BloomNotice extends StatelessWidget {
   _NoticeColors _resolveColors(bool isDark) {
     return switch (_variant) {
       _NoticeVariant.warning => _NoticeColors(
-        background: isDark
-            ? AppColorTokens.bloomGold.withValues(alpha: 0.12)
-            : AppColorTokens.bloomWarningBg,
-        border: isDark
-            ? AppColorTokens.bloomGold.withValues(alpha: 0.3)
-            : AppColorTokens.bloomWarningBorder,
-        tileBg: isDark
-            ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
-            : const Color(0xFFF7E5BE),
-        iconColor: isDark
-            ? AppColorTokens.bloomGold
-            : AppColorTokens.bloomWarningText,
-        textColor: isDark
-            ? AppColorTokens.bloomDarkTextPrimary
-            : AppColorTokens.bloomWarningText,
-        actionColor: isDark
-            ? AppColorTokens.violetLight
-            : AppColorTokens.violetPrimary,
-      ),
+          background: isDark
+              ? AppColorTokens.bloomGold.withValues(alpha: 0.12)
+              : AppColorTokens.bloomWarningBg,
+          border: isDark
+              ? AppColorTokens.bloomGold.withValues(alpha: 0.3)
+              : AppColorTokens.bloomWarningBorder,
+          tileBg: isDark
+              ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
+              : const Color(0xFFF7E5BE),
+          iconColor: isDark
+              ? AppColorTokens.bloomGold
+              : AppColorTokens.bloomWarningText,
+          textColor: isDark
+              ? AppColorTokens.bloomDarkTextPrimary
+              : AppColorTokens.bloomWarningText,
+          actionColor: isDark
+              ? AppColorTokens.violetLight
+              : AppColorTokens.violetPrimary,
+        ),
       _NoticeVariant.error => _NoticeColors(
-        background: isDark
-            ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.12)
-            : const Color(0xFFFDF2F3),
-        border: isDark
-            ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.3)
-            : const Color(0xFFF4D2D4),
-        tileBg: isDark
-            ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.18)
-            : const Color(0xFFFDE8E8),
-        iconColor: isDark
-            ? AppColorTokens.bloomDebitDark
-            : AppColorTokens.bloomDebitLight,
-        textColor: isDark
-            ? AppColorTokens.bloomDarkTextPrimary
-            : AppColorTokens.bloomDebitLight,
-        actionColor: isDark
-            ? AppColorTokens.violetLight
-            : AppColorTokens.violetPrimary,
-      ),
+          background: isDark
+              ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.12)
+              : const Color(0xFFFDF2F3),
+          border: isDark
+              ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.3)
+              : const Color(0xFFF4D2D4),
+          tileBg: isDark
+              ? AppColorTokens.bloomDebitDark.withValues(alpha: 0.18)
+              : const Color(0xFFFDE8E8),
+          iconColor: isDark
+              ? AppColorTokens.bloomDebitDark
+              : AppColorTokens.bloomDebitLight,
+          textColor: isDark
+              ? AppColorTokens.bloomDarkTextPrimary
+              : AppColorTokens.bloomDebitLight,
+          actionColor: isDark
+              ? AppColorTokens.violetLight
+              : AppColorTokens.violetPrimary,
+        ),
     };
   }
 }
