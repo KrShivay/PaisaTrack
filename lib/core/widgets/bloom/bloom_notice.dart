@@ -86,7 +86,9 @@ class BloomNotice extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            vertical: 2, horizontal: 4),
+                          vertical: 2,
+                          horizontal: 4,
+                        ),
                         child: Text(
                           actionLabel!,
                           style: AppTheme.bloomDisplay(
