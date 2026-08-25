@@ -394,16 +394,21 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             if (index == grouped.length) {
                               return _loadMoreButton();
                             }
-                            final group = grouped[index];
-                            return _DayGroupSection(
-                              header: group.header,
-                              dayTotal: group.total,
-                              items: group.items,
-                              isDark: isDark,
-                              onTap: _openDetail,
-                              onSwipeRight: _confirmItem,
-                              onSwipeLeft: _recategorizeItem,
-                            );
+                            final item = grouped[index];
+                            return switch (item) {
+                              _ActivityHeaderItem(:final header, :final total) =>
+                                _DayHeaderRow(header: header, total: total, isDark: isDark),
+                              _ActivityTransactionItem(:final item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _DismissibleTransactionRow(
+                                    item: item,
+                                    isDark: isDark,
+                                    onTap: () => _openDetail(item),
+                                    onSwipeRight: () => _confirmItem(item),
+                                    onSwipeLeft: () => _recategorizeItem(item),
+                                  ),
+                                ),
+                            };
                           },
                         ),
             ),
@@ -431,7 +436,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  List<_DayGroup> _groupByDay(List<TransactionListItem> items) {
+  List<_ActivityListItem> _groupByDay(List<TransactionListItem> items) {
     final Map<String, List<TransactionListItem>> map = {};
     final Map<String, double> totals = {};
 
@@ -460,14 +465,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               : item.amount);
     }
 
-    return [
-      for (final entry in map.entries)
-        _DayGroup(
-          header: entry.key,
-          total: totals[entry.key] ?? 0,
-          items: entry.value,
-        ),
-    ];
+    final result = <_ActivityListItem>[];
+    for (final entry in map.entries) {
+      result.add(_ActivityHeaderItem(entry.key, totals[entry.key] ?? 0));
+      for (final txn in entry.value) {
+        result.add(_ActivityTransactionItem(txn));
+      }
+    }
+    return result;
   }
 
   String _shortMonth(int month) => const [
@@ -486,16 +491,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       ][month - 1];
 }
 
-class _DayGroup {
-  const _DayGroup({
-    required this.header,
-    required this.total,
-    required this.items,
-  });
+sealed class _ActivityListItem {
+  const _ActivityListItem();
+}
 
+class _ActivityHeaderItem extends _ActivityListItem {
+  const _ActivityHeaderItem(this.header, this.total);
   final String header;
   final double total;
-  final List<TransactionListItem> items;
+}
+
+class _ActivityTransactionItem extends _ActivityListItem {
+  const _ActivityTransactionItem(this.item);
+  final TransactionListItem item;
 }
 
 class _FilterChip extends StatelessWidget {
@@ -542,66 +550,42 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _DayGroupSection extends StatelessWidget {
-  const _DayGroupSection({
+class _DayHeaderRow extends StatelessWidget {
+  const _DayHeaderRow({
     required this.header,
-    required this.dayTotal,
-    required this.items,
+    required this.total,
     required this.isDark,
-    required this.onTap,
-    required this.onSwipeRight,
-    required this.onSwipeLeft,
   });
 
   final String header;
-  final double dayTotal;
-  final List<TransactionListItem> items;
+  final double total;
   final bool isDark;
-  final ValueChanged<TransactionListItem> onTap;
-  final ValueChanged<TransactionListItem> onSwipeRight;
-  final ValueChanged<TransactionListItem> onSwipeLeft;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Day Header
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                header,
-                style: AppTheme.bloomDisplay(
-                  11,
-                  FontWeight.w600,
-                  letterSpacing: 0.1,
-                  color: isDark
-                      ? AppColorTokens.bloomDarkTextTertiary
-                      : AppColorTokens.inkTertiary,
-                ),
-              ),
-              BloomAmount(
-                amount: dayTotal,
-                size: 12,
-                weight: FontWeight.w500,
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            header,
+            style: AppTheme.bloomDisplay(
+              11,
+              FontWeight.w600,
+              letterSpacing: 0.1,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextTertiary
+                  : AppColorTokens.inkTertiary,
+            ),
           ),
-        ),
-        for (final item in items) ...[
-          _DismissibleTransactionRow(
-            item: item,
-            isDark: isDark,
-            onTap: () => onTap(item),
-            onSwipeRight: () => onSwipeRight(item),
-            onSwipeLeft: () => onSwipeLeft(item),
+          BloomAmount(
+            amount: total,
+            size: 12,
+            weight: FontWeight.w500,
           ),
-          if (item != items.last) const SizedBox(height: 8),
         ],
-      ],
+      ),
     );
   }
 }
