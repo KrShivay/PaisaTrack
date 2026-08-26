@@ -130,7 +130,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.textContaining('Credit card bill payment — excluded'),
-        findsOneWidget);
+    expect(
+      find.textContaining('Credit card bill payment — excluded'),
+      findsOneWidget,
+    );
   });
 }
