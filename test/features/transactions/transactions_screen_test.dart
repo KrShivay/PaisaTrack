@@ -181,7 +181,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'amazon');
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 300)); // debounce delay
 
     expect(find.text('Amazon'), findsWidgets);
     expect(find.text('Salary Inc'), findsNothing);
@@ -218,6 +218,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'Salary');
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300)); // debounce delay
 
     expect(find.text('No transactions matching "Salary"'), findsOneWidget);
     expect(find.text('Load more transactions'), findsOneWidget);

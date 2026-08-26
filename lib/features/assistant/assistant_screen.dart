@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/util/debouncer.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database_provider.dart';
 import '../../intelligence/assistant/assistant_controller.dart';
@@ -318,11 +319,13 @@ class _PromptCatalogueEmptyState extends StatefulWidget {
 class _PromptCatalogueEmptyStateState
     extends State<_PromptCatalogueEmptyState> {
   final _searchController = TextEditingController();
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
   String _query = '';
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debouncer.dispose();
     super.dispose();
   }
 
@@ -375,7 +378,9 @@ class _PromptCatalogueEmptyStateState
         TextField(
           key: const ValueKey('assistant_prompt_search_field'),
           controller: _searchController,
-          onChanged: (value) => setState(() => _query = value),
+          onChanged: (value) => _debouncer.run(() {
+            if (mounted) setState(() => _query = value);
+          }),
           decoration: const InputDecoration(
             hintText: 'Search questions...',
             prefixIcon: Icon(Icons.search),

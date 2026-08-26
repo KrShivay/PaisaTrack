@@ -83,6 +83,7 @@ void main() {
     );
     await tester.enterText(search, 'subscription');
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300)); // debounce delay
 
     expect(find.text('Subscriptions & Bills'), findsOneWidget);
     expect(find.text('What subscriptions renew this week?'), findsOneWidget);
@@ -90,6 +91,8 @@ void main() {
 
     await tester.enterText(search, 'no matching question');
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300)); // debounce delay
+
     expect(find.text('No matching questions.'), findsOneWidget);
   });
 }
