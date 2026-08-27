@@ -37,6 +37,7 @@ void main() {
             confidenceJson: '{}',
             status: 'auto',
             lifecycleState: const Value('settled'),
+            isAnalyticsExcluded: const Value(false),
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
           ),
@@ -55,6 +56,7 @@ void main() {
             confidenceJson: '{}',
             status: 'auto',
             lifecycleState: const Value('settled'),
+            isAnalyticsExcluded: const Value(true), // This is the crucial part that was missing from the test setup!
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
           ),
@@ -91,7 +93,7 @@ void main() {
       confidenceJson: '{}',
       status: 'auto',
       isDeleted: false,
-      isAnalyticsExcluded: false,
+      isAnalyticsExcluded: true, // Should be true here for the UI text to trigger
       lifecycleState: 'settled',
       createdAt: ts,
       updatedAt: ts,
