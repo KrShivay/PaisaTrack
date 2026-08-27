@@ -50,8 +50,9 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
       if (q.isEmpty) return true;
       if (category.name.toLowerCase().contains(q)) return true;
       final parentName = byId[category.parentId]?.name;
-      if (parentName != null && parentName.toLowerCase().contains(q))
+      if (parentName != null && parentName.toLowerCase().contains(q)) {
         return true;
+      }
       return false;
     }).toList(growable: false);
     final suggested = _idsToCategories(widget.suggestedCategoryIds, byId);

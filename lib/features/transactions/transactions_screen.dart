@@ -95,8 +95,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         if (item.status.toLowerCase().contains(q)) return true;
         if ((item.accountHint ?? '').toLowerCase().contains(q)) return true;
         if ((item.categoryName ?? '').toLowerCase().contains(q)) return true;
-        if ((item.paymentSourceName ?? '').toLowerCase().contains(q))
+        if ((item.paymentSourceName ?? '').toLowerCase().contains(q)) {
           return true;
+        }
         if ((item.merchantRaw ?? '').toLowerCase().contains(q)) return true;
 
         return false; // Did not match any property, skip
