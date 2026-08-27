@@ -46,10 +46,13 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
     final filtered = _hierarchicalCategories(widget.categories).where((
       category,
     ) {
-      final parentName = byId[category.parentId]?.name.toLowerCase();
-      return q.isEmpty ||
-          category.name.toLowerCase().contains(q) ||
-          (parentName?.contains(q) ?? false);
+      // ⚡ Bolt: Using early returns skips unnecessary `.toLowerCase()` calls in iteration
+      if (q.isEmpty) return true;
+      if (category.name.toLowerCase().contains(q)) return true;
+      final parentName = byId[category.parentId]?.name;
+      if (parentName != null && parentName.toLowerCase().contains(q))
+        return true;
+      return false;
     }).toList(growable: false);
     final suggested = _idsToCategories(widget.suggestedCategoryIds, byId);
     final recent = _idsToCategories(widget.recentCategoryIds, byId);
@@ -64,89 +67,89 @@ class _CategoryPickerSheetState extends State<CategoryPickerSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-              Text(
-                widget.title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: _searchController,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Search categories',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Clear category search',
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _query = '');
-                          },
-                        ),
-                ),
-                onChanged: (value) => setState(() => _query = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Expanded(
-                child: ListView(
-                  children: [
-                    if (_query.trim().isEmpty && suggested.isNotEmpty) ...[
-                      const _SectionLabel('Suggested'),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final category in suggested)
-                            _CategoryChip(
-                              category: category,
-                              parentName: byId[category.parentId]?.name,
-                              selected: category.id == widget.currentCategoryId,
-                              onTap: () => Navigator.of(context).pop(category),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    if (_query.trim().isEmpty && recent.isNotEmpty) ...[
-                      const _SectionLabel('Recent'),
-                      for (final category in recent)
-                        _CategoryRow(
-                          category: category,
-                          parentName: byId[category.parentId]?.name,
-                          selected: category.id == widget.currentCategoryId,
-                          explanation: widget.explanations[category.id],
-                        ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    _SectionLabel(
-                      _query.trim().isEmpty
-                          ? 'All categories'
-                          : 'Matches (${filtered.length})',
+          Text(
+            widget.title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _searchController,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Search categories',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear category search',
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _query = '');
+                      },
                     ),
-                    if (filtered.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.lg,
-                        ),
-                        child: Text(
-                          'No categories match your search.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      )
-                    else
-                      for (final category in filtered)
-                        _CategoryRow(
+            ),
+            onChanged: (value) => setState(() => _query = value),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Expanded(
+            child: ListView(
+              children: [
+                if (_query.trim().isEmpty && suggested.isNotEmpty) ...[
+                  const _SectionLabel('Suggested'),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      for (final category in suggested)
+                        _CategoryChip(
                           category: category,
                           parentName: byId[category.parentId]?.name,
                           selected: category.id == widget.currentCategoryId,
-                          explanation: widget.explanations[category.id],
+                          onTap: () => Navigator.of(context).pop(category),
                         ),
-                  ],
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                if (_query.trim().isEmpty && recent.isNotEmpty) ...[
+                  const _SectionLabel('Recent'),
+                  for (final category in recent)
+                    _CategoryRow(
+                      category: category,
+                      parentName: byId[category.parentId]?.name,
+                      selected: category.id == widget.currentCategoryId,
+                      explanation: widget.explanations[category.id],
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                _SectionLabel(
+                  _query.trim().isEmpty
+                      ? 'All categories'
+                      : 'Matches (${filtered.length})',
                 ),
-              ),
+                if (filtered.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.lg,
+                    ),
+                    child: Text(
+                      'No categories match your search.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  )
+                else
+                  for (final category in filtered)
+                    _CategoryRow(
+                      category: category,
+                      parentName: byId[category.parentId]?.name,
+                      selected: category.id == widget.currentCategoryId,
+                      explanation: widget.explanations[category.id],
+                    ),
+              ],
+            ),
+          ),
         ],
       ),
     );
