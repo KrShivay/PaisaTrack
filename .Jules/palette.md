@@ -1,0 +1,3 @@
+## 2026-08-28 - Replace GestureDetector with Material + InkWell for Interactive Rows
+**Learning:** Using `GestureDetector` with a decorated `Container` for custom interactive components (like cards or rows) lacks built-in visual tap feedback (ripples) and standard accessibility focus states for keyboard navigation.
+**Action:** When building custom interactive components, prefer using a `Material` widget coupled with an `InkWell`. This ensures built-in material ripples and proper accessibility states. Move any inner padding to a `Padding` widget inside the `InkWell` to maintain layout while gaining tap feedback.
