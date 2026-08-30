@@ -42,11 +42,24 @@ void main() {
           ),
         );
 
+    // Category setup
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'cat_bill',
+            name: 'Bills',
+            icon: 'receipt',
+            isSpending: false, // is_spending = 0 excludes it from totals
+            sortOrder: 1,
+            isUserCreated: false,
+          ),
+        );
+
     // Credit Card Bill Payment: Rs 5000 (should NOT be added to category spending)
     await database.into(database.transactions).insert(
           TransactionsCompanion.insert(
             id: 'txn_card_bill',
             ts: ts + 1000,
+            categoryId: const Value('cat_bill'),
             amount: 5000.0,
             direction: 'debit',
             channel: 'netbanking',
