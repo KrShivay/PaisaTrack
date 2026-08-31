@@ -1,0 +1,3 @@
+## 2024-05-18 - Maintain Built-in A11y and UX in Interactive Elements
+**Learning:** When building custom interactive components like transaction rows or cards, using `GestureDetector` with a decorated `Container` strips out built-in Material design accessibility features (like standard keyboard focus states) and UX polish (like visual tap ripples).
+**Action:** Always prefer using a `Material` widget coupled with an `InkWell` for custom interactive components. Move the inner padding from the `Container` to a `Padding` widget inside the `InkWell` to maintain layout while enabling default ripples and screen-reader/keyboard focus support.

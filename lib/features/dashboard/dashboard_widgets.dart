@@ -1024,62 +1024,63 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: Row(
-          children: [
-            BloomCategoryTile(
-              categoryId: txn.categoryId,
-              iconName: txn.categoryIcon,
-              size: 36,
-              borderRadius: 13,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    txn.displayName,
-                    style: AppTheme.bloomDisplay(
-                      14,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatTime(txn.ts),
-                    style: AppTheme.bloomDisplay(
-                      11,
-                      FontWeight.w400,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextTertiary
-                          : AppColorTokens.inkTertiary,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              BloomCategoryTile(
+                categoryId: txn.categoryId,
+                iconName: txn.categoryIcon,
+                size: 36,
+                borderRadius: 13,
               ),
-            ),
-            const SizedBox(width: 8),
-            BloomAmount(
-              amount: txn.direction == TransactionDirection.debit
-                  ? -txn.amount
-                  : txn.amount,
-              size: 15,
-              weight: FontWeight.w500,
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      txn.displayName,
+                      style: AppTheme.bloomDisplay(
+                        14,
+                        FontWeight.w500,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextPrimary
+                            : AppColorTokens.ink,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatTime(txn.ts),
+                      style: AppTheme.bloomDisplay(
+                        11,
+                        FontWeight.w400,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              BloomAmount(
+                amount: txn.direction == TransactionDirection.debit
+                    ? -txn.amount
+                    : txn.amount,
+                size: 15,
+                weight: FontWeight.w500,
+              ),
+            ],
+          ),
         ),
       ),
     );
