@@ -277,33 +277,38 @@ class _NavTabItemButton extends StatelessWidget {
     const activeColor = Colors.white;
     const inactiveColor = AppColorTokens.inkQuaternary;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? item.selectedIcon : item.icon,
-              size: 19,
-              color: isSelected ? activeColor : inactiveColor,
+    return Semantics(
+        button: true,
+        selected: isSelected,
+        label: item.label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected ? item.selectedIcon : item.icon,
+                  size: 19,
+                  color: isSelected ? activeColor : inactiveColor,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.label,
+                  style: AppTheme.bloomDisplay(
+                    9,
+                    isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              item.label,
-              style: AppTheme.bloomDisplay(
-                9,
-                isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }
 
