@@ -1,0 +1,3 @@
+## 2023-11-20 - Clean Screen Reader Announcements for Custom Gesture Navigation Tabs
+**Learning:** When building custom bottom navigation tabs or floating action buttons that contain multiple elements (like icons and text) inside a `GestureDetector`, screen readers often announce each child element separately, leading to cluttered or redundant announcements.
+**Action:** Always wrap the `GestureDetector` of custom interactive controls in a `Semantics` widget with `button: true`, `excludeSemantics: true`, and a single concise `label`. This groups the entire widget into a single accessible button element with a clear purpose.
