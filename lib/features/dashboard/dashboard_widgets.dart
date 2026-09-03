@@ -307,29 +307,22 @@ class _MetricPillButton extends StatelessWidget {
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
 
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: label,
-      excludeSemantics: true,
-      child: Material(
-        color: isSelected ? activeBg : inactiveBg,
-        borderRadius: BorderRadius.circular(15),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Center(
-              child: Text(
-                label,
-                style: AppTheme.bloomDisplay(
-                  12,
-                  isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? activeFg : inactiveFg,
-                ),
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? activeBg : inactiveBg,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTheme.bloomDisplay(
+              12,
+              isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? activeFg : inactiveFg,
             ),
           ),
         ),
@@ -394,16 +387,20 @@ class BloomBudgetCard extends ConsumerWidget {
                 // Header row
                 Row(
                   children: [
-                    Text(
-                      '${_monthName(now.month).toUpperCase()} BUDGET',
-                      style: AppTheme.bloomDisplay(
-                        11,
-                        FontWeight.w600,
-                        letterSpacing: 0.14,
-                        color: const Color(0xFF7FD9B6),
+                    Expanded(
+                      child: Text(
+                        '${_monthName(now.month).toUpperCase()} BUDGET',
+                        style: AppTheme.bloomDisplay(
+                          11,
+                          FontWeight.w600,
+                          letterSpacing: 0.14,
+                          color: const Color(0xFF7FD9B6),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
