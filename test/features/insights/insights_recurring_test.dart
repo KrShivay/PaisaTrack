@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
 import 'package:paisatrack/features/recurring/recurring_screen.dart';
@@ -116,19 +117,39 @@ void main() {
         overrides: [
           activeInsightsProvider
               .overrideWith((ref) => Stream.value([insightRow])),
-          sixMonthTrendProvider.overrideWith((ref) => const []),
+          dashboardAggregateProvider.overrideWith(
+            (ref) async => const DashboardAggregateSnapshot(
+              debitTotal: 0,
+              creditTotal: 0,
+              previousSpend: 0,
+              categories: [],
+              merchants: [],
+              trendByMonth: {},
+            ),
+          ),
+          sixMonthTrendProvider.overrideWith(
+            (ref) => const AsyncData<List<MonthPoint>>([]),
+          ),
           monthOverMonthSpendProvider.overrideWith(
-            (ref) => const MonthOverMonthSpend(
-              current: 0,
-              previous: 0,
-              pctChange: 0,
+            (ref) => const AsyncData(
+              MonthOverMonthSpend(
+                current: 0,
+                previous: 0,
+                pctChange: 0,
+              ),
             ),
           ),
           monthDirectionTotalsProvider.overrideWith(
-            (ref) => const MonthDirectionTotals(debitTotal: 0, creditTotal: 0),
+            (ref) => const AsyncData(
+              MonthDirectionTotals(debitTotal: 0, creditTotal: 0),
+            ),
           ),
-          categoryBreakdownProvider.overrideWith((ref) => const []),
-          topMerchantsProvider.overrideWith((ref) => const []),
+          categoryBreakdownProvider.overrideWith(
+            (ref) => const AsyncData<List<CategorySlice>>([]),
+          ),
+          topMerchantsProvider.overrideWith(
+            (ref) => const AsyncData<List<MerchantStat>>([]),
+          ),
           appDatabaseProvider.overrideWith((ref) async => database),
         ],
         child: MaterialApp(

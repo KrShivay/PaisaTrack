@@ -213,6 +213,14 @@ class SettingsScreen extends ConsumerWidget {
                           .setCapturePaused(val);
                     },
                   ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => _blockSender(context, ref),
+                      icon: const Icon(Icons.block, size: 16),
+                      label: const Text('Block a sender'),
+                    ),
+                  ),
                   if (settings.pausedSenders.isNotEmpty) ...[
                     const Divider(height: 1),
                     const SizedBox(height: 8),
@@ -410,6 +418,42 @@ class SettingsScreen extends ConsumerWidget {
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
+  }
+
+  /// Adds a sender ID to the ingestion blacklist (`pausedSenders`), which
+  /// `SmsIngestor` checks to skip capture. Normalization (trim/uppercase) is
+  /// handled by [AppSettingsController.setSenderPaused].
+  static Future<void> _blockSender(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final result = await showBloomDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Block a sender'),
+        content: TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            hintText: 'Sender ID (e.g. HDFCBK)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      await ref
+          .read(appSettingsControllerProvider.notifier)
+          .setSenderPaused(result, true);
+    }
   }
 
   static Future<void> _editMonthlyBudget(

@@ -11,6 +11,7 @@ class DashboardQueryWindow {
     required this.previousEnd,
     required this.trendStart,
     required this.trendEnd,
+    this.timeZoneOffset = Duration.zero,
   });
 
   final DateTime start;
@@ -19,6 +20,13 @@ class DashboardQueryWindow {
   final DateTime previousEnd;
   final DateTime trendStart;
   final DateTime trendEnd;
+
+  /// Offset used to bucket the monthly trend, matching the `FinancialCalendar`
+  /// that produced the period boundaries. Trend bucketing applies this offset
+  /// explicitly instead of SQLite's `'localtime'`, so month grouping honours
+  /// the same calendar the rest of analytics uses and stays deterministic under
+  /// an injected offset in tests.
+  final Duration timeZoneOffset;
 }
 
 class DashboardCategoryAggregate {
@@ -206,7 +214,7 @@ LIMIT 5
   ) async {
     final rows = await _database.customSelect(
       '''
-SELECT strftime('%Y-%m', t.ts / 1000, 'unixepoch', 'localtime') AS month_key,
+SELECT strftime('%Y-%m', t.ts / 1000 + ?, 'unixepoch') AS month_key,
        SUM(t.amount) AS total
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
@@ -215,6 +223,7 @@ WHERE t.ts >= ? AND t.ts < ?
 GROUP BY month_key
 ''',
       variables: [
+        Variable.withInt(window.timeZoneOffset.inSeconds),
         Variable.withInt(window.trendStart.millisecondsSinceEpoch),
         Variable.withInt(window.trendEnd.millisecondsSinceEpoch),
       ],

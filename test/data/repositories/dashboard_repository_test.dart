@@ -97,6 +97,32 @@ void main() {
     expect(snapshot.trendByMonth['2026-07'], 100);
   });
 
+  test('trend buckets honour the injected timezone offset', () async {
+    // 2026-06-30 20:00 UTC is 2026-07-01 01:30 in IST (+5:30).
+    await insert('boundary', DateTime.utc(2026, 6, 30, 20), 300);
+
+    DashboardQueryWindow window({Duration offset = Duration.zero}) =>
+        DashboardQueryWindow(
+          start: DateTime.utc(2026, 6),
+          end: DateTime.utc(2026, 8),
+          previousStart: DateTime.utc(2026, 5),
+          previousEnd: DateTime.utc(2026, 6),
+          trendStart: DateTime.utc(2026, 2),
+          trendEnd: DateTime.utc(2026, 8),
+          timeZoneOffset: offset,
+        );
+
+    final utc = await DashboardRepository(database).load(window());
+    expect(utc.trendByMonth['2026-06'], 300);
+    expect(utc.trendByMonth.containsKey('2026-07'), isFalse);
+
+    final ist = await DashboardRepository(database).load(
+      window(offset: const Duration(hours: 5, minutes: 30)),
+    );
+    expect(ist.trendByMonth['2026-07'], 300);
+    expect(ist.trendByMonth.containsKey('2026-06'), isFalse);
+  });
+
   test('dashboard excludes non-settled debits from every spending aggregate',
       () async {
     await insert('settled', DateTime(2026, 7, 10), 100);

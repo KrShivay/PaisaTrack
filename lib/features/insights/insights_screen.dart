@@ -46,6 +46,7 @@ class InsightsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final period = ref.watch(dashboardPeriodProvider);
+    final aggregateAsync = ref.watch(dashboardAggregateProvider);
     final sixMonthTrend = ref.watch(sixMonthTrendProvider);
     final mom = ref.watch(monthOverMonthSpendProvider);
     final totals = ref.watch(monthDirectionTotalsProvider);
@@ -204,32 +205,40 @@ class InsightsScreen extends ConsumerWidget {
               const SizedBox(height: 12),
             ],
 
-            // 6-Month Spend Bar Chart Card
-            _SixMonthBarChartCard(
-              trend: sixMonthTrend,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 20),
+            // Analytics sections are driven only by the SQL aggregate; loading
+            // and error stay distinct from real data (never the bounded feed).
+            ...aggregateAsync.when(
+              data: (_) => [
+                // 6-Month Spend Bar Chart Card
+                _SixMonthBarChartCard(
+                  trend: sixMonthTrend.requireValue,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 20),
 
-            // Month-over-Month Comparison Card
-            _MoMComparisonCard(
-              mom: mom,
-              currentSpend: totals.debitTotal,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 24),
+                // Month-over-Month Comparison Card
+                _MoMComparisonCard(
+                  mom: mom.requireValue,
+                  currentSpend: totals.requireValue.debitTotal,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 24),
 
-            // Category Breakdown Section
-            _CategoryBreakdownSection(
-              categories: categories,
-              isDark: isDark,
-            ),
-            const SizedBox(height: 24),
+                // Category Breakdown Section
+                _CategoryBreakdownSection(
+                  categories: categories.requireValue,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 24),
 
-            // Top Merchants Section
-            _TopMerchantsSection(
-              merchants: merchants,
-              isDark: isDark,
+                // Top Merchants Section
+                _TopMerchantsSection(
+                  merchants: merchants.requireValue,
+                  isDark: isDark,
+                ),
+              ],
+              loading: () => [_analyticsPlaceholder(isDark, isError: false)],
+              error: (_, __) => [_analyticsPlaceholder(isDark, isError: true)],
             ),
 
             // Bottom clearance for floating nav pill
@@ -239,6 +248,52 @@ class InsightsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Loading/error placeholder for the analytics sections. Keeps loading and
+/// failure visually distinct and never renders a fabricated number.
+Widget _analyticsPlaceholder(bool isDark, {required bool isError}) {
+  final border = isDark
+      ? AppColorTokens.bloomDarkOutline
+      : AppColorTokens.bloomHairline;
+  final textColor = isDark
+      ? AppColorTokens.bloomDarkTextSecondary
+      : AppColorTokens.inkSecondary;
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip,
+      borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+      border: Border.all(color: border),
+    ),
+    child: isError
+        ? Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 18, color: textColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Couldn't load spending analytics. Pull to refresh.",
+                  style: AppTheme.bloomDisplay(
+                    13,
+                    FontWeight.w500,
+                    color: textColor,
+                  ),
+                ),
+              ),
+            ],
+          )
+        : const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BloomSkeleton(height: 120, borderRadius: 12),
+              SizedBox(height: 16),
+              BloomSkeleton(height: 60, borderRadius: 12),
+              SizedBox(height: 16),
+              BloomSkeleton(height: 60, borderRadius: 12),
+            ],
+          ),
+  );
 }
 
 class _NarrativeInsightCard extends StatelessWidget {

@@ -104,6 +104,50 @@ void main() {
       expect(find.text('Pause All SMS Capture'), findsOneWidget);
     });
 
+    testWidgets('Blocking a sender adds a normalized entry to the paused list',
+        (tester) async {
+      tester.view.physicalSize = const Size(402, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWith((ref) async => database),
+            monthlyBudgetProvider.overrideWith((ref) async => null),
+            appSettingsControllerProvider
+                .overrideWith(() => FakeAppSettingsController()),
+          ],
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: const SettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final blockButton = find.text('Block a sender');
+      await tester.ensureVisible(blockButton);
+      await tester.tap(blockButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField).last, 'hdfcbk');
+      await tester.tap(find.text('Block'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Stored uppercase-normalized and rendered as a removable chip.
+      expect(find.text('HDFCBK'), findsOneWidget);
+    });
+
     test('SmsIngestor skips ingestion when isCapturePaused is true', () async {
       final ingestor = SmsIngestor(
         database: database,

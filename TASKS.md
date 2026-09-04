@@ -240,7 +240,12 @@ promoting it to `Ready`. Full contracts, owners, rollback paths, and acceptance
 metrics are in `docs/tasks/T-172.md`.
 
 - [ ] PV-01 [P0] Complete full-history keyset search/filter and timestamp contract. Depends: T-160b–d, T-164a–b, T-164e.
-- [ ] PV-02 [P0] Make dashboard aggregates truthful on loading/error and expose completeness/exclusions. Depends: T-126.
+- [ ] PV-02 [P0] Expose dashboard aggregate completeness/exclusions. Depends: T-126.
+      Done: loading/error truthfulness — the ~10 dashboard/insights derived
+      providers now project `dashboardAggregateProvider` as `AsyncValue` and
+      render distinct loading/error states instead of summing the bounded
+      100-row feed. Remaining: surface completeness and applied exclusions
+      (transfers, opted-out sources) on the dashboard.
 - [ ] PV-03 [P0] Add privacy-safe capture outcome ledger, reason buckets, and bounded retry. Depends: T-161a–e, T-162a–c.
 - [ ] PV-04 [P0] Unify lifecycle, duplicate, transfer, refund, and excluded-source explanations. Depends: T-164c–d, T-135.
 - [ ] PV-05 [P0] Share correction/undo and complete backup/reset/raw-SMS/native-artifact recovery proof. Depends: T-159a, T-157b, T-170a–b.

@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/data/repositories/dashboard_repository.dart';
+import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
 
@@ -23,6 +25,8 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
         ],
         child: const MaterialApp(
           home: BloomUndoToastHost(
@@ -126,3 +130,12 @@ void main() {
     });
   });
 }
+
+const _emptyDashboardAggregate = DashboardAggregateSnapshot(
+  debitTotal: 0,
+  creditTotal: 0,
+  previousSpend: 0,
+  categories: [],
+  merchants: [],
+  trendByMonth: {},
+);

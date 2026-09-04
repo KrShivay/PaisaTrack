@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/financial_calendar.dart';
-import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/dashboard_repository.dart';
 import '../../data/repositories/budget_repository.dart';
@@ -200,6 +199,7 @@ final dashboardAggregateProvider =
       previousEnd: previous.end,
       trendStart: trendStart,
       trendEnd: trendEnd,
+      timeZoneOffset: period.calendar.timeZoneOffset,
     ),
   );
 });
@@ -228,50 +228,34 @@ class MonthDirectionTotals {
   final double creditTotal;
 }
 
-bool _countsAsSpending(TransactionListItem txn) =>
-    txn.includeInAnalytics &&
-    !txn.isOwnedTransfer &&
-    txn.direction == TransactionDirection.debit &&
-    txn.categoryIsSpending;
-
-final monthDirectionTotalsProvider = Provider<MonthDirectionTotals>((ref) {
-  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
-  if (aggregate != null) {
-    return MonthDirectionTotals(
-      debitTotal: aggregate.debitTotal,
-      creditTotal: aggregate.creditTotal,
-    );
-  }
-  final transactions =
-      ref.watch(transactionListProvider).valueOrNull ?? const [];
-  final period = ref.watch(dashboardPeriodProvider);
-  var debitTotal = 0.0;
-  var creditTotal = 0.0;
-
-  for (final txn in transactions) {
-    if (!period.contains(txn.ts)) continue;
-    if (!txn.includeInAnalytics || txn.isOwnedTransfer) continue;
-    switch (txn.direction) {
-      case TransactionDirection.debit:
-        if (txn.categoryIsSpending) debitTotal += txn.amount;
-      case TransactionDirection.credit:
-        creditTotal += txn.amount;
-    }
-  }
-
-  return MonthDirectionTotals(debitTotal: debitTotal, creditTotal: creditTotal);
+/// Settled debit/credit totals for the active period.
+///
+/// Sourced only from the SQL aggregate — the sole valid source for full-period
+/// totals. Loading and error propagate as [AsyncValue] so the UI keeps those
+/// states distinct from real data; it never substitutes the bounded 100-row
+/// transaction feed, which would understate any period with more than one page
+/// of history (PV-02).
+final monthDirectionTotalsProvider =
+    Provider<AsyncValue<MonthDirectionTotals>>((ref) {
+  return ref.watch(dashboardAggregateProvider).whenData(
+        (aggregate) => MonthDirectionTotals(
+          debitTotal: aggregate.debitTotal,
+          creditTotal: aggregate.creditTotal,
+        ),
+      );
 });
 
-final monthNetProvider = Provider<double>((ref) {
-  final totals = ref.watch(monthDirectionTotalsProvider);
-  return totals.creditTotal - totals.debitTotal;
+final monthNetProvider = Provider<AsyncValue<double>>((ref) {
+  return ref
+      .watch(monthDirectionTotalsProvider)
+      .whenData((totals) => totals.creditTotal - totals.debitTotal);
 });
 
-final dailyAverageSpendProvider = Provider<double>((ref) {
-  final totals = ref.watch(monthDirectionTotalsProvider);
+final dailyAverageSpendProvider = Provider<AsyncValue<double>>((ref) {
   final daysElapsed = ref.watch(dashboardPeriodProvider).elapsedDays();
-  if (daysElapsed <= 0) return 0;
-  return totals.debitTotal / daysElapsed;
+  return ref.watch(monthDirectionTotalsProvider).whenData(
+        (totals) => daysElapsed <= 0 ? 0.0 : totals.debitTotal / daysElapsed,
+      );
 });
 
 final commitmentsTotalProvider = Provider<double>((ref) {
@@ -291,51 +275,51 @@ final commitmentsTotalProvider = Provider<double>((ref) {
 
 /// Safe today = (budget - spent - remaining commitments) / inclusive days remaining.
 /// Only meaningful for the current calendar month — returns null otherwise.
-final safeTodayValueProvider = Provider<double?>((ref) {
+final safeTodayValueProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return null;
+  if (!period.isCurrentMonth()) return const AsyncData(null);
 
   final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
-  if (budget == null) return null;
+  if (budget == null) return const AsyncData(null);
 
-  final totals = ref.watch(monthDirectionTotalsProvider);
   final commitments = ref.watch(commitmentsTotalProvider);
-  final now = DateTime.now();
-  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-  final daysRemaining = daysInMonth - now.day + 1;
-  if (daysRemaining <= 0) return 0;
-
-  final remainingBudget = budget - totals.debitTotal - commitments;
-  return remainingBudget / daysRemaining;
+  return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final daysRemaining = daysInMonth - now.day + 1;
+    if (daysRemaining <= 0) return 0.0;
+    return (budget - totals.debitTotal - commitments) / daysRemaining;
+  });
 });
 
 /// Runway in days = (budget - spent - commitments) / daily burn.
 /// Only meaningful for the current calendar month — returns null otherwise.
-final runwayValueProvider = Provider<double?>((ref) {
+final runwayValueProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return null;
+  if (!period.isCurrentMonth()) return const AsyncData(null);
 
   final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
-  if (budget == null) return null;
+  if (budget == null) return const AsyncData(null);
 
-  final totals = ref.watch(monthDirectionTotalsProvider);
   final commitments = ref.watch(commitmentsTotalProvider);
-  final burn = ref.watch(dailyAverageSpendProvider);
-  if (burn <= 0) return null;
-
-  final remainingBudget = budget - totals.debitTotal - commitments;
-  return remainingBudget / burn;
+  return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
+    final daysElapsed = period.elapsedDays();
+    final burn = daysElapsed <= 0 ? 0.0 : totals.debitTotal / daysElapsed;
+    if (burn <= 0) return null;
+    return (budget - totals.debitTotal - commitments) / burn;
+  });
 });
 
-final projectedMonthEndSpendProvider = Provider<double?>((ref) {
-  final totals = ref.watch(monthDirectionTotalsProvider);
+final projectedMonthEndSpendProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return null;
-  final now = DateTime.now();
-  final daysElapsed = now.day;
-  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-  if (daysElapsed <= 0) return totals.debitTotal;
-  return totals.debitTotal / daysElapsed * daysInMonth;
+  if (!period.isCurrentMonth()) return const AsyncData(null);
+  return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
+    final now = DateTime.now();
+    final daysElapsed = now.day;
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    if (daysElapsed <= 0) return totals.debitTotal;
+    return totals.debitTotal / daysElapsed * daysInMonth;
+  });
 });
 
 class MonthOverMonthSpend {
@@ -350,9 +334,9 @@ class MonthOverMonthSpend {
   final double? pctChange;
 }
 
-final monthOverMonthSpendProvider = Provider<MonthOverMonthSpend>((ref) {
-  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
-  if (aggregate != null) {
+final monthOverMonthSpendProvider =
+    Provider<AsyncValue<MonthOverMonthSpend>>((ref) {
+  return ref.watch(dashboardAggregateProvider).whenData((aggregate) {
     final current = aggregate.debitTotal;
     final previous = aggregate.previousSpend;
     return MonthOverMonthSpend(
@@ -360,29 +344,7 @@ final monthOverMonthSpendProvider = Provider<MonthOverMonthSpend>((ref) {
       previous: previous,
       pctChange: previous > 0 ? (current - previous) / previous : null,
     );
-  }
-  final transactions =
-      ref.watch(transactionListProvider).valueOrNull ?? const [];
-  final period = ref.watch(dashboardPeriodProvider);
-  final previousPeriod = period.previous;
-
-  var current = 0.0;
-  var previous = 0.0;
-  for (final txn in transactions) {
-    if (!_countsAsSpending(txn)) continue;
-    if (period.contains(txn.ts)) {
-      current += txn.amount;
-    } else if (previousPeriod.contains(txn.ts)) {
-      previous += txn.amount;
-    }
-  }
-
-  final pct = previous > 0 ? (current - previous) / previous : null;
-  return MonthOverMonthSpend(
-    current: current,
-    previous: previous,
-    pctChange: pct,
-  );
+  });
 });
 
 class CategorySlice {
@@ -403,12 +365,12 @@ class CategorySlice {
 
 const _maxCategorySlices = 5;
 
-final categoryBreakdownProvider = Provider<List<CategorySlice>>((ref) {
-  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
-  if (aggregate != null) {
+final categoryBreakdownProvider =
+    Provider<AsyncValue<List<CategorySlice>>>((ref) {
+  return ref.watch(dashboardAggregateProvider).whenData((aggregate) {
     final entries = aggregate.categories;
     final grandTotal = entries.fold<double>(0, (sum, row) => sum + row.total);
-    if (grandTotal <= 0) return const [];
+    if (grandTotal <= 0) return const <CategorySlice>[];
     final slices = [
       for (final row in entries.take(_maxCategorySlices))
         CategorySlice(
@@ -434,66 +396,7 @@ final categoryBreakdownProvider = Provider<List<CategorySlice>>((ref) {
       );
     }
     return slices;
-  }
-  final transactions =
-      ref.watch(transactionListProvider).valueOrNull ?? const [];
-  final period = ref.watch(dashboardPeriodProvider);
-
-  final totals = <String?, double>{};
-  final names = <String?, String>{};
-  final icons = <String?, String?>{};
-  var grandTotal = 0.0;
-
-  for (final txn in transactions) {
-    if (!_countsAsSpending(txn)) continue;
-    if (!period.contains(txn.ts)) continue;
-
-    final key = txn.categoryId;
-    totals[key] = (totals[key] ?? 0) + txn.amount;
-    names[key] = txn.categoryName ?? 'Uncategorised';
-    icons[key] = txn.categoryIcon;
-    grandTotal += txn.amount;
-  }
-
-  if (grandTotal <= 0) return const [];
-
-  final entries = totals.entries.toList()
-    ..sort((a, b) {
-      final byValue = b.value.compareTo(a.value);
-      if (byValue != 0) return byValue;
-      return (names[a.key] ?? '').compareTo(names[b.key] ?? '');
-    });
-
-  final slices = <CategorySlice>[];
-  final top = entries.take(_maxCategorySlices);
-  for (final entry in top) {
-    slices.add(
-      CategorySlice(
-        categoryId: entry.key,
-        name: names[entry.key] ?? 'Uncategorised',
-        icon: icons[entry.key],
-        total: entry.value,
-        share: entry.value / grandTotal,
-      ),
-    );
-  }
-
-  if (entries.length > _maxCategorySlices) {
-    final otherTotal = entries
-        .skip(_maxCategorySlices)
-        .fold<double>(0, (sum, e) => sum + e.value);
-    slices.add(
-      CategorySlice(
-        categoryId: null,
-        name: 'Other',
-        icon: null,
-        total: otherTotal,
-        share: otherTotal / grandTotal,
-      ),
-    );
-  }
-
-  return slices;
+  });
 });
 
 class MerchantStat {
@@ -508,47 +411,13 @@ class MerchantStat {
   final double total;
 }
 
-const _maxMerchants = 5;
-
-final topMerchantsProvider = Provider<List<MerchantStat>>((ref) {
-  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
-  if (aggregate != null) {
-    return [
-      for (final row in aggregate.merchants)
-        MerchantStat(name: row.name, count: row.count, total: row.total),
-    ];
-  }
-  final transactions =
-      ref.watch(transactionListProvider).valueOrNull ?? const [];
-  final period = ref.watch(dashboardPeriodProvider);
-
-  final totals = <String, double>{};
-  final counts = <String, int>{};
-
-  for (final txn in transactions) {
-    if (!_countsAsSpending(txn)) continue;
-    if (!period.contains(txn.ts)) continue;
-
-    final name = txn.displayName;
-    totals[name] = (totals[name] ?? 0) + txn.amount;
-    counts[name] = (counts[name] ?? 0) + 1;
-  }
-
-  final entries = totals.entries.toList()
-    ..sort((a, b) {
-      final byValue = b.value.compareTo(a.value);
-      if (byValue != 0) return byValue;
-      return a.key.compareTo(b.key);
-    });
-
-  return [
-    for (final e in entries.take(_maxMerchants))
-      MerchantStat(
-        name: e.key,
-        count: counts[e.key] ?? 0,
-        total: e.value,
-      ),
-  ];
+final topMerchantsProvider = Provider<AsyncValue<List<MerchantStat>>>((ref) {
+  return ref.watch(dashboardAggregateProvider).whenData(
+        (aggregate) => [
+          for (final row in aggregate.merchants)
+            MerchantStat(name: row.name, count: row.count, total: row.total),
+        ],
+      );
 });
 
 class MonthPoint {
@@ -560,39 +429,19 @@ class MonthPoint {
 
 const _trendMonths = 6;
 
-final sixMonthTrendProvider = Provider<List<MonthPoint>>((ref) {
-  final aggregate = ref.watch(dashboardAggregateProvider).valueOrNull;
-  final transactions =
-      ref.watch(transactionListProvider).valueOrNull ?? const [];
+final sixMonthTrendProvider = Provider<AsyncValue<List<MonthPoint>>>((ref) {
   final anchor = ref.watch(dashboardPeriodProvider).trendAnchor;
-
-  final buckets = <String, double>{};
-  final order = <String, DateTime>{};
-  for (var i = _trendMonths - 1; i >= 0; i--) {
-    final month = DateTime(anchor.year, anchor.month - i);
-    final key = '${month.year}-${month.month}';
-    buckets[key] = aggregate?.trendByMonth[
-            '${month.year}-${month.month.toString().padLeft(2, '0')}'] ??
-        0;
-    order[key] = month;
-  }
-
-  if (aggregate == null) {
-    for (final txn in transactions) {
-      if (!_countsAsSpending(txn)) continue;
-      final local = txn.ts.toLocal();
-      final key = '${local.year}-${local.month}';
-      if (!buckets.containsKey(key)) continue;
-      buckets[key] = (buckets[key] ?? 0) + txn.amount;
+  return ref.watch(dashboardAggregateProvider).whenData((aggregate) {
+    final points = <MonthPoint>[];
+    for (var i = _trendMonths - 1; i >= 0; i--) {
+      final month = DateTime(anchor.year, anchor.month - i);
+      final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      points.add(
+        MonthPoint(month: month, spend: aggregate.trendByMonth[key] ?? 0),
+      );
     }
-  }
-
-  final keys = order.keys.toList()
-    ..sort((a, b) => order[a]!.compareTo(order[b]!));
-  return [
-    for (final key in keys)
-      MonthPoint(month: order[key]!, spend: buckets[key]!),
-  ];
+    return points;
+  });
 });
 
 class ReviewAttention {
@@ -653,8 +502,8 @@ final dashboardGreetingProvider = Provider<String>((ref) {
 
 /// Derived financial status subline based on actual spend/budget metrics.
 final dashboardStatusSublineProvider = Provider<String>((ref) {
-  final mom = ref.watch(monthOverMonthSpendProvider);
-  if (mom.pctChange != null) {
+  final mom = ref.watch(monthOverMonthSpendProvider).valueOrNull;
+  if (mom != null && mom.pctChange != null) {
     final pct = (mom.pctChange! * 100).abs().toStringAsFixed(0);
     if (mom.pctChange! < 0) {
       return '$pct% lower spend than last month';
@@ -662,7 +511,7 @@ final dashboardStatusSublineProvider = Provider<String>((ref) {
       return '$pct% higher spend than last month';
     }
   }
-  final safeToday = ref.watch(safeTodayValueProvider);
+  final safeToday = ref.watch(safeTodayValueProvider).valueOrNull;
   if (safeToday != null && safeToday >= 0) {
     return 'Budget on track today';
   }

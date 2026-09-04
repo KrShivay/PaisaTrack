@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/budget_repository.dart';
+import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
@@ -40,6 +41,7 @@ Future<ProviderContainer> _ready(
   List<TransactionListItem> items, {
   DashboardPeriod? period,
   double? budget,
+  DashboardAggregateSnapshot? aggregate,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -48,6 +50,8 @@ Future<ProviderContainer> _ready(
       if (budget != null)
         monthlyBudgetProvider
             .overrideWith((ref) => Future<double?>.value(budget)),
+      if (aggregate != null)
+        dashboardAggregateProvider.overrideWith((ref) async => aggregate),
     ],
   );
   addTearDown(container.dispose);
@@ -55,7 +59,21 @@ Future<ProviderContainer> _ready(
   if (budget != null) {
     await container.read(monthlyBudgetProvider.future);
   }
+  if (aggregate != null) {
+    await container.read(dashboardAggregateProvider.future);
+  }
   return container;
+}
+
+DashboardAggregateSnapshot _snapshot({double debitTotal = 0}) {
+  return DashboardAggregateSnapshot(
+    debitTotal: debitTotal,
+    creditTotal: 0,
+    previousSpend: 0,
+    categories: const [],
+    merchants: const [],
+    trendByMonth: const {},
+  );
 }
 
 void main() {
@@ -81,7 +99,7 @@ void main() {
         budget: 50000,
       );
       expect(
-        c.read(safeTodayValueProvider),
+        c.read(safeTodayValueProvider).value,
         isNull,
         reason:
             'Safe-today is meaningless for a historical month; must be null',
@@ -117,7 +135,7 @@ void main() {
         budget: 50000,
       );
       expect(
-        c.read(runwayValueProvider),
+        c.read(runwayValueProvider).value,
         isNull,
         reason: 'Runway is meaningless for a historical month; must be null',
       );
@@ -140,7 +158,7 @@ void main() {
         ],
         period: period,
       );
-      expect(c.read(projectedMonthEndSpendProvider), isNull);
+      expect(c.read(projectedMonthEndSpendProvider).value, isNull);
     });
 
     test(
@@ -156,8 +174,9 @@ void main() {
           ),
         ],
         budget: 50000,
+        aggregate: _snapshot(debitTotal: 300),
       );
-      final safe = c.read(safeTodayValueProvider);
+      final safe = c.read(safeTodayValueProvider).value;
       expect(safe, isNotNull);
       expect(safe, isPositive);
     });

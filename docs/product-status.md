@@ -1,8 +1,10 @@
 # Product Status
 
-Status date: 2026-08-01
+Status date: 2026-09-04
 Code baseline: current `main` worktree, including T-126 calendar/eligibility
-semantics and T-156a dialog consolidation
+semantics, T-156a dialog consolidation, T-157b shared correction/undo, and
+PV-02 truthful dashboard aggregates (loading/error no longer fall back to the
+bounded transaction feed)
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -165,9 +167,10 @@ task briefs under `docs/tasks/` with a one-line index in `TASKS.md`.
   as a settled transaction at confidence 0.75. T-131 closes this with an
   evidence-span verification boundary.
 - `docs/ui-gaps-and-redesign.md` (T-145…T-154) — conformance with the accepted
-  Bloom handoff plus reported defects. The most visible: no `BloomCategoryTile`
-  call site passes `iconName`, so every category row in the app renders the
-  generic fallback glyph while showing the correct hue.
+  Bloom handoff plus reported defects. (The earlier `BloomCategoryTile`
+  fallback-glyph defect is resolved: call sites now pass `iconName`, and
+  `CategoryVisuals.iconFor` also resolves an icon from `categoryId` when none is
+  passed, so category rows render the correct glyph and hue.)
 
 `PLAN.md` records eight open product decisions, each with a default already in
 effect so none of them blocks implementation.

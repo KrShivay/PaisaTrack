@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/data/repositories/dashboard_repository.dart';
+import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
 
 void main() {
@@ -13,8 +15,12 @@ void main() {
     });
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: InsightsScreen()),
+      ProviderScope(
+        overrides: [
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
       ),
     );
     await tester.pump();
@@ -27,6 +33,20 @@ void main() {
 
     expect(find.text('Trends'), findsOneWidget);
     expect(find.text('SPEND TREND (LAST 6 MONTHS)'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('MONTH OVER MONTH'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('MONTH OVER MONTH'), findsOneWidget);
   });
 }
+
+const _emptyDashboardAggregate = DashboardAggregateSnapshot(
+  debitTotal: 0,
+  creditTotal: 0,
+  previousSpend: 0,
+  categories: [],
+  merchants: [],
+  trendByMonth: {},
+);
