@@ -28,8 +28,9 @@ class DashboardScreen extends ConsumerWidget {
     final period = ref.watch(dashboardPeriodProvider);
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      backgroundColor: isDark
+          ? AppColorTokens.bloomDarkBase
+          : AppColorTokens.bloomBase,
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -38,11 +39,7 @@ class DashboardScreen extends ConsumerWidget {
             // Header Row: Mascot (36px) + Greeting + Streak chip
             Row(
               children: [
-                const BloomMascot(
-                  size: 36,
-                  bob: true,
-                  pulseRing: false,
-                ),
+                const BloomMascot(size: 36, bob: true, pulseRing: false),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -78,45 +75,47 @@ class DashboardScreen extends ConsumerWidget {
                   child: Semantics(
                     button: true,
                     label: 'Settings and $streak day streak',
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const SettingsScreen(),
+                    excludeSemantics: true,
+                    child: Material(
+                      color: isDark
+                          ? AppColorTokens.bloomGold.withValues(alpha: 0.16)
+                          : const Color(0xFFFFF0D6),
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SettingsScreen(),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
                           ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColorTokens.bloomGold.withValues(alpha: 0.16)
-                              : const Color(0xFFFFF0D6),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.local_fire_department_rounded,
-                              size: 14,
-                              color: AppColorTokens.bloomGold,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$streak day streak',
-                              style: AppTheme.bloomDisplay(
-                                12,
-                                FontWeight.w600,
-                                color: isDark
-                                    ? AppColorTokens.bloomGold
-                                    : const Color(0xFF8A5A00),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.local_fire_department_rounded,
+                                size: 14,
+                                color: AppColorTokens.bloomGold,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Text(
+                                '$streak day streak',
+                                style: AppTheme.bloomDisplay(
+                                  12,
+                                  FontWeight.w600,
+                                  color: isDark
+                                      ? AppColorTokens.bloomGold
+                                      : const Color(0xFF8A5A00),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -130,59 +129,67 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    showBloomModalSheet(
-                      context: context,
-                      builder: (context) => const BloomDatePeriodSheet(),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTrack
-                          : AppColorTokens.bloomChip,
+                Semantics(
+                  button: true,
+                  label: 'Select period, ${period.label}',
+                  excludeSemantics: true,
+                  child: Material(
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTrack
+                        : AppColorTokens.bloomChip,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
+                      side: BorderSide(
                         color: isDark
                             ? AppColorTokens.bloomDarkOutline
                             : AppColorTokens.bloomHairline,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 13,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextSecondary
-                              : AppColorTokens.inkSecondary,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        showBloomModalSheet(
+                          context: context,
+                          builder: (context) => const BloomDatePeriodSheet(),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          period.label,
-                          style: AppTheme.bloomDisplay(
-                            12,
-                            FontWeight.w600,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 13,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextSecondary
+                                  : AppColorTokens.inkSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              period.label,
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w600,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextPrimary
+                                    : AppColorTokens.ink,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 16,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextTertiary
-                              : AppColorTokens.inkTertiary,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

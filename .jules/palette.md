@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessible custom interaction pills
+**Learning:** Custom interactive chips that contain both text and icons read out redundantly to screen readers and lack standard visual focus/tap feedback when built with just `GestureDetector` and `Container`.
+**Action:** When building interactive navigation chips or pills, wrap a `Material` and `InkWell` component to provide standard a11y focus states and tap feedback (ripples). Additionally, wrap the component in `Semantics(button: true, label: <custom_label>, excludeSemantics: true)` to ensure a clean, single-element announcement for screen readers.
