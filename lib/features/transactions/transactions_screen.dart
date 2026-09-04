@@ -52,6 +52,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   List<TransactionListItem> _filterItems(List<TransactionListItem> items) {
+    final q = _query.toLowerCase(); // Bolt: hoist invariant string outside loop
     return items.where((item) {
       if (widget.initialCategoryId != null &&
           item.categoryId != widget.initialCategoryId) {
@@ -81,30 +82,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         case ActivityFilterChoice.all:
           break;
       }
-      if (_query.isNotEmpty) {
-        final q = _query.toLowerCase();
-        final name = item.displayName.toLowerCase();
-        final note = (item.note ?? '').toLowerCase();
-        final amt = item.amount.toString();
-        final channel = item.channel.toLowerCase();
-        final ref = (item.reference ?? '').toLowerCase();
-        final status = item.status.toLowerCase();
-        final account = (item.accountHint ?? '').toLowerCase();
-        final category = (item.categoryName ?? '').toLowerCase();
-        final source = (item.paymentSourceName ?? '').toLowerCase();
-        final merchant = (item.merchantRaw ?? '').toLowerCase();
-        if (!name.contains(q) &&
-            !note.contains(q) &&
-            !amt.contains(q) &&
-            !channel.contains(q) &&
-            !ref.contains(q) &&
-            !status.contains(q) &&
-            !account.contains(q) &&
-            !category.contains(q) &&
-            !source.contains(q) &&
-            !merchant.contains(q)) {
-          return false;
-        }
+      if (q.isNotEmpty) {
+        // Bolt: short-circuit property stringification and match evaluation
+        if (item.displayName.toLowerCase().contains(q)) return true;
+        if ((item.note ?? '').toLowerCase().contains(q)) return true;
+        if (item.amount.toString().contains(q)) return true;
+        if (item.channel.toLowerCase().contains(q)) return true;
+        if ((item.reference ?? '').toLowerCase().contains(q)) return true;
+        if (item.status.toLowerCase().contains(q)) return true;
+        if ((item.accountHint ?? '').toLowerCase().contains(q)) return true;
+        if ((item.categoryName ?? '').toLowerCase().contains(q)) return true;
+        if ((item.paymentSourceName ?? '').toLowerCase().contains(q)) return true;
+        if ((item.merchantRaw ?? '').toLowerCase().contains(q)) return true;
+        return false;
       }
       return true;
     }).toList();
