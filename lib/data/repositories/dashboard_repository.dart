@@ -63,6 +63,8 @@ class DashboardAggregateSnapshot {
     required this.categories,
     required this.merchants,
     required this.trendByMonth,
+    this.excludedDebitTotal = 0,
+    this.excludedDebitCount = 0,
   });
 
   final double debitTotal;
@@ -71,6 +73,13 @@ class DashboardAggregateSnapshot {
   final List<DashboardCategoryAggregate> categories;
   final List<DashboardMerchantAggregate> merchants;
   final Map<String, double> trendByMonth;
+
+  /// Amount of settled spending debit removed from [debitTotal] by exclusion
+  /// flags (owned self-transfers and analytics-excluded sources) in the current
+  /// period, with its row count. Lets the dashboard explain completeness
+  /// instead of silently dropping money from the headline total (PV-02).
+  final double excludedDebitTotal;
+  final int excludedDebitCount;
 }
 
 /// Runs dashboard arithmetic in SQLite so UI rebuild cost is independent of
@@ -89,12 +98,14 @@ class DashboardRepository {
       _loadCategories(window),
       _loadMerchants(window),
       _loadTrend(window),
+      _loadExcluded(window),
     ]);
     final totals = results[0] as ({
       double debit,
       double credit,
       double previous,
     });
+    final excluded = results[4] as ({double total, int count});
     return DashboardAggregateSnapshot(
       debitTotal: totals.debit,
       creditTotal: totals.credit,
@@ -102,6 +113,38 @@ class DashboardRepository {
       categories: results[1] as List<DashboardCategoryAggregate>,
       merchants: results[2] as List<DashboardMerchantAggregate>,
       trendByMonth: results[3] as Map<String, double>,
+      excludedDebitTotal: excluded.total,
+      excludedDebitCount: excluded.count,
+    );
+  }
+
+  /// Spending debit removed from the headline total by exclusion flags
+  /// (self-transfers / analytics-excluded sources) in the current period.
+  Future<({double total, int count})> _loadExcluded(
+    DashboardQueryWindow window,
+  ) async {
+    final row = await _database.customSelect(
+      '''
+SELECT COALESCE(SUM(t.amount), 0) AS total, COUNT(*) AS cnt
+FROM transactions t
+LEFT JOIN categories c ON c.id = t.category_id
+WHERE t.ts >= ? AND t.ts < ?
+  AND t.is_deleted = 0
+  AND t.duplicate_of_txn_id IS NULL
+  AND t.lifecycle_state = 'settled'
+  AND t.direction = 'debit'
+  AND COALESCE(c.is_spending, 1) = 1
+  AND (t.owned_transfer_id IS NOT NULL OR t.is_analytics_excluded = 1)
+''',
+      variables: [
+        Variable.withInt(window.start.millisecondsSinceEpoch),
+        Variable.withInt(window.end.millisecondsSinceEpoch),
+      ],
+      readsFrom: {_database.transactions, _database.categories},
+    ).getSingle();
+    return (
+      total: row.read<double>('total'),
+      count: row.read<int>('cnt'),
     );
   }
 

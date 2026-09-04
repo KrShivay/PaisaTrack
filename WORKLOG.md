@@ -1,5 +1,21 @@
 # Current Handoff
 
+## 2026-09-04 — PV-02 completeness/exclusions + stale exclusion test fix
+
+- **PV-02 completeness (second half):** `DashboardAggregateSnapshot` now reports
+  `excludedDebitTotal`/`excludedDebitCount` (settled spending debit removed by
+  self-transfer or analytics-excluded flags for the period).
+  `dashboardExclusionsProvider` projects it, and `BloomExclusionsNote` under the
+  metric pills shows "₹X across N transfers & excluded items not counted in
+  spending" (only on successful data with a non-zero amount). Repo + widget
+  tests added. PV-02 is now implemented end to end (In Review).
+- **Stale test fix (was pre-existing on main):** rewrote
+  `exclusion_explanation_test.dart` to match shipped T-158d behaviour — an
+  unflagged credit-card bill is counted and shows no exclusion banner; only
+  flag-driven exclusion (owned transfer / analytics-excluded) is disclosed. The
+  two tests previously asserted the removed merchant-pattern heuristics.
+- Verified: `flutter analyze --no-pub` clean; full `flutter test` all green.
+
 ## 2026-09-04 — PV-02 truthful dashboard aggregates + review fixes
 
 - **PV-02 (loading/error half):** The ~10 dashboard/insights aggregate-derived
@@ -37,16 +53,6 @@
 - Focused Review/Detail correction suite: 20/20 passed. `flutter analyze
   --no-pub`: no issues found.
 
-## 2026-08-08 — T-158d exclusionReasonFor parity fix
-
-- Removed 2 merchant-pattern branches (CREDIT CARD/CARD BILL and ATM/WITHDRAWAL)
-  from `exclusionReasonFor`. These fired when neither `ownedTransferId` nor
-  `isAnalyticsExcluded` was set — i.e., the banner claimed exclusion for
-  transactions that `FinancialEligibility` SQL actually counts. CC bill payments
-  between untracked accounts and ATM withdrawals not yet categorized were both
-  affected. Only the two flags that drive SQL exclusion now produce a banner.
-- Updated 4 tests: 2 patterns-alone → now expect null; CC+isAnalyticsExcluded
-  priority test reworded. 29/29 passing, analyzer clean.
 
 This is a rolling handoff, not a project history. Current product state is in
 `docs/product-status.md`; unfinished work is in `TASKS.md`.

@@ -95,6 +95,11 @@ void main() {
     expect(snapshot.merchants.single.count, 1);
     expect(snapshot.trendByMonth['2026-06'], 50);
     expect(snapshot.trendByMonth['2026-07'], 100);
+    // Completeness: spending debit removed by exclusion flags (analytics-excluded
+    // 900 + owned-transfer 800). The non-spending 'transfers' debit is excluded
+    // by category, not a flag, so it is not part of this figure.
+    expect(snapshot.excludedDebitTotal, 1700);
+    expect(snapshot.excludedDebitCount, 2);
   });
 
   test('trend buckets honour the injected timezone offset', () async {

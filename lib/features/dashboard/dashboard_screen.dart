@@ -196,6 +196,9 @@ class DashboardScreen extends ConsumerWidget {
 
             // Metric Switcher Pills (Safe today, Net flow, Burn, Runway)
             const BloomMetricSwitcherPills(),
+
+            // Completeness note: spending excluded from the headline total.
+            const BloomExclusionsNote(),
             const SizedBox(height: 24),
 
             // Budget Card

@@ -391,6 +391,52 @@ class _MetricPillButton extends StatelessWidget {
   }
 }
 
+/// Completeness note explaining spending excluded from the headline total by
+/// self-transfer / analytics-excluded flags. Renders only on a successful
+/// aggregate with a non-zero excluded amount, so it never fabricates a figure
+/// during loading or error (PV-02).
+class BloomExclusionsNote extends ConsumerWidget {
+  const BloomExclusionsNote({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final exclusions = ref.watch(dashboardExclusionsProvider).valueOrNull;
+    if (exclusions == null || exclusions.total <= 0) {
+      return const SizedBox.shrink();
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final showPaise = ref.watch(showPaiseProvider);
+    var amount = formatInr(exclusions.total);
+    if (!showPaise) {
+      final idx = amount.lastIndexOf('.');
+      if (idx != -1) amount = amount.substring(0, idx);
+    }
+    final n = exclusions.count;
+    final color = isDark
+        ? AppColorTokens.bloomDarkTextSecondary
+        : AppColorTokens.inkSecondary;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 13, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              '$amount across $n ${n == 1 ? 'transfer/excluded item' : 'transfers & excluded items'} '
+              'not counted in spending',
+              textAlign: TextAlign.center,
+              style: AppTheme.bloomDisplay(11, FontWeight.w500, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Dark emerald budget card from Pulse handoff.
 class BloomBudgetCard extends ConsumerWidget {
   const BloomBudgetCard({super.key});

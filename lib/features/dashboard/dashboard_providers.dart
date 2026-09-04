@@ -322,6 +322,26 @@ final projectedMonthEndSpendProvider = Provider<AsyncValue<double?>>((ref) {
   });
 });
 
+/// Spending removed from the headline total by exclusion flags (self-transfers
+/// and analytics-excluded sources) in the active period. Drives the dashboard
+/// completeness note so excluded money is explained, not silently dropped.
+class DashboardExclusions {
+  const DashboardExclusions({required this.total, required this.count});
+
+  final double total;
+  final int count;
+}
+
+final dashboardExclusionsProvider =
+    Provider<AsyncValue<DashboardExclusions>>((ref) {
+  return ref.watch(dashboardAggregateProvider).whenData(
+        (aggregate) => DashboardExclusions(
+          total: aggregate.excludedDebitTotal,
+          count: aggregate.excludedDebitCount,
+        ),
+      );
+});
+
 class MonthOverMonthSpend {
   const MonthOverMonthSpend({
     required this.current,

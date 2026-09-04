@@ -128,6 +128,49 @@ void main() {
 
       await database.close();
     });
+
+    testWidgets('completeness note appears when spending is excluded',
+        (tester) async {
+      tester.view.physicalSize = const Size(402, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final database = AppDatabase(NativeDatabase.memory());
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWith((ref) async => database),
+            dashboardAggregateProvider.overrideWith(
+              (ref) async => const DashboardAggregateSnapshot(
+                debitTotal: 500,
+                creditTotal: 0,
+                previousSpend: 0,
+                categories: [],
+                merchants: [],
+                trendByMonth: {},
+                excludedDebitTotal: 1700,
+                excludedDebitCount: 2,
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: BloomUndoToastHost(child: DashboardScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.textContaining('not counted in spending'),
+        findsOneWidget,
+      );
+
+      await database.close();
+    });
   });
 }
 
