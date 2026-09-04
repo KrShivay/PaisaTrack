@@ -1,0 +1,914 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 67.0.0 (107.0.0 available)
+  analyzer 6.4.1 (14.3.0 available)
+  analyzer_plugin 0.11.3 (0.14.16 available)
+  build 2.4.1 (4.0.11 available)
+  build_config 1.1.2 (1.3.3 available)
+  build_daemon 4.1.1 (4.1.6 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.16.1 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  built_value 8.12.6 (8.13.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.0.0 available)
+  code_builder 4.11.1 (4.12.0 available)
+  dart_style 2.3.6 (3.1.13 available)
+  drift 2.18.0 (2.34.4 available)
+  drift_dev 2.18.0 (2.34.6 available)
+  flutter_lints 4.0.0 (6.0.0 available)
+  flutter_riverpod 2.6.1 (3.4.3 available)
+  glob 2.1.3 (2.2.0 available)
+  hooks 2.0.2 (2.2.0 available)
+  io 1.0.5 (1.1.0 available)
+  jni 1.0.0 (1.0.3 available)
+  jni_flutter 1.0.1 (1.0.3 available)
+  lints 4.0.0 (6.1.0 available)
+  matcher 0.12.18 (0.12.20 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.17.0 (1.19.0 available)
+  mime 2.0.0 (2.1.0 available)
+  objective_c 9.4.1 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  pool 1.5.2 (1.5.3 available)
+  process 5.0.5 (5.0.6 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  riverpod 2.6.1 (3.4.3 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  source_gen 1.5.0 (4.3.0 available)
+  sqlcipher_flutter_libs 0.6.8 (0.7.0+eol available)
+  sqlite3 2.4.5 (3.5.2 available)
+  sqlparser 0.36.0 (0.45.0 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  test_api 0.7.9 (0.7.14 available)
+  vector_math 2.2.0 (2.4.2 available)
+  vm_service 15.2.0 (15.3.0 available)
+  web 0.5.1 (1.1.1 available)
+  workmanager 0.9.0+3 (0.10.9 available)
+  workmanager_android 0.9.0+2 (0.10.8 available)
+  workmanager_apple 0.9.1+2 (0.9.10 available)
+  workmanager_platform_interface 0.9.1+1 (0.10.4 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+53 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /app/test/fixtures/sms_bank_fixture_coverage_test.dart
+00:00 +0: /app/test/fixtures/sms_bank_fixture_coverage_test.dart: declined/failed/future-event SMS never produce a transaction
+00:01 +1: /app/test/fixtures/sms_t108_bank_fixture_coverage_test.dart: PNB has sourced public fixtures with >=90% exact coverage
+00:01 +2: /app/test/fixtures/sms_bank_fixture_coverage_test.dart: >=90% of real per-bank transactional SMS parse into the correct NormalizedTransactionRecord
+00:02 +3: /app/test/fixtures/sms_bank_fixture_coverage_test.dart: generic fallback parses >=80% of positive fixtures without contradicting amount, direction, or account hint
+00:02 +4: /app/test/fixtures/sms_bank_fixture_coverage_test.dart: generic fallback parses >=80% of positive fixtures without contradicting amount, direction, or account hint
+00:02 +5: /app/test/fixtures/sms_fixture_runner_test.dart: compares sample unparsed parser fixture
+00:03 +6: /app/test/fixtures/sms_fixture_runner_test.dart: loads public provenance from optional fixture metadata
+00:03 +7: /app/test/fixtures/sms_fixture_runner_test.dart: loads ordered sequence fixtures with expected event graphs
+00:03 +8: /app/test/fixtures/sms_fixture_runner_test.dart: loads adversarial fixtures without promoting bait to an amount
+00:04 +9: /app/test/fixtures/sms_t067_bank_fixture_coverage_test.dart: kotak has sourced public fixtures with >=90% exact coverage
+00:05 +10: /app/test/fixtures/sms_t067_bank_fixture_coverage_test.dart: centbk has sourced public fixtures with >=90% exact coverage
+00:05 +11: /app/test/fixtures/sms_t067_bank_fixture_coverage_test.dart: centbk has sourced public fixtures with >=90% exact coverage
+00:07 +12: /app/test/intelligence/llm/llm_runtime_test.dart: feature-off and absent-model paths return typed no-op results
+00:07 +13: /app/test/intelligence/llm/llm_runtime_test.dart: complete uses only the inference platform method
+00:07 +14: /app/test/intelligence/llm/llm_runtime_test.dart: extractJson validates strict schema in one attempt
+00:07 +15: /app/test/intelligence/llm/llm_runtime_test.dart: extractJson rejects extra fields without retrying
+00:07 +16: /app/test/intelligence/llm/llm_runtime_test.dart: extractJson rejects enum values without retrying
+00:07 +17: /app/test/intelligence/llm/llm_runtime_test.dart: extractJson pulls the object out of markdown fences and prose
+00:07 +18: /app/test/intelligence/llm/llm_runtime_test.dart: extractJson skips an echoed schema and accepts the later values object
+00:07 +19: /app/test/intelligence/llm/llm_runtime_test.dart: extractJson accepts an object-typed field left open (no properties)
+00:07 +20: /app/test/intelligence/llm/llm_runtime_test.dart: extractJsonRequest puts schema in system instruction
+00:07 +21: /app/test/intelligence/llm/llm_runtime_test.dart: extractJsonRequest rejects non-empty thinking output
+00:07 +22: /app/test/intelligence/llm/llm_runtime_test.dart: extractJsonRequest permits an empty leading thinking block
+00:07 +23: /app/test/intelligence/llm/llm_runtime_test.dart: completeRequest rejects blank fields without a platform call
+00:07 +24: /app/test/intelligence/llm/llm_runtime_test.dart: fake no-op runtime lets callers degrade without throwing
+00:07 +25: /app/test/intelligence/llm/llm_runtime_test.dart: downloadModelWithRetry retries on failure up to maxRetries
+00:07 +26: /app/test/intelligence/llm/llm_runtime_test.dart: modelStatus parses native metadata defensively
+00:07 +27: /app/test/intelligence/llm/llm_runtime_test.dart: downloadModelResult preserves typed platform failure code
+00:07 +28: /app/test/intelligence/nightly_job_test.dart: seeded DB run executes every stage in PLAN order
+00:08 +29: /app/test/intelligence/nightly_job_test.dart: failed run resumes after the last completed stage
+00:08 +30: /app/test/intelligence/nightly_job_test.dart: completed run is idempotent for the same UTC day
+00:08 +31: /app/test/intelligence/commitment_kind_classification_test.dart: Classifies EMI, subscription, and bill commitment kinds accurately
+00:08 +32: /app/test/intelligence/commitment_kind_classification_test.dart: Ambiguous series stay unclassified rather than guessing
+00:09 +33: /app/test/intelligence/insights_engine_test.dart: precomputes every deterministic insight kind
+00:10 +34: /app/test/intelligence/insights_engine_test.dart: rerun is idempotent, preserves dismissal, and clears stale rows
+00:10 +35: /app/test/intelligence/anomaly_detector_test.dart: incrementally updates a baseline once per period
+00:10 +36: /app/test/intelligence/anomaly_detector_test.dart: flags above 2.5 sigma with top three contributors
+00:11 +37: /app/test/intelligence/models/embedder_test.dart: embed sends the trimmed text and converts Float64List to Float32List
+00:11 +38: /app/test/intelligence/models/embedder_test.dart: embed accepts a plain numeric list payload
+00:11 +39: /app/test/intelligence/models/embedder_test.dart: embed returns null when the model is unavailable (native null)
+00:11 +40: /app/test/intelligence/models/embedder_test.dart: embed returns null for empty and whitespace-only text without a channel call
+00:11 +41: /app/test/intelligence/models/embedder_test.dart: embed returns null instead of throwing on PlatformException
+00:12 +42: /app/test/intelligence/models/embedder_test.dart: embed returns null instead of throwing when no native side exists (MissingPluginException)
+00:12 +43: /app/test/intelligence/models/embedder_test.dart: embed returns null for an empty vector payload
+00:12 +44: /app/test/intelligence/models/embedder_test.dart: embed returns null for a malformed (non-numeric) payload
+00:12 +45: /app/test/intelligence/models/embedder_test.dart: model lifecycle isModelAvailable reflects the native answer and defaults to false
+00:12 +46: /app/test/intelligence/models/embedder_test.dart: model lifecycle downloadModel surfaces success and swallows failures
+00:12 +47: /app/test/intelligence/models/embedder_test.dart: model lifecycle deleteModel surfaces the native answer
+00:12 +48: /app/test/intelligence/models/embedder_test.dart: NoopEmbedder never yields vectors and reports the model unavailable
+00:12 +49: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: classifies common totals without invoking a language model
+00:12 +50: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: resolves categories and merchant names deterministically
+00:12 +51: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: resolves a single distinctive token to a multi-word category
+00:12 +52: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: resolves years, quarters, and explicit ranges locally
+00:12 +53: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: builds comparisons and recurring ranges from relative dates
+00:12 +54: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: leaves ambiguous and unsupported filters for the guarded fallback
+00:12 +55: /app/test/intelligence/assistant/assistant_intent_classifier_test.dart: covers common conversational finance paraphrases locally
+00:13 +56: /app/test/intelligence/assistant/assistant_controller_test.dart: modelAbsent tells the user to download the model
+00:13 +57: /app/test/intelligence/assistant/assistant_controller_test.dart: unsupportedDevice names the device, not the missing model
+00:13 +58: /app/test/intelligence/assistant/assistant_controller_test.dart: failure (e.g. unparsable model output) asks to rephrase, not redownload
+00:13 +59: /app/test/intelligence/assistant/assistant_controller_test.dart: featureDisabled reports the build flag, not the missing model
+00:13 +60: /app/test/intelligence/assistant/assistant_controller_test.dart: common questions bypass the model-backed runtime
+00:13 +61: /app/test/intelligence/assistant/assistant_controller_test.dart: oversized questions refuse before loading the model
+00:13 +62: /app/test/intelligence/assistant/assistant_controller_test.dart: repeated fallback questions reuse the intent but re-run the query
+00:13 +63: /app/test/intelligence/assistant/assistant_controller_test.dart: fallback keeps question separate and JSON-encodes category data
+00:13 +64: /app/test/intelligence/assistant/assistant_controller_test.dart: current-month Ask result includes local July transactions
+00:13 +65: /app/test/intelligence/assistant/query_engine_test.dart: totals, merchant lookup, breakdown, and comparison are exact
+00:14 +66: /app/test/intelligence/assistant/query_engine_test.dart: upcoming recurring and active insights exclude out-of-scope rows
+00:14 +67: /app/test/intelligence/assistant/query_engine_test.dart: transaction predicates run in SQL before rows are materialized
+00:14 +68: /app/test/intelligence/assistant/assistant_compact_intent_test.dart: expands compact merchant filter and all-time range
+00:15 +69: /app/test/intelligence/assistant/assistant_compact_intent_test.dart: expands compact current and comparison month ranges
+00:15 +70: /app/test/intelligence/assistant/assistant_compact_intent_test.dart: expands compact recurring intent and applies default future range
+00:15 +71: /app/test/intelligence/assistant/prompt_catalogue_test.dart: every catalogue question maps to a valid supported intent
+00:16 +72: /app/test/intelligence/assistant/answer_renderer_test.dart: renderer cannot surface model-originated figures
+00:16 +73: /app/test/intelligence/assistant/answer_renderer_test.dart: empty results are stated without invented zero figures
+00:16 +74: /app/test/intelligence/assistant/assistant_intent_test.dart: month ranges follow local calendar boundaries
+00:16 +75: /app/test/intelligence/assistant/assistant_intent_test.dart: accepts every whitelisted intent
+00:16 +76: /app/test/intelligence/assistant/assistant_intent_test.dart: rejects unsupported, unknown category, malformed date, and SQL-shaped fields
+00:16 +77: /app/test/intelligence/assistant/assistant_intent_test.dart: category resolution is exact then case-insensitive
+00:18 +78: /app/test/intelligence/burn_rate_forecaster_test.dart: projects current spend from trailing per-day medians
+00:18 +79: /app/test/intelligence/burn_rate_forecaster_test.dart: uses strict 10 percent threshold and clears a stale insight
+00:18 +80: /app/test/intelligence/narrative_insight_generator_test.dart: stores a number-free narrative from aggregate payloads
+00:19 +81: /app/test/intelligence/narrative_insight_generator_test.dart: rejects model-authored numbers
+00:19 +82: /app/test/intelligence/narrative_insight_generator_test.dart: rejects advice, Unicode digits, thinking markup, and oversized text
+00:20 +83: /app/test/intelligence/anomaly_suppression_test.dart: An annual premium in a detected recurring series raises a suppressed anomaly
+00:21 +84: /app/test/intelligence/anomaly_suppression_test.dart: A small-rupee swing below the floor raises a suppressed anomaly
+00:21 +85: /app/test/intelligence/anomaly_suppression_test.dart: A genuine large deviation above floor without recurring series raises an active anomaly flag
+00:21 +86: /app/test/intelligence/net_spending_contract_test.dart: MoneyUtils converts between rupees and paise accurately
+00:22 +87: /app/test/intelligence/net_spending_contract_test.dart: Dashboard and burn rate forecaster aggregates match expectations
+00:23 +88: /app/test/intelligence/recurring_detector_test.dart: detects and idempotently upserts monthly subscription
+00:23 +89: /app/test/intelligence/recurring_detector_test.dart: classifies EMI and rising last-three amounts
+00:24 +90: /app/test/intelligence/recurring_detector_test.dart: marks overdue income series missed after twenty-percent grace
+00:24 +91: /app/test/intelligence/recurring_detector_test.dart: rejects sparse, irregular, and separate amount-cluster noise
+00:24 +92: /app/test/intelligence/recurring_detector_test.dart: detects variable monthly electricity bills by cadence
+00:24 +93: /app/test/intelligence/recurring_detector_test.dart: classifies mutual fund and NPS series as investments
+00:24 +94: /app/test/intelligence/recurring_detector_test.dart: uses parent and subcategory data for variable recurring bills
+00:24 +95: /app/test/intelligence/recurring_detector_test.dart: uses the available on-device model for semantic recurring kind
+00:24 +96: /app/test/intelligence/recurring_detector_test.dart: foreground scanner runs once and reruns after transaction changes
+00:24 +97: /app/test/intelligence/recurring_detector_test.dart: detects imported history without resolved merchant ids
+00:24 +98: /app/test/core/crypto/database_cipher_test.dart: AndroidKeystoreDatabasePassphraseProvider returns passphrase from platform keystore channel
+00:24 +99: /app/test/intelligence/recurring_detector_test.dart: large single-merchant histories are clustered in bounded time
+00:24 +100: /app/test/intelligence/recurring_detector_test.dart: large single-merchant histories are clustered in bounded time
+00:24 +101: /app/test/intelligence/recurring_detector_test.dart: large single-merchant histories are clustered in bounded time
+00:26 +102: /app/test/core/widgets/app_state_views_test.dart: error state scrolls instead of overflowing at short heights
+00:27 +103: /app/test/core/widgets/transaction_filter_sheet_test.dart: search matches every supported transaction field
+00:27 +104: /app/test/core/widgets/transaction_filter_sheet_test.dart: complete filters combine with AND semantics
+00:27 +105: /app/test/core/widgets/transaction_filter_sheet_test.dart: clearing one filter preserves the others
+00:29 +106: /app/test/core/widgets/bloom_category_tile_test.dart: BloomCategoryTile Icon Resolution (T-146a) resolves explicit iconName correctly (e.g. restaurant)
+00:30 +107: /app/test/core/widgets/bloom_category_tile_test.dart: BloomCategoryTile Icon Resolution (T-146a) falls back to categoryId mapped icon when iconName is null (food -> Icons.restaurant)
+00:30 +108: /app/test/core/widgets/bloom_category_tile_test.dart: BloomCategoryTile Icon Resolution (T-146a) groceries category falls back to Icons.local_grocery_store
+00:30 +109: /app/test/core/widgets/correction_scope_sheet_test.dart: scope defaults match correction context
+00:30 +110: /app/test/core/widgets/bloom_category_tile_test.dart: BloomCategoryTile Icon Resolution (T-146a) transport category falls back to Icons.directions_car
+00:30 +111: /app/test/core/widgets/correction_scope_sheet_test.dart: shows explicit scope choices and returns the selection
+00:31 +112: /app/test/core/widgets/category_picker_sheet_test.dart: shows suggested categories, search, and current selection
+00:34 +113: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) renders 44x5 handle, 30px radius, and mandatory exit control
+00:34 +114: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) renders 44x5 handle, 30px radius, and mandatory exit control
+00:34 +115: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) renders 44x5 handle, 30px radius, and mandatory exit control
+00:35 +116: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) asserts mandatory exit affordance is passed
+00:35 +117: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) drag past threshold dismisses sheet
+00:35 +118: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) semantics test asserts exit controls are labelled
+00:35 +119: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) honours disableAnimations (reduce motion)
+00:35 +120: /app/test/core/widgets/bloom_full_screen_sheet_test.dart: showBloomFullScreenSheet (T-152a) drag not past threshold springs back
+00:36 +121: /app/test/core/widgets/transaction_components_accessibility_test.dart: large text keeps long merchant and full INR amount usable
+00:37 +122: /app/test/core/platform/system_document_gateway_test.dart: saveDocument sends name, MIME type, and bytes over the channel
+00:37 +123: /app/test/core/platform/system_document_gateway_test.dart: dismissed save picker returns false
+00:37 +124: /app/test/core/platform/system_document_gateway_test.dart: openDocument returns selected bytes and null when dismissed
+00:37 +125: /app/test/core/platform/system_document_gateway_test.dart: streaming sessions keep chunks bounded and expose picker lifecycle
+00:37 +126: /app/test/core/platform/system_document_gateway_test.dart: streaming gateway rejects chunks above the platform ceiling
+00:38 +127: /app/test/core/financial_calendar_test.dart: maps the local month boundary to half-open UTC query instants
+00:38 +128: /app/test/core/financial_calendar_test.dart: DashboardPeriod uses the same injected local month boundary
+00:39 +129: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette violet primary has expected hex value
+00:39 +130: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette ink has expected hex value
+00:39 +131: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom light surfaces are distinct
+00:39 +132: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom dark surfaces are distinct from legacy dark surfaces
+00:39 +133: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom credit/debit light colors match README
+00:39 +134: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom credit/debit dark colors match README
+00:39 +135: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom warning colors match README
+00:39 +136: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette legacy tokens are preserved
+00:39 +137: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom gradients have correct color counts
+00:39 +138: /app/test/core/theme/bloom_design_system_test.dart: AppColorTokens Bloom palette bloom shadows are non-empty
+00:39 +139: /app/test/core/theme/bloom_design_system_test.dart: AppRadius Bloom tokens bloom radius values match design spec
+00:39 +140: /app/test/core/theme/bloom_design_system_test.dart: AppRadius Bloom tokens legacy radius values are preserved
+00:39 +141: /app/test/core/theme/bloom_design_system_test.dart: AppDurations Bloom tokens bloom motion durations match design spec
+00:39 +142: /app/test/core/theme/bloom_design_system_test.dart: AppDurations Bloom tokens legacy durations are preserved
+00:39 +143: /app/test/core/theme/bloom_design_system_test.dart: PaisaColors Bloom fields light instance includes Bloom fields
+00:39 +144: /app/test/core/theme/bloom_design_system_test.dart: PaisaColors Bloom fields dark instance includes Bloom fields
+00:39 +145: /app/test/core/theme/bloom_design_system_test.dart: PaisaColors Bloom fields legacy credit/debit fields are preserved
+00:39 +146: /app/test/core/theme/bloom_design_system_test.dart: PaisaColors Bloom fields copyWith updates Bloom fields
+00:39 +147: /app/test/core/theme/bloom_design_system_test.dart: PaisaColors Bloom fields lerp interpolates Bloom fields
+00:39 +148: /app/test/core/theme/bloom_design_system_test.dart: AppTheme Bloom variants bloomDisplay produces Space Grotesk family
+00:39 +149: /app/test/core/theme/bloom_design_system_test.dart: AppTheme Bloom variants bloomMono produces IBM Plex Mono family with tight tracking
+00:39 +150: /app/test/core/theme/bloom_design_system_test.dart: AppTheme Bloom variants bloomLight returns a ThemeData with Bloom surfaces
+00:39 +151: /app/test/core/theme/bloom_design_system_test.dart: AppTheme Bloom variants bloomDark returns a ThemeData with dark Bloom surfaces
+00:39 +152: /app/test/core/theme/bloom_design_system_test.dart: AppTheme Bloom variants legacy dark/light themes still build successfully
+00:39 +153: /app/test/core/theme/bloom_design_system_test.dart: BloomText display renders with Space Grotesk
+00:39 +154: /app/test/core/theme/bloom_design_system_test.dart: BloomText display renders with Space Grotesk
+00:39 +155: /app/test/core/theme/bloom_design_system_test.dart: BloomText display renders with Space Grotesk
+00:39 +156: /app/test/core/theme/bloom_design_system_test.dart: BloomText display renders with Space Grotesk
+00:40 +157: /app/test/core/theme/bloom_design_system_test.dart: BloomText mono renders with IBM Plex Mono
+00:40 +158: /app/test/core/theme/bloom_design_system_test.dart: BloomText body has 1.5 line height
+00:40 +159: /app/test/core/theme/bloom_design_system_test.dart: BloomText renders at 320px width without overflow
+00:40 +160: /app/test/core/theme/bloom_design_system_test.dart: BloomAmount renders formatted positive amount
+00:40 +161: /app/test/core/theme/bloom_design_system_test.dart: BloomAmount hides paise when showPaise is false
+00:40 +162: /app/test/core/theme/bloom_design_system_test.dart: BloomAmount renders with IBM Plex Mono
+00:40 +163: /app/test/core/theme/bloom_design_system_test.dart: BloomAmount uses credit color for positive amounts
+00:40 +164: /app/test/core/theme/bloom_design_system_test.dart: BloomAmount uses debit color for negative amounts
+00:40 +165: /app/test/core/theme/bloom_design_system_test.dart: BloomAmount dark mode uses dark credit color
+00:40 +166: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot renders at 36px without overflow
+00:40 +167: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot renders at 92px without overflow
+00:40 +168: /app/test/core/format_test.dart: formatInr formats amounts below one lakh with standard thousands grouping
+00:40 +169: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot bob is disabled when reduce-motion is active
+00:40 +170: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot bob is disabled when reduce-motion is active
+00:40 +171: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot bob is disabled when reduce-motion is active
+00:40 +172: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot bob is disabled when reduce-motion is active
+00:40 +173: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot bob is disabled when reduce-motion is active
+00:40 +174: /app/test/core/format_test.dart: formatTxnTime includes two-digit year for prior years
+00:40 +175: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot pulse ring is disabled when reduce-motion is active
+00:40 +176: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot pulse ring is disabled when reduce-motion is active
+00:40 +177: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot pulse ring is disabled when reduce-motion is active
+00:41 +178: /app/test/core/theme/bloom_design_system_test.dart: BloomMascot renders at 320px width
+00:41 +179: /app/test/core/theme/bloom_design_system_test.dart: BloomCategoryTile uses correct alpha for light theme
+00:41 +180: /app/test/core/theme/bloom_design_system_test.dart: BloomCategoryTile uses correct alpha for dark theme
+00:41 +181: /app/test/core/theme/bloom_design_system_test.dart: BloomCategoryTile renders without overflow at 52px
+00:41 +182: /app/test/core/theme/bloom_design_system_test.dart: BloomSkeleton renders shimmer in normal mode
+00:41 +183: /app/test/core/theme/bloom_design_system_test.dart: BloomSkeleton shimmer is disabled when reduce-motion is active
+00:41 +184: /app/test/core/theme/bloom_design_system_test.dart: BloomNotice warning variant renders message and action
+00:41 +185: /app/test/core/theme/bloom_design_system_test.dart: BloomNotice error variant renders
+00:41 +186: /app/test/core/theme/bloom_design_system_test.dart: BloomNotice warning renders in dark mode
+00:41 +187: /app/test/core/theme/bloom_design_system_test.dart: BloomMotion helpers useReduceMotion returns false normally
+00:41 +188: /app/test/core/theme/bloom_design_system_test.dart: BloomMotion helpers useReduceMotion returns true when disabled
+00:41 +189: /app/test/core/theme/bloom_design_system_test.dart: BloomMotion helpers BloomBobWrapper animates normally
+00:41 +190: /app/test/core/theme/bloom_design_system_test.dart: BloomMotion helpers BloomBobWrapper static when reduce-motion is on
+00:41 +191: /app/test/core/theme/bloom_design_system_test.dart: AppSpacing Bloom tokens bloom screen padding is 20px horizontal
+00:41 +192: /app/test/core/theme/bloom_design_system_test.dart: AppSpacing Bloom tokens legacy screen padding is preserved
+00:42 +193: /app/test/security/android_platform_security_config_test.dart: Android OS backup and device transfer are disabled
+00:42 +194: /app/test/security/android_platform_security_config_test.dart: embedding model integrity pin uses SHA-256, not MD5
+00:43 +195: /app/test/widget_test.dart: renders startup progress before permission lookup completes
+00:44 +196: /app/test/widget_test.dart: renders startup progress before permission lookup completes
+00:44 +197: /app/test/widget_test.dart: renders startup progress before permission lookup completes
+00:45 +198: /app/test/widget_test.dart: renders the app shell
+00:46 +199: /app/test/widget_test.dart: renders the app shell
+00:46 +200: /app/test/widget_test.dart: boots with an in-memory app database override
+00:47 +201: /app/test/data/db/app_database_v9_migration_test.dart: v8->v9 migration adds lifecycle_state, lifecycle_reason, and message_kind columns and backfills to settled
+00:48 +202: /app/test/data/db/app_database_v16_migration_test.dart: v15->v16 migration creates the shadow transactions table
+00:49 +203: /app/test/data/db/app_database_migration_test.dart: migration v1 creates encrypted schema
+  SQLCipher is not available in this host VM test process.
+00:50 +203 ~1: /app/test/data/db/app_database_v6_payment_source_repair_test.dart: v5->v6 repairs null and millisecond payment_sources rows
+00:51 +204 ~1: /app/test/data/db/app_database_v3_migration_test.dart: v2->current migration creates additive schema without losing rows
+00:52 +205 ~1: /app/test/data/db/app_database_v13_migration_test.dart: v12->v13 migration creates feature_flags table with key primary key
+00:53 +206 ~1: /app/test/data/db/app_database_v12_migration_test.dart: v11->v12 migration creates expected_events table and unique index on (dedup_key, expected_date)
+00:54 +207 ~1: /app/test/data/db/app_database_v8_migration_test.dart: v7->v8 migration adds evidence_json column and reads back existing rows with null evidence
+00:56 +208 ~1: /app/test/data/db/category_seed_loader_test.dart: loads bundled category seeds idempotently
+00:57 +209 ~1: /app/test/data/db/app_database_v7_payment_source_shape_repair_test.dart: v6->v7 adds payment source columns missing on upgraded devices
+00:58 +210 ~1: /app/test/data/db/app_database_v11_migration_test.dart: v10->v11 migration creates counterparties table with unique identity_key
+00:59 +211 ~1: /app/test/data/db/app_database_v14_migration_test.dart: v13->v14 migration adds nullable raw SMS attempt metadata
+00:59 +212 ~1: /app/test/data/db/app_database_v14_migration_test.dart: v13->v14 creates raw SMS table for legacy databases without it
+01:00 +213 ~1: /app/test/data/models/normalized_transaction_record_test.dart: serializes to the frozen normalized transaction contract
+01:00 +214 ~1: /app/test/data/models/normalized_transaction_record_test.dart: FieldEvidence serializes and deserializes cleanly
+01:00 +215 ~1: /app/test/data/models/normalized_transaction_record_test.dart: NormalizedTransactionRecord includes evidence in toJson when present
+01:01 +216 ~1: /app/test/data/repositories/insights_repository_test.dart: dismiss sets dismissed=true
+01:01 +217 ~1: /app/test/data/repositories/insights_repository_test.dart: dismiss on unknown id is a no-op and does not throw
+01:01 +218 ~1: /app/test/data/repositories/insights_repository_test.dart: newly inserted insight is not dismissed by default
+01:02 +219 ~1: /app/test/data/repositories/category_repository_test.dart: add, rename, and merge retro-apply transactions and rules
+01:03 +220 ~1: /app/test/data/repositories/payee_label_repository_test.dart: maps multiple aliases and preserves original transaction evidence
+01:04 +221 ~1: /app/test/data/repositories/payee_label_repository_test.dart: refuses aliases that would merge two existing payees
+01:04 +222 ~1: /app/test/data/repositories/payee_label_repository_test.dart: loads SQL-grouped identities with bounded aliases and eligibility rules
+01:04 +223 ~1: /app/test/data/repositories/payee_label_repository_test.dart: searches aliases and filters unlabeled identities in SQL
+01:04 +224 ~1: /app/test/data/repositories/payee_label_repository_test.dart: uses a stable keyset cursor without repeating page items
+01:04 +225 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:04 +226 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:04 +227 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:05 +228 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:05 +229 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +230 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +231 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +232 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +233 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +234 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +235 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +236 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +237 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +238 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +239 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +240 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +241 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:06 +242 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +243 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +244 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +245 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +246 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +247 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +248 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +249 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:08 +250 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:10 +251 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:10 +252 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:10 +253 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:12 +254 ~1: /app/test/data/repositories/payee_label_repository_test.dart: keeps page size bounded at realistic transaction volume
+01:14 +255 ~1: /app/test/data/repositories/expected_event_reconciliation_test.dart: Sequence fixture: reminder -> debit -> fulfilled; both rows remain visible
+01:14 +256 ~1: /app/test/data/repositories/expected_event_reconciliation_test.dart: Reminder with no debit past window -> missed; both rows remain visible
+01:14 +257 ~1: /app/test/data/repositories/expected_event_reconciliation_test.dart: Snooze and cancel update event state correctly
+01:15 +258 ~1: /app/test/data/repositories/payment_source_repository_test.dart: trigger links sources and unique owned transfer pairs are recognized
+01:15 +259 ~1: /app/test/data/repositories/payment_source_repository_test.dart: nickname and analytics exclusion propagate without hiding rows
+01:16 +260 ~1: /app/test/data/repositories/dashboard_repository_test.dart: dashboard SQL aggregates preserve analytics inclusion semantics
+01:16 +261 ~1: /app/test/data/repositories/dashboard_repository_test.dart: dashboard excludes non-settled debits from every spending aggregate
+01:17 +262 ~1: /app/test/data/repositories/dashboard_repository_test.dart: transaction feed enforces limit and optional date bounds
+01:17 +263 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve no merchant text or counterparty -> confidence 0, source none
+01:17 +264 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve exact alias lookup wins at confidence 1.0
+01:17 +265 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve embedder unavailable -> unembedded fallback, no DB writes
+01:17 +266 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve cosine >= 0.92 auto-links and writes a learned alias
+01:17 +267 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve 0.75 <= cosine < 0.92 links with needs_review, source similarity
+01:17 +268 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve cosine < 0.75 creates and embeds a new merchant
+01:17 +269 ~1: /app/test/enrichment/merchant_resolver_test.dart: resolve falls back to the counterparty VPA when merchant text is absent
+01:17 +270 ~1: /app/test/enrichment/merchant_resolver_test.dart: normalizeAlias uppercases and strips non-alphanumeric characters
+01:18 +271 ~1: /app/test/enrichment/merchant_resolver_test.dart: cosineSimilarity identical vectors score 1.0
+01:18 +272 ~1: /app/test/enrichment/merchant_resolver_test.dart: cosineSimilarity orthogonal vectors score 0.0
+01:18 +273 ~1: /app/test/enrichment/merchant_resolver_test.dart: cosineSimilarity mismatched length or empty vectors score -1
+01:18 +274 ~1: /app/test/enrichment/merchant_resolver_test.dart: cosineSimilarity a zero vector scores -1 (undefined direction)
+01:19 +275 ~1: /app/test/enrichment/llm_category_suggestion_test.dart: A 0.99-confidence model suggestion is capped at 0.70 and cannot auto-apply silently
+01:19 +276 ~1: /app/test/enrichment/categorizer_test.dart: seed map fromJson parses the bundled format
+01:20 +277 ~1: /app/test/enrichment/categorizer_test.dart: seed map prefers the longest matching key
+01:20 +278 ~1: /app/test/enrichment/categorizer_test.dart: seed map returns null for empty or unmatched text
+01:20 +279 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) rules always win over the seed map
+01:20 +280 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) counterparty rule matches the exact VPA
+01:20 +281 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) counterparty rule (exact identity) beats merchant rule
+01:20 +282 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) unknown match_type never matches; ladder falls through
+01:20 +283 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) rule without a category is skipped; seed map applies
+01:20 +284 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) seed map falls back to the VPA when merchant text is absent
+01:20 +285 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) nothing matches -> Other at 0.3, guaranteed review entry
+01:20 +286 ~1: /app/test/enrichment/categorizer_test.dart: ladder (table-driven) classifier uses the winning category adaptive threshold
+01:20 +287 ~1: /app/test/enrichment/categorizer_test.dart: rule repository merchant match is a normalized substring check
+01:20 +288 ~1: /app/test/enrichment/categorizer_test.dart: rule repository incrementHitCount increments only the applied rule
+01:20 +289 ~1: /app/test/enrichment/merchant_clusterer_test.dart: clustering is deterministic and suggests clusters at >= 0.85 similarity without auto-merging
+01:21 +290 ~1: /app/test/enrichment/merchant_clusterer_test.dart: NightlyPipeline includes merchantClustering stage
+01:22 +291 ~1: /app/test/enrichment/decision_policy_test.dart: table driven status branches
+01:22 +292 ~1: /app/test/enrichment/decision_policy_test.dart: wire names match transaction status values
+01:22 +293 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy thresholdFor a null category returns the static default
+01:22 +294 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy thresholdFor with no persisted history returns the static default
+01:22 +295 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy thresholdFor falls back for a category missing from stored history
+01:22 +296 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy thresholdFor returns the default on malformed stored JSON
+01:22 +297 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy recompute skips categories with fewer than 50 recent auto labels
+01:22 +298 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy raises the threshold +0.03 when correction rate exceeds 15%
+01:23 +299 ~1: /app/test/enrichment/counterparty_backfill_service_test.dart: previewBackfill lists affected rows before write and leaves merchant_raw untouched
+01:23 +300 ~1: /app/test/enrichment/counterparty_backfill_service_test.dart: previewBackfill lists affected rows before write and leaves merchant_raw untouched
+01:23 +301 ~1: /app/test/enrichment/counterparty_backfill_service_test.dart: previewBackfill lists affected rows before write and leaves merchant_raw untouched
+01:23 +302 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy lower is floored at 0.0
+01:23 +303 ~1: /app/test/enrichment/counterparty_backfill_service_test.dart: applyBackfill writes counterparties and undoBackfill restores prior state
+01:23 +304 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy does not reapply the same trailing window twice
+01:23 +305 ~1: /app/test/enrichment/decision_policy_test.dart: AdaptiveThresholdPolicy preserves thresholds for categories without a new window
+01:24 +306 ~1: /app/test/enrichment/person_merchant_split_test.dart: P2P payment creates no merchant row and needsReview is false
+01:25 +307 ~1: /app/test/enrichment/counterparty_key_test.dart: CounterpartyKeyParser parses P2P VPA with phone number and hashes phone without storing raw phone
+01:25 +308 ~1: /app/test/enrichment/counterparty_key_test.dart: CounterpartyKeyParser strips trailing digits only when remaining core is a known PSP token
+01:25 +309 ~1: /app/test/enrichment/counterparty_key_test.dart: CounterpartyKeyParser recognizes QR merchant prefixes
+01:25 +310 ~1: /app/test/enrichment/counterparty_key_test.dart: CounterpartyKeyParser parses card descriptors stripping trailing store numbers and geography
+01:26 +311 ~1: /app/test/enrichment/merchant_memory_step_test.dart: Two consistent confirmations produce a high-confidence memory hit (0.95)
+01:26 +312 ~1: /app/test/enrichment/merchant_memory_step_test.dart: Conflicting history lowers confidence rather than picking a winner with false certainty
+01:27 +313 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.features pads a short embedding with zeros to the requested dimension
+01:27 +314 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.features truncates an embedding longer than the requested dimension
+01:27 +315 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.features null embedding fills the embedding slots with zero
+01:27 +316 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.features features layout includes one-hot channel, merchant features, and round amount
+01:27 +317 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierModel round-trips through JSON
+01:27 +318 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierModel rejects malformed JSON
+01:27 +319 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierModel rejects a shape mismatch between weights and categories
+01:27 +320 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierModel rejects ragged weight rows
+01:27 +321 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.predict no stored model -> null (ladder falls through unchanged)
+01:27 +322 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.predict malformed model_meta value -> null
+01:27 +323 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.predict picks the highest-scoring category via softmax
+01:27 +324 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.predict feature-vector length mismatch against stored weights -> null
+01:27 +325 ~1: /app/test/enrichment/local_classifier_test.dart: LocalClassifier.predict older model trained against old feature count (20) returns null without crashing
+01:27 +326 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierTrainer no feedback rows -> false, no model written
+01:27 +327 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierTrainer fewer than two distinct categories -> false
+01:27 +328 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierTrainer trains and persists weights + last_trained_at from feedback rows
+01:27 +329 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierTrainer ignores feedback rows whose field is not category_id
+01:27 +330 ~1: /app/test/enrichment/local_classifier_test.dart: ClassifierTrainer same seed on the same feedback set trains deterministically
+01:28 +331 ~1: /app/test/features/recovery/key_loss_screen_test.dart: app routes to KeyLossScreen when DatabaseKeyLostError occurs
+01:29 +332 ~1: /app/test/features/recovery/startup_error_routing_test.dart: App startup error routing DatabaseKeyLostError routes to KeyLossScreen
+01:29 +333 ~1: /app/test/features/recovery/startup_error_routing_test.dart: App startup error routing DatabaseKeyLostError routes to KeyLossScreen
+01:29 +334 ~1: /app/test/features/recovery/startup_error_routing_test.dart: App startup error routing DatabaseKeyLostError routes to KeyLossScreen
+01:30 +335 ~1: /app/test/features/recovery/startup_error_routing_test.dart: App startup error routing Generic error routes to DatabaseErrorScreen with retry
+01:30 +336 ~1: /app/test/features/settings/category_manager_icon_test.dart: suggests an icon on create and allows editing it
+01:33 +337 ~1: /app/test/features/settings/settings_test.dart: shows Bloom Settings banner and sections
+01:33 +338 ~1: /app/test/features/settings/settings_test.dart: shows Bloom Settings banner and sections
+01:33 +339 ~1: /app/test/features/settings/category_manager_icon_test.dart: can create a visible subcategory under a parent
+01:33 +340 ~1: /app/test/features/settings/category_manager_icon_test.dart: manager searches categories and uses one overflow per row
+01:34 +341 ~1: /app/test/features/settings/payee_labels_backfill_test.dart: PayeeLabelsScreen shows backfill action and opens preview dialog
+01:36 +342 ~1: /app/test/features/settings/payee_labels_screen_test.dart: filters payee identities by search query and unlabeled filter
+01:37 +343 ~1: /app/test/features/settings/app_data_reset_test.dart: AppDataResetService deleteEverything resets DB and seeds default categories
+01:37 +344 ~1: /app/test/features/settings/payee_labels_screen_test.dart: clears search text when clear button is tapped
+01:39 +345 ~1: /app/test/features/settings/settings_backup_test.dart: SettingsScreen renders appearance, data & backup options
+01:40 +346 ~1: /app/test/features/settings/bloom_settings_test.dart: Bloom SettingsScreen renders profile banner card and section headers
+01:41 +347 ~1: /app/test/features/settings/bloom_settings_test.dart: Bloom SettingsScreen renders theme options and destructive reset button
+01:42 +348 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +349 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +350 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +351 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +352 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +353 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +354 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +355 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +356 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +357 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +358 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +359 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +360 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:43 +361 ~1: /app/test/features/settings/cluster_review_ui_test.dart: PayeeLabelsScreen reviews duplicate suggestions without merging
+01:44 +362 ~1: /app/test/features/dashboard/dashboard_truthful_state_test.dart: DashboardScreen renders dynamic greeting and non-hardcoded streak
+01:45 +363 ~1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen renders greeting, mascot, and streak chip
+01:45 +364 ~1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen renders greeting, mascot, and streak chip
+01:45 +365 ~1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen renders greeting, mascot, and streak chip
+01:46 +366 ~1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen renders Hero Ring and metric switcher pills
+01:46 +367 ~1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen tapping metric switcher pill changes selected metric
+01:47 +368 ~1: /app/test/features/dashboard/dashboard_screen_test.dart: renders Bloom hero ring and header
+01:47 +369 ~1: /app/test/features/dashboard/dashboard_screen_test.dart: renders Bloom hero ring and header
+01:48 +369 ~1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen monthly budget dialog validates and saves its action result
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 11 pixels on the right.
+
+The relevant error-causing widget was:
+  Row Row:file:///app/lib/features/dashboard/dashboard_widgets.dart:388:17
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#12ce5 relayoutBoundary=up11 OVERFLOWING:
+  creator: Row ← Column ← Padding ← Stack ← Padding ← ClipPath ← DecoratedBox ← Container ←
+    BloomBudgetCard ← RepaintBoundary ← IndexedSemantics ← _SelectionKeepAlive ← ⋯
+  parentData: offset=Offset(0.0, 0.0); flex=null; fit=null (can use size)
+  constraints: BoxConstraints(0.0<=w<=322.0, 0.0<=h<=Infinity)
+  size: Size(322.0, 20.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+01:48 +369 ~1 -1: /app/test/features/dashboard/dashboard_screen_test.dart: renders Bloom hero ring and header
+01:48 +369 ~1 -1: /app/test/features/dashboard/bloom_dashboard_test.dart: Bloom DashboardScreen monthly budget dialog validates and saves its action result [E]
+  Test failed. See exception logs above.
+  The test description was: monthly budget dialog validates and saves its action result
+
+01:48 +370 ~1 -1: /app/test/features/dashboard/dashboard_screen_test.dart: renders metric switcher pills
+01:49 +371 ~1 -1: /app/test/features/dashboard/dashboard_truthful_guidance_test.dart: Period-gated guidance providers safeTodayValueProvider returns null for historical period even with budget
+01:49 +372 ~1 -1: /app/test/features/dashboard/dashboard_truthful_guidance_test.dart: Period-gated guidance providers commitmentsTotalProvider returns 0 for historical period
+01:49 +373 ~1 -1: /app/test/features/dashboard/dashboard_truthful_guidance_test.dart: Period-gated guidance providers runwayValueProvider returns null for historical period even with budget
+01:49 +374 ~1 -1: /app/test/features/dashboard/dashboard_truthful_guidance_test.dart: Period-gated guidance providers projectedMonthEndSpendProvider returns null for historical period
+01:49 +375 ~1 -1: /app/test/features/dashboard/dashboard_truthful_guidance_test.dart: Period-gated guidance providers safeTodayValueProvider returns a value for the current month with budget
+01:49 +376 ~1 -1: /app/test/features/dashboard/dashboard_truthful_guidance_test.dart: No hardcoded data ships No Blinkit, 48k, or fabricated cap strings in dashboard
+01:51 +377 ~1 -1: /app/test/features/sms/unreadable_sms_screen_test.dart: shows content-free counts, reason buckets, and retention policy
+01:51 +378 ~1 -1: /app/test/features/sms/unreadable_sms_screen_test.dart: shows content-free counts, reason buckets, and retention policy
+01:51 +379 ~1 -1: /app/test/features/sms/unreadable_sms_screen_test.dart: retry affordance opens the existing scan and starts it
+01:52 +380 ~1 -1: /app/test/features/sms/sms_lookup_sheet_test.dart: SmsLookupSheet renders header and ready state when permitted
+01:53 +381 ~1 -1: /app/test/features/sms/sms_permission_status_card_test.dart: shows the granted state
+01:53 +382 ~1 -1: /app/test/features/sms/sms_permission_status_card_test.dart: shows the granted state
+01:53 +383 ~1 -1: /app/test/features/sms/sms_permission_status_card_test.dart: shows the granted state
+01:53 +384 ~1 -1: /app/test/features/sms/sms_permission_status_card_test.dart: shows the granted state
+01:54 +385 ~1 -1: /app/test/features/sms/sms_permission_status_card_test.dart: offers the runtime permission request when denied
+01:54 +386 ~1 -1: /app/test/features/sms/sms_permission_status_card_test.dart: offers Android settings when permanently denied
+01:55 +387 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export import round-trips domain rows without plaintext temp files
+01:55 +388 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export import round-trips domain rows without plaintext temp files
+01:55 +389 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export import round-trips domain rows without plaintext temp files
+01:56 +390 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export import round-trips domain rows without plaintext temp files
+01:56 +391 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export import round-trips domain rows without plaintext temp files
+01:56 +392 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export import round-trips domain rows without plaintext temp files
+01:57 +393 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: chunked file export reports monotonic progress and finalizes
+01:57 +394 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: chunked envelope rejects tampering, reordering, and truncation
+01:58 +395 ~1 -1: /app/test/features/dev/feature_flags_screen_test.dart: renders the feature flag catalogue
+01:58 +396 ~1 -1: /app/test/features/dev/feature_flags_screen_test.dart: renders the feature flag catalogue
+01:59 +397 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: document export/import uses bounded gateway sessions
+01:59 +398 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: wrong passphrase fails closed and leaves current data untouched
+02:00 +399 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +400 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +401 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +402 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +403 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +404 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +405 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +406 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +407 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: in-memory export import round-trips for document picker
+02:00 +408 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: raw SMS parser metadata round-trips and accepts legacy rows
+02:01 +409 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +410 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +411 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +412 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +413 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +414 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +415 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +416 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: archive round-trips a raw SMS row without parser metadata
+02:01 +417 ~1 -1: /app/test/features/dev/model_metrics_screen_test.dart: ModelMetricsScreen renders accuracy, ask rate, and per-category correction rates
+02:02 +418 ~1 -1: /app/test/features/dev/model_metrics_screen_test.dart: ModelMetricsScreen renders accuracy, ask rate, and per-category correction rates
+02:03 +419 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: backup restore rejects non-allowlisted raw SMS failure reasons
+02:03 +420 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: backup restore rejects non-allowlisted raw SMS failure reasons
+02:03 +421 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: import derives with the bounded KDF parameters stored in the payload
+02:03 +422 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: import rejects unknown KDF and cipher identifiers
+02:04 +423 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: export rejects an unsupported configured KDF profile
+02:04 +424 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: rejects oversized files and ciphertext before restoring
+02:04 +425 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: shows an empty state with no unparsed sms
+02:04 +426 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: shows an empty state with no unparsed sms
+02:05 +427 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: enforces per-table and total archive row limits before restore
+02:05 +428 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: enforces per-table and total archive row limits before restore
+02:05 +429 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: lists unprocessed raw sms rows
+02:05 +430 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: import rejects excessive Argon2 parameters before key derivation
+02:05 +431 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: recomputes a distinct generic reason per row (T-070)
+02:05 +432 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: recomputes a distinct generic reason per row (T-070)
+02:06 +433 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: backup export/import includes baselines, insights, model_meta, and recurring_series
+02:06 +434 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: backup export/import includes baselines, insights, model_meta, and recurring_series
+02:06 +435 ~1 -1: /app/test/features/backup/encrypted_backup_service_test.dart: backup export/import includes baselines, insights, model_meta, and recurring_series
+02:06 +436 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: previews exact sanitized device fixture before copying
+02:07 +437 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: cancel leaves sanitized fixture on device
+02:07 +438 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: displays unparsed reason breakdown summary card
+02:07 +439 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: categorizeUnparsedSms classifies balance and login footer messages correctly
+02:07 +440 ~1 -1: /app/test/features/dev/unparsed_sms_screen_test.dart: repository lists unprocessed raw sms and excludes processed ones
+02:07 +441 ~1 -1: /app/test/features/dev/transaction_export_test.dart: serializeAll emits reconciliation schema incl. suppressed rows
+02:07 +442 ~1 -1: /app/test/features/dev/transaction_export_test.dart: exportTo writes parseable JSON file
+02:07 +443 ~1 -1: /app/test/features/dev/transaction_export_test.dart: exportBytes encodes parseable JSON for the document picker
+02:08 +444 ~1 -1: /app/test/features/dev/transaction_export_test.dart: TransactionCsvExporter serializes rows into CSV format with header
+02:08 +445 ~1 -1: /app/test/features/dev/transaction_export_test.dart: TransactionCsvExporter neutralizes spreadsheet formula characters
+02:08 +446 ~1 -1: /app/test/features/dev/shadow_metrics_screen_test.dart: repository loads local shadow and production counts
+02:09 +447 ~1 -1: /app/test/features/dev/shadow_metrics_screen_test.dart: renders metrics and explicit copy action
+02:09 +448 ~1 -1: /app/test/features/dev/shadow_metrics_screen_test.dart: renders metrics and explicit copy action
+02:10 +449 ~1 -1: /app/test/features/transactions/manual_entry_screen_test.dart: saving the form persists a manual transaction
+02:12 +450 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: shows an empty state with no transactions
+02:13 +451 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: shows an empty state with no transactions
+02:13 +452 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: shows an empty state with no transactions
+02:13 +453 ~1 -1: /app/test/features/transactions/manual_entry_screen_test.dart: transactions list FAB opens the manual entry form
+02:13 +454 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: renders parsed transactions newest-first with display names
+02:13 +455 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: keeps SMS import available after transactions exist
+02:14 +456 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: hides the continuation action when the page is terminal
+02:14 +457 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: shows the continuation action when the page has more
+02:14 +458 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: search filters the list by merchant name
+02:14 +459 ~1 -1: /app/test/features/transactions/transactions_screen_test.dart: keeps paging available when the search match is on an older page
+02:15 +460 ~1 -1: /app/test/features/transactions/transaction_detail_correction_behavior_test.dart: T-159a — _selectCategoryDirectly tapping a non-current chip updates DB category and pushes undo token
+02:17 +461 ~1 -1: /app/test/features/transactions/transaction_detail_correction_test.dart: TransactionDetailScreen renders header, merchant, and category
+02:17 +462 ~1 -1: /app/test/features/transactions/transaction_detail_correction_test.dart: TransactionDetailScreen renders header, merchant, and category
+02:17 +463 ~1 -1: /app/test/features/transactions/transaction_detail_correction_behavior_test.dart: T-159a — _changeCategory More chip → picker → scope → updates DB category and pushes undo token
+02:18 +464 ~1 -1: /app/test/features/transactions/transaction_detail_correction_test.dart: TransactionDetailScreen note editing persists to database
+02:18 +465 ~1 -1: /app/test/features/transactions/transaction_detail_correction_behavior_test.dart: T-159a — _changeCategory undo after _changeCategory reverts the DB category
+02:18 +466 ~1 -1: /app/test/features/transactions/transaction_detail_correction_behavior_test.dart: T-159a — _changeCategory undo after _changeCategory reverts the DB category
+02:18 +467 ~1 -1: /app/test/features/transactions/transaction_detail_correction_test.dart: TransactionCorrectionSheet renders form elements
+02:19 +468 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen renders transaction detail with category tile and hero amount
+02:21 +469 ~1 -1: /app/test/features/transactions/evidence_spans_highlight_test.dart: Technical SMS Evidence Spans Highlight Template-parsed transaction highlights evidence spans in technical details section
+02:21 +470 ~1 -1: /app/test/features/transactions/evidence_spans_highlight_test.dart: Technical SMS Evidence Spans Highlight Template-parsed transaction highlights evidence spans in technical details section
+02:21 +471 ~1 -1: /app/test/features/transactions/evidence_spans_highlight_test.dart: Technical SMS Evidence Spans Highlight Template-parsed transaction highlights evidence spans in technical details section
+02:22 +472 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen T-148b: renders selected category chip in category hue and More chip
+02:22 +473 ~1 -1: /app/test/features/transactions/evidence_spans_highlight_test.dart: Technical SMS Evidence Spans Highlight Row with purged raw_sms degrades to retention text without error
+02:22 +474 ~1 -1: /app/test/features/transactions/evidence_spans_highlight_test.dart: Technical SMS Evidence Spans Highlight Row with purged raw_sms degrades to retention text without error
+02:22 +475 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen T-147a: renders retention degradation copy for purged SMS row
+02:22 +476 ~1 -1: /app/test/features/transactions/evidence_spans_highlight_test.dart: Technical SMS Evidence Spans Highlight Pre-T-131 row with null evidence shows body without highlights
+02:22 +477 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen T-147a: omits WHERE THIS CAME FROM section for manual entry rows
+02:22 +478 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen T-147b: renders Parsed locally badge and parser name for template source
+02:22 +479 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen T-147b: renders Parsed locally badge and parser name for generic source
+02:22 +480 ~1 -1: /app/test/features/transactions/transaction_detail_screen_test.dart: Bloom TransactionDetailScreen T-147b: renders Parsed locally badge and parser name for LLM source
+02:23 +481 ~1 -1: /app/test/features/transactions/bloom_activity_test.dart: Bloom Activity / TransactionsScreen renders Activity title, search bar, and filter chips
+02:24 +481 ~1 -2: /app/test/features/transactions/bloom_activity_test.dart: Bloom Activity / TransactionsScreen renders Activity title, search bar, and filter chips
+02:24 +481 ~1 -2: /app/test/features/transactions/exclusion_explanation_test.dart: credit card bill payment and cash withdrawals are excluded from category totals [E]
+  Expected: <500.0>
+    Actual: <5500.0>
+
+  package:matcher                                                  expect
+  package:flutter_test/src/widget_tester.dart 473:18               expect
+  test/features/transactions/exclusion_explanation_test.dart 77:5  main.<fn>
+
+02:25 +482 ~1 -2: /app/test/features/transactions/exclusion_explanation_test.dart: TransactionDetailScreen discloses credit card bill exclusion explanation copy
+02:25 +483 ~1 -2: /app/test/features/transactions/exclusion_explanation_test.dart: TransactionDetailScreen discloses credit card bill exclusion explanation copy
+02:25 +484 ~1 -2: /app/test/features/transactions/exclusion_explanation_test.dart: TransactionDetailScreen discloses credit card bill exclusion explanation copy
+02:25 +485 ~1 -2: /app/test/features/transactions/exclusion_explanation_test.dart: TransactionDetailScreen discloses credit card bill exclusion explanation copy
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextContainingWidgetFinder:<Found 0 widgets with text containing Credit card bill payment
+— excluded: []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///app/test/features/transactions/exclusion_explanation_test.dart:126:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///app/test/features/transactions/exclusion_explanation_test.dart line 126
+The test description was:
+  TransactionDetailScreen discloses credit card bill exclusion explanation copy
+════════════════════════════════════════════════════════════════════════════════════════════════════
+02:26 +485 ~1 -3: /app/test/features/transactions/exclusion_explanation_test.dart: TransactionDetailScreen discloses credit card bill exclusion explanation copy [E]
+  Test failed. See exception logs above.
+  The test description was: TransactionDetailScreen discloses credit card bill exclusion explanation copy
+
+02:27 +485 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories always starts with currentCat
+02:27 +486 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories fills from suggestedIds up to 3
+02:27 +487 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories skips currentCat duplicate in suggestedIds, fills from allCategories
+02:27 +488 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories skips uncategorized in suggestedIds
+02:27 +489 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories falls back to allCategories when suggestions are short
+02:27 +490 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories caps at 3 even with many suggestions
+02:27 +491 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories no duplicates when fallback overlaps suggestions
+02:27 +492 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: chipCategories ignores unknown suggestion ids
+02:27 +493 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor null when ordinary transaction
+02:27 +494 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor self-transfer when ownedTransferId set
+02:27 +495 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor credit card bill merchant pattern alone returns null
+02:27 +496 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor ATM withdrawal merchant pattern alone returns null
+02:27 +497 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor analytics excluded flag
+02:27 +498 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor ownedTransferId takes priority over merchant patterns
+02:27 +499 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: exclusionReasonFor isAnalyticsExcluded fires even with ATM merchant name
+02:27 +500 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: formatDetailDate formats midnight as 12:00 am
+02:27 +501 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: formatDetailDate formats noon as 12:00 pm
+02:27 +502 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: formatDetailDate formats 1 pm correctly
+02:27 +503 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: formatDetailDate pads minutes to two digits
+02:27 +504 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: formatDetailDate all 12 month abbreviations appear for matching month
+02:27 +505 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel template source
+02:27 +506 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel generic source
+02:27 +507 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel llm source
+02:27 +508 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel manual source
+02:27 +509 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel null source falls back to Parsed
+02:27 +510 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel unknown source passes through verbatim
+02:27 +511 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel appends confidence percentage
+02:27 +512 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel rounds confidence correctly
+02:27 +513 ~1 -3: /app/test/features/transactions/detail/transaction_detail_formatting_test.dart: parserSourceLabel no confidence suffix when parseConfidence is null
+02:27 +514 ~1 -3: /app/test/features/transactions/detail/transaction_detail_evidence_test.dart: buildEvidenceSpans — null/empty rawSmsBody shows purged message when rawSmsBody is null
+02:28 +515 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:28 +516 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:28 +517 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:28 +518 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:28 +519 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +520 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +521 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +522 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +523 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +524 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +525 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +526 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen renders category tile, merchant header, and hero amount
+02:29 +527 ~1 -3: /app/test/features/transactions/bloom_detail_test.dart: Bloom TransactionDetailScreen discloses technical provenance on tap
+02:30 +528 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService generates valid CSV header and data row
+02:30 +529 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService excludes raw SMS, confidence JSON, and internal IDs
+02:30 +530 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService neutralizes formula injection characters
+02:30 +531 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService handles empty list gracefully
+02:30 +532 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService escapes CSV cells with commas and quotes
+02:30 +533 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService credit transactions show Credit direction
+02:30 +534 ~1 -3: /app/test/features/transactions/transaction_csv_export_service_test.dart: TransactionCsvExportService handles null optional fields gracefully
+02:31 +535 ~1 -3: /app/test/features/transactions/transactions_page_controller_test.dart: Activity controller loads the next keyset page without offset growth
+02:32 +536 ~1 -3: /app/test/features/assistant/assistant_screen_test.dart: shows Ask PaisaTrack preset suggestions and input bar
+02:34 +537 ~1 -3: /app/test/features/assistant/bloom_assistant_test.dart: Bloom AssistantScreen renders Ask PaisaTrack header, mascot, and preset chips
+02:34 +538 ~1 -3: /app/test/features/assistant/bloom_assistant_test.dart: Bloom AssistantScreen renders Ask PaisaTrack header, mascot, and preset chips
+02:35 +539 ~1 -3: /app/test/features/assistant/bloom_assistant_test.dart: Bloom AssistantScreen renders Ask PaisaTrack header, mascot, and preset chips
+02:35 +540 ~1 -3: /app/test/features/assistant/assistant_screen_test.dart: shows three rotating prompt chips after a conversation starts
+02:35 +541 ~1 -3: /app/test/features/assistant/bloom_assistant_test.dart: Bloom AssistantScreen renders bottom input bar with send button
+02:37 +542 ~1 -3: /app/test/features/assistant/assistant_model_state_test.dart: AssistantScreen renders header, mascot, and privacy badge
+02:38 +543 ~1 -3: /app/test/features/recurring/recurring_category_tint_test.dart: Recurring Series Category Tint (T-146b) recurring row for a food merchant carries the food hue, not slate
+02:39 +544 ~1 -3: /app/test/features/recurring/bloom_recurring_test.dart: Bloom RecurringScreen renders commitments summary card and header
+02:40 +545 ~1 -3: /app/test/features/recurring/recurring_screen_test.dart: shows designed empty state
+02:40 +546 ~1 -3: /app/test/features/recurring/recurring_screen_test.dart: shows designed empty state
+02:41 +547 ~1 -3: /app/test/features/recurring/recurring_screen_test.dart: renders active series with Bloom components
+02:41 +548 ~1 -3: /app/test/features/recurring/recurring_screen_test.dart: renders recharge and investment kinds with valid visuals
+02:42 +549 ~1 -3: /app/test/features/insights/insights_recurring_test.dart: RecurringScreen renders commitments and statuses
+02:43 +550 ~1 -3: /app/test/features/insights/bloom_trends_test.dart: Bloom Trends / InsightsScreen renders title, Recurring button, and 6-month trend chart
+02:43 +551 ~1 -3: /app/test/features/insights/bloom_trends_test.dart: Bloom Trends / InsightsScreen renders title, Recurring button, and 6-month trend chart
+02:44 +552 ~1 -3: /app/test/features/insights/bloom_trends_test.dart: Bloom Trends / InsightsScreen renders Month-over-Month comparison card
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "MONTH OVER MONTH": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///app/test/features/insights/bloom_trends_test.dart:41:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///app/test/features/insights/bloom_trends_test.dart line 41
+The test description was:
+  renders Month-over-Month comparison card
+════════════════════════════════════════════════════════════════════════════════════════════════════
+02:44 +552 ~1 -4: /app/test/features/insights/bloom_trends_test.dart: Bloom Trends / InsightsScreen renders Month-over-Month comparison card [E]
+  Test failed. See exception logs above.
+  The test description was: renders Month-over-Month comparison card
+
+02:44 +552 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+02:45 +553 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+02:45 +554 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+02:45 +555 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+02:45 +556 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+02:45 +557 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+02:45 +558 ~1 -4: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "MONTH OVER MONTH": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///app/test/features/insights/insights_screen_test.dart:30:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///app/test/features/insights/insights_screen_test.dart line 30
+The test description was:
+  renders Bloom Trends header and 6-month spend chart
+════════════════════════════════════════════════════════════════════════════════════════════════════
+02:45 +558 ~1 -5: /app/test/features/insights/insights_screen_test.dart: renders Bloom Trends header and 6-month spend chart [E]
+  Test failed. See exception logs above.
+  The test description was: renders Bloom Trends header and 6-month spend chart
+
+02:46 +558 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: shows Inbox Zero when review queue is empty
+02:47 +559 ~1 -5: /app/test/features/review/sort_safety_test.dart: Sort persistence safety (T-123) Skipping item cycles to next item without false Inbox Zero
+02:47 +560 ~1 -5: /app/test/features/review/sort_safety_test.dart: Sort persistence safety (T-123) Skipping item cycles to next item without false Inbox Zero
+02:48 +561 ~1 -5: /app/test/features/review/sort_safety_test.dart: Sort persistence safety (T-123) Skipping item cycles to next item without false Inbox Zero
+02:48 +562 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _confirmItem undo after confirm re-inserts item into the queue
+02:48 +563 ~1 -5: /app/test/features/review/sort_safety_test.dart: T-153a — cursor-based queue skip advances cursor without removing item — counter shows non-zero position
+02:48 +564 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem change-category button → picker → updates DB category and pushes undo token
+02:48 +565 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem change-category button → picker → updates DB category and pushes undo token
+02:48 +566 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem change-category button → picker → updates DB category and pushes undo token
+02:48 +567 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem change-category button → picker → updates DB category and pushes undo token
+02:49 +568 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem change-category button → picker → updates DB category and pushes undo token
+02:49 +569 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem change-category button → picker → updates DB category and pushes undo token
+02:49 +570 ~1 -5: /app/test/features/review/sort_safety_test.dart: T-154a — detail sheet from card tapping sort card opens a sheet without losing cursor position
+02:49 +571 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem undo after _recategorizeItem reverts DB category
+02:49 +572 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem undo after _recategorizeItem reverts DB category
+02:49 +573 ~1 -5: /app/test/features/review/weekly_review_screen_test.dart: T-159a — _recategorizeItem undo after _recategorizeItem reverts DB category
+02:49 +574 ~1 -5: loading /app/test/features/review/bloom_sort_test.dart
+02:50 +574 ~1 -5: /app/test/features/review/bloom_sort_test.dart: Bloom Sort / WeeklyReviewScreen renders Inbox Zero view when queue is empty
+02:51 +575 ~1 -5: /app/test/features/shell/bloom_navigation_test.dart: Bloom Navigation Shell renders four tabs: Home, Activity, Sort, Trends
+02:52 +576 ~1 -5: /app/test/features/shell/bloom_navigation_test.dart: Bloom Navigation Shell renders four tabs: Home, Activity, Sort, Trends
+02:52 +577 ~1 -5: /app/test/features/shell/bloom_navigation_test.dart: Bloom Navigation Shell renders four tabs: Home, Activity, Sort, Trends
+02:53 +578 ~1 -5: /app/test/features/shell/bloom_navigation_test.dart: Bloom Navigation Shell tapping Ask orb opens Ask PaisaTrack sheet
+02:54 +579 ~1 -5: /app/test/features/shell/accessibility_responsive_test.dart: App screens render without overflow on small and large viewports
+02:54 +580 ~1 -5: /app/test/features/shell/accessibility_responsive_test.dart: App screens render without overflow on small and large viewports
+02:54 +581 ~1 -5: /app/test/features/shell/accessibility_responsive_test.dart: App screens render without overflow on small and large viewports
+02:54 +582 ~1 -5: /app/test/features/shell/accessibility_responsive_test.dart: App screens render without overflow on small and large viewports
+02:54 +583 ~1 -5: /app/test/features/shell/accessibility_responsive_test.dart: App screens render without overflow on small and large viewports
+02:55 +584 ~1 -5: /app/test/features/shell/app_lifecycle_permission_test.dart: rechecks SMS permission when the app resumes
+02:56 +585 ~1 -5: /app/test/features/onboarding/disclosure_and_capture_controls_test.dart: Onboarding Disclosure & Consent (T-144b) Prominent disclosure precedes runtime prompt and survives denial
+02:57 +586 ~1 -5: /app/test/features/onboarding/disclosure_and_capture_controls_test.dart: Capture Controls (T-144b) SettingsScreen displays SMS CAPTURE & PRIVACY CONTROLS section
+02:57 +587 ~1 -5: /app/test/features/onboarding/disclosure_and_capture_controls_test.dart: Capture Controls (T-144b) SettingsScreen displays SMS CAPTURE & PRIVACY CONTROLS section
+02:57 +588 ~1 -5: /app/test/features/onboarding/disclosure_and_capture_controls_test.dart: Capture Controls (T-144b) SettingsScreen displays SMS CAPTURE & PRIVACY CONTROLS section
+02:58 +589 ~1 -5: /app/test/features/onboarding/disclosure_and_capture_controls_test.dart: Capture Controls (T-144b) SmsIngestor skips ingestion when isCapturePaused is true
+02:58 +590 ~1 -5: /app/test/features/onboarding/disclosure_and_capture_controls_test.dart: Capture Controls (T-144b) SmsIngestor skips ingestion for blacklisted sender
+02:59 +591 ~1 -5: /app/test/features/onboarding/onboarding_screen_test.dart: shows granted confirmation when access is already granted
+02:59 +592 ~1 -5: /app/test/features/onboarding/onboarding_screen_test.dart: shows granted confirmation when access is already granted
+02:59 +593 ~1 -5: /app/test/features/onboarding/onboarding_screen_test.dart: shows granted confirmation when access is already granted
+03:00 +594 ~1 -5: /app/test/features/onboarding/onboarding_screen_test.dart: denied shows the request button and grants on tap
+03:00 +595 ~1 -5: /app/test/capture/materialized_projections_test.dart: indexed SQL reconcileOwnedTransfers creates graph link and denormalized owned_transfer_id
+03:00 +596 ~1 -5: /app/test/capture/materialized_projections_test.dart: indexed SQL reconcileOwnedTransfers creates graph link and denormalized owned_transfer_id
+03:00 +597 ~1 -5: /app/test/features/onboarding/onboarding_screen_test.dart: denied offers continue-without-SMS and sets the flag
+03:00 +598 ~1 -5: /app/test/features/onboarding/onboarding_screen_test.dart: permanently denied still offers continue-without-SMS
+03:02 +599 ~1 -5: /app/test/capture/parser_cascade_test.dart: returns unparsed when no template registries exist
+03:02 +600 ~1 -5: /app/test/capture/parser_cascade_test.dart: uses a generic parse after a template miss
+03:02 +601 ~1 -5: /app/test/capture/parser_cascade_test.dart: template parse takes precedence over the generic fallback
+03:02 +602 ~1 -5: /app/test/capture/parser_cascade_test.dart: generic confidence never produces an automatic decision
+03:02 +603 ~1 -5: /app/test/capture/parser_cascade_test.dart: public template confidence is capped below silent auto-labeling
+03:02 +604 ~1 -5: /app/test/capture/parser_cascade_test.dart: generic fallback rejects non-transaction SMS: Your OTP is 123456. Do not share it.
+03:02 +605 ~1 -5: /app/test/capture/parser_cascade_test.dart: generic fallback rejects non-transaction SMS: Get Rs. 500 cashback with this limited offer.
+03:02 +606 ~1 -5: /app/test/capture/parser_cascade_test.dart: generic fallback rejects non-transaction SMS: Your card bill of Rs. 1200 is due on 20-07-26.
+03:02 +607 ~1 -5: /app/test/capture/parser_cascade_test.dart: generic fallback rejects non-transaction SMS: Your account statement is ready. Balance Rs. 1200.
+03:02 +608 ~1 -5: /app/test/capture/parser_cascade_test.dart: returns unparsed for matched template with non-positive amount
+03:02 +609 ~1 -5: /app/test/capture/parser_cascade_test.dart: returns unparsed for matched template with garbage amount
+03:02 +610 ~1 -5: /app/test/capture/parser_cascade_test.dart: returns unparsed for matched template with non-numeric date
+03:02 +611 ~1 -5: /app/test/capture/parser_cascade_test.dart: returns unparsed for matched template with invalid direction
+03:02 +612 ~1 -5: /app/test/capture/permissions/sms_permission_provider_test.dart: build reflects the current status without prompting
+03:02 +613 ~1 -5: /app/test/capture/permissions/sms_permission_provider_test.dart: request publishes the granted outcome
+03:02 +614 ~1 -5: /app/test/capture/permissions/sms_permission_provider_test.dart: request surfaces a denied outcome instead of throwing
+03:02 +615 ~1 -5: /app/test/capture/permissions/sms_permission_provider_test.dart: recheckStatus publishes a permission change made in system settings
+03:02 +616 ~1 -5: /app/test/capture/permissions/sms_permission_provider_test.dart: build error is captured as AsyncError, not a crash
+03:02 +617 ~1 -5: /app/test/capture/permissions/sms_permission_provider_test.dart: fromName maps unknown or null names defensively
+03:03 +618 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: paired-duplicate: bank SMS (vpa) + wallet SMS (merchant), same amount, 4 minutes apart
+03:03 +619 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: paired-duplicate: matching UPI ref id overrides mismatched counterparty text
+03:03 +620 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: near-miss-not-duplicate: same counterparty and amount but outside the pairing window
+03:03 +621 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: near-miss-not-duplicate: same counterparty and time but amount differs
+03:03 +622 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: unrelated: different direction rules out a refund vs debit collision
+03:03 +623 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: unrelated: same amount/time window but unrelated counterparties
+03:03 +624 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: unrelated: already-suppressed existing row is never a match target
+03:03 +625 ~1 -5: /app/test/capture/duplicate_suppressor_test.dart: unrelated: an existing row already linked as someone else's echo (duplicate_of_txn_id set) is never a match target
+03:03 +626 ~1 -5: /app/test/capture/llm_field_locator_test.dart: returns a verified record when model returns verbatim quotations
+03:03 +627 ~1 -5: /app/test/capture/llm_field_locator_test.dart: refuses adversarial hallucinated amount not in body text
+03:03 +628 ~1 -5: /app/test/capture/llm_field_locator_test.dart: refuses verbatim formatting mismatch (1,250.00 vs 1250.00) rather than coercing
+03:03 +629 ~1 -5: /app/test/capture/llm_field_locator_test.dart: refuses non-transactional messages
+03:03 +630 ~1 -5: /app/test/capture/llm_field_locator_test.dart: fails closed when runtime is unavailable
+03:04 +631 ~1 -5: /app/test/capture/template_engine/template_trust_ledger_test.dart: promotes a public template after twenty clean confirmations
+03:04 +632 ~1 -5: /app/test/capture/template_engine/template_trust_ledger_test.dart: amount or direction correction demotes and flags a public template
+03:04 +633 ~1 -5: /app/test/capture/template_engine/template_trust_ledger_test.dart: ignores parse verdicts without public template attribution
+03:04 +634 ~1 -5: /app/test/capture/template_engine/template_trust_ledger_test.dart: watch emits a developer alert after a demotion refresh
+03:04 +635 ~1 -5: /app/test/capture/template_engine/template_registry_test.dart: template provenance defaults to device for legacy JSON
+03:04 +636 ~1 -5: /app/test/capture/template_engine/template_registry_test.dart: template registry reads public provenance from JSON
+03:05 +637 ~1 -5: /app/test/capture/template_engine/field_normalizer_test.dart: parses Indian comma amount formats
+03:05 +638 ~1 -5: /app/test/capture/template_engine/field_normalizer_test.dart: parses dd-MM-yy dates
+03:05 +639 ~1 -5: /app/test/capture/template_engine/field_normalizer_test.dart: parsed date epoch milliseconds are timezone-stable
+03:05 +640 ~1 -5: /app/test/capture/template_engine/field_normalizer_test.dart: parses dd-MM-yyyy four-digit-year dates
+03:05 +641 ~1 -5: /app/test/capture/template_engine/field_normalizer_test.dart: parses ddMMMyy separator-less alpha-month dates
+03:05 +642 ~1 -5: /app/test/capture/template_engine/field_normalizer_test.dart: falls back on malformed ddMMMyy value
+03:06 +643 ~1 -5: /app/test/capture/expected_event_ingestion_test.dart: Three reminders for the same bill produce exactly 1 expected event and 0 transactions
+03:07 +644 ~1 -5: /app/test/capture/sms_backfill_test.dart: imports every page including transactions older than three months
+03:07 +645 ~1 -5: /app/test/capture/sms_backfill_test.dart: aggregates privacy-safe outcome counts across pages
+03:07 +646 ~1 -5: /app/test/capture/sms_backfill_test.dart: decodes native inbox outcome counts without raw-content fields
+03:07 +647 ~1 -5: /app/test/capture/sms_backfill_test.dart: reports new and already-known transactions separately
+03:07 +648 ~1 -5: /app/test/capture/sms_backfill_test.dart: SmsBackfillStatusNotifier updates progress state and stage
+03:07 +649 ~1 -5: /app/test/capture/sms_backfill_test.dart: continues after a page containing no filter-approved messages
+03:07 +650 ~1 -5: /app/test/capture/sms_backfill_test.dart: rejects a non-advancing inbox cursor
+03:07 +651 ~1 -5: /app/test/capture/sms_backfill_test.dart: re-import is idempotent
+03:07 +652 ~1 -5: /app/test/capture/sms_backfill_test.dart: one imported page emits one transaction-table change
+03:07 +653 ~1 -5: /app/test/capture/sms_backfill_test.dart: version 1 marker automatically catches up to full-history version
+03:07 +654 ~1 -5: /app/test/capture/sms_backfill_test.dart: current import version skips automatic scan
+03:07 +655 ~1 -5: /app/test/capture/sms_filter_diagnostics_test.dart: decodes content-free native counters
+03:07 +656 ~1 -5: /app/test/capture/sms_backfill_test.dart: forced re-import bypasses current version marker
+03:07 +657 ~1 -5: /app/test/capture/sms_backfill_test.dart: forced re-import bypasses current version marker
+03:07 +658 ~1 -5: /app/test/capture/sms_backfill_test.dart: automatic import resumes from the last completed page
+03:07 +659 ~1 -5: /app/test/capture/sms_backfill_test.dart: automatic import saves its cursor after every completed page
+03:07 +660 ~1 -5: /app/test/capture/sms_backfill_test.dart: partial row failure completes scan and remains manually retryable
+03:07 +661 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up recovers a recent gap behind a known SMS
+03:08 +662 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up retries retained failures after parser upgrade
+03:08 +663 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:09 +664 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:09 +665 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:09 +666 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:09 +667 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +668 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +669 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +670 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +671 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +672 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +673 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +674 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +675 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +676 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +677 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +678 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up queries only IDs in the current inbox page
+03:10 +679 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up succeeds on an empty inbox
+03:11 +680 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up succeeds on a single-page inbox
+03:11 +681 ~1 -5: /app/test/capture/sms_backfill_test.dart: incremental catch-up waits for the initial versioned import
+03:11 +682 ~1 -5: /app/test/capture/shadow_pipeline_test.dart: writes normalized shadow rows without changing production rows
+03:12 +683 ~1 -5: /app/test/capture/lifecycle_routing_test.dart: failed and reversed transactions persist in DB with lifecycle_state and are excluded from spending totals
+03:12 +684 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: rejectionReason maps each guard to its reason hard-reject term short-circuits before other checks
+03:12 +685 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: rejectionReason maps each guard to its reason no direction keyword
+03:12 +686 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: rejectionReason maps each guard to its reason no usable amount (only a balance figure)
+03:12 +687 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: rejectionReason maps each guard to its reason direction and amount present but no context signal
+03:12 +688 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: rejectionReason maps each guard to its reason returns null (accepted) when the guard would parse
+03:12 +689 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: parse and rejectionReason never both yield a value
+03:12 +690 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: extracts a UPI handle without treating an email address as a VPA
+03:12 +691 ~1 -5: /app/test/capture/generic_transaction_parser_test.dart: marks an account credit described as salary for income categorization
+03:13 +692 ~1 -5: /app/test/capture/sms_ingestion_test.dart: ingests channel SMS into raw_sms and transactions on parse success
+03:14 +693 ~1 -5: /app/test/capture/span_verifier_test.dart: verifies accurate evidence spans against body text
+03:14 +694 ~1 -5: /app/test/capture/sms_ingestion_test.dart: settings emissions do not re-subscribe the capture stream (regression: T-046 triage — ask-budget watch rebuilt the provider)
+03:14 +695 ~1 -5: /app/test/capture/sms_ingestion_test.dart: settings emissions do not re-subscribe the capture stream (regression: T-046 triage — ask-budget watch rebuilt the provider)
+03:14 +696 ~1 -5: /app/test/capture/sms_ingestion_test.dart: settings emissions do not re-subscribe the capture stream (regression: T-046 triage — ask-budget watch rebuilt the provider)
+03:14 +697 ~1 -5: /app/test/capture/sms_ingestion_test.dart: settings emissions do not re-subscribe the capture stream (regression: T-046 triage — ask-budget watch rebuilt the provider)
+03:14 +698 ~1 -5: /app/test/capture/sms_ingestion_test.dart: settings emissions do not re-subscribe the capture stream (regression: T-046 triage — ask-budget watch rebuilt the provider)
+03:14 +699 ~1 -5: /app/test/capture/sms_ingestion_test.dart: decision policy marks high amount seed-categorized txn asked
+03:14 +700 ~1 -5: /app/test/capture/sms_ingestion_test.dart: persists template id and provenance in parser confidence metadata
+03:14 +701 ~1 -5: /app/test/capture/sms_ingestion_test.dart: decision policy respects daily ask budget exhaustion
+03:14 +702 ~1 -5: /app/test/capture/sms_ingestion_test.dart: daily ask quota resets at the injected local midnight boundary
+03:14 +703 ~1 -5: /app/test/capture/sms_ingestion_test.dart: decision policy asks for familiar merchant at medium confidence
+03:14 +704 ~1 -5: /app/test/capture/sms_ingestion_test.dart: decision policy keeps rule-backed high confidence txn auto
+03:14 +705 ~1 -5: /app/test/capture/sms_ingestion_test.dart: decision policy asks once then auto-classifies a seen counterparty
+03:14 +706 ~1 -5: /app/test/capture/sms_ingestion_test.dart: leaves raw_sms unparsed when parser returns an expected miss
+03:14 +707 ~1 -5: /app/test/capture/sms_ingestion_test.dart: persists an unparsed reason and skips same-version retry
+03:14 +708 ~1 -5: /app/test/capture/sms_ingestion_test.dart: retries a retained failure after a parser-version upgrade
+03:14 +709 ~1 -5: /app/test/capture/sms_ingestion_test.dart: persists processing errors without exception text
+03:14 +710 ~1 -5: /app/test/capture/sms_ingestion_test.dart: reprocessing the same SMS id is idempotent (no duplicate rows)
+03:14 +711 ~1 -5: /app/test/capture/sms_ingestion_test.dart: re-import preserves edited and soft-deleted transaction state
+03:15 +712 ~1 -5: /app/test/capture/sms_ingestion_test.dart: suppresses a wallet SMS echo of an already-ingested bank debit (T-025)
+03:15 +713 ~1 -5: /app/test/capture/sms_ingestion_test.dart: production parser registry ingests a real SBI fixture through smsCaptureBootstrapProvider
+03:15 +714 ~1 -5: /app/test/capture/refund_linking_test.dart: auto-links full refund on exact ref ID within 30 days
+03:15 +715 ~1 -5: /app/test/capture/refund_linking_test.dart: auto-links partial refund on single candidate matching counterparty and amount <= expense
+03:15 +716 ~1 -5: /app/test/capture/refund_linking_test.dart: fails closed (unlinked) when multiple ambiguous candidates match
+03:16 +717 ~1 -5: /app/test/capture/message_kind_classifier_test.dart: (setUpAll)
+03:16 +717 ~1 -5: /app/test/capture/message_kind_classifier_test.dart: MessageKindClassifier classifies promoted negative fixtures correctly
+03:16 +718 ~1 -5: /app/test/capture/message_kind_classifier_test.dart: MessageKindClassifier classifies OTP, promo, balance, mandate, reversal, and settled kinds
+03:16 +719 ~1 -5: /app/test/capture/message_kind_classifier_test.dart: (tearDownAll)
+03:17 +719 ~1 -5: /app/test/capture/salary_credit_ingestion_test.dart: salary-credit matrix creates income transactions end to end
+03:17 +720 ~1 -5: /app/test/capture/shadow_diff_test.dart: identical snapshots produce an empty diff
+03:17 +721 ~1 -5: /app/test/capture/shadow_diff_test.dart: counts gained, lost, amount, and label differences once
+03:18 +722 ~1 -5: /app/test/ci/manifest_scope_guard_test.dart: Manifest scope script passes on android/app/src/main/AndroidManifest.xml
+03:18 +723 ~1 -5: /app/test/ci/manifest_scope_guard_test.dart: Manifest scope script fails when SEND_SMS or WRITE_SMS is injected
+03:18 +724 ~1 -5: Some tests failed.
