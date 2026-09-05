@@ -281,6 +281,8 @@ class _NavTabItemButton extends StatelessWidget {
       selected: isSelected,
       label: item.label,
       excludeSemantics: true,
+      onTapHint: item.label,
+      onTap: onTap,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
