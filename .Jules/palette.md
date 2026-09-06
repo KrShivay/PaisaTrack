@@ -1,0 +1,3 @@
+## 2026-09-06 - Pill Button Accessibility and Material Feedback
+**Learning:** Custom pill buttons using `GestureDetector` and `Container` lack standard keyboard focus states and screen reader announcements (when not explicitly provided). Furthermore, `excludeSemantics: true` on `Semantics` will drop inner tap semantics, so interactions must be redefined on the `Semantics` node.
+**Action:** Always wrap custom interactive UI elements like pills with `Semantics`, use `Material` + `InkWell` instead of `GestureDetector`, and redefine `onTap` and `onTapHint` directly on `Semantics` when `excludeSemantics` is used.
