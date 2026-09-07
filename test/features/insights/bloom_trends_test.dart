@@ -38,7 +38,16 @@ void main() {
     testWidgets('renders Month-over-Month comparison card', (tester) async {
       await pumpTrends(tester);
 
-      expect(find.text('MONTH OVER MONTH'), findsOneWidget);
+      final listFinder = find.byType(Scrollable);
+      final itemFinder = find.text('MONTH OVER MONTH');
+
+      await tester.scrollUntilVisible(
+        itemFinder,
+        500.0,
+        scrollable: listFinder,
+      );
+
+      expect(itemFinder, findsOneWidget);
       expect(find.textContaining('spent so far'), findsOneWidget);
     });
   });
