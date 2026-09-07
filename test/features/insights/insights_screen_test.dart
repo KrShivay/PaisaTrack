@@ -27,6 +27,14 @@ void main() {
 
     expect(find.text('Trends'), findsOneWidget);
     expect(find.text('SPEND TREND (LAST 6 MONTHS)'), findsOneWidget);
-    expect(find.text('MONTH OVER MONTH'), findsOneWidget);
+    final listFinder = find.byType(Scrollable);
+    final itemFinder = find.text('MONTH OVER MONTH');
+
+    await tester.scrollUntilVisible(
+      itemFinder,
+      500.0,
+      scrollable: listFinder,
+    );
+    expect(itemFinder, findsOneWidget);
   });
 }
