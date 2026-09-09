@@ -387,20 +387,16 @@ class BloomBudgetCard extends ConsumerWidget {
                 // Header row
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${_monthName(now.month).toUpperCase()} BUDGET',
-                        style: AppTheme.bloomDisplay(
-                          11,
-                          FontWeight.w600,
-                          letterSpacing: 0.14,
-                          color: const Color(0xFF7FD9B6),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      '${_monthName(now.month).toUpperCase()} BUDGET',
+                      style: AppTheme.bloomDisplay(
+                        11,
+                        FontWeight.w600,
+                        letterSpacing: 0.14,
+                        color: const Color(0xFF7FD9B6),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
