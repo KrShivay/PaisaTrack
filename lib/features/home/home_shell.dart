@@ -276,30 +276,41 @@ class _NavTabItemButton extends StatelessWidget {
     const activeColor = Colors.white;
     const inactiveColor = AppColorTokens.inkQuaternary;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: item.label,
+      excludeSemantics: true,
+      onTapHint: 'Switch to ${item.label} tab',
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? item.selectedIcon : item.icon,
-              size: 19,
-              color: isSelected ? activeColor : inactiveColor,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected ? item.selectedIcon : item.icon,
+                  size: 19,
+                  color: isSelected ? activeColor : inactiveColor,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.label,
+                  style: AppTheme.bloomDisplay(
+                    9,
+                    isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              item.label,
-              style: AppTheme.bloomDisplay(
-                9,
-                isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -348,59 +359,66 @@ class _AskOrbButtonState extends State<_AskOrbButton>
   Widget build(BuildContext context) {
     final reduceMotion = useReduceMotion(context);
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'Ask PaisaTrack',
+      onTapHint: 'Open assistant',
       onTap: widget.onTap,
-      child: SizedBox(
-        width: AppSizes.minTouchTarget,
-        height: AppSizes.minTouchTarget,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Pulsing ring animation
-            if (!reduceMotion)
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, _) {
-                  final t = _pulseController.value;
-                  final scale = 1.0 + (0.35 * t);
-                  final opacity = (0.5 * (1 - t)).clamp(0.0, 1.0);
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: SizedBox(
+          width: AppSizes.minTouchTarget,
+          height: AppSizes.minTouchTarget,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Pulsing ring animation
+              if (!reduceMotion)
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, _) {
+                    final t = _pulseController.value;
+                    final scale = 1.0 + (0.35 * t);
+                    final opacity = (0.5 * (1 - t)).clamp(0.0, 1.0);
 
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColorTokens.bloomEmerald.withValues(
-                            alpha: opacity,
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColorTokens.bloomEmerald.withValues(
+                              alpha: opacity,
+                            ),
+                            width: 2,
                           ),
-                          width: 2,
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            // Orb
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColorTokens.bloomEmeraldGradient,
-                boxShadow: AppColorTokens.bloomAskOrbGlow,
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 20,
-                  color: AppColorTokens.ink,
+                    );
+                  },
+                ),
+              // Orb
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColorTokens.bloomEmeraldGradient,
+                  boxShadow: AppColorTokens.bloomAskOrbGlow,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 20,
+                    color: AppColorTokens.ink,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
