@@ -83,17 +83,26 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
       if (_query.isNotEmpty) {
         final q = _query.toLowerCase();
-        // ⚡ Bolt: Use short-circuit evaluation to prevent unnecessary string allocations
-        if (!item.displayName.toLowerCase().contains(q) &&
-            !(item.note ?? '').toLowerCase().contains(q) &&
-            !item.amount.toString().contains(q) &&
-            !item.channel.toLowerCase().contains(q) &&
-            !(item.reference ?? '').toLowerCase().contains(q) &&
-            !item.status.toLowerCase().contains(q) &&
-            !(item.accountHint ?? '').toLowerCase().contains(q) &&
-            !(item.categoryName ?? '').toLowerCase().contains(q) &&
-            !(item.paymentSourceName ?? '').toLowerCase().contains(q) &&
-            !(item.merchantRaw ?? '').toLowerCase().contains(q)) {
+        final name = item.displayName.toLowerCase();
+        final note = (item.note ?? '').toLowerCase();
+        final amt = item.amount.toString();
+        final channel = item.channel.toLowerCase();
+        final ref = (item.reference ?? '').toLowerCase();
+        final status = item.status.toLowerCase();
+        final account = (item.accountHint ?? '').toLowerCase();
+        final category = (item.categoryName ?? '').toLowerCase();
+        final source = (item.paymentSourceName ?? '').toLowerCase();
+        final merchant = (item.merchantRaw ?? '').toLowerCase();
+        if (!name.contains(q) &&
+            !note.contains(q) &&
+            !amt.contains(q) &&
+            !channel.contains(q) &&
+            !ref.contains(q) &&
+            !status.contains(q) &&
+            !account.contains(q) &&
+            !category.contains(q) &&
+            !source.contains(q) &&
+            !merchant.contains(q)) {
           return false;
         }
       }
