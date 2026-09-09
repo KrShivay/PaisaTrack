@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,6 +42,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   ActivityFilterChoice _activeFilter = ActivityFilterChoice.all;
+  Timer? _debounce;
 
   void _loadMoreTransactions() {
     ref.read(activityTransactionPageProvider.notifier).loadMore();
@@ -47,6 +50,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -301,7 +305,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (val) => setState(() => _query = val),
+                  onChanged: (val) {
+                    if (_debounce?.isActive ?? false) _debounce?.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 300), () {
+                      setState(() => _query = val);
+                    });
+                  },
                   style: AppTheme.bloomDisplay(
                     14,
                     FontWeight.w400,
