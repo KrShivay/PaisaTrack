@@ -235,6 +235,7 @@ class _TransactionCorrectionSheetState
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: Colors.white,
+                          semanticsLabel: 'Saving correction',
                         ),
                       )
                     : const Text('Save Correction'),
