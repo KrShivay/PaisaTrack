@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
 import '../../core/undo/undo_controller.dart';
+import '../../core/util/debouncer.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
@@ -38,6 +39,7 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   final _searchController = TextEditingController();
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
   String _query = '';
   ActivityFilterChoice _activeFilter = ActivityFilterChoice.all;
 
@@ -48,6 +50,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _debouncer.dispose();
     super.dispose();
   }
 
@@ -301,7 +304,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (val) => setState(() => _query = val),
+                  onChanged: (val) => _debouncer.run(() {
+                    if (mounted) setState(() => _query = val);
+                  }),
                   style: AppTheme.bloomDisplay(
                     14,
                     FontWeight.w400,

@@ -149,7 +149,7 @@ void main() {
         'Blinkit',
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 300)); // debounce delay
 
       expect(find.text('Blinkit'), findsWidgets);
       expect(find.text('Swiggy'), findsNothing);
