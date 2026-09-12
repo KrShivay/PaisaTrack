@@ -516,48 +516,49 @@ class BloomBudgetCard extends ConsumerWidget {
 class _SetBudgetCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => _showBudgetInput(context, ref),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomCard,
-          borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 28,
-              color: AppColorTokens.violetPrimary,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Set monthly budget',
-                    style: AppTheme.bloomDisplay(14, FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Unlocks safe-today calculation and progress ring.',
-                    style: AppTheme.bloomDisplay(
-                      12,
-                      FontWeight.w400,
-                      color: AppColorTokens.inkTertiary,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: AppColorTokens.bloomCard,
+      borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _showBudgetInput(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 28,
+                color: AppColorTokens.violetPrimary,
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColorTokens.inkTertiary,
-            ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Set monthly budget',
+                      style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Unlocks safe-today calculation and progress ring.',
+                      style: AppTheme.bloomDisplay(
+                        12,
+                        FontWeight.w400,
+                        color: AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppColorTokens.inkTertiary,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1024,62 +1025,63 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: Row(
-          children: [
-            BloomCategoryTile(
-              categoryId: txn.categoryId,
-              iconName: txn.categoryIcon,
-              size: 36,
-              borderRadius: 13,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    txn.displayName,
-                    style: AppTheme.bloomDisplay(
-                      14,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatTime(txn.ts),
-                    style: AppTheme.bloomDisplay(
-                      11,
-                      FontWeight.w400,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextTertiary
-                          : AppColorTokens.inkTertiary,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              BloomCategoryTile(
+                categoryId: txn.categoryId,
+                iconName: txn.categoryIcon,
+                size: 36,
+                borderRadius: 13,
               ),
-            ),
-            const SizedBox(width: 8),
-            BloomAmount(
-              amount: txn.direction == TransactionDirection.debit
-                  ? -txn.amount
-                  : txn.amount,
-              size: 15,
-              weight: FontWeight.w500,
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      txn.displayName,
+                      style: AppTheme.bloomDisplay(
+                        14,
+                        FontWeight.w500,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextPrimary
+                            : AppColorTokens.ink,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatTime(txn.ts),
+                      style: AppTheme.bloomDisplay(
+                        11,
+                        FontWeight.w400,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              BloomAmount(
+                amount: txn.direction == TransactionDirection.debit
+                    ? -txn.amount
+                    : txn.amount,
+                size: 15,
+                weight: FontWeight.w500,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -51,6 +51,7 @@ void main() {
             direction: 'debit',
             channel: 'netbanking',
             merchantRaw: const Value('HDFC CREDIT CARD PAYMENT'),
+            isAnalyticsExcluded: const Value(true),
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'auto',
