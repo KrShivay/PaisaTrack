@@ -164,7 +164,16 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
             const SizedBox(height: AppSpacing.xl),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Save'),
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Save'),
             ),
           ],
         ),
