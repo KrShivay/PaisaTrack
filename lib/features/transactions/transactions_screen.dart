@@ -138,10 +138,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
       showBack: true,
-      builder: (context) => CategoryPickerSheet(
-        categories: categories,
-        title: 'Change Category',
-      ),
+      builder: (context) =>
+          CategoryPickerSheet(categories: categories, title: 'Change Category'),
     );
     if (chosen == null || !mounted) return;
 
@@ -583,11 +581,7 @@ class _DayGroupSection extends StatelessWidget {
                       : AppColorTokens.inkTertiary,
                 ),
               ),
-              BloomAmount(
-                amount: dayTotal,
-                size: 12,
-                weight: FontWeight.w500,
-              ),
+              BloomAmount(amount: dayTotal, size: 12, weight: FontWeight.w500),
             ],
           ),
         ),
@@ -653,64 +647,65 @@ class _DismissibleTransactionRow extends StatelessWidget {
         }
         return false; // Re-render row so state updates smoothly via Riverpod stream
       },
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-          ),
-          child: Row(
-            children: [
-              BloomCategoryTile(
-                categoryId: item.categoryId,
-                iconName: item.categoryIcon,
-                size: 36,
-                borderRadius: 13,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.displayName,
-                      style: AppTheme.bloomDisplay(
-                        14,
-                        FontWeight.w500,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextPrimary
-                            : AppColorTokens.ink,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatMeta(item),
-                      style: AppTheme.bloomDisplay(
-                        11,
-                        FontWeight.w400,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextTertiary
-                            : AppColorTokens.inkTertiary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                BloomCategoryTile(
+                  categoryId: item.categoryId,
+                  iconName: item.categoryIcon,
+                  size: 36,
+                  borderRadius: 13,
                 ),
-              ),
-              const SizedBox(width: 8),
-              BloomAmount(
-                amount: item.direction == TransactionDirection.debit
-                    ? -item.amount
-                    : item.amount,
-                size: 15,
-                weight: FontWeight.w500,
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.displayName,
+                        style: AppTheme.bloomDisplay(
+                          14,
+                          FontWeight.w500,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextPrimary
+                              : AppColorTokens.ink,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatMeta(item),
+                        style: AppTheme.bloomDisplay(
+                          11,
+                          FontWeight.w400,
+                          color: isDark
+                              ? AppColorTokens.bloomDarkTextTertiary
+                              : AppColorTokens.inkTertiary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                BloomAmount(
+                  amount: item.direction == TransactionDirection.debit
+                      ? -item.amount
+                      : item.amount,
+                  size: 15,
+                  weight: FontWeight.w500,
+                ),
+              ],
+            ),
           ),
         ),
       ),

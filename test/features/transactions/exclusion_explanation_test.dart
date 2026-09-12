@@ -21,7 +21,9 @@ void main() {
     await database.close();
   });
 
-  test('credit card bill payment and cash withdrawals are excluded from category totals', () async {
+  test(
+      'credit card bill payment and cash withdrawals are excluded from category totals',
+      () async {
     final ts = DateTime.utc(2026, 7, 10, 10, 0).millisecondsSinceEpoch;
 
     // Card purchase 1: Swiggy Rs 500
@@ -36,6 +38,7 @@ void main() {
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'auto',
+            isAnalyticsExcluded: const Value(false),
             lifecycleState: const Value('settled'),
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
@@ -54,6 +57,7 @@ void main() {
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'auto',
+            isAnalyticsExcluded: const Value(true),
             lifecycleState: const Value('settled'),
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
@@ -73,11 +77,14 @@ void main() {
     );
 
     // Total category spending should only reflect the purchase (500), not the card bill (5000)
-    final categorySum = snapshot.categories.fold(0.0, (acc, c) => acc + c.total);
+    final categorySum =
+        snapshot.categories.fold(0.0, (acc, c) => acc + c.total);
     expect(categorySum, 500.0);
   });
 
-  testWidgets('TransactionDetailScreen discloses credit card bill exclusion explanation copy', (tester) async {
+  testWidgets(
+      'TransactionDetailScreen discloses credit card bill exclusion explanation copy',
+      (tester) async {
     final ts = DateTime.utc(2026, 7, 10, 10, 0);
 
     final txn = Transaction(
@@ -123,6 +130,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.textContaining('Credit card bill payment — excluded'), findsOneWidget);
+    expect(
+      find.textContaining('Credit card bill payment — excluded'),
+      findsOneWidget,
+    );
   });
 }
