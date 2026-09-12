@@ -42,6 +42,17 @@ void main() {
           ),
         );
 
+    await database.into(database.categories).insert(
+      CategoriesCompanion.insert(
+        id: 'cat_bill',
+        name: 'Bills',
+        icon: 'receipt',
+        sortOrder: 0,
+        isUserCreated: false,
+        isSpending: false,
+      ),
+    );
+
     // Credit Card Bill Payment: Rs 5000 (should NOT be added to category spending)
     await database.into(database.transactions).insert(
           TransactionsCompanion.insert(
@@ -51,6 +62,7 @@ void main() {
             direction: 'debit',
             channel: 'netbanking',
             merchantRaw: const Value('HDFC CREDIT CARD PAYMENT'),
+            categoryId: const Value('cat_bill'),
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'auto',
