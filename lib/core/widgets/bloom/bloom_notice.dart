@@ -79,14 +79,24 @@ class BloomNotice extends StatelessWidget {
                 ),
                 if (actionLabel != null) ...[
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: onAction,
-                    child: Text(
-                      actionLabel!,
-                      style: AppTheme.bloomDisplay(
-                        12,
-                        FontWeight.w600,
-                        color: colors.actionColor,
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onAction,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 2,
+                          horizontal: 4,
+                        ),
+                        child: Text(
+                          actionLabel!,
+                          style: AppTheme.bloomDisplay(
+                            12,
+                            FontWeight.w600,
+                            color: colors.actionColor,
+                          ),
+                        ),
                       ),
                     ),
                   ),

@@ -88,23 +88,27 @@ class _ToastContent extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 12),
-            GestureDetector(
-              onTap: () {
-                ref.read(undoControllerProvider.notifier).undo();
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColorTokens.bloomEmerald.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  'Undo',
-                  style: AppTheme.bloomDisplay(
-                    13,
-                    FontWeight.w600,
-                    color: AppColorTokens.bloomEmerald,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  ref.read(undoControllerProvider.notifier).undo();
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColorTokens.bloomEmerald.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    'Undo',
+                    style: AppTheme.bloomDisplay(
+                      13,
+                      FontWeight.w600,
+                      color: AppColorTokens.bloomEmerald,
+                    ),
                   ),
                 ),
               ),
