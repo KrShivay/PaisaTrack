@@ -1,0 +1,3 @@
+## 2023-09-13 - Optimize Dart List Filtering
+**Learning:** In Dart/Flutter list filters (e.g., searching transactions), evaluating strings inline with `&&` or `||` is much faster than upfront string allocations across multiple fields due to short-circuiting.
+**Action:** Prioritize lazy/short-circuit evaluation (using `&&` or `||` and inline strings like `.toLowerCase().contains()`) over upfront string allocations.
