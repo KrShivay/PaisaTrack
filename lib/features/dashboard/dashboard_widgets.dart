@@ -17,10 +17,7 @@ import 'dashboard_providers.dart';
 
 /// Conic ring painter drawing category arcs in descending order with remainder arc.
 class BloomHeroRingPainter extends CustomPainter {
-  BloomHeroRingPainter({
-    required this.slices,
-    required this.isDark,
-  });
+  BloomHeroRingPainter({required this.slices, required this.isDark});
 
   final List<CategorySlice> slices;
   final bool isDark;
@@ -79,21 +76,22 @@ class BloomHeroRing extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final slices =
-        ref.watch(categoryBreakdownProvider).valueOrNull ?? const [];
+    final slices = ref.watch(categoryBreakdownProvider).valueOrNull ?? const [];
     final selectedMetric = ref.watch(selectedDashboardMetricProvider);
     final showPaise = ref.watch(showPaiseProvider);
 
     final creditColor = isDark
         ? AppColorTokens.bloomCreditDark
         : AppColorTokens.bloomCreditLight;
-    final debitColor =
-        isDark ? AppColorTokens.bloomDebitDark : AppColorTokens.bloomDebitLight;
+    final debitColor = isDark
+        ? AppColorTokens.bloomDebitDark
+        : AppColorTokens.bloomDebitLight;
     final secondaryColor = isDark
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
-    final primaryColor =
-        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    final primaryColor = isDark
+        ? AppColorTokens.bloomDarkTextPrimary
+        : AppColorTokens.ink;
 
     // Resolve the selected metric into displayable content while keeping the
     // aggregate's loading and error states distinct — the ring never shows a
@@ -101,7 +99,9 @@ class BloomHeroRing extends ConsumerWidget {
     final AsyncValue<_HeroMetricContent> contentAsync;
     switch (selectedMetric) {
       case DashboardMetricChoice.safeToday:
-        contentAsync = ref.watch(safeTodayValueProvider).whenData(
+        contentAsync = ref
+            .watch(safeTodayValueProvider)
+            .whenData(
               (safeToday) => _HeroMetricContent(
                 label: 'SAFE TODAY',
                 amount: safeToday != null
@@ -116,7 +116,9 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             );
       case DashboardMetricChoice.netFlow:
-        contentAsync = ref.watch(monthNetProvider).whenData(
+        contentAsync = ref
+            .watch(monthNetProvider)
+            .whenData(
               (netFlow) => _HeroMetricContent(
                 label: 'NET FLOW',
                 amount: _formatAmount(netFlow, showPaise: showPaise),
@@ -125,7 +127,9 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             );
       case DashboardMetricChoice.burn:
-        contentAsync = ref.watch(dailyAverageSpendProvider).whenData(
+        contentAsync = ref
+            .watch(dailyAverageSpendProvider)
+            .whenData(
               (burn) => _HeroMetricContent(
                 label: 'BURN RATE',
                 amount: _formatAmount(burn, showPaise: showPaise),
@@ -134,7 +138,9 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             );
       case DashboardMetricChoice.runway:
-        contentAsync = ref.watch(runwayValueProvider).whenData(
+        contentAsync = ref
+            .watch(runwayValueProvider)
+            .whenData(
               (runway) => _HeroMetricContent(
                 label: 'RUNWAY',
                 amount: runway != null
@@ -148,8 +154,9 @@ class BloomHeroRing extends ConsumerWidget {
             );
     }
 
-    final innerBg =
-        isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase;
+    final innerBg = isDark
+        ? AppColorTokens.bloomDarkBase
+        : AppColorTokens.bloomBase;
 
     return Center(
       child: SizedBox(
@@ -160,19 +167,13 @@ class BloomHeroRing extends ConsumerWidget {
           children: [
             CustomPaint(
               size: const Size(230, 230),
-              painter: BloomHeroRingPainter(
-                slices: slices,
-                isDark: isDark,
-              ),
+              painter: BloomHeroRingPainter(slices: slices, isDark: isDark),
             ),
             // Inner 180px circle
             Container(
               width: 180,
               height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: innerBg,
-              ),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: innerBg),
               child: AnimatedSwitcher(
                 duration: AppDurations.fast,
                 child: KeyedSubtree(
@@ -215,11 +216,11 @@ class BloomHeroRing extends ConsumerWidget {
   }
 
   static String _metricLabel(DashboardMetricChoice metric) => switch (metric) {
-        DashboardMetricChoice.safeToday => 'SAFE TODAY',
-        DashboardMetricChoice.netFlow => 'NET FLOW',
-        DashboardMetricChoice.burn => 'BURN RATE',
-        DashboardMetricChoice.runway => 'RUNWAY',
-      };
+    DashboardMetricChoice.safeToday => 'SAFE TODAY',
+    DashboardMetricChoice.netFlow => 'NET FLOW',
+    DashboardMetricChoice.burn => 'BURN RATE',
+    DashboardMetricChoice.runway => 'RUNWAY',
+  };
 
   Widget _heroInner({
     required String label,
@@ -360,29 +361,39 @@ class _MetricPillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeBg = isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink;
-    final inactiveBg =
-        isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip;
+    final inactiveBg = isDark
+        ? AppColorTokens.bloomDarkCard
+        : AppColorTokens.bloomChip;
     const activeFg = Colors.white;
     final inactiveFg = isDark
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      excludeSemantics: true,
+      onTapHint: label,
       onTap: onTap,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : inactiveBg,
+      child: Material(
+        color: isSelected ? activeBg : inactiveBg,
+        borderRadius: BorderRadius.circular(15),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(15),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTheme.bloomDisplay(
-              12,
-              isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? activeFg : inactiveFg,
+          child: Container(
+            height: 30,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Center(
+              child: Text(
+                label,
+                style: AppTheme.bloomDisplay(
+                  12,
+                  isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? activeFg : inactiveFg,
+                ),
+              ),
             ),
           ),
         ),
@@ -459,11 +470,8 @@ class BloomBudgetCard extends ConsumerWidget {
         spent: totals.debitTotal,
         commitments: commitments,
       ),
-      loading: () => _card(
-        budget: budget,
-        spent: null,
-        commitments: commitments,
-      ),
+      loading: () =>
+          _card(budget: budget, spent: null, commitments: commitments),
       error: (_, __) => _card(
         budget: budget,
         spent: null,
@@ -483,8 +491,9 @@ class BloomBudgetCard extends ConsumerWidget {
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final daysLeft = daysInMonth - now.day;
 
-    final spentFraction =
-        spent == null ? 0.0 : (spent / budget).clamp(0.0, 1.0);
+    final spentFraction = spent == null
+        ? 0.0
+        : (spent / budget).clamp(0.0, 1.0);
     final committedFraction = spent == null
         ? 0.0
         : (commitments / budget).clamp(0.0, 1.0 - spentFraction);
@@ -507,10 +516,7 @@ class BloomBudgetCard extends ConsumerWidget {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    Color(0x4D34D399),
-                    Colors.transparent,
-                  ],
+                  colors: [Color(0x4D34D399), Colors.transparent],
                 ),
               ),
             ),
@@ -656,66 +662,67 @@ class BloomBudgetCard extends ConsumerWidget {
   }
 
   String _monthName(int month) => const [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ][month - 1];
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ][month - 1];
 }
 
 class _SetBudgetCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => _showBudgetInput(context, ref),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomCard,
-          borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 28,
-              color: AppColorTokens.violetPrimary,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Set monthly budget',
-                    style: AppTheme.bloomDisplay(14, FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Unlocks safe-today calculation and progress ring.',
-                    style: AppTheme.bloomDisplay(
-                      12,
-                      FontWeight.w400,
-                      color: AppColorTokens.inkTertiary,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: AppColorTokens.bloomCard,
+      borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+      child: InkWell(
+        onTap: () => _showBudgetInput(context, ref),
+        borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 28,
+                color: AppColorTokens.violetPrimary,
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColorTokens.inkTertiary,
-            ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Set monthly budget',
+                      style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Unlocks safe-today calculation and progress ring.',
+                      style: AppTheme.bloomDisplay(
+                        12,
+                        FontWeight.w400,
+                        color: AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppColorTokens.inkTertiary,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -794,41 +801,32 @@ class BloomTopCategoriesSection extends ConsumerWidget {
         final top3 = slices.take(3).toList();
         if (top3.isEmpty) return const SizedBox.shrink();
         final maxVal = top3.first.total;
-        return _wrap(
-          isDark,
-          [
-            for (final slice in top3) ...[
-              _CategoryRow(slice: slice, maxTotal: maxVal, isDark: isDark),
-              if (slice != top3.last) const SizedBox(height: 10),
-            ],
+        return _wrap(isDark, [
+          for (final slice in top3) ...[
+            _CategoryRow(slice: slice, maxTotal: maxVal, isDark: isDark),
+            if (slice != top3.last) const SizedBox(height: 10),
           ],
-        );
+        ]);
       },
-      loading: () => _wrap(
-        isDark,
-        const [
-          BloomSkeleton(height: 18),
-          SizedBox(height: 10),
-          BloomSkeleton(height: 18),
-          SizedBox(height: 10),
-          BloomSkeleton(height: 18),
-        ],
-      ),
-      error: (_, __) => _wrap(
-        isDark,
-        [
-          Text(
-            "Couldn't load category breakdown.",
-            style: AppTheme.bloomDisplay(
-              13,
-              FontWeight.w400,
-              color: isDark
-                  ? AppColorTokens.bloomDarkTextSecondary
-                  : AppColorTokens.inkSecondary,
-            ),
+      loading: () => _wrap(isDark, const [
+        BloomSkeleton(height: 18),
+        SizedBox(height: 10),
+        BloomSkeleton(height: 18),
+        SizedBox(height: 10),
+        BloomSkeleton(height: 18),
+      ]),
+      error: (_, __) => _wrap(isDark, [
+        Text(
+          "Couldn't load category breakdown.",
+          style: AppTheme.bloomDisplay(
+            13,
+            FontWeight.w400,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextSecondary
+                : AppColorTokens.inkSecondary,
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 
@@ -882,8 +880,9 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final barFraction =
-        maxTotal > 0 ? (slice.total / maxTotal).clamp(0.05, 1.0) : 0.0;
+    final barFraction = maxTotal > 0
+        ? (slice.total / maxTotal).clamp(0.05, 1.0)
+        : 0.0;
     final color = CategoryVisuals.color(slice.categoryId);
 
     return Row(
@@ -1092,10 +1091,7 @@ class BloomTodayList extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         if (reviewAttention != null && reviewAttention.count > 0) ...[
-          _UnsortedRow(
-            count: reviewAttention.count,
-            isDark: isDark,
-          ),
+          _UnsortedRow(count: reviewAttention.count, isDark: isDark),
           const SizedBox(height: 10),
         ],
         if (recent.isEmpty)
@@ -1135,10 +1131,7 @@ class BloomTodayList extends ConsumerWidget {
 }
 
 class _UnsortedRow extends StatelessWidget {
-  const _UnsortedRow({
-    required this.count,
-    required this.isDark,
-  });
+  const _UnsortedRow({required this.count, required this.isDark});
 
   final int count;
   final bool isDark;
@@ -1150,8 +1143,10 @@ class _UnsortedRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColorTokens.bloomWarningBg,
         borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        border:
-            Border.all(color: AppColorTokens.bloomWarningBorder, width: 1.5),
+        border: Border.all(
+          color: AppColorTokens.bloomWarningBorder,
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
@@ -1218,70 +1213,72 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: Row(
-          children: [
-            BloomCategoryTile(
-              categoryId: txn.categoryId,
-              iconName: txn.categoryIcon,
-              size: 36,
-              borderRadius: 13,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    txn.displayName,
-                    style: AppTheme.bloomDisplay(
-                      14,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatTime(txn.ts),
-                    style: AppTheme.bloomDisplay(
-                      11,
-                      FontWeight.w400,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextTertiary
-                          : AppColorTokens.inkTertiary,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              BloomCategoryTile(
+                categoryId: txn.categoryId,
+                iconName: txn.categoryIcon,
+                size: 36,
+                borderRadius: 13,
               ),
-            ),
-            const SizedBox(width: 8),
-            BloomAmount(
-              amount: txn.direction == TransactionDirection.debit
-                  ? -txn.amount
-                  : txn.amount,
-              size: 15,
-              weight: FontWeight.w500,
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      txn.displayName,
+                      style: AppTheme.bloomDisplay(
+                        14,
+                        FontWeight.w500,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextPrimary
+                            : AppColorTokens.ink,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatTime(txn.ts),
+                      style: AppTheme.bloomDisplay(
+                        11,
+                        FontWeight.w400,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              BloomAmount(
+                amount: txn.direction == TransactionDirection.debit
+                    ? -txn.amount
+                    : txn.amount,
+                size: 15,
+                weight: FontWeight.w500,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   String _formatTime(DateTime date) {
-    final h =
-        date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final h = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final m = date.minute.toString().padLeft(2, '0');
     final ampm = date.hour >= 12 ? 'pm' : 'am';
     return '$h:$m $ampm';
