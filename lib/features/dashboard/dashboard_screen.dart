@@ -130,59 +130,74 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
+                Semantics(
+                  button: true,
+                  label: period.label,
+                  excludeSemantics: true,
+                  onTapHint: 'Change date period',
                   onTap: () {
                     showBloomModalSheet(
                       context: context,
                       builder: (context) => const BloomDatePeriodSheet(),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTrack
-                          : AppColorTokens.bloomChip,
+                  child: Material(
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTrack
+                        : AppColorTokens.bloomChip,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
+                      side: BorderSide(
                         color: isDark
                             ? AppColorTokens.bloomDarkOutline
                             : AppColorTokens.bloomHairline,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 13,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextSecondary
-                              : AppColorTokens.inkSecondary,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        showBloomModalSheet(
+                          context: context,
+                          builder: (context) => const BloomDatePeriodSheet(),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          period.label,
-                          style: AppTheme.bloomDisplay(
-                            12,
-                            FontWeight.w600,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 13,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextSecondary
+                                  : AppColorTokens.inkSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              period.label,
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w600,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextPrimary
+                                    : AppColorTokens.ink,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 16,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextTertiary
-                              : AppColorTokens.inkTertiary,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
