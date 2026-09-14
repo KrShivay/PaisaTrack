@@ -155,20 +155,21 @@ class TransactionFilters {
   bool matchesSearch(TransactionListItem item, String query) {
     final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return true;
-    final searchable = [
-      item.displayName,
-      item.merchantRaw,
-      item.categoryName,
-      item.amount.toStringAsFixed(2),
-      item.amount.toStringAsFixed(0),
-      item.accountHint,
-      item.channel,
-      item.note,
-      item.reference,
-      item.status == 'needs_review' ? 'needs review' : item.status,
-      item.parseSource == 'manual' ? 'manual' : 'sms',
-    ].whereType<String>();
-    return searchable.any((value) => value.toLowerCase().contains(normalized));
+
+    // Bolt ⚡: Optimized filtering using lazy evaluation with short-circuiting.
+    // Replaced eager list creation and iteration, avoiding multiple string allocations
+    // per row on early matches, improving search responsiveness.
+    return item.displayName.toLowerCase().contains(normalized) ||
+        (item.merchantRaw?.toLowerCase().contains(normalized) ?? false) ||
+        (item.categoryName?.toLowerCase().contains(normalized) ?? false) ||
+        item.amount.toStringAsFixed(2).contains(normalized) ||
+        item.amount.toStringAsFixed(0).contains(normalized) ||
+        (item.accountHint?.toLowerCase().contains(normalized) ?? false) ||
+        item.channel.toLowerCase().contains(normalized) ||
+        (item.note?.toLowerCase().contains(normalized) ?? false) ||
+        (item.reference?.toLowerCase().contains(normalized) ?? false) ||
+        (item.status == 'needs_review' ? 'needs review' : item.status).toLowerCase().contains(normalized) ||
+        (item.parseSource == 'manual' ? 'manual' : 'sms').toLowerCase().contains(normalized);
   }
 }
 
