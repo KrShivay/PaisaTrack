@@ -83,26 +83,24 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
       if (_query.isNotEmpty) {
         final q = _query.toLowerCase();
-        final name = item.displayName.toLowerCase();
-        final note = (item.note ?? '').toLowerCase();
-        final amt = item.amount.toString();
-        final channel = item.channel.toLowerCase();
-        final ref = (item.reference ?? '').toLowerCase();
-        final status = item.status.toLowerCase();
-        final account = (item.accountHint ?? '').toLowerCase();
-        final category = (item.categoryName ?? '').toLowerCase();
-        final source = (item.paymentSourceName ?? '').toLowerCase();
-        final merchant = (item.merchantRaw ?? '').toLowerCase();
-        if (!name.contains(q) &&
-            !note.contains(q) &&
-            !amt.contains(q) &&
-            !channel.contains(q) &&
-            !ref.contains(q) &&
-            !status.contains(q) &&
-            !account.contains(q) &&
-            !category.contains(q) &&
-            !source.contains(q) &&
-            !merchant.contains(q)) {
+
+        // Bolt ⚡: Optimized filtering using lazy evaluation with short-circuiting.
+        // Instead of eagerly calling toLowerCase() and allocating strings for every field,
+        // we check properties one by one and stop at the first match.
+        // This avoids up to ~10 object allocations per row for matching records, reducing
+        // memory pressure and CPU overhead when typing rapidly in the search box.
+        final matchesSearch = item.displayName.toLowerCase().contains(q) ||
+            (item.note?.toLowerCase().contains(q) ?? false) ||
+            item.amount.toString().contains(q) ||
+            item.channel.toLowerCase().contains(q) ||
+            (item.reference?.toLowerCase().contains(q) ?? false) ||
+            item.status.toLowerCase().contains(q) ||
+            (item.accountHint?.toLowerCase().contains(q) ?? false) ||
+            (item.categoryName?.toLowerCase().contains(q) ?? false) ||
+            (item.paymentSourceName?.toLowerCase().contains(q) ?? false) ||
+            (item.merchantRaw?.toLowerCase().contains(q) ?? false);
+
+        if (!matchesSearch) {
           return false;
         }
       }

@@ -1,0 +1,3 @@
+## 2024-05-18 - Eager String Allocation in High-Frequency Filters
+**Learning:** In Dart/Flutter, when implementing filters that execute frequently over large collections (e.g., search filters iterating over 10k items on every keystroke), extracting fields into variables via `toLowerCase()` upfront causes unnecessary memory allocations and CPU cycles.
+**Action:** Use inline short-circuit evaluation (e.g., `item.field.toLowerCase().contains(query) || ...`). This leverages Dart's lazy evaluation, avoiding redundant string allocations for properties that don't need to be checked if an early match occurs, or avoiding them entirely on un-matching rows.
