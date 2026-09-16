@@ -8,8 +8,9 @@ import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/repositories/category_repository.dart';
 
-final categoryManagerListProvider =
-    StreamProvider<List<Category>>((ref) async* {
+final categoryManagerListProvider = StreamProvider<List<Category>>((
+  ref,
+) async* {
   final database = await ref.watch(appDatabaseProvider.future);
   yield* ref.watch(categoryRepositoryProvider(database)).watchAll();
 });
@@ -50,12 +51,14 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
           final query = _searchController.text.trim().toLowerCase();
           final byId = {for (final category in rows) category.id: category};
           final visible = _hierarchicalRows(rows).where((category) {
-            final parentName =
-                byId[category.parentId]?.name.toLowerCase() ?? '';
             if (query.isNotEmpty &&
-                !category.name.toLowerCase().contains(query) &&
-                !parentName.contains(query)) {
-              return false;
+                !category.name.toLowerCase().contains(query)) {
+              // ⚡ Bolt: Lazily evaluate parentName only if the child name didn't match.
+              final parentName =
+                  byId[category.parentId]?.name.toLowerCase() ?? '';
+              if (!parentName.contains(query)) {
+                return false;
+              }
             }
             return switch (_filter) {
               _CategoryFilter.all => true,
@@ -112,8 +115,9 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
                   left: parent == null ? 0 : AppSpacing.lg,
                 ),
                 leading: CircleAvatar(
-                  backgroundColor: CategoryVisuals.color(category.id)
-                      .withValues(alpha: 0.15),
+                  backgroundColor: CategoryVisuals.color(
+                    category.id,
+                  ).withValues(alpha: 0.15),
                   child: Icon(
                     CategoryVisuals.icon(category.icon),
                     color: CategoryVisuals.color(category.id),
@@ -157,9 +161,8 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
             itemCount: visible.length + 1,
           );
         },
-        error: (error, stackTrace) => Center(
-          child: Text('Could not load categories: $error'),
-        ),
+        error: (error, stackTrace) =>
+            Center(child: Text('Could not load categories: $error')),
         loading: () => const Center(child: CircularProgressIndicator()),
       ),
     );
@@ -183,10 +186,7 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       }
     }
     return [
-      for (final root in roots) ...[
-        root,
-        ...?children[root.id],
-      ],
+      for (final root in roots) ...[root, ...?children[root.id]],
     ];
   }
 
@@ -296,7 +296,10 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
     );
     if (confirmed != true || !context.mounted) return;
 
-    await (await _repository(ref)).mergeCategory(
+    await (await _repository(
+      ref,
+    ))
+        .mergeCategory(
       sourceCategoryId: source.id,
       targetCategoryId: target.id,
     );
@@ -472,12 +475,10 @@ class _CategoryEditorDialogState extends State<CategoryEditorDialog> {
                 textCapitalization: TextCapitalization.words,
                 onChanged: (value) {
                   if (!widget.allowIconSelection || _manuallySelected) return;
-                  setState(
-                    () {
-                      _errorText = null;
-                      _selectedIcon = CategoryVisuals.suggestIcon(value);
-                    },
-                  );
+                  setState(() {
+                    _errorText = null;
+                    _selectedIcon = CategoryVisuals.suggestIcon(value);
+                  });
                 },
                 onSubmitted: (_) => _save(),
               ),
@@ -545,12 +546,12 @@ class _CategoryEditorDialogState extends State<CategoryEditorDialog> {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: selected
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainer,
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainer,
                               borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             child: Icon(option.icon),
