@@ -300,7 +300,9 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
       ref,
     ))
         .mergeCategory(
-            sourceCategoryId: source.id, targetCategoryId: target.id);
+      sourceCategoryId: source.id,
+      targetCategoryId: target.id,
+    );
   }
 
   Future<CategoryEditorResult?> _askCategory(
