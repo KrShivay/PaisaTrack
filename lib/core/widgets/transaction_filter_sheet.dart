@@ -155,20 +155,26 @@ class TransactionFilters {
   bool matchesSearch(TransactionListItem item, String query) {
     final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return true;
-    final searchable = [
-      item.displayName,
-      item.merchantRaw,
-      item.categoryName,
-      item.amount.toStringAsFixed(2),
-      item.amount.toStringAsFixed(0),
-      item.accountHint,
-      item.channel,
-      item.note,
-      item.reference,
-      item.status == 'needs_review' ? 'needs review' : item.status,
-      item.parseSource == 'manual' ? 'manual' : 'sms',
-    ].whereType<String>();
-    return searchable.any((value) => value.toLowerCase().contains(normalized));
+
+    // Performance optimization: Using short-circuit evaluation instead of allocating
+    // a list of strings reduces CPU overhead and memory allocations when filtering.
+    if (item.displayName.toLowerCase().contains(normalized)) return true;
+    if (item.merchantRaw != null && item.merchantRaw!.toLowerCase().contains(normalized)) return true;
+    if (item.categoryName != null && item.categoryName!.toLowerCase().contains(normalized)) return true;
+    if (item.amount.toStringAsFixed(2).contains(normalized)) return true;
+    if (item.amount.toStringAsFixed(0).contains(normalized)) return true;
+    if (item.accountHint != null && item.accountHint!.toLowerCase().contains(normalized)) return true;
+    if (item.channel.toLowerCase().contains(normalized)) return true;
+    if (item.note != null && item.note!.toLowerCase().contains(normalized)) return true;
+    if (item.reference != null && item.reference!.toLowerCase().contains(normalized)) return true;
+
+    final statusStr = item.status == 'needs_review' ? 'needs review' : item.status;
+    if (statusStr.toLowerCase().contains(normalized)) return true;
+
+    final sourceStr = item.parseSource == 'manual' ? 'manual' : 'sms';
+    if (sourceStr.toLowerCase().contains(normalized)) return true;
+
+    return false;
   }
 }
 
