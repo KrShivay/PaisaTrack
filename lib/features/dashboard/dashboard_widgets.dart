@@ -79,8 +79,7 @@ class BloomHeroRing extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final slices =
-        ref.watch(categoryBreakdownProvider).valueOrNull ?? const [];
+    final slices = ref.watch(categoryBreakdownProvider).valueOrNull ?? const [];
     final selectedMetric = ref.watch(selectedDashboardMetricProvider);
     final showPaise = ref.watch(showPaiseProvider);
 
@@ -674,48 +673,56 @@ class BloomBudgetCard extends ConsumerWidget {
 class _SetBudgetCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'Set monthly budget',
+      excludeSemantics: true,
+      onTapHint: 'Set budget',
       onTap: () => _showBudgetInput(context, ref),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomCard,
+      child: Material(
+        color: AppColorTokens.bloomCard,
+        borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+        child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 28,
-              color: AppColorTokens.violetPrimary,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Set monthly budget',
-                    style: AppTheme.bloomDisplay(14, FontWeight.w600),
+          onTap: () => _showBudgetInput(context, ref),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 28,
+                  color: AppColorTokens.violetPrimary,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Set monthly budget',
+                        style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Unlocks safe-today calculation and progress ring.',
+                        style: AppTheme.bloomDisplay(
+                          12,
+                          FontWeight.w400,
+                          color: AppColorTokens.inkTertiary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Unlocks safe-today calculation and progress ring.',
-                    style: AppTheme.bloomDisplay(
-                      12,
-                      FontWeight.w400,
-                      color: AppColorTokens.inkTertiary,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppColorTokens.inkTertiary,
+                ),
+              ],
             ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColorTokens.inkTertiary,
-            ),
-          ],
+          ),
         ),
       ),
     );
