@@ -1,0 +1,3 @@
+## 2024-09-25 - Avoid Upfront String Allocations in List Filters
+**Learning:** In Dart/Flutter list filters (e.g., searching transactions), building an array of strings for all searchable fields upfront before performing a search is highly inefficient. It allocates unnecessary objects and iterates through them, increasing CPU overhead and memory allocations.
+**Action:** Prioritize lazy/short-circuit evaluation (using `&&` or `||` and inline string methods like `.toLowerCase().contains()`) over upfront string allocations across multiple fields to reduce CPU overhead and unnecessary memory allocations.
