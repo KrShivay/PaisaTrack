@@ -4,6 +4,10 @@ Android-first, privacy-first personal finance tracking from transactional SMS.
 Parsing, categorization, analytics, and optional language-model inference run
 on-device. No cloud inference path exists.
 
+## Android release
+
+Download the [PaisaTrack 0.1.0 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (90.6 MB). This build is for 64-bit ARM Android devices.
+
 ## Current product
 
 - Live SMS capture, resumable page-batched history import, and bounded
