@@ -154,7 +154,9 @@ class _PayeeLabelsScreenState extends ConsumerState<PayeeLabelsScreen> {
       return const Center(child: Text('No matching payees found.'));
     }
     return ListView.separated(
-      padding: AppSpacing.screen,
+      padding: AppSpacing.screen.copyWith(
+        bottom: BloomBottomInset.contentPadding(context),
+      ),
       itemCount: _items.length + (_hasMore ? 1 : 0),
       separatorBuilder: (_, index) => index == _items.length - 1 && _hasMore
           ? const SizedBox(height: AppSpacing.sm)

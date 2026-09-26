@@ -84,3 +84,13 @@ no SMS, transaction, account, or other user data.
 ## Raw SMS Provenance & App Lock (T-147b)
 
 The raw SMS provenance section ("WHERE THIS CAME FROM") in transaction details displays the raw message body (the most sensitive string in the app). It is strictly excluded from home widgets (T-091) and covered by app lock (T-090).
+
+## Proposed assistance metadata (not implemented)
+
+[ADR 0011](decisions/0011-evidence-backed-assistance.md) proposes local field
+provenance, confirmed-label learning, review deferrals and minimal evaluation
+records. Before implementation, specify retention, encrypted backup/restore,
+delete-everything and model/cache invalidation for each added field or table.
+Do not extend raw-SMS retention for training or collect financial telemetry.
+Receipt/screenshot evidence is future opt-in discovery, not a new permission
+or background collection path. See the [plan](plans/smart-transaction-assistance.md).

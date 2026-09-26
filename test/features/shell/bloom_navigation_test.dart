@@ -20,6 +20,51 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Bloom Navigation Shell', () {
+    testWidgets(
+        'last dashboard item scrolls fully above the gesture inset and nav pill',
+        (tester) async {
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewPadding = const FakeViewPadding(bottom: 24);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetViewPadding();
+      });
+
+      final database = AppDatabase(NativeDatabase.memory());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWith((ref) async => database),
+            smsPermissionGateProvider.overrideWithValue(
+              FakeSmsPermissionGate(
+                initialStatus: SmsPermissionStatus.granted,
+              ),
+            ),
+            capturedSmsSourceProvider.overrideWithValue(
+              const FakeCapturedSmsSource(),
+            ),
+          ],
+          child: const PaisaTrackApp(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final finalDashboardItem = find.text('No transactions yet today');
+      await tester.ensureVisible(finalDashboardItem);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final navRect = tester.getRect(
+        find.byKey(const ValueKey('floating_navigation_pill')),
+      );
+      final itemRect = tester.getRect(finalDashboardItem);
+      expect(itemRect.bottom, lessThanOrEqualTo(navRect.top));
+
+      await database.close();
+    });
+
     testWidgets('renders four tabs: Home, Activity, Sort, Trends',
         (tester) async {
       final database = AppDatabase(NativeDatabase.memory());

@@ -195,3 +195,22 @@ source at `45a3546` plus the current worktree.
 - Android Gradle unit tests.
 
 These must be run on the development machine before the branch merges.
+
+## Documentation audit — 2026-09-26
+
+This planning review is source inspection, not a new device acceptance pass.
+[Smart assistance](plans/smart-transaction-assistance.md) (T-177) and
+[grounded AI](reports/grounded-ai-opportunities.md) (T-178) are proposed only.
+
+- Standard categorizer wiring omits the merchant-memory and LLM-suggestion
+  callbacks despite helper implementations. Treat T-140 historical completion
+  as component work, not proof of active production learning.
+- Assistant spending queries need parity with canonical settled-state and
+  spending-category eligibility before more analytical answers ship (T-178a).
+- Forecast capture gaps and partial-month comparisons need explicit handling;
+  derived claims must expose evidence and data sufficiency (T-178a/b).
+- Conflicting board/brief status (notably T-143) must be reconciled with tests;
+  this cleanup does not close uncertain implementation work.
+
+The feature matrix above retains historical acceptance context; use current
+source and the task board to verify individual implementation claims.

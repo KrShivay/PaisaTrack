@@ -148,32 +148,39 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         body: BloomUndoToastHost(
-          bottomOffset: 110,
+          bottomOffset: MediaQuery.paddingOf(context).bottom +
+              kBottomNavHeight +
+              kBottomNavBottomGap +
+              8,
           child: Stack(
             children: [
               // Swipeable PageView with independent tab navigators
-              PageView.builder(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                itemCount: _tabs.length,
-                itemBuilder: (context, index) {
-                  return Navigator(
-                    key: _navKeys[index],
-                    onGenerateRoute: (settings) {
-                      return MaterialPageRoute<void>(
-                        builder: (_) => _tabs[index].screen,
-                        settings: settings,
-                      );
-                    },
-                  );
-                },
+              MediaQuery(
+                data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  itemCount: _tabs.length,
+                  itemBuilder: (context, index) {
+                    return Navigator(
+                      key: _navKeys[index],
+                      onGenerateRoute: (settings) {
+                        return MaterialPageRoute<void>(
+                          builder: (_) => _tabs[index].screen,
+                          settings: settings,
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
 
               // Floating Nav Pill
               Positioned(
                 left: 20,
                 right: 20,
-                bottom: MediaQuery.paddingOf(context).bottom + 20,
+                bottom:
+                    MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
                 child: _FloatingNavPill(
                   currentIndex: _currentIndex,
                   tabs: _tabs,
@@ -227,7 +234,8 @@ class _FloatingNavPill extends StatelessWidget {
         : null;
 
     return Container(
-      height: 64,
+      key: const ValueKey('floating_navigation_pill'),
+      height: kBottomNavHeight,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: bgColor,

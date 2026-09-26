@@ -60,7 +60,12 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: settingsAsync.when(
         data: (settings) => ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            BloomBottomInset.contentPadding(context),
+          ),
           children: [
             // App Banner Card
             _AppBannerCard(isDark: isDark),
@@ -442,8 +447,7 @@ class SettingsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(controller.text.trim()),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: const Text('Block'),
           ),
         ],

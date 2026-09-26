@@ -64,3 +64,17 @@ traceable to a query-result field.
 Adding an intent requires a typed validator model, one deterministic query
 method, fixed renderer output, seeded exact-result tests, refusal tests, and a
 privacy review. Never expand the model into a free-form answer generator.
+
+## Known implementation gap and planned extension
+
+Source review on 2026-09-26 found that `AssistantQueryEngine._transactions`
+filters deleted, duplicate, analytics-excluded and owned-transfer rows but does
+not yet apply the canonical settled-state and spending-category predicates.
+The query rules above are the required contract, not proof of current parity.
+T-178a must add parity tests and reuse the shared eligibility contract before
+expanding spending claims. Income queries need their own explicit semantics.
+
+[T-178](tasks/T-178.md) plans typed evidence-linked insights, forecast ranges and
+English/Hinglish questions; estimates remain separate from facts. The model
+cannot generate SQL or bypass the fixed renderer. See the
+[AI report](reports/grounded-ai-opportunities.md).

@@ -28,23 +28,19 @@ state is not yet covered by Delete everything.
 
 ## Future development
 
-The selected roadmap focuses on:
+The next product priority is less manual transaction work: safe auto-fill,
+confirmed-history learning, scoped corrections and grouped review. Grounded
+insights and measured forecasts follow; optional statement/receipt evidence
+adds context without inventing financial facts.
 
-1. Physical-device acceptance for responsive startup and live/resume SMS capture.
-2. Statement import and reconciliation.
-3. Reimbursement and refund tracking.
-4. A recurring-payment calendar, including upcoming-payment SMS detection.
-5. Monthly category budgets.
-6. Release hardening: app lock, performance, accessibility, widget, and
-   distribution work.
-
-See [PLAN.md](PLAN.md) for feature contracts and [TASKS.md](TASKS.md) for the
-future-only backlog. Completed and review-only history is intentionally omitted;
-Git history is the archive.
+See [PLAN.md](PLAN.md), the [feature plan](docs/plans/smart-transaction-assistance.md),
+the [AI report](docs/reports/grounded-ai-opportunities.md), and [TASKS.md](TASKS.md).
+These are proposed changes, not a claim that the flow has shipped.
 
 ## Project documentation
 
-- [Architecture](docs/architecture.md)
+- [Architecture and planning map](ARCHICTURE.md)
+- [Technical architecture](docs/architecture.md)
 - [Product status](docs/product-status.md)
 - [Schema](docs/schema.md)
 - [Privacy](docs/privacy.md)

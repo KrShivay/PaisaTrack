@@ -18,6 +18,16 @@ The presentation layer is a four-tab Bloom shell (Home, Activity, Sort, Trends)
 with an Ask sheet and secondary task sheets/pages. `docs/product-status.md`
 records which Bloom paths are complete and which remain unsafe or partial.
 
+The shell reserves a shared bottom inset equal to the device's bottom system
+inset plus the floating navigation pill's height and gap. Its tab Navigators
+inherit that inset through `MediaQuery`, so scrollable content and `SafeArea`
+actions in primary tabs and pushed tab routes stay above the persistent pill.
+Scrollables with explicit padding use `BloomBottomInset.contentPadding`;
+Scaffold FABs use the shared nav-aware location because their default location
+ignores overridden padding. The undo toast uses the same shell geometry. The
+full-screen Ask sheet is outside the tab Navigator and handles only its system
+safe area.
+
 ## Capture
 
 - `SmsReceiver` handles live messages.
@@ -66,9 +76,18 @@ events, not relax the transaction parser's future-event rejection.
 then creates a merchant when no safe match exists. `Categorizer` applies:
 
 1. user rules;
-2. the local classifier when its category threshold is met;
-3. the seed keyword map;
-4. `Other` at review confidence.
+2. optional confirmed-history memory callback;
+3. the local classifier when its category threshold is met;
+4. the seed keyword map;
+5. a person/self counterparty default to Transfers;
+6. an optional capped LLM category suggestion;
+7. `Other` at review confidence.
+
+**Production wiring caveat (2026-09-26):** `categorizerProvider` supplies rules,
+seed map, classifier and adaptive thresholds, but not the memory or LLM
+callbacks. Those extension points are not evidence of active production
+learning. T-177 audits and connects the needed paths. Its plan also reviews the
+P2P default: a personal VPA does not prove that a payment is non-spending.
 
 `DecisionPolicy` chooses `auto`, `asked`, or `needs_review`. Unseen UPI
 counterparties fail closed; seen counterparties rejoin the confidence policy
@@ -114,9 +133,10 @@ Current boundaries that must be preserved while fixing the UI:
 - The global monthly-budget/merchant-cap implementation is a prototype stored
   in `baselines`, not the planned category-budget domain.
 
-Known scale limits are the 100-row Activity and Review windows, client-side
-payee aggregation, quadratic owned-transfer reconciliation, and the bounded
-legacy in-memory backup compatibility helpers. The production document path
+Known scale concerns include bounded feed/review queries (verify full-history
+search and queue paging separately), quadratic owned-transfer reconciliation,
+and bounded legacy in-memory backup compatibility helpers. Payee evidence
+aggregation already uses the SQL index described above. The production document path
 now streams authenticated rows; physical SAF/provider acceptance remains
 release evidence.
 
@@ -157,3 +177,13 @@ Model prose and model-authored numbers cannot reach the answer.
 - T-098: compute budgets from the shared net-spending contract.
 
 See `docs/schema.md`, `docs/privacy.md`, and ADRs before changing these boundaries.
+
+## Proposed assistance and AI work
+
+The [smart assistance plan](plans/smart-transaction-assistance.md) and
+[AI report](reports/grounded-ai-opportunities.md) extend existing components.
+They do not describe shipped behavior. [Proposed ADR 0011](decisions/0011-evidence-backed-assistance.md)
+separates source facts, user-confirmed labels, suggestions, and forecast estimates;
+requires scoped correction/undo; and limits model output to supported claims.
+Current SQL arithmetic, evidence preservation and offline fallback remain the
+boundaries. No new tables, model, runtime or dependency are introduced here.

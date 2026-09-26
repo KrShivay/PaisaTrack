@@ -3,14 +3,18 @@
 ## Sources of truth
 
 - `TASKS.md`: unfinished implementation work only.
-- `PLAN.md`: future feature contracts and delivery order.
+- `PLAN.md`: future feature contracts and delivery order; detailed proposals in
+  `docs/plans/`, with evaluation reports in `docs/reports/`.
+- `ARCHICTURE.md`: navigation only; `docs/architecture.md` remains canonical.
 - `WORKLOG.md`: rolling handoff containing at most the latest three entries.
 - `docs/architecture.md`, `docs/schema.md`, and `docs/privacy.md`: current
   technical constraints.
 - `docs/decisions/`: durable decisions that should survive task completion.
 - Git history: completed tasks, review evidence, and old plans.
 
-Do not recreate a Markdown task archive or append unbounded session history.
+Do not recreate a full Markdown task archive or append unbounded session history.
+Short archive references may name superseded task groups, replacement owners and
+a Git revision; retain unresolved work on the active board.
 
 ## Required task-board headings
 
@@ -65,3 +69,10 @@ section.
 
 Any material privacy, dependency, schema, or architecture decision requires a
 short ADR before implementation.
+
+## Documentation-only changes
+
+Check local Markdown links, task-board heading/ID invariants, proposal versus
+shipped-state wording, and `git diff --check`. Do not run application tests merely
+for prose edits or claim previous test results as fresh verification. If a commit
+also includes code changes, the implementation definition of done still applies.

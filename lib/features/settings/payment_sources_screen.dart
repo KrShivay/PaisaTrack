@@ -39,7 +39,9 @@ class PaymentSourcesScreen extends ConsumerWidget {
                 child: Text('No masked account or payment source found yet.'),
               )
             : ListView.separated(
-                padding: AppSpacing.screen,
+                padding: AppSpacing.screen.copyWith(
+                  bottom: BloomBottomInset.contentPadding(context),
+                ),
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {

@@ -33,7 +33,12 @@ class DashboardScreen extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            BloomBottomInset.contentPadding(context),
+          ),
           children: [
             // Header Row: Mascot (36px) + Greeting + Streak chip
             Row(
@@ -227,9 +232,6 @@ class DashboardScreen extends ConsumerWidget {
                 );
               },
             ),
-
-            // Bottom clearance for floating nav pill
-            const SizedBox(height: 110),
           ],
         ),
       ),

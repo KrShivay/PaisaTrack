@@ -8,7 +8,14 @@ later hardening.
 
 ## In Progress
 
-<!-- Empty -->
+- [ ] T-176 [P1] Apply global bottom-inset contract to all screens.
+      Module: all primary screens (Dashboard, Activity, Review, Insights,
+      Settings, Assistant, Review/Sort card view).
+      Gap: content at the bottom of each screen underlaps the bottom navigation
+      bar; FABs and action button rows are not consistently lifted above it.
+      Next: centralize shell inset geometry, apply it to explicit scroll padding
+      and fixed action rows, then verify gesture-navigation geometry across tabs
+      and nested routes.
 
 ## In Review
 
@@ -17,6 +24,13 @@ later hardening.
       Flutter analyzer reports no issues; `git diff --check` clean. The four
       handlers now call `TransactionCorrectionController.apply` and retain
       their existing optimistic UI, repository contexts, and undo callbacks.
+- [ ] PV-02 [P0] Truthful dashboard aggregates on loading/error and
+      completeness/exclusions. Depends: T-126.
+      Implemented: dashboard/insights derived providers use
+      `dashboardAggregateProvider` as `AsyncValue`, render loading/error states,
+      and report excluded spending totals/counts with a completeness note.
+      Verification: analyze clean, full suite green, and repository/provider/
+      widget coverage added.
 
 ## Ready
 
@@ -51,20 +65,6 @@ later hardening.
       and several errors rendered as empty states.
       Next: use semantic Material controls, ≥48dp targets, corrected tokens,
       1.5×/2× and multi-viewport widget tests, then TalkBack acceptance.
-- [ ] T-176 [P1] Apply global bottom-inset contract to all screens.
-      Module: all primary screens (Dashboard, Activity, Review, Insights,
-      Settings, Assistant, Review/Sort card view).
-      Gap: content at the bottom of each screen underlaps the bottom navigation
-      bar; FABs and action button rows are not consistently lifted above it.
-      Next: introduce a shared `kBottomNavHeight` constant (or read it from
-      `MediaQuery`); add `SliverPadding` / `EdgeInsets.only(bottom:)` equal to
-      bottom-nav height + system gesture inset to every scroll body; move each
-      FAB/action-button row up by the same amount so the last content item is
-      always reachable. All primary screens must be scrollable to their last item
-      without any content being occluded.
-      Acceptance: on a device with gesture navigation every screen scrolls its
-      last item fully into view; no FAB or action-button row overlaps the
-      navigation bar or system gesture area.
 - [ ] T-090 (@codex) [P4] App lock.
       Module: app lifecycle/security.
       Depends: T-122/T-124 recovery contracts.
@@ -132,9 +132,8 @@ Phase A blocks B; B blocks C and D.
 | **T-133a** | P1 | ~L | Shape scoring and quarantine store | T-129 |
 | **T-133b** | P1 | ~M | "Messages we couldn't read" + retry on upgrade | T-133a |
 
-Completed work is retained in Git history: T-131a–c, T-132a–c, T-134a–c,
-T-135a–c, T-136a–c, T-137a–b, T-138a–c, T-139a–b, T-140a–c, T-141a,
-T-142a, and T-144a–b.
+Completed briefs are mapped in `docs/archive/planning-cleanup-2026-09.md`;
+T-140's production integration gaps are handled by T-177a/b.
 
 #### UI gaps — `docs/ui-gaps-and-redesign.md`
 
@@ -151,67 +150,37 @@ T-154a.
 | **T-149b** | P3 | ~M | Habits and money shape | T-149a |
 | **T-149c** | P3 | ~S | Data footprint and privacy posture | T-149a |
 
-T-145a, T-145b, T-146a, T-146b, T-147a, T-147b, T-148a, T-148b, and T-152a are
-implemented on `main` (see WORKLOG.md) and removed from this board per the
-board rules below.
+Completed T-145a/b, T-146a/b, T-147a/b, T-148a/b, and T-152a are mapped in
+`docs/archive/planning-cleanup-2026-09.md`.
 
-#### Suggested order
-
-Ship next: T-153a. T-151b remains open pending a supported affordability
-intent and deterministic verdict contract.
-Then the foundations everything else waits on: T-131b/c, T-132a-c.
+Follow `PLAN.md` for delivery priority: T-176 and the T-157b/PV-02 reviews, then
+T-177a. Recheck T-153a integration only if its implementation is still needed;
+T-151b remains open pending a supported affordability intent and deterministic
+verdict contract.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`
 
-Scoped to duplicated category/icon/color resolution, sheet/dialog APIs,
-scattered threshold constants, the oversized `transaction_detail_screen.dart`,
-Riverpod boundary violations, and shallow render-only tests. Narrows T-130's
-"oversized repository/screens" gap for these specific files; does not replace
-T-130's data-layer/DTO scope. T-159a (regression tests) should land before
-T-157b starts — it is the safety net for the riskiest extraction here.
+Scoped to presentation helpers, the oversized `transaction_detail_screen.dart`,
+Riverpod boundaries, and shallow render-only tests. T-159a is complete; see the
+historical mapping in `docs/archive/planning-cleanup-2026-09.md`.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| ~~**T-156b**~~ | ~~P2~~ | ~~~M~~ | ~~Route 4 bespoke sheet presenters through Bloom helpers~~ | ~~—~~ |
 | **T-156c** | P2 | ~M | Standardize TransactionDetailScreen's presentation | T-158c |
-| ~~**T-157a**~~ | ~~P2~~ | ~~~M~~ | ~~Move raw Drift writes out of recurring/insights screens~~ | ~~—~~ |
-| **T-157b** | P2 | ~L | Shared category-correction + undo controller | T-159a |
-| ~~**T-157c**~~ | ~~P3~~ | ~~~S~~ | ~~Relocate `suggestedCategoriesProvider` out of the screen~~ | ~~—~~ |
-| ~~**T-158a**~~ | ~~P2~~ | ~~~M~~ | ~~Extract pure functions (chip ranking, exclusion, evidence)~~ | ~~—~~ |
 | **T-158b** | P2 | ~M | Extract `TransactionDetailController` | T-157b |
-| **T-158c** | P2 | ~M | Extract sub-widgets into `detail/` | T-158a |
-| ~~**T-158d**~~ | ~~P3~~ | ~~~S~~ | ~~Verify exclusion-reason parity (UI vs. analytics SQL)~~ | ~~T-158a~~ |
-| ~~**T-159a**~~ | ~~P1~~ | ~~~M~~ | ~~Characterize correction/undo behavior before extraction~~ | ~~—~~ |
-| ~~**T-159b**~~ | ~~P2~~ | ~~~S~~ | ~~Unit tests for extracted pure functions~~ | ~~T-158a~~ |
+| **T-158c** | P2 | ~M | Extract sub-widgets into `detail/` | T-158a (complete) |
 | **T-159c** | P3 | ~M | Convert remaining shallow render tests to behavioral | T-158c |
 
-Suggested order: T-159a first (safety net) — then T-155/T-156/T-157a/T-158a
-can proceed in any order (independent) — then T-157b — then T-158b/c — then
-T-156c and T-159b/c last.
+Completed T-156b, T-157a/c, T-158a/d, and T-159a/b are mapped in
+`docs/archive/planning-cleanup-2026-09.md`. T-157b remains only in In Review.
 
 ## Backlog
 
 <!-- Groom future work here before promoting it to Ready. -->
 
-### GPT-5.6 Sol high-thinking delivery queue
-
-Each item is intentionally small enough for one focused implementation pass.
-Before promoting an item to `Ready`, copy it to a task brief with file/symbol
-anchors, acceptance tests, privacy impact, and rollback path. Do not run more
-than one implementation item at once.
-
-#### Luna high-level recursive workstreams
-
-These are parent goals for a recursive Luna agent. They are not implementation
-tasks: select their ordered child tickets below, delegate independent audits and
-reviews, and close the parent only after every child has verification evidence.
-
-- [ ] LUNA-01 [P0] Restore trustworthy transaction visibility: deliver T-160a–d, T-164a–d, and T-164e so the entire non-deleted history is discoverable, consistently dated, correctly filtered, paged without gaps, and explainable when excluded.
-- [ ] LUNA-02 [P0] Make real SMS capture reliable and observable: deliver T-161a–e, T-162a–d, and T-163a–c with privacy-safe counters, supported-sender evidence, salary-credit coverage, permission recovery, and no raw-content leakage.
-- [ ] LUNA-03 [P0] Make navigation predictable and unobstructed: deliver T-167e–j across every root tab, detail route, and sheet, with a shared inset contract, deterministic back behavior, and device/viewport proof that every primary action remains tappable.
-- [ ] LUNA-04 [P1] Harden data correctness and scale: deliver T-165a–d, T-166a–b, and T-170a–d, preserving local-first semantics while proving large histories, income reporting, recovery, and deletion behavior.
-- [ ] LUNA-05 [P1] Complete accessible, maintainable UI: deliver T-167a–d, T-168a–d, and T-169a–b using characterization tests before refactors, shared presentation primitives, and visual/semantics regression coverage.
-- [ ] LUNA-06 [P1] Establish release confidence: deliver T-171a–b plus all unresolved P0/P1 verification evidence; produce a release-readiness report listing device tests, residual risks, privacy posture, and rollback steps.
+Before promoting an item to `Ready`, keep its brief actionable and include
+acceptance evidence, dependencies, privacy impact, and rollback path. Keep one
+implementation task in progress at a time.
 
 #### Capture correctness and observability
 
@@ -225,13 +194,10 @@ reviews, and close the parent only after every child has verification evidence.
 
 #### Product-value research and review
 
-See the completed review package in `docs/product-value-review-2026-08.md`,
-the task brief in `docs/tasks/T-172.md`, the recurring procedure in
-`docs/product-quality-review.md`, and the synthetic corpus in
-`test/fixtures/product_review/corpus.json`. LUNA-07 and T-172e are closed for
-this review by explicit product-owner waiver: participant and interactive
-accessibility evidence is not required and no further T-172e pickup is planned.
-Target-device screen-smoke remains documented as observation, not a human pass.
+Historical review: `docs/product-value-review-2026-08.md` and
+`docs/product-quality-review.md`; T-172e's evidence boundary and waiver are in
+`docs/tasks/T-172.md`. Target-device screen-smoke is an observation, not a
+human-validation pass.
 
 #### Product-value implementation briefs
 
@@ -240,21 +206,29 @@ promoting it to `Ready`. Full contracts, owners, rollback paths, and acceptance
 metrics are in `docs/tasks/T-172.md`.
 
 - [ ] PV-01 [P0] Complete full-history keyset search/filter and timestamp contract. Depends: T-160b–d, T-164a–b, T-164e.
-- [ ] PV-02 [P0] (In Review) Truthful dashboard aggregates on loading/error and
-      completeness/exclusions. Depends: T-126.
-      Implemented: the ~10 dashboard/insights derived providers project
-      `dashboardAggregateProvider` as `AsyncValue` and render distinct
-      loading/error states instead of summing the bounded 100-row feed;
-      `DashboardAggregateSnapshot` now reports `excludedDebitTotal`/`Count`
-      (self-transfer + analytics-excluded spending) and the dashboard shows a
-      completeness note ("₹X … not counted in spending"). Verification: analyze
-      clean; full suite green; new repo/provider/widget coverage.
 - [ ] PV-03 [P0] Add privacy-safe capture outcome ledger, reason buckets, and bounded retry. Depends: T-161a–e, T-162a–c.
 - [ ] PV-04 [P0] Unify lifecycle, duplicate, transfer, refund, and excluded-source explanations. Depends: T-164c–d, T-135.
 - [ ] PV-05 [P0] Share correction/undo and complete backup/reset/raw-SMS/native-artifact recovery proof. Depends: T-159a, T-157b, T-170a–b.
 - [ ] PV-06 [P1] Add salary income semantics and reversible source correction. Depends: T-162a, T-166a–b.
 - [ ] PV-07 [P1] Apply the accessible primary-flow contract and device matrix. Depends: T-167a–h.
 - [ ] PV-08 [P1] Add the data-footprint disclosure and release review package. Depends: T-169b, T-171a–b.
+
+#### Smart transaction assistance — `docs/plans/smart-transaction-assistance.md`
+
+- [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
+- [ ] T-177b [P1] Integrate confirmed payee memory with a P2P eligibility guard.
+- [ ] T-177c [P1] Complete correction scopes, rule conflicts, and undo.
+- [ ] T-177d [P1] Add paged grouped review and persistent deferral.
+- [ ] T-177e [P2] Reuse categories and support evidence-only optional descriptions.
+- [ ] T-177f [P1] Shadow-evaluate and stage opt-in assistance release.
+- [ ] T-177g [P3] Assess local receipt/screenshot matching.
+
+#### Grounded AI
+
+- [ ] T-178a [P1] Validate insight claims and comparison correctness against source data.
+- [ ] T-178b [P1] Validate forecast ranges, data coverage, and backtesting.
+- [ ] T-178c [P2] Add typed Hinglish assistant intents over validated results.
+- [ ] T-178d [P2] Add local evaluation, performance gates, and staged release.
 
 #### Transaction integrity, data model, and performance
 
@@ -283,7 +257,6 @@ metrics are in `docs/tasks/T-172.md`.
 - [ ] T-167i [P2] Standardize bottom-sheet action bars and scroll padding on the same inset contract, including long forms, validation errors, and hardware-keyboard layouts.
 - [ ] T-167j [P0] Define and implement one app-wide back-navigation contract: Android back button, predictive-back gesture, and in-app back controls dismiss transient UI first, then pop every previously visited route one by one; once on a root tab, return to Home; once on Home, show an accessible “Press back again to exit” snackbar and exit only on a second back action within a documented timeout. Preserve tab history deliberately, avoid accidental exit, and add widget/integration tests for sheets, nested details, all root tabs, Home fallback, timeout expiry, keyboard-open state, and gesture/button parity.
 - [ ] T-168a [P1] Extract `TransactionDetailScreen` pure presentation helpers and subwidgets behind characterization tests (T-159a prerequisite).
-- [ ] T-168b [P1] Consolidate repeated category correction + undo flows into one controller; prove behavior parity for detail and weekly review.
 - [ ] T-168c [P2] Route remaining bespoke sheets/dialogs through Bloom helpers and add API-level presentation tests.
 - [ ] T-168d [P2] Establish a visual-regression golden suite for Activity, SMS scan, salary income, errors, and dark/light themes.
 - [ ] T-169a [P1] Add a dedicated transaction-import progress model shared by onboarding, Settings, and Activity; remove duplicated display counters.

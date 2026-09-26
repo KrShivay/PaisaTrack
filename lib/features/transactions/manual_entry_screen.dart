@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
+import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -88,7 +89,9 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: AppSpacing.screen,
+          padding: AppSpacing.screen.copyWith(
+            bottom: BloomBottomInset.contentPadding(context),
+          ),
           children: [
             SegmentedButton<TransactionDirection>(
               segments: const [

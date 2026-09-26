@@ -1,5 +1,31 @@
 # Current Handoff
 
+## 2026-09-26 — Smart assistance planning and documentation cleanup
+
+- Added the smart transaction assistance plan, T-177a–g briefs, proposed ADR
+  0011, grounded-AI report and T-178a–d briefs. New feature work stays Backlog;
+  no smart-assistance/AI implementation was made.
+- Added ARCHICTURE.md as a navigation entry; retained docs/architecture.md as
+  canonical. Updated roadmap, assistant/privacy/status notes and task/archive
+  indexes; removed completed task prose and duplicate/model-specific queues.
+  Short historical pointers retain commit a429994f; uncertain T-133/T-143 work
+  remains open. T-140 integration gaps are explicitly owned by T-177.
+- Three Luna high agents wrote/reviewed the report, pruned task records and
+  independently reviewed plan and existing inset code. Fixed documentation
+  gaps around immutable evidence versus corrections, assistant eligibility
+  parity, and expected versus settled events.
+- User requested a commit of all workspace changes, including pre-existing
+  T-176 bottom-inset code. Only added code cleanup was removal of one unused
+  test import. T-176 remains In Progress pending real-device acceptance.
+- Verification: analyzer clean; focused inset/navigation tests 15/15 passed.
+  Full Flutter suite 761/761 passed; changed-document links, unique board IDs,
+  four board headings, three-entry handoff and whitespace checks passed.
+  GitNexus refreshed; all-scope diff: 154 symbols, 2 expected content-padding
+  processes, medium risk, no partial/truncated diff response. Index process
+  enumeration is bounded, so this is not proof of exhaustive path coverage.
+  Independent code review found no actionable inset regressions; real-device
+  navigation/keyboard verification remains open.
+
 ## 2026-09-04 — PV-02 completeness/exclusions + stale exclusion test fix
 
 - **PV-02 completeness (second half):** `DashboardAggregateSnapshot` now reports
@@ -41,18 +67,3 @@
   **pre-existing on `main`** (they assert the CC-bill exclusion behaviour that
   T-158d intentionally removed), unrelated to this change. `detect_changes`:
   50 symbols / 4 processes, all expected.
-
-## 2026-08-08 — T-157b shared correction/undo controller
-
-- Added `TransactionCorrectionController` to centralize database resolution,
-  repository mutation, and undo-token registration for transaction detail and
-  Sort. Optimistic queue/category presentation and existing repository contexts
-  remain in the screens through callbacks.
-- Repointed `_changeCategory`, `_selectCategoryDirectly`, `_confirmItem`, and
-  `_recategorizeItem`; cleaned six pre-existing analyzer infos in T-159b tests.
-- Focused Review/Detail correction suite: 20/20 passed. `flutter analyze
-  --no-pub`: no issues found.
-
-
-This is a rolling handoff, not a project history. Current product state is in
-`docs/product-status.md`; unfinished work is in `TASKS.md`.

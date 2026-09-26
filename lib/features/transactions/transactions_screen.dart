@@ -372,23 +372,43 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       ? Column(
                           children: [
                             Expanded(
-                              child: _EmptyState(
-                                isDark: isDark,
-                                query: _query,
-                                onClearFilters: () {
-                                  setState(() {
-                                    _query = '';
-                                    _searchController.clear();
-                                    _activeFilter = ActivityFilterChoice.all;
-                                  });
-                                },
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: BloomBottomInset.contentPadding(
+                                    context,
+                                  ),
+                                ),
+                                child: _EmptyState(
+                                  isDark: isDark,
+                                  query: _query,
+                                  onClearFilters: () {
+                                    setState(() {
+                                      _query = '';
+                                      _searchController.clear();
+                                      _activeFilter = ActivityFilterChoice.all;
+                                    });
+                                  },
+                                ),
                               ),
                             ),
-                            if (hasMore) _loadMoreButton(),
+                            if (hasMore)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: BloomBottomInset.contentPadding(
+                                    context,
+                                  ),
+                                ),
+                                child: _loadMoreButton(),
+                              ),
                           ],
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            0,
+                            20,
+                            BloomBottomInset.contentPadding(context),
+                          ),
                           itemCount: grouped.length + (hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index == grouped.length) {

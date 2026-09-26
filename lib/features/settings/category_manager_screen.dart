@@ -40,6 +40,8 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Categories')),
+      floatingActionButtonLocation:
+          BloomBottomInset.floatingActionButtonLocation,
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addCategory(context, ref),
         tooltip: 'Add category',
@@ -68,7 +70,7 @@ class _CategoryManagerScreenState extends ConsumerState<CategoryManagerScreen> {
               AppSpacing.screen.left,
               AppSpacing.screen.top,
               AppSpacing.screen.right,
-              AppSpacing.screen.bottom + 72,
+              BloomBottomInset.contentPadding(context),
             ),
             itemBuilder: (context, index) {
               if (index == 0) {

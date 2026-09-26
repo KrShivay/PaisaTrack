@@ -61,7 +61,12 @@ class InsightsScreen extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            BloomBottomInset.contentPadding(context),
+          ),
           children: [
             // Top Header: Title + Period Chip + Recurring button
             Row(
@@ -196,7 +201,8 @@ class InsightsScreen extends ConsumerWidget {
                   insight: insight,
                   isDark: isDark,
                   onDismiss: () async {
-                    final repo = await ref.read(insightsRepositoryProvider.future);
+                    final repo =
+                        await ref.read(insightsRepositoryProvider.future);
                     await repo.dismiss(id: insight.id);
                   },
                 ),
@@ -240,9 +246,6 @@ class InsightsScreen extends ConsumerWidget {
               loading: () => [_analyticsPlaceholder(isDark, isError: false)],
               error: (_, __) => [_analyticsPlaceholder(isDark, isError: true)],
             ),
-
-            // Bottom clearance for floating nav pill
-            const SizedBox(height: 110),
           ],
         ),
       ),
@@ -253,9 +256,8 @@ class InsightsScreen extends ConsumerWidget {
 /// Loading/error placeholder for the analytics sections. Keeps loading and
 /// failure visually distinct and never renders a fabricated number.
 Widget _analyticsPlaceholder(bool isDark, {required bool isError}) {
-  final border = isDark
-      ? AppColorTokens.bloomDarkOutline
-      : AppColorTokens.bloomHairline;
+  final border =
+      isDark ? AppColorTokens.bloomDarkOutline : AppColorTokens.bloomHairline;
   final textColor = isDark
       ? AppColorTokens.bloomDarkTextSecondary
       : AppColorTokens.inkSecondary;

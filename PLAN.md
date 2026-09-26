@@ -1,175 +1,82 @@
-# PaisaTrack — Future Development Plan
+# PaisaTrack — delivery plan
 
-This document contains only information needed for future development. Current
-implementation details belong in `docs/`; completed work remains available in
-Git history.
+Updated 2026-09-26. This is future direction, not a shipped-feature checklist.
+Current behavior: [architecture](docs/architecture.md) and
+[product status](docs/product-status.md). Executable queue: [TASKS.md](TASKS.md).
 
-## Product direction
+## Product priority
 
-PaisaTrack should turn noisy financial messages and imported statements into a
-trustworthy, user-correctable view of spending. It is not intended to become a
-bank, payment app, investment platform, or cloud financial-data service.
+Make captured transactions useful with less manual work: recognise the payee,
+reuse what the user already confirmed, fill supported details, and ask only
+about uncertainty. Then explain and forecast recorded spending with evidence.
 
-## Non-negotiable constraints
+## Delivery order
 
-- Local-first: financial data and inference stay on-device.
-- Preserve evidence: labels and reconciliation never overwrite original sender,
-  UPI ID, merchant text, reference, or imported statement fields.
-- User control: identity merges, historical relabeling, and reconciliation are
-  previewed and reversible where practical.
-- Fail closed: uncertain matches remain separate or enter review.
-- Spending semantics: transfers are excluded; linked refunds and reimbursements
-  reduce the appropriate expense without being silently deleted.
-- Schema changes are additive and migration-tested.
-- No paid or proprietary runtime dependency is required for core behavior.
+1. Finish the current T-176 navigation-inset task and outstanding T-157b/PV-02
+   reviews; retain capture, visibility and recovery release blockers on the board.
+2. T-177a: baseline and production-wiring audit. Resolve contradictory legacy
+   completion claims before adding duplicate implementations.
+3. T-177b–f: safe recognition/memory, scoped correction/undo, grouped review,
+   category reuse and a measured staged rollout. [Full feature plan](docs/plans/smart-transaction-assistance.md).
+4. T-178a: evidence-linked insights and fair period comparisons; T-178b–d:
+   validated forecast ranges, grounded English/Hinglish questions and evaluation.
+   [AI report](docs/reports/grounded-ai-opportunities.md).
+5. T-102: local statement reconciliation; T-177g: optional receipt evidence
+   feasibility. Neither is required for the initial learn-once flow.
+6. Finish remaining refund/expected-event product gaps (T-100/T-101), then
+   category budgets (T-098). Existing link/event code must be reused and audited,
+   not rebuilt from old design briefs.
 
-## Selected roadmap
+This order does not waive release blockers or claim dependencies have passed.
+New work stays Backlog until its child brief is groomed; one implementation task
+at a time. Briefs: [T-177](docs/tasks/T-177.md), [T-178](docs/tasks/T-178.md).
 
-### 1. Statement import and reconciliation — T-102
+## Remaining product contracts
 
-Import bank/card statements locally to recover missing transactions and verify
-SMS-derived rows.
+| Outcome | Required behavior |
+|---|---|
+| T-102 statements | Local CSV preview/account mapping; reference-first guarded matching; idempotency; ambiguity review; rollback; never overwrite user corrections |
+| T-100 refunds/reimbursements | Full/partial/many links; preserve source rows; explain net totals; verify existing link implementation before planning gaps |
+| T-101 expected payments | Expected events separate from settled payments; date/amount ranges; guarded settlement match; snooze/cancel/missed/price-change states |
+| T-098 category budgets | Dedicated category/month model; net-spending consistency; explained exclusions; no automatic rollover; current global prototype is not completion |
+| T-090/T-091/T-094 release | App lock before privacy-safe widget; recovery, performance, accessibility and distribution evidence |
 
-Requirements:
+## Non-negotiable boundaries
 
-- Start with CSV plus explicit per-bank column mappings; add formats only with
-  sanitized fixtures.
-- Preview parsed rows and selected account before writing.
-- Match by reference first, then guarded amount/date/direction rules.
-- Import is idempotent and never duplicates or overwrites edited transactions.
-- Unmatched rows may create statement-sourced transactions; ambiguous rows enter
-  review.
-- Produce a reconciliation summary: matched, imported, ambiguous, and rejected.
-- Raw statement files are not retained after import unless the user explicitly
-  exports them.
+- Financial data and inference stay on-device; no new cloud service or paid
+  runtime dependency. Model availability never blocks capture.
+- Source amount/date/reference/identity evidence stays separate from edits and
+  derived labels. No invented payments, items, purpose, balances or locations.
+- Confirmed rules outrank suggestions. Uncertainty can remain unresolved.
+- Historical changes, identity merges and reconciliation have previews and undo
+  where practical; bulk assistance requires full correction/rule/feedback undo.
+- One calendar and financial-eligibility contract across queries, forecasts,
+  insights and budgets. Pending events are not settled spending; transfers and
+  linked refunds follow the verified accounting contract, not merchant-name guesses.
+- Schema changes require an ADR, additive migration, backup/delete coverage and
+  migration tests. [ADR 0011](docs/decisions/0011-evidence-backed-assistance.md)
+  is proposed only; no schema/model/runtime change is approved by this document.
 
-### 2. Reimbursement and refund tracking — T-100
+## Defaults to preserve or validate
 
-Link refunds, reimbursements, charge reversals, and repayments to their original
-expense.
+- Keep the current model/runtime selection in ADR 0009; benchmark before change.
+- Raw-SMS retention follows the existing privacy policy; new inference is not a
+  reason to retain messages longer.
+- Non-INR amounts retain currency; no invented exchange rates.
+- Profile name remains optional. Category creation and descriptions are optional.
+- Daily Sort skip and persistent “don't remember” are distinct states; T-177d
+  must specify migration without treating either as confirmation.
+- Automated refund thresholds and category confidence require measured precision;
+  an old numeric default is not evidence of safe automation.
 
-Requirements:
+## Verification and history
 
-- Support full and partial links and many repayments against one expense.
-- Distinguish merchant refund, personal reimbursement, and correction/reversal.
-- Budget and spending totals use the net linked amount for the relevant period.
-- Keep both transactions visible with an explanation of the relationship.
-- Suggest high-confidence links; require confirmation for ambiguous matches.
+Implementation follows [COLLABORATION.md](COLLABORATION.md). Documentation-only
+work checks links, board invariants, internal consistency and whitespace; it
+must not report application tests as run unless actually executed.
 
-### 3. Recurring-payment calendar and upcoming messages — T-101
-
-Turn detected recurring series and bill-due/autopay messages into a calendar of
-expected payments.
-
-Requirements:
-
-- Combine historical recurrence detection with future-event SMS parsing.
-- A due/reminder message creates an expected event, never a settled transaction.
-- Match the later debit to the expected event and preserve both sources.
-- Show expected date/range, amount/range, cadence, confidence, and source.
-- Support reminders, snooze, cancellation, missed events, and price changes.
-- Deduplicate repeated reminders for the same obligation.
-
-### 4. Monthly category budgets — T-098
-
-Add a planning layer over trustworthy spending totals.
-
-The current global monthly-budget and merchant-cap prototype is not this
-feature. It stores overall values in `baselines`, has no per-category/month
-model, and must not be treated as completed T-098 work.
-
-Requirements:
-
-- Monthly limit per spending category, with optional notification threshold.
-- Show spent, refunded/reimbursed, remaining, percentage, and projected month end.
-- Transfers and excluded payment sources do not consume budgets.
-- Editing a budget never edits transactions.
-- Initial version uses calendar months and no automatic rollover.
-
-## Rework plans
-
-Two design documents now sit ahead of the roadmap above; both are decomposed
-into PR-sized task briefs under `docs/tasks/` with a one-line index in
-`TASKS.md`.
-
-- `docs/sms-intelligence-design.md` — capture, parsing, identity, lifecycle, and
-  the net-spending contract (T-131…T-144). Closes T-100 and T-101 on completion
-  and supplies the shared spending definition T-098 depends on.
-- `docs/ui-gaps-and-redesign.md` — conformance with the accepted Bloom handoff
-  plus reported UI defects (T-145…T-154).
-
-## Existing implementation backlog
-
-- T-090: app lock.
-- T-091: privacy-safe home widget.
-- T-092: cold-start and 10,000-message import performance budgets.
-- T-093: accessibility and onboarding acceptance.
-- T-094: distribution and portfolio release package.
-- T-096: typo-tolerant category-name resolution.
-- T-103/T-104: physical-device acceptance for responsive startup and automatic
-  live/resume SMS ingestion.
-- T-108..T-110: bank capture coverage, correction-rule matching semantics, and
-  backup completeness (see TASKS.md).
-
-## Recommended delivery order
-
-1. T-103/T-104 physical-device startup and SMS acceptance.
-2. T-108 bank capture coverage.
-3. T-102 statement import and reconciliation.
-4. T-100 reimbursement/refund links.
-5. T-101 recurring calendar and upcoming-message parsing.
-6. T-098 monthly category budgets.
-7. T-121..T-130 correctness, recovery, scale, accessibility, and release
-   blockers from the verified product audit.
-8. T-096 tolerant category resolution, then remaining T-090..T-094 hardening.
-
-Identity and source management come before budgets because incorrect payees,
-transfers, and account inclusion rules would make budget totals untrustworthy.
-
-## Open decisions
-
-High-priority product decisions that the rework depends on. **Each has a default
-already applied**, so none of them blocks implementation — the plan proceeds on
-the default and the decision only changes behaviour if made before the "decide
-by" task ships. Nothing here is a gate.
-
-| # | Decision | Default in effect | Decide by | Cost of changing later |
-|---|---|---|---|---|
-| 1 | Do pending card authorisations count in the headline monthly total? | **No** — excluded; shown only in an explicitly-labelled "including pending" view, never in budgets | T-132c | Low — a display predicate and a setting |
-| 2 | Is a credit-card bill payment shown as an excluded transfer, or hidden entirely? | **Shown, excluded, with an explanation** — counting both the bill and the card's purchases double-counts | T-135c | Low — copy and one predicate |
-| 3 | How long are quarantined (unreadable) messages kept? | **30 days**, matching `raw_sms` retention | T-133a | Medium — a template written on day 40 cannot retry a message purged on day 30. A content-free fingerprint kept longer would let the app say "we now support 14 messages we previously missed" |
-| 4 | How are non-INR transactions treated? | **Captured with their currency, never converted**, excluded from INR totals with a visible marker | T-135a | Low — conversion needs rates, which needs a network call, which ADR 0002 forbids. Manual per-transaction rate entry is the only offline-honest alternative |
-| 5 | Does skip in Sort persist across app restarts, or reset? | **Persists** through process death within the session; resets on a new day | T-153c | Low — provider storage choice |
-| 6 | Which on-device model backs span location and inference? | **Qwen3-0.6B mixed-INT4** (ADR 0009) | T-115 profiling | Medium — Gemma 3 270M is worth benchmarking against the 421–533 MB PSS problem; span location is a much easier task than structured extraction, so a smaller model may suffice |
-| 7 | What confidence auto-links a refund to its original expense? | **0.90**, with undo | T-135b | Low — a threshold in `feature_flags`, tunable from T-143 metrics without a rebuild |
-| 8 | Is the profile display name required? | **Optional** — blank falls back to a neutral greeting, never "Hey ," | T-149a | Low |
-
-Two of these are worth an early answer because the cost of reversing them grows:
-**#3** (retention shapes what can ever be recovered) and **#6** (model choice
-shapes the memory budget the whole app is measured against).
-
-Everything else can be decided when its task is claimed, or left on the default
-indefinitely.
-
-## Definition of done
-
-Every task requires:
-
-- pre-edit GitNexus impact analysis;
-- tests for behavior, migration, failure, and idempotency paths;
-- documentation updates for architecture, schema, privacy, and manual QA;
-- `flutter analyze`, relevant focused tests, full Flutter tests, Android tests
-  when native code changes, `git diff --check`, and `detect_changes()`;
-- physical-device evidence when behavior depends on SMS, storage pickers,
-  background work, local models, performance, or accessibility.
-
-## Legacy ADR reference map
-
-Older ADRs may cite sections from the original build plan. Use these current
-sources instead:
-
-- legacy §1 principles → this document's non-negotiable constraints;
-- legacy §2 stack → `pubspec.yaml`, Android build files, and model ADRs;
-- legacy §6.2 record/schema → `NormalizedTransactionRecord` and `docs/schema.md`;
-- legacy §7.3–§7.8 intelligence → `docs/architecture.md`;
-- legacy §8 privacy → `docs/privacy.md`.
+Older execution orders, completed-ticket details and model-specific umbrella
+queues are superseded. Use the [short archive reference](docs/archive/planning-cleanup-2026-09.md)
+and Git history; retain unfinished child tasks until verified closed.
+Legacy PLAN section references resolve to current architecture, schema, privacy
+and ADR documents; do not recreate a duplicate historical plan.
