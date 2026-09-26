@@ -33,6 +33,70 @@ void main() {
     expect(record?.evidence, hasLength(3));
   });
 
+  test('drops hallucinated merchant and account while retaining core fields', () async {
+    final locator = LlmFieldLocator(
+      _JsonRuntime({
+        'amount_text': '1250.00',
+        'direction_text': 'debited',
+        'merchant_text': 'ACME STORE',
+        'account_text': '9876',
+        'message_kind': 'transactional',
+      }),
+    );
+
+    final record = await locator.locate(sms);
+
+    expect(record, isNotNull);
+    expect(record?.amount, 1250.0);
+    expect(record?.direction, TransactionDirection.debit);
+    expect(record?.merchantRaw, isNull);
+    expect(record?.accountHint, isNull);
+  });
+
+  test('retains an account hint quoted verbatim in the SMS', () async {
+    final accountSms = RawSms(
+      id: 'unknown-account',
+      sender: 'XX-NEWBANK',
+      body: 'Rs 1250.00 debited from a/c XX1234 for order at ZOMATO',
+      receivedAt: sms.receivedAt,
+    );
+    final locator = LlmFieldLocator(
+      _JsonRuntime({
+        'amount_text': '1250.00',
+        'direction_text': 'debited',
+        'merchant_text': 'ZOMATO',
+        'account_text': '1234',
+        'message_kind': 'transactional',
+      }),
+    );
+
+    final record = await locator.locate(accountSms);
+
+    expect(record?.merchantRaw, 'ZOMATO');
+    expect(record?.accountHint, 'xx1234');
+  });
+
+  test('does not cite a hallucinated date quotation as timestamp evidence', () async {
+    final locator = LlmFieldLocator(
+      _JsonRuntime({
+        'amount_text': '1250.00',
+        'direction_text': 'debited',
+        'date_text': '26 Sep 2026',
+        'message_kind': 'transactional',
+      }),
+    );
+
+    final record = await locator.locate(sms);
+    final timestampEvidence = record?.evidence
+        ?.where((evidence) => evidence.field == 'ts')
+        .single;
+
+    expect(record, isNotNull);
+    expect(record?.ts, sms.receivedAt);
+    expect(timestampEvidence?.verbatim, sms.body);
+    expect(timestampEvidence?.verbatim, isNot(contains('26 Sep 2026')));
+  });
+
   test('refuses adversarial hallucinated amount not in body text', () async {
     final locator = LlmFieldLocator(
       _JsonRuntime({

@@ -1,10 +1,13 @@
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
+import 'package:paisatrack/capture/template_engine/template_registry.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
 import 'package:paisatrack/data/repositories/expected_event_repository.dart';
@@ -34,6 +37,8 @@ void main() {
       parser: parser,
       messageKindClassifier: classifier,
       expectedEventRepository: repository,
+      financialCalendar:
+          const FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
     );
   });
 
@@ -41,7 +46,9 @@ void main() {
     await database.close();
   });
 
-  test('Three reminders for the same bill produce exactly 1 expected event and 0 transactions', () async {
+  test(
+      'Three reminders for the same bill produce exactly 1 expected event and 0 transactions',
+      () async {
     final now = DateTime.utc(2026, 7, 10);
     final sms1 = RawSms(
       id: 'sms_rem_1',
@@ -52,13 +59,15 @@ void main() {
     final sms2 = RawSms(
       id: 'sms_rem_2',
       sender: 'HDFCBK',
-      body: 'Reminder 2: Your credit card bill of Rs 4500 is due on 15-Jul-2026.',
+      body:
+          'Reminder 2: Your credit card bill of Rs 4500 is due on 15-Jul-2026.',
       receivedAt: now,
     );
     final sms3 = RawSms(
       id: 'sms_rem_3',
       sender: 'HDFCBK',
-      body: 'Final Reminder: Your credit card bill of Rs 4500 is due on 15-Jul-2026.',
+      body:
+          'Final Reminder: Your credit card bill of Rs 4500 is due on 15-Jul-2026.',
       receivedAt: now,
     );
 
@@ -71,9 +80,149 @@ void main() {
     expect(events, hasLength(1));
     expect(events.first.expectedAmountPaise, 450000);
     expect(events.first.label, contains('HDFCBK'));
+    expect(
+      events.first.expectedDate.millisecondsSinceEpoch,
+      DateTime.utc(2026, 7, 15).millisecondsSinceEpoch,
+    );
 
     // AC: A reminder NEVER creates a transaction
     final txns = await database.select(database.transactions).get();
     expect(txns, isEmpty);
+  });
+
+  test('comma-formatted reminder amount is parsed as a whole amount', () async {
+    final sms = RawSms(
+      id: 'sms_rem_comma',
+      sender: 'HDFCBK',
+      body:
+          'Reminder: Your credit card bill of Rs 1,250 is due on 15-Jul-2026.',
+      receivedAt: DateTime.utc(2026, 7, 10),
+    );
+
+    await ingestor.ingest(sms);
+
+    final events = await repository.getExpectedEvents();
+    expect(events, hasLength(1));
+    expect(events.single.expectedAmountPaise, 125000);
+    expect(
+      events.single.expectedDate.millisecondsSinceEpoch,
+      DateTime.utc(2026, 7, 15).millisecondsSinceEpoch,
+    );
+  });
+
+  test('comma-formatted reminder range preserves both bounds', () async {
+    final sms = RawSms(
+      id: 'sms_rem_range',
+      sender: 'UTILITY',
+      body: 'Reminder: upcoming charge may be 1,234,567 to 2,500,000 INR.',
+      receivedAt: DateTime.utc(2026, 7, 10),
+    );
+
+    await ingestor.ingest(sms);
+
+    final events = await repository.getExpectedEvents();
+    expect(events, hasLength(1));
+    expect(events.single.amountLowPaise, 123456700);
+    expect(events.single.amountHighPaise, 250000000);
+    expect(
+      events.single.expectedDate.millisecondsSinceEpoch,
+      sms.receivedAt.millisecondsSinceEpoch,
+    );
+  });
+
+  test('received-at fallback uses the financial calendar day', () async {
+    await ingestor.ingest(
+      RawSms(
+        id: 'sms_rem_local_day',
+        sender: 'UTILITY',
+        body: 'Reminder: upcoming monthly bill Rs 4500.',
+        receivedAt: DateTime.utc(2026, 7, 9, 20),
+      ),
+    );
+
+    final events = await repository.getExpectedEvents();
+    expect(events, hasLength(1));
+    expect(events.single.expectedDate.toUtc(), DateTime.utc(2026, 7, 10));
+  });
+
+  test('rupee symbol and Indian grouping parse through the same normalizer',
+      () async {
+    final sms = RawSms(
+      id: 'sms_rem_inr_symbol',
+      sender: 'HDFCBK',
+      body: 'Reminder: payment of ₹ 12,34,567 is due on 15-Jul-2026.',
+      receivedAt: DateTime.utc(2026, 7, 10),
+    );
+
+    await ingestor.ingest(sms);
+
+    final events = await repository.getExpectedEvents();
+    expect(events, hasLength(1));
+    expect(events.single.expectedAmountPaise, 123456700);
+  });
+
+  test(
+      'ingesting a reminder reconciles it with an earlier exact-identity debit',
+      () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'prior_debit',
+            ts: expectedDate.millisecondsSinceEpoch,
+            amount: 4500,
+            direction: 'debit',
+            channel: 'upi',
+            counterpartyVpa: const Value('billpay@upi'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: expectedDate,
+            updatedAt: expectedDate,
+          ),
+        );
+    final reminderIngestor = SmsIngestor(
+      database: database,
+      parser: ParserCascade(
+        templateMatcher: TemplateMatcher(
+          registries: [
+            TemplateRegistry(
+              senderPatterns: [RegExp(r'^BILLER$')],
+              templates: [
+                SmsTemplate(
+                  id: 'reminder_with_vpa',
+                  regex: RegExp(
+                    r'Reminder: Rs (?<amount>\d+) due to (?<merchant>Electricity) (?<vpa>billpay@upi)',
+                  ),
+                  direction: 'debit',
+                  channel: 'upi',
+                  dateFormat: null,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      messageKindClassifier: MessageKindClassifier(
+        cues: {
+          MessageKind.reminder: [RegExp(r'reminder', caseSensitive: false)],
+        },
+      ),
+      now: () => expectedDate,
+    );
+
+    await reminderIngestor.ingest(
+      RawSms(
+        id: 'identity_reminder',
+        sender: 'BILLER',
+        body: 'Reminder: Rs 4500 due to Electricity billpay@upi',
+        receivedAt: expectedDate,
+      ),
+    );
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.state, 'fulfilled');
+    expect(event.counterpartyId, 'billpay@upi');
+    expect(event.fulfilledTxnId, 'prior_debit');
+    expect(await database.select(database.transactions).get(), hasLength(1));
   });
 }

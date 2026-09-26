@@ -150,6 +150,10 @@ Model prose and model-authored numbers cannot reach the answer.
   do not bypass `SmsIngestor` invariants when creating normalized rows.
 - T-100: represent transaction relationships; do not mutate/delete originals.
 - T-101: store expected events separately from transactions.
+- Expected events auto-fulfil only against one eligible settled debit with an
+  exact normalized VPA, matching amount/range, and an in-window timestamp.
+  Missing identity or ambiguous candidates stay expected for review; repeated
+  reminders cannot reopen terminal event states.
 - T-098: compute budgets from the shared net-spending contract.
 
 See `docs/schema.md`, `docs/privacy.md`, and ADRs before changing these boundaries.

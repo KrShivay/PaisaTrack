@@ -17,7 +17,8 @@ class ExpectedEventRepository {
     String? cadence,
     required int amountPaise,
   }) {
-    final cpty = counterpartyId ?? label.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+    final cpty =
+        counterpartyId ?? label.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
     final cad = cadence ?? 'monthly';
     // Group amount into ~100 INR buckets (10000 paise) to absorb minor fee variations
     final roughAmt = (amountPaise / 10000).round();
@@ -48,7 +49,9 @@ class ExpectedEventRepository {
 
     final id = 'ee_${dedupKey}_${expectedDate.millisecondsSinceEpoch}';
 
-    await _db.into(_db.expectedEvents).insertOnConflictUpdate(
+    // A repeated reminder may arrive after an event was fulfilled, missed, or
+    // cancelled. Updating the row would reset that lifecycle state to expected.
+    await _db.into(_db.expectedEvents).insert(
           ExpectedEventsCompanion.insert(
             id: id,
             source: source,
@@ -66,66 +69,169 @@ class ExpectedEventRepository {
             confidence: confidence,
             dedupKey: dedupKey,
           ),
+          mode: InsertMode.insertOrIgnore,
         );
   }
 
   /// Query all expected events.
-  Future<List<ExpectedEvent>> getExpectedEvents() => _db.select(_db.expectedEvents).get();
+  Future<List<ExpectedEvent>> getExpectedEvents() =>
+      _db.select(_db.expectedEvents).get();
 
   /// Reconciles expected events against actual debit transactions (T-138c).
-  /// Matches a later debit at >= 0.85 into 'fulfilled', preserving both rows.
-  /// Past the date window with no match -> 'missed'.
+  /// Exact-identity, amount, and date matches fulfil while preserving both rows.
+  /// Past the window with no candidates -> missed; ambiguity stays expected for
+  /// review because an eligible debit may represent the obligation.
   Future<void> reconcileExpectedEvents({required DateTime today}) async {
-    final pendingEvents = await (_db.select(_db.expectedEvents)
-          ..where((row) => row.state.equals('expected')))
-        .get();
+    await _db.transaction(() async {
+      final pendingEvents = await (_db.select(_db.expectedEvents)
+            ..where((row) => row.state.equals('expected'))
+            ..orderBy([
+              (row) => OrderingTerm.asc(row.expectedDate),
+              (row) => OrderingTerm.asc(row.id),
+            ]))
+          .get();
+      if (pendingEvents.isEmpty) return;
 
-    final allTxns = await (_db.select(_db.transactions)
-          ..where((row) => row.direction.equals('debit')))
-        .get();
+      final fulfilledEvents = await (_db.select(_db.expectedEvents)
+            ..where((row) => row.fulfilledTxnId.isNotNull()))
+          .get();
+      final alreadyLinkedTxnIds =
+          fulfilledEvents.map((event) => event.fulfilledTxnId!).toSet();
+      final todayStart = _utcDayStart(today);
 
-    for (final event in pendingEvents) {
-      final windowStart = event.expectedDate.subtract(Duration(days: event.dateWindowDays));
-      final windowEnd = event.expectedDate.add(Duration(days: event.dateWindowDays));
+      // Query each event's narrow indexed timestamp/amount window instead of
+      // loading the transaction history. Identity and ambiguity checks remain
+      // in Dart because VPAs are normalized case-insensitively here.
+      final candidatesByEvent = <String, List<Transaction>>{};
+      final eventIdsByTxn = <String, Set<String>>{};
+      final hasPotentialMatch = <String, bool>{};
+      for (final event in pendingEvents) {
+        final counterparty = _normalizedVpa(event.counterpartyId);
+        final bounds = _amountBounds(event);
+        if (counterparty.isEmpty || bounds == null) {
+          candidatesByEvent[event.id] = const [];
+          hasPotentialMatch[event.id] = false;
+          continue;
+        }
 
-      Transaction? match;
-      for (final txn in allTxns) {
-        final txnDate = DateTime.fromMillisecondsSinceEpoch(txn.ts);
-        if (txnDate.isBefore(windowStart) || txnDate.isAfter(windowEnd)) continue;
-
-        final txnPaise = (txn.amount * 100).round();
-        final amountMatches = (txnPaise - event.expectedAmountPaise).abs() < 2000 ||
-            (event.amountLowPaise != null &&
-                event.amountHighPaise != null &&
-                txnPaise >= event.amountLowPaise! &&
-                txnPaise <= event.amountHighPaise!);
-
-        if (amountMatches) {
-          match = txn;
-          break;
+        final dueDay = _utcDayStart(event.expectedDate);
+        final windowDays = event.dateWindowDays < 0 ? 0 : event.dateWindowDays;
+        final windowStart = dueDay.subtract(Duration(days: windowDays));
+        final windowEndExclusive = dueDay.add(Duration(days: windowDays + 1));
+        final candidates = await (_db.select(_db.transactions)
+              ..where(
+                (row) =>
+                    row.direction.equals('debit') &
+                    row.lifecycleState.equals('settled') &
+                    row.status.isIn(['auto', 'confirmed']) &
+                    row.isDeleted.equals(false) &
+                    row.duplicateOfTxnId.isNull() &
+                    row.ts.isBiggerOrEqual(
+                      Variable<int>(windowStart.millisecondsSinceEpoch),
+                    ) &
+                    row.ts.isSmallerThan(
+                      Variable<int>(windowEndExclusive.millisecondsSinceEpoch),
+                    ) &
+                    _amountClause(
+                      row.amount,
+                      bounds,
+                    ),
+              ))
+            .get();
+        final identityMatches = candidates
+            .where((txn) => _normalizedVpa(txn.counterpartyVpa) == counterparty)
+            .toList(growable: false);
+        candidatesByEvent[event.id] = identityMatches;
+        hasPotentialMatch[event.id] = identityMatches.isNotEmpty;
+        for (final txn in identityMatches) {
+          eventIdsByTxn.putIfAbsent(txn.id, () => <String>{}).add(event.id);
         }
       }
 
-      if (match != null) {
-        await (_db.update(_db.expectedEvents)..where((row) => row.id.equals(event.id))).write(
-          ExpectedEventsCompanion(
-            state: const Value('fulfilled'),
-            fulfilledTxnId: Value(match.id),
-          ),
-        );
-      } else if (today.isAfter(windowEnd)) {
-        await (_db.update(_db.expectedEvents)..where((row) => row.id.equals(event.id))).write(
-          const ExpectedEventsCompanion(state: Value('missed')),
-        );
+      for (final event in pendingEvents) {
+        final candidates = candidatesByEvent[event.id] ?? const [];
+        final unclaimed = candidates
+            .where((txn) => !alreadyLinkedTxnIds.contains(txn.id))
+            .toList(growable: false);
+        final match = unclaimed.length == 1 &&
+                eventIdsByTxn[unclaimed.single.id]?.length == 1
+            ? unclaimed.single
+            : null;
+
+        if (match != null) {
+          await (_db.update(_db.expectedEvents)
+                ..where(
+                  (row) =>
+                      row.id.equals(event.id) & row.state.equals('expected'),
+                ))
+              .write(
+            ExpectedEventsCompanion(
+              state: const Value('fulfilled'),
+              fulfilledTxnId: Value(match.id),
+            ),
+          );
+          alreadyLinkedTxnIds.add(match.id);
+        } else {
+          final dueDay = _utcDayStart(event.expectedDate);
+          final windowDays =
+              event.dateWindowDays < 0 ? 0 : event.dateWindowDays;
+          final lastWindowDay = dueDay.add(Duration(days: windowDays));
+          if (hasPotentialMatch[event.id] != true &&
+              todayStart.isAfter(lastWindowDay)) {
+            await (_db.update(_db.expectedEvents)
+                  ..where(
+                    (row) =>
+                        row.id.equals(event.id) & row.state.equals('expected'),
+                  ))
+                .write(const ExpectedEventsCompanion(state: Value('missed')));
+          }
+        }
       }
+    });
+  }
+
+  static String _normalizedVpa(String? value) =>
+      value?.trim().toLowerCase() ?? '';
+
+  static DateTime _utcDayStart(DateTime value) {
+    final utc = value.toUtc();
+    return DateTime.utc(utc.year, utc.month, utc.day);
+  }
+
+  static (int, int)? _amountBounds(ExpectedEvent event) {
+    final low = event.amountLowPaise;
+    final high = event.amountHighPaise;
+    if (low != null && high != null && low > 0 && high >= low) {
+      return (low, high);
     }
+    if (event.expectedAmountPaise <= 0) return null;
+    // Transaction.amount is still REAL; one paisa absorbs its conversion
+    // rounding while remaining far tighter than the old ₹20 tolerance.
+    return (event.expectedAmountPaise - 1, event.expectedAmountPaise + 1);
+  }
+
+  static Expression<bool> _amountClause(
+    Expression<double> amount,
+    (int, int) bounds,
+  ) {
+    final lowRupees = bounds.$1 / 100;
+    final highRupees = bounds.$2 / 100;
+    return (amount.isBiggerOrEqual(
+          Variable<double>(lowRupees),
+        ) &
+        amount.isSmallerOrEqual(
+          Variable<double>(highRupees),
+        ));
   }
 
   /// Snoozes an expected event for [days].
   Future<void> snoozeEvent(String id, {int days = 1}) async {
-    final event = await (_db.select(_db.expectedEvents)..where((row) => row.id.equals(id))).getSingleOrNull();
+    final event = await (_db.select(_db.expectedEvents)
+          ..where((row) => row.id.equals(id)))
+        .getSingleOrNull();
     if (event == null) return;
-    await (_db.update(_db.expectedEvents)..where((row) => row.id.equals(id))).write(
+    await (_db.update(_db.expectedEvents)..where((row) => row.id.equals(id)))
+        .write(
       ExpectedEventsCompanion(
         state: const Value('snoozed'),
         expectedDate: Value(event.expectedDate.add(Duration(days: days))),
@@ -135,7 +241,8 @@ class ExpectedEventRepository {
 
   /// Cancels an expected event.
   Future<void> cancelEvent(String id) async {
-    await (_db.update(_db.expectedEvents)..where((row) => row.id.equals(id))).write(
+    await (_db.update(_db.expectedEvents)..where((row) => row.id.equals(id)))
+        .write(
       const ExpectedEventsCompanion(state: Value('cancelled')),
     );
   }

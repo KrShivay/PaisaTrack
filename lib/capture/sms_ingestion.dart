@@ -30,6 +30,7 @@ import 'parser_version.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
 import 'span_verifier.dart';
+import 'template_engine/field_normalizer.dart';
 import 'template_engine/template_matcher.dart';
 import 'template_engine/template_registry.dart';
 import 'template_engine/template_trust_ledger.dart';
@@ -115,6 +116,7 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
       // Keep capture alive even if one native payload is malformed.
     },
   );
+  unawaited(_reconcileExpectedEventsSafely(ingestor));
   ref.onDispose(subscription.cancel);
 });
 
@@ -126,6 +128,14 @@ Future<void> _ingestSafely(SmsIngestor ingestor, RawSms sms) async {
     await ingestor.ingest(sms);
   } catch (_) {
     // Intentionally swallowed: no raw SMS content is logged on this path.
+  }
+}
+
+Future<void> _reconcileExpectedEventsSafely(SmsIngestor ingestor) async {
+  try {
+    await ingestor.reconcileExpectedEvents();
+  } catch (_) {
+    // Keep capture alive; a later ingest or app start retries reconciliation.
   }
 }
 
@@ -206,6 +216,16 @@ class SmsIngestor {
 
   int get parserVersion => _parserVersion;
 
+  /// Reconciles stored expectations on startup and after each persisted SMS.
+  Future<void> reconcileExpectedEvents() {
+    final localToday = (_financialCalendar ?? FinancialCalendar()).localDate(
+      _now(),
+    );
+    return _expectedEventRepository.reconcileExpectedEvents(
+      today: DateTime.utc(localToday.year, localToday.month, localToday.day),
+    );
+  }
+
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
   Future<void> ingest(RawSms sms) async {
     if (_isCapturePaused?.call() == true) return;
@@ -262,22 +282,22 @@ class SmsIngestor {
             label = parseResult.value.merchantRaw ?? sms.sender;
             counterpartyId = parseResult.value.counterpartyVpa;
           } else {
+            const amountNumber =
+                r'(?:\d{1,2}(?:,\d{2})*,\d{3}|\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?';
             final amtMatch = RegExp(
-              r'(?:Rs\.?|INR)\s*(\d+(?:\.\d{1,2})?)',
+              '(?:Rs\\.?|INR|₹)\\s*($amountNumber)(?![\\d,.])',
               caseSensitive: false,
             ).firstMatch(sms.body);
             if (amtMatch != null) {
-              final amt = double.tryParse(amtMatch.group(1)!) ?? 0.0;
-              amountPaise = (amt * 100).round();
+              amountPaise = _fallbackAmountPaise(amtMatch.group(1)!) ?? 0;
             }
-            final rangeMatch =
-                RegExp(r'(\d+)\s*to\s*(\d+)', caseSensitive: false)
-                    .firstMatch(sms.body);
+            final rangeMatch = RegExp(
+              '(?:^|[^\\d,.])($amountNumber)\\s*to\\s*($amountNumber)(?![\\d,.])',
+              caseSensitive: false,
+            ).firstMatch(sms.body);
             if (rangeMatch != null) {
-              amountLowPaise =
-                  (double.parse(rangeMatch.group(1)!) * 100).round();
-              amountHighPaise =
-                  (double.parse(rangeMatch.group(2)!) * 100).round();
+              amountLowPaise = _fallbackAmountPaise(rangeMatch.group(1)!);
+              amountHighPaise = _fallbackAmountPaise(rangeMatch.group(2)!);
             }
           }
 
@@ -289,7 +309,7 @@ class SmsIngestor {
             expectedAmountPaise: amountPaise,
             amountLowPaise: amountLowPaise,
             amountHighPaise: amountHighPaise,
-            expectedDate: sms.receivedAt,
+            expectedDate: _reminderExpectedDate(sms.body, sms.receivedAt),
             confidence: 0.95,
           );
 
@@ -298,6 +318,7 @@ class SmsIngestor {
             processed: true,
             failureReason: null,
           );
+          await reconcileExpectedEvents();
           return;
         }
 
@@ -346,8 +367,8 @@ class SmsIngestor {
                     messageKind: kind,
                     lifecycleState: lifecycleState,
                     lifecycleReason: lifecycleReason,
-                ),
-              );
+                  ),
+                );
             await PayeeEvidenceRepository(_database).replaceForTransaction(
               transactionId: transactionId,
               merchantRaw: value.merchantRaw,
@@ -383,6 +404,7 @@ class SmsIngestor {
               failureReason: SmsFailureReason.unparsed,
             );
         }
+        await reconcileExpectedEvents();
       });
     } catch (_) {
       await _recordProcessingFailure(sms, flagsState);
@@ -714,6 +736,63 @@ class SmsIngestor {
         failureReason: Value(failureReason),
       ),
     );
+  }
+
+  int? _fallbackAmountPaise(String amountText) {
+    final double? amount;
+    try {
+      amount = const FieldNormalizer().parseOptionalAmount(amountText);
+    } on FormatException {
+      return null;
+    }
+    if (amount == null || !amount.isFinite || amount <= 0) return null;
+
+    // Expected amounts are stored as integer paise; keep conversion within the
+    // safe integer range of the double-based normalizer.
+    const maxSafePaise = 9007199254740991;
+    final paiseValue = amount * 100;
+    if (!paiseValue.isFinite || paiseValue > maxSafePaise) return null;
+    final paise = paiseValue.round();
+    return paise > 0 ? paise : null;
+  }
+
+  DateTime _reminderExpectedDate(String body, DateTime fallback) {
+    DateTime fallbackDate() {
+      final localDate =
+          (_financialCalendar ?? FinancialCalendar()).localDate(fallback);
+      return DateTime.utc(localDate.year, localDate.month, localDate.day);
+    }
+
+    final match = RegExp(
+      r'\bdue\s+on\s+(\d{1,2})-([A-Za-z]{3})-(\d{4})\b',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (match == null) return fallbackDate();
+
+    const months = <String, int>{
+      'jan': 1,
+      'feb': 2,
+      'mar': 3,
+      'apr': 4,
+      'may': 5,
+      'jun': 6,
+      'jul': 7,
+      'aug': 8,
+      'sep': 9,
+      'oct': 10,
+      'nov': 11,
+      'dec': 12,
+    };
+    final day = int.parse(match.group(1)!);
+    final month = months[match.group(2)!.toLowerCase()];
+    final year = int.parse(match.group(3)!);
+    if (month == null) return fallbackDate();
+
+    final parsed = DateTime.utc(year, month, day);
+    if (parsed.year != year || parsed.month != month || parsed.day != day) {
+      return fallbackDate();
+    }
+    return parsed;
   }
 
   Future<void> _recordProcessingFailure(

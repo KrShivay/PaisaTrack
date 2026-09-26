@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -16,10 +17,13 @@ void main() {
     await database.close();
   });
 
-  test('Sequence fixture: reminder -> debit -> fulfilled; both rows remain visible', () async {
+  test(
+      'Sequence fixture: reminder -> debit -> fulfilled; both rows remain visible',
+      () async {
     final expectedDate = DateTime.utc(2026, 7, 10);
     await repository.recordExpectedEvent(
       source: 'sms_reminder',
+      counterpartyId: 'billpay@upi',
       label: 'Electricity Bill',
       expectedAmountPaise: 450000,
       expectedDate: expectedDate,
@@ -34,6 +38,7 @@ void main() {
             amount: 4500.0,
             direction: 'debit',
             channel: 'upi',
+            counterpartyVpa: const Value(' BillPay@UPI '),
             parseSource: 'template',
             confidenceJson: '{}',
             status: 'confirmed',
@@ -54,7 +59,211 @@ void main() {
     expect(txns, hasLength(1));
   });
 
-  test('Reminder with no debit past window -> missed; both rows remain visible', () async {
+  test('same date and amount from a different VPA does not fulfil', () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      counterpartyId: 'electricity@upi',
+      label: 'Electricity Bill',
+      expectedAmountPaise: 450000,
+      expectedDate: expectedDate,
+      confidence: 0.95,
+    );
+    await _insertDebit(
+      database,
+      id: 'unrelated_debit',
+      ts: expectedDate,
+      amount: 4500,
+      counterpartyVpa: 'groceries@upi',
+    );
+
+    await repository.reconcileExpectedEvents(today: expectedDate);
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.state, 'expected');
+    expect(event.fulfilledTxnId, isNull);
+  });
+
+  test('ambiguous overlapping expectations do not share one debit', () async {
+    final firstDate = DateTime.utc(2026, 7, 10);
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      counterpartyId: 'billpay@upi',
+      label: 'Bill A',
+      expectedAmountPaise: 450000,
+      expectedDate: firstDate,
+      confidence: 0.95,
+    );
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      counterpartyId: 'billpay@upi',
+      label: 'Bill B',
+      expectedAmountPaise: 450000,
+      expectedDate: firstDate.add(const Duration(days: 1)),
+      confidence: 0.95,
+    );
+    await _insertDebit(
+      database,
+      id: 'ambiguous_debit',
+      ts: firstDate,
+      amount: 4500,
+      counterpartyVpa: 'billpay@upi',
+    );
+
+    await repository.reconcileExpectedEvents(today: firstDate);
+
+    final events = await repository.getExpectedEvents();
+    expect(events, hasLength(2));
+    expect(events.map((event) => event.state), everyElement('expected'));
+    expect(events.map((event) => event.fulfilledTxnId), everyElement(isNull));
+  });
+
+  test('multiple same-identity debits remain ambiguous for one event',
+      () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      counterpartyId: 'billpay@upi',
+      label: 'Electricity Bill',
+      expectedAmountPaise: 450000,
+      expectedDate: expectedDate,
+      confidence: 0.95,
+    );
+    await _insertDebit(
+      database,
+      id: 'candidate_one',
+      ts: expectedDate,
+      amount: 4500,
+      counterpartyVpa: 'billpay@upi',
+    );
+    await _insertDebit(
+      database,
+      id: 'candidate_two',
+      ts: expectedDate.add(const Duration(hours: 1)),
+      amount: 4500,
+      counterpartyVpa: 'billpay@upi',
+    );
+
+    await repository.reconcileExpectedEvents(today: expectedDate);
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.state, 'expected');
+    expect(event.fulfilledTxnId, isNull);
+  });
+
+  test('unidentified event and ineligible debits stay unfulfilled', () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    for (final (id, counterparty) in [
+      ('no_identity', null),
+      ('deleted', 'deleted@upi'),
+      ('duplicate', 'duplicate@upi'),
+      ('not_settled', 'pending@upi'),
+    ]) {
+      final dayOffset = [
+        'no_identity',
+        'deleted',
+        'duplicate',
+        'not_settled',
+      ].indexOf(id);
+      await repository.recordExpectedEvent(
+        source: 'sms_reminder',
+        counterpartyId: counterparty,
+        label: id,
+        expectedAmountPaise: 450000,
+        expectedDate: expectedDate.add(Duration(days: dayOffset)),
+        confidence: 0.95,
+      );
+    }
+    await _insertDebit(
+      database,
+      id: 'unidentified_debit',
+      ts: expectedDate,
+      amount: 4500,
+      counterpartyVpa: null,
+    );
+    await _insertDebit(
+      database,
+      id: 'deleted_debit',
+      ts: expectedDate.add(const Duration(days: 1)),
+      amount: 4500,
+      counterpartyVpa: 'deleted@upi',
+      isDeleted: true,
+    );
+    await _insertDebit(
+      database,
+      id: 'duplicate_source',
+      ts: expectedDate.add(const Duration(days: 2)),
+      amount: 4500,
+      counterpartyVpa: 'duplicate@upi',
+      status: 'needs_review',
+    );
+    await _insertDebit(
+      database,
+      id: 'duplicate_debit',
+      ts: expectedDate.add(const Duration(days: 2)),
+      amount: 4500,
+      counterpartyVpa: 'duplicate@upi',
+      duplicateOfTxnId: 'duplicate_source',
+    );
+    await _insertDebit(
+      database,
+      id: 'pending_debit',
+      ts: expectedDate.add(const Duration(days: 3)),
+      amount: 4500,
+      counterpartyVpa: 'pending@upi',
+      lifecycleState: 'pending',
+    );
+
+    await repository.reconcileExpectedEvents(
+      today: expectedDate.add(const Duration(days: 3)),
+    );
+
+    final events = await repository.getExpectedEvents();
+    expect(events.map((event) => event.state), everyElement('expected'));
+  });
+
+  test('repeated reminder cannot reset a fulfilled event', () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    final event = {
+      'source': 'sms_reminder',
+      'counterpartyId': 'billpay@upi',
+      'label': 'Electricity Bill',
+      'expectedAmountPaise': 450000,
+      'expectedDate': expectedDate,
+      'confidence': 0.95,
+    };
+    await repository.recordExpectedEvent(
+      source: event['source']! as String,
+      counterpartyId: event['counterpartyId']! as String,
+      label: event['label']! as String,
+      expectedAmountPaise: event['expectedAmountPaise']! as int,
+      expectedDate: event['expectedDate']! as DateTime,
+      confidence: event['confidence']! as double,
+    );
+    await _insertDebit(
+      database,
+      id: 'fulfilled_debit',
+      ts: expectedDate,
+      amount: 4500,
+      counterpartyVpa: 'billpay@upi',
+    );
+    await repository.reconcileExpectedEvents(today: expectedDate);
+    await repository.recordExpectedEvent(
+      source: event['source']! as String,
+      counterpartyId: event['counterpartyId']! as String,
+      label: event['label']! as String,
+      expectedAmountPaise: event['expectedAmountPaise']! as int,
+      expectedDate: event['expectedDate']! as DateTime,
+      confidence: event['confidence']! as double,
+    );
+
+    final updated = (await repository.getExpectedEvents()).single;
+    expect(updated.state, 'fulfilled');
+    expect(updated.fulfilledTxnId, 'fulfilled_debit');
+  });
+
+  test('Reminder with no debit past window -> missed; both rows remain visible',
+      () async {
     final expectedDate = DateTime.utc(2026, 7, 10);
     await repository.recordExpectedEvent(
       source: 'sms_reminder',
@@ -96,4 +305,35 @@ void main() {
     updated = await repository.getExpectedEvents();
     expect(updated.first.state, 'cancelled');
   });
+}
+
+Future<void> _insertDebit(
+  AppDatabase database, {
+  required String id,
+  required DateTime ts,
+  required double amount,
+  required String? counterpartyVpa,
+  String status = 'confirmed',
+  String lifecycleState = 'settled',
+  bool isDeleted = false,
+  String? duplicateOfTxnId,
+}) async {
+  await database.into(database.transactions).insert(
+        TransactionsCompanion.insert(
+          id: id,
+          ts: ts.millisecondsSinceEpoch,
+          amount: amount,
+          direction: 'debit',
+          channel: 'upi',
+          counterpartyVpa: Value(counterpartyVpa),
+          duplicateOfTxnId: Value(duplicateOfTxnId),
+          parseSource: 'template',
+          confidenceJson: '{}',
+          status: status,
+          isDeleted: Value(isDeleted),
+          lifecycleState: Value(lifecycleState),
+          createdAt: ts,
+          updatedAt: ts,
+        ),
+      );
 }

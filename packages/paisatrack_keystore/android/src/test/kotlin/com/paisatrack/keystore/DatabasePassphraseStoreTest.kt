@@ -19,7 +19,8 @@ class DatabasePassphraseStoreTest {
         assertTrue(storage.lastWritten?.ciphertext?.startsWith("encrypted:") == true)
         assertNotEquals(first, storage.lastWritten?.ciphertext)
         assertEquals(1, cipher.encryptCalls)
-        assertEquals(1, cipher.decryptCalls)
+        // getOrCreate decrypts once to verify the new write and again on reuse.
+        assertEquals(2, cipher.decryptCalls)
     }
 
     @Test

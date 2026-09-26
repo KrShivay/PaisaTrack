@@ -329,6 +329,67 @@ void main() {
     expect(restored.map((row) => row.id), ['sms_active']);
   });
 
+  test('restore detaches transactions from expired raw SMS in both formats',
+      () async {
+    for (final format in ['legacy', 'chunked']) {
+      final smsId = 'sms_expired_$format';
+      final transactionId = 'txn_expired_$format';
+      await database.into(database.rawSms).insert(
+            RawSmsCompanion.insert(
+              id: smsId,
+              sender: 'VK-HDFCBK',
+              body: 'Expired synthetic SMS',
+              receivedAt: DateTime.utc(2026, 7, 1),
+              purgeAfter: DateTime.utc(2026, 8, 2),
+            ),
+          );
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: transactionId,
+              ts: DateTime.utc(2026, 7, 1).millisecondsSinceEpoch,
+              amount: 20,
+              direction: 'debit',
+              channel: 'upi',
+              parseSource: 'template',
+              smsId: Value(smsId),
+              confidenceJson: '{}',
+              status: 'auto',
+              createdAt: DateTime.utc(2026, 7, 1),
+              updatedAt: DateTime.utc(2026, 7, 1),
+            ),
+          );
+
+      final passphrase = 'expired-sms-$format-passphrase';
+      final backup = format == 'legacy'
+          ? await service().exportBytes(passphrase: passphrase)
+          : await service().exportToFile(
+              directory: directory,
+              passphrase: passphrase,
+            );
+      await database.delete(database.transactions).go();
+      await database.delete(database.rawSms).go();
+
+      if (format == 'legacy') {
+        await service().importBytes(
+          bytes: backup as Uint8List,
+          passphrase: passphrase,
+        );
+      } else {
+        await service().importFromFile(
+          file: backup as File,
+          passphrase: passphrase,
+        );
+      }
+
+      final restored = await (database.select(database.transactions)
+            ..where((row) => row.id.equals(transactionId)))
+          .getSingle();
+      expect(restored.id, transactionId);
+      expect(restored.smsId, isNull);
+      expect(await database.select(database.rawSms).get(), isEmpty);
+    }
+  });
+
   test('backup restore rejects non-allowlisted raw SMS failure reasons',
       () async {
     await database.into(database.rawSms).insert(

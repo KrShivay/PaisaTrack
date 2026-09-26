@@ -8,21 +8,47 @@ PaisaTrack enforces release signing security for production builds.
 
 1. Generate an Android release keystore:
    ```bash
-   keytool -genkey -v -keystore android/paisatrack-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias paisatrack_release
+   keytool -genkeypair -v -storetype PKCS12 -keystore android/paisatrack-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias paisatrack_release
    ```
 
-2. Create a `keystore.properties` file in the project root or `android/` directory:
+2. Create `android/keystore.properties` (the Android Gradle build reads this
+   exact path):
    ```properties
-   storeFile=../android/paisatrack-release.jks
+   storeFile=../paisatrack-release.jks
    storePassword=YOUR_STORE_PASSWORD
    keyAlias=paisatrack_release
    keyPassword=YOUR_KEY_PASSWORD
    ```
+   `storeFile` is relative to `android/app/`. Restrict the properties file to
+   your user account (`chmod 600 android/keystore.properties`).
 
 3. Build release bundle or APK:
    ```bash
-   flutter build appbundle --release
+   ./.tooling/flutter/bin/flutter build appbundle --release
    ```
+
+## Published APK
+
+The current `0.1.0+2` release is an ARM64 APK for 64-bit ARM Android devices.
+Resolve dependencies, then build from the repository root with:
+
+```bash
+./.tooling/flutter/bin/flutter pub get
+./.tooling/flutter/bin/flutter build apk --release --no-pub --split-per-abi --target-platform android-arm64
+```
+
+The command produces `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
+After verifying the signing certificate and installing it on ARM64 Android,
+copy that file to `app-release-arm64.apk` on the `apk-downloads` GitHub branch.
+The README links directly to that file. The current APK is 56.49 MB; GitHub
+warns above 50 MB and rejects individual files of 100 MB or more, so use a
+GitHub Release asset if a future APK exceeds that limit.
+
+The current local signing files are `android/paisatrack-release.jks` and
+`android/keystore.properties`. Both are git-ignored. Back up both files in a
+secure location and preserve them for every future update: Android will reject
+an update signed with a different key. Never copy either file into the APK
+download branch or commit them to the source repository.
 
 ### Option B: CI/CD Build via Environment Variables
 

@@ -1095,6 +1095,7 @@ class EncryptedBackupService {
   }) async {
     final tables = archive['tables']! as Map<String, Object?>;
     final database = _database;
+    final retainedRawSmsIds = <String>{};
 
     await database.transaction(() async {
       await database.delete(database.recurringSeries).go();
@@ -1132,6 +1133,7 @@ class EncryptedBackupService {
           continue;
         }
         await database.into(database.rawSms).insert(rawSms);
+        retainedRawSmsIds.add(rawSms.id);
       }
       for (final row in _tableRows(tables, 'merchant_aliases')) {
         await database
@@ -1144,12 +1146,17 @@ class EncryptedBackupService {
             .insert(PaymentSource.fromJson(row));
       }
       for (final row in _tableRows(tables, 'transactions')) {
+        final transactionRow = Map<String, dynamic>.from(row);
+        final smsId = transactionRow['smsId'];
+        if (smsId is String && !retainedRawSmsIds.contains(smsId)) {
+          transactionRow['smsId'] = null;
+        }
         await database.into(database.transactions).insert(
               Transaction.fromJson({
                 'paymentSourceId': null,
                 'ownedTransferId': null,
                 'isAnalyticsExcluded': false,
-                ...row,
+                ...transactionRow,
               }),
             );
       }
@@ -1573,6 +1580,7 @@ class _ChunkedArchiveRestorer {
   final void Function(int processedRows) onRows;
   final _NdjsonLineBuffer _lines = _NdjsonLineBuffer();
   final _tableCounts = <String, int>{};
+  final _retainedRawSmsIds = <String>{};
   var _processedRows = 0;
   var _sawHeader = false;
   var _sawFooter = false;
@@ -1580,6 +1588,7 @@ class _ChunkedArchiveRestorer {
   int get totalRows => _processedRows;
 
   Future<void> clearDatabase() async {
+    _retainedRawSmsIds.clear();
     await database.delete(database.recurringSeries).go();
     await database.delete(database.modelMeta).go();
     await database.delete(database.insights).go();
@@ -1689,6 +1698,7 @@ class _ChunkedArchiveRestorer {
         }
         if (rawSms.purgeAfter.isAfter(now)) {
           await database.into(database.rawSms).insert(rawSms);
+          _retainedRawSmsIds.add(rawSms.id);
         }
       case 'merchant_aliases':
         await database
@@ -1699,12 +1709,17 @@ class _ChunkedArchiveRestorer {
             .into(database.paymentSources)
             .insert(PaymentSource.fromJson(row));
       case 'transactions':
+        final transactionRow = Map<String, dynamic>.from(row);
+        final smsId = transactionRow['smsId'];
+        if (smsId is String && !_retainedRawSmsIds.contains(smsId)) {
+          transactionRow['smsId'] = null;
+        }
         await database.into(database.transactions).insert(
               Transaction.fromJson({
                 'paymentSourceId': null,
                 'ownedTransferId': null,
                 'isAnalyticsExcluded': false,
-                ...row,
+                ...transactionRow,
               }),
             );
       case 'rules':

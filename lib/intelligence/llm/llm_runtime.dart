@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -115,10 +116,14 @@ class PlatformLlmRuntime extends LlmRuntime {
   const PlatformLlmRuntime({
     MethodChannel channel = const MethodChannel('com.paisatrack/llm'),
     this.enabled = AppConstants.enableLocalLlm,
+    this.completionTimeout = const Duration(minutes: 2),
+    this.operationTimeout = const Duration(minutes: 15),
   }) : _channel = channel;
 
   final MethodChannel _channel;
   final bool enabled;
+  final Duration completionTimeout;
+  final Duration operationTimeout;
 
   @override
   Future<LlmResult<String>> complete(String prompt) => completeRequest(
@@ -142,7 +147,7 @@ class PlatformLlmRuntime extends LlmRuntime {
         'systemInstruction': request.systemInstruction.trim(),
         'userMessage': request.userMessage.trim(),
         'task': request.task.wireValue,
-      }).timeout(const Duration(minutes: 2));
+      }).timeout(completionTimeout);
       if (response == null) {
         return const LlmUnavailable(LlmUnavailableReason.modelAbsent);
       }
@@ -151,6 +156,8 @@ class PlatformLlmRuntime extends LlmRuntime {
       return LlmUnavailable(_reasonFor(error.code));
     } on MissingPluginException {
       return const LlmUnavailable(LlmUnavailableReason.unsupportedDevice);
+    } on TimeoutException {
+      return const LlmUnavailable(LlmUnavailableReason.failure);
     }
   }
 
@@ -235,7 +242,7 @@ class PlatformLlmRuntime extends LlmRuntime {
     try {
       final result = await _channel
           .invokeMethod<Object?>(method)
-          .timeout(const Duration(minutes: 15));
+          .timeout(operationTimeout);
       final success = result == true;
       return LlmOperationResult(
         success: success,
@@ -243,6 +250,8 @@ class PlatformLlmRuntime extends LlmRuntime {
       );
     } on PlatformException catch (error) {
       return LlmOperationResult(success: false, code: error.code);
+    } on TimeoutException {
+      return const LlmOperationResult(success: false, code: 'timeout');
     }
   }
 

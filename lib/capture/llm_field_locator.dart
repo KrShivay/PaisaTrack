@@ -68,9 +68,9 @@ class LlmFieldLocator {
 
     final amountText = _optionalText(json['amount_text']);
     final directionText = _optionalText(json['direction_text']);
-    final dateText = _optionalText(json['date_text']);
-    final merchantText = _optionalText(json['merchant_text']);
-    final accountText = _optionalText(json['account_text']);
+    final dateText = _verifiedOptionalText(json['date_text'], sms.body);
+    final merchantText = _verifiedOptionalText(json['merchant_text'], sms.body);
+    final accountText = _verifiedOptionalText(json['account_text'], sms.body);
 
     if (amountText == null || directionText == null) return null;
 
@@ -127,16 +127,6 @@ class LlmFieldLocator {
             start: dateIndex,
             end: dateIndex + dateText.length,
             verbatim: dateText,
-            extractor: 'local_llm',
-          ),
-        );
-      } else {
-        evidence.add(
-          FieldEvidence(
-            field: 'ts',
-            start: 0,
-            end: body.length,
-            verbatim: body,
             extractor: 'local_llm',
           ),
         );
@@ -201,5 +191,10 @@ class LlmFieldLocator {
   String? _optionalText(Object? value) {
     if (value is! String || value.trim().isEmpty) return null;
     return value.trim();
+  }
+
+  String? _verifiedOptionalText(Object? value, String body) {
+    final text = _optionalText(value);
+    return text != null && body.contains(text) ? text : null;
   }
 }

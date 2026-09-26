@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/intelligence/llm/llm_request.dart';
@@ -320,6 +322,29 @@ void main() {
     expect(calls, 0);
   });
 
+  test('completeRequest maps platform timeout to typed unavailable result',
+      () async {
+    const timeoutRuntime = PlatformLlmRuntime(
+      channel: channel,
+      enabled: true,
+      completionTimeout: Duration(milliseconds: 1),
+    );
+    messenger.setMockMethodCallHandler(channel, (call) {
+      return Completer<Object?>().future;
+    });
+
+    final result = await timeoutRuntime.complete('request');
+
+    expect(
+      result,
+      isA<LlmUnavailable<String>>().having(
+        (value) => value.reason,
+        'reason',
+        LlmUnavailableReason.failure,
+      ),
+    );
+  });
+
   test('fake no-op runtime lets callers degrade without throwing', () async {
     const fake = NoopLlmRuntime();
     expect(await fake.complete('raw SMS'), isA<LlmUnavailable<String>>());
@@ -383,5 +408,22 @@ void main() {
 
     expect(result.success, isFalse);
     expect(result.code, 'insufficient_storage');
+  });
+
+  test('downloadModelResult maps platform timeout to operation failure',
+      () async {
+    const timeoutRuntime = PlatformLlmRuntime(
+      channel: channel,
+      enabled: true,
+      operationTimeout: Duration(milliseconds: 1),
+    );
+    messenger.setMockMethodCallHandler(channel, (call) {
+      return Completer<Object?>().future;
+    });
+
+    final result = await timeoutRuntime.downloadModelResult();
+
+    expect(result.success, isFalse);
+    expect(result.code, 'timeout');
   });
 }
