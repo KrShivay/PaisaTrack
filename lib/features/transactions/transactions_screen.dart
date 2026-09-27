@@ -83,28 +83,21 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
       if (_query.isNotEmpty) {
         final q = _query.toLowerCase();
-        final name = item.displayName.toLowerCase();
-        final note = (item.note ?? '').toLowerCase();
-        final amt = item.amount.toString();
-        final channel = item.channel.toLowerCase();
-        final ref = (item.reference ?? '').toLowerCase();
-        final status = item.status.toLowerCase();
-        final account = (item.accountHint ?? '').toLowerCase();
-        final category = (item.categoryName ?? '').toLowerCase();
-        final source = (item.paymentSourceName ?? '').toLowerCase();
-        final merchant = (item.merchantRaw ?? '').toLowerCase();
-        if (!name.contains(q) &&
-            !note.contains(q) &&
-            !amt.contains(q) &&
-            !channel.contains(q) &&
-            !ref.contains(q) &&
-            !status.contains(q) &&
-            !account.contains(q) &&
-            !category.contains(q) &&
-            !source.contains(q) &&
-            !merchant.contains(q)) {
-          return false;
+        // ⚡ Bolt: Optimize search by using short-circuit evaluation
+        // This avoids allocating many string variables up front.
+        if (item.displayName.toLowerCase().contains(q)) return true;
+        if ((item.note ?? '').toLowerCase().contains(q)) return true;
+        if (item.amount.toString().contains(q)) return true;
+        if (item.channel.toLowerCase().contains(q)) return true;
+        if ((item.reference ?? '').toLowerCase().contains(q)) return true;
+        if (item.status.toLowerCase().contains(q)) return true;
+        if ((item.accountHint ?? '').toLowerCase().contains(q)) return true;
+        if ((item.categoryName ?? '').toLowerCase().contains(q)) return true;
+        if ((item.paymentSourceName ?? '').toLowerCase().contains(q)) {
+          return true;
         }
+        if ((item.merchantRaw ?? '').toLowerCase().contains(q)) return true;
+        return false;
       }
       return true;
     }).toList();
@@ -138,10 +131,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
       showBack: true,
-      builder: (context) => CategoryPickerSheet(
-        categories: categories,
-        title: 'Change Category',
-      ),
+      builder: (context) =>
+          CategoryPickerSheet(categories: categories, title: 'Change Category'),
     );
     if (chosen == null || !mounted) return;
 
@@ -374,9 +365,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             Expanded(
                               child: Padding(
                                 padding: EdgeInsets.only(
-                                  bottom: BloomBottomInset.contentPadding(
-                                    context,
-                                  ),
+                                  bottom:
+                                      BloomBottomInset.contentPadding(context),
                                 ),
                                 child: _EmptyState(
                                   isDark: isDark,
@@ -394,9 +384,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             if (hasMore)
                               Padding(
                                 padding: EdgeInsets.only(
-                                  bottom: BloomBottomInset.contentPadding(
-                                    context,
-                                  ),
+                                  bottom:
+                                      BloomBottomInset.contentPadding(context),
                                 ),
                                 child: _loadMoreButton(),
                               ),
@@ -603,11 +592,7 @@ class _DayGroupSection extends StatelessWidget {
                       : AppColorTokens.inkTertiary,
                 ),
               ),
-              BloomAmount(
-                amount: dayTotal,
-                size: 12,
-                weight: FontWeight.w500,
-              ),
+              BloomAmount(amount: dayTotal, size: 12, weight: FontWeight.w500),
             ],
           ),
         ),
