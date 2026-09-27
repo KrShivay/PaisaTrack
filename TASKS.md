@@ -6,7 +6,16 @@ state; Git history and `docs/archive/` retain completed evidence.
 Priority: P0 release blocker, P1 high-impact, P2 important, P3 planned, P4/P5
 later hardening.
 
+## In Progress
+
 ## In Review
+
+- [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
+      Verification: 768 Flutter tests passed; analyzer and diff check clean;
+      Android keystore unit tests and app Kotlin compile passed; API 35 ARM64
+      emulator restored a synthetic archive through the real Keystore selector
+      into SQLCipher, reopened the active generation, and verified legacy bytes
+      remained unchanged. MainActivity relaunched successfully on emulator.
 
 - [ ] T-176 [P1] Apply global bottom-inset contract to all screens.
       Module: all primary screens (Dashboard, Activity, Review, Insights,

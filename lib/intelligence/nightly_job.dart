@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../core/crypto/database_cipher.dart';
 import '../data/db/database.dart';
+import '../data/db/database_file_lock.dart';
 import '../data/db/database_provider.dart';
 import '../enrichment/decision_policy.dart';
 import '../enrichment/local_classifier.dart';
@@ -40,10 +39,7 @@ enum NightlyStage {
 }
 
 class NightlyRunResult {
-  const NightlyRunResult({
-    required this.completed,
-    required this.stagesRun,
-  });
+  const NightlyRunResult({required this.completed, required this.stagesRun});
 
   final bool completed;
   final List<NightlyStage> stagesRun;
@@ -71,19 +67,16 @@ class NightlyPipeline {
           await database.transaction(() async {
             final expiredIds = database.selectOnly(database.rawSms)
               ..addColumns([database.rawSms.id])
-              ..where(
-                database.rawSms.purgeAfter.isSmallerOrEqualValue(now),
-              );
+              ..where(database.rawSms.purgeAfter.isSmallerOrEqualValue(now));
             // Transactions are permanent; raw bodies are not. Detach the
             // nullable provenance link before deleting expired raw rows so
             // full-history imports do not defeat the privacy retention rule.
             await (database.update(database.transactions)
                   ..where((row) => row.smsId.isInQuery(expiredIds)))
-                .write(
-              const TransactionsCompanion(smsId: Value(null)),
-            );
-            await (database.delete(database.rawSms)
-                  ..where((row) => row.purgeAfter.isSmallerOrEqualValue(now)))
+                .write(const TransactionsCompanion(smsId: Value(null)));
+            await (database.delete(
+              database.rawSms,
+            )..where((row) => row.purgeAfter.isSmallerOrEqualValue(now)))
                 .go();
           });
         },
@@ -162,8 +155,9 @@ class NightlyPipeline {
   }
 
   Future<(String?, int)> _readCheckpoint() async {
-    final row = await (_database.select(_database.modelMeta)
-          ..where((entry) => entry.key.equals(_checkpointKey)))
+    final row = await (_database.select(
+      _database.modelMeta,
+    )..where((entry) => entry.key.equals(_checkpointKey)))
         .getSingleOrNull();
     if (row == null) return (null, 0);
     try {
@@ -196,16 +190,19 @@ void nightlyCallbackDispatcher() {
     if (task != nightlyTaskName) return true;
     WidgetsFlutterBinding.ensureInitialized();
     DartPluginRegistrant.ensureInitialized();
-    final database = await _openWorkerDatabase();
-    try {
-      final result = await NightlyPipeline.production(
-        database,
-        recurringEmbedder: const PlatformEmbedder(),
-      ).run();
-      return result.completed;
-    } finally {
-      await closeAppDatabase(database);
-    }
+    final directory = await getApplicationDocumentsDirectory();
+    return withDatabaseFileLock(directory, () async {
+      final database = await _openWorkerDatabase();
+      try {
+        final result = await NightlyPipeline.production(
+          database,
+          recurringEmbedder: const PlatformEmbedder(),
+        ).run();
+        return result.completed;
+      } finally {
+        await closeAppDatabase(database);
+      }
+    });
   });
 }
 
@@ -218,20 +215,18 @@ Future<void> initializeNightlyWork() async {
     // `keep` preserves constraints from an older install. `update` is needed
     // so devices already holding the charging+idle job receive this fix.
     existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    constraints: Constraints(
-      requiresBatteryNotLow: true,
-    ),
+    constraints: Constraints(requiresBatteryNotLow: true),
   );
 }
 
 Future<AppDatabase> _openWorkerDatabase() async {
   final directory = await getApplicationDocumentsDirectory();
-  final passphrase =
-      await const AndroidKeystoreDatabasePassphraseProvider().getPassphrase();
+  const passphrases = AndroidKeystoreDatabasePassphraseProvider();
+  final config = await resolveActiveDatabaseConfig(
+    directory: directory,
+    passphrases: passphrases,
+  );
   return AppDatabase(
-    openEncryptedDatabase(
-      file: File(p.join(directory.path, appDatabaseFileName)),
-      passphrase: passphrase,
-    ),
+    openEncryptedDatabase(file: config.file, passphrase: config.passphrase),
   );
 }

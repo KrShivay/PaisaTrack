@@ -17,12 +17,33 @@ import javax.crypto.spec.GCMParameterSpec
 internal class DatabasePassphraseStore internal constructor(
     private val storage: PassphraseStorage,
     private val cipher: PassphraseCipher,
+    private val recoveryStoreFactory: ((String) -> DatabasePassphraseStore)? = null,
+    private val recoveryState: SharedPreferences? = null,
 ) {
     constructor(context: Context) : this(
         storage = SharedPreferencesPassphraseStorage(
             context.applicationContext.getSharedPreferences(PrefsName, Context.MODE_PRIVATE),
         ),
-        cipher = AndroidKeyStorePassphraseCipher(context.applicationContext),
+        cipher = AndroidKeyStorePassphraseCipher(context.applicationContext, KeyAlias),
+        recoveryState = context.applicationContext.getSharedPreferences(
+            RecoveryStatePrefsName,
+            Context.MODE_PRIVATE,
+        ),
+        recoveryStoreFactory = { generationId ->
+            val appContext = context.applicationContext
+            DatabasePassphraseStore(
+                storage = SharedPreferencesPassphraseStorage(
+                    appContext.getSharedPreferences(
+                        "$RecoveryPrefsName.$generationId",
+                        Context.MODE_PRIVATE,
+                    ),
+                ),
+                cipher = AndroidKeyStorePassphraseCipher(
+                    appContext,
+                    "$RecoveryKeyAlias.$generationId",
+                ),
+            )
+        },
     )
 
     fun getOrCreate(): String = synchronized(lock) {
@@ -42,8 +63,130 @@ internal class DatabasePassphraseStore internal constructor(
         return verifiedPassphrase
     }
 
+    private fun getExisting(): String = synchronized(lock) {
+        val encrypted = storage.read()
+            ?: throw IllegalStateException("Database generation key is missing")
+        cipher.decrypt(encrypted)
+    }
+
     fun clearForTests() {
         clear()
+    }
+
+    fun createGenerationPassphrase(generationId: String): String {
+        validateGenerationId(generationId)
+        val store = recoveryStoreFactory?.invoke(generationId)
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        registerGeneration(generationId)
+        updateStagingGenerationIds { ids -> ids + generationId }
+        return store.getOrCreate()
+    }
+
+    fun getGenerationPassphrase(generationId: String): String {
+        validateGenerationId(generationId)
+        val store = recoveryStoreFactory?.invoke(generationId)
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        return store.getExisting()
+    }
+
+    fun deleteGenerationPassphrase(generationId: String) {
+        validateGenerationId(generationId)
+        check(getActiveGenerationId() != generationId) {
+            "Cannot delete the active database generation key"
+        }
+        val store = recoveryStoreFactory?.invoke(generationId)
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        store.clear()
+        updateGenerationIds { ids -> ids - generationId }
+        updateStagingGenerationIds { ids -> ids - generationId }
+    }
+
+    fun getActiveGenerationId(): String? {
+        val generationId = recoveryState?.getString(ActiveGenerationKey, null)
+            ?: return null
+        validateGenerationId(generationId)
+        return generationId
+    }
+
+    fun getGenerationIds(): Set<String> {
+        val ids = recoveryState?.getStringSet(RecoveryGenerationIdsKey, emptySet())
+            ?: return emptySet()
+        ids.forEach { validateGenerationId(it) }
+        return ids.toSet()
+    }
+
+    fun getStagingGenerationIds(): Set<String> {
+        val ids = recoveryState?.getStringSet(StagingGenerationIdsKey, emptySet())
+            ?: return emptySet()
+        ids.forEach { validateGenerationId(it) }
+        return ids.toSet()
+    }
+
+    fun activateGeneration(generationId: String) {
+        validateGenerationId(generationId)
+        getGenerationPassphrase(generationId)
+        val state = recoveryState
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        val stagingIds = getStagingGenerationIds() - generationId
+        val editor = state.edit().putString(ActiveGenerationKey, generationId)
+        if (stagingIds.isEmpty()) {
+            editor.remove(StagingGenerationIdsKey)
+        } else {
+            editor.putStringSet(StagingGenerationIdsKey, stagingIds)
+        }
+        check(editor.commit()) {
+            "Failed to activate database generation"
+        }
+    }
+
+    fun clearAllGenerationPassphrases() {
+        val state = recoveryState
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        val ids = state.getStringSet(RecoveryGenerationIdsKey, emptySet()).orEmpty().toSet()
+        // Unpublish the active generation before deleting any of its key
+        // material. If this durable commit fails, every key remains usable and
+        // the previous selector is still intact.
+        check(state.edit().remove(ActiveGenerationKey).commit()) {
+            "Failed to deactivate database generation keys"
+        }
+        ids.forEach { generationId ->
+            if (GenerationIdPattern.matches(generationId)) {
+                recoveryStoreFactory?.invoke(generationId)?.clear()
+            }
+        }
+        check(
+            state.edit()
+                .remove(RecoveryGenerationIdsKey)
+                .remove(StagingGenerationIdsKey)
+                .commit(),
+        ) { "Failed to clear database generation keys" }
+    }
+
+    private fun registerGeneration(generationId: String) {
+        updateGenerationIds { ids -> ids + generationId }
+    }
+
+    private fun updateStagingGenerationIds(transform: (Set<String>) -> Set<String>) {
+        val state = recoveryState
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        val ids = getStagingGenerationIds()
+        val updated = transform(ids)
+        val editor = state.edit()
+        if (updated.isEmpty()) {
+            editor.remove(StagingGenerationIdsKey)
+        } else {
+            editor.putStringSet(StagingGenerationIdsKey, updated)
+        }
+        check(editor.commit()) { "Failed to persist staging generation index" }
+    }
+
+    private fun updateGenerationIds(transform: (Set<String>) -> Set<String>) {
+        val state = recoveryState
+            ?: throw IllegalStateException("Recovery key slots are unavailable")
+        val ids = state.getStringSet(RecoveryGenerationIdsKey, emptySet()).orEmpty()
+        check(state.edit().putStringSet(RecoveryGenerationIdsKey, transform(ids)).commit()) {
+            "Failed to persist database generation index"
+        }
     }
 
     fun clear() = synchronized(lock) {
@@ -57,8 +200,16 @@ internal class DatabasePassphraseStore internal constructor(
         return Base64.getEncoder().encodeToString(bytes)
     }
 
+    private fun validateGenerationId(generationId: String) {
+        require(GenerationIdPattern.matches(generationId)) {
+            "Invalid database generation id"
+        }
+    }
+
     companion object {
         private val lock = Any()
+        private val GenerationIdPattern =
+            Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     }
 }
 
@@ -110,6 +261,7 @@ internal class SharedPreferencesPassphraseStorage(
 
 internal class AndroidKeyStorePassphraseCipher(
     private val appContext: Context,
+    private val keyAlias: String,
 ) : PassphraseCipher {
     private val keyStore = KeyStore.getInstance(AndroidKeyStore).apply { load(null) }
 
@@ -134,11 +286,11 @@ internal class AndroidKeyStorePassphraseCipher(
     }
 
     override fun clear() {
-        keyStore.deleteEntry(KeyAlias)
+        keyStore.deleteEntry(keyAlias)
     }
 
     private fun getOrCreateKey(): SecretKey {
-        keyStore.getKey(KeyAlias, null)?.let { return it as SecretKey }
+        keyStore.getKey(keyAlias, null)?.let { return it as SecretKey }
 
         val keyGenerator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
@@ -162,7 +314,7 @@ internal class AndroidKeyStorePassphraseCipher(
 
     private fun keySpec(strongBoxBacked: Boolean): KeyGenParameterSpec {
         val builder = KeyGenParameterSpec.Builder(
-            KeyAlias,
+            keyAlias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -181,6 +333,12 @@ private const val AndroidKeyStore = "AndroidKeyStore"
 private const val AesGcmNoPadding = "AES/GCM/NoPadding"
 private const val GcmTagBits = 128
 private const val KeyAlias = "paisatrack_database_passphrase"
+private const val RecoveryKeyAlias = "paisatrack_database_recovery"
+private const val RecoveryPrefsName = "database_passphrase_recovery"
+private const val RecoveryStatePrefsName = "database_recovery_state"
+private const val RecoveryGenerationIdsKey = "generation_ids"
+private const val StagingGenerationIdsKey = "staging_generation_ids"
+private const val ActiveGenerationKey = "active_generation"
 private const val PassphraseByteLength = 32
 private const val PrefsName = "database_passphrase"
 private const val PassphraseKey = "passphrase"

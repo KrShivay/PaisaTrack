@@ -37,13 +37,27 @@ abstract interface class DatabasePassphraseProvider {
   Future<void> clearStoredPassphrase();
 }
 
+/// Provides independent Keystore slots for staged database recovery. A new
+/// generation is not active until its manifest is atomically published.
+abstract interface class GenerationDatabasePassphraseProvider
+    implements DatabasePassphraseProvider {
+  Future<DatabasePassphrase> createGenerationPassphrase(String generationId);
+  Future<DatabasePassphrase> getGenerationPassphrase(String generationId);
+  Future<void> deleteGenerationPassphrase(String generationId);
+  Future<Set<String>> getGenerationIds();
+  Future<String?> getActiveGenerationId();
+  Future<Set<String>> getStagingGenerationIds();
+  Future<void> activateGeneration(String generationId);
+  Future<void> clearAllGenerationPassphrases();
+}
+
 /// Android Keystore-backed database passphrase provider.
 ///
 /// The native implementation generates a passphrase once, wraps it with an
 /// Android Keystore AES key, and stores only encrypted bytes in app-private
 /// storage. StrongBox is requested when the device reports support.
 class AndroidKeystoreDatabasePassphraseProvider
-    implements DatabasePassphraseProvider {
+    implements GenerationDatabasePassphraseProvider {
   const AndroidKeystoreDatabasePassphraseProvider({
     keystore.AndroidKeystoreDatabasePassphraseProvider? delegate,
   }) : _delegate = delegate ??
@@ -61,6 +75,44 @@ class AndroidKeystoreDatabasePassphraseProvider
   Future<void> clearStoredPassphrase() async {
     await _delegate.clearStoredPassphrase();
   }
+
+  @override
+  Future<DatabasePassphrase> createGenerationPassphrase(
+    String generationId,
+  ) async {
+    final result = await _delegate.createGenerationPassphrase(generationId);
+    return DatabasePassphrase(result.value);
+  }
+
+  @override
+  Future<DatabasePassphrase> getGenerationPassphrase(
+    String generationId,
+  ) async {
+    final result = await _delegate.getGenerationPassphrase(generationId);
+    return DatabasePassphrase(result.value);
+  }
+
+  @override
+  Future<void> deleteGenerationPassphrase(String generationId) =>
+      _delegate.deleteGenerationPassphrase(generationId);
+
+  @override
+  Future<Set<String>> getGenerationIds() => _delegate.getGenerationIds();
+
+  @override
+  Future<String?> getActiveGenerationId() => _delegate.getActiveGenerationId();
+
+  @override
+  Future<Set<String>> getStagingGenerationIds() =>
+      _delegate.getStagingGenerationIds();
+
+  @override
+  Future<void> activateGeneration(String generationId) =>
+      _delegate.activateGeneration(generationId);
+
+  @override
+  Future<void> clearAllGenerationPassphrases() =>
+      _delegate.clearAllGenerationPassphrases();
 
   /// Clears stored passphrase in debug builds for tests.
   @visibleForTesting
@@ -84,8 +136,9 @@ QueryExecutor openEncryptedDatabase({
         throw StateError('SQLCipher not available for this database');
       }
 
-      database
-          .execute("PRAGMA key = '${_escapeSqliteString(passphrase.value)}'");
+      database.execute(
+        "PRAGMA key = '${_escapeSqliteString(passphrase.value)}'",
+      );
     },
   );
 }

@@ -1,5 +1,19 @@
 # Current Handoff
 
+## 2026-09-27 — T-179a safe key-loss recovery
+
+- Added generation-key recovery from the key-loss screen while preserving the
+  old encrypted database family and key. Recovery validates/imports before
+  activation, keeps retry state on failures, and fails closed on missing or
+  ambiguous generation metadata. Settings reset and nightly work share a
+  cross-engine database lock; reset holds it through fresh DB seeding.
+- Validation: Flutter suite 768/768; `flutter analyze --no-pub` clean; Android
+  keystore unit tests + app Kotlin compile passed; API 35 ARM64 emulator
+  integration 1/1 passed using the real Keystore slot and SQLCipher, followed
+  by successful MainActivity launch. Physical phone and original backup untouched.
+- GitNexus refreshed; `detect-changes --scope all` reported 20 files, 319
+  symbols, 6 affected flows, HIGH overall impact, no partial/truncated result.
+
 ## 2026-09-27 — PV-02 aggregate parity and truthful dashboard scope
 
 - Added a corpus-seeded SQL parity test that seeds all 20 current corpus rows and
@@ -46,19 +60,3 @@
   enumeration is bounded, so this is not proof of exhaustive path coverage.
   Independent code review found no actionable inset regressions; real-device
   navigation/keyboard verification remains open.
-
-## 2026-09-04 — PV-02 completeness/exclusions + stale exclusion test fix
-
-- **PV-02 completeness (second half):** `DashboardAggregateSnapshot` now reports
-  `excludedDebitTotal`/`excludedDebitCount` (settled spending debit removed by
-  self-transfer or analytics-excluded flags for the period).
-  `dashboardExclusionsProvider` projects it, and `BloomExclusionsNote` under the
-  metric pills shows "₹X across N transfers & excluded items not counted in
-  spending" (only on successful data with a non-zero amount). Repo + widget
-  tests added. PV-02 is now implemented end to end (In Review).
-- **Stale test fix (was pre-existing on main):** rewrote
-  `exclusion_explanation_test.dart` to match shipped T-158d behaviour — an
-  unflagged credit-card bill is counted and shows no exclusion banner; only
-  flag-driven exclusion (owned transfer / analytics-excluded) is disclosed. The
-  two tests previously asserted the removed merchant-pattern heuristics.
-- Verified: `flutter analyze --no-pub` clean; full `flutter test` all green.

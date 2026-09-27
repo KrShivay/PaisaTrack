@@ -39,6 +39,58 @@ class AndroidKeystoreDatabasePassphraseProvider {
     await _channel.invokeMethod<void>('clearPassphrase');
   }
 
+  /// Creates an isolated key slot for a staged database generation. The
+  /// existing database key and wrapped passphrase remain unchanged.
+  Future<DatabasePassphrase> createGenerationPassphrase(
+    String generationId,
+  ) async {
+    final value = await _channel.invokeMethod<String>(
+      'createGenerationPassphrase',
+      {'generationId': generationId},
+    );
+    if (value == null || value.isEmpty) {
+      throw StateError('Android Keystore returned an empty recovery key');
+    }
+    return DatabasePassphrase(value);
+  }
+
+  Future<DatabasePassphrase> getGenerationPassphrase(
+    String generationId,
+  ) async {
+    final value = await _channel.invokeMethod<String>(
+      'getGenerationPassphrase',
+      {'generationId': generationId},
+    );
+    if (value == null || value.isEmpty) {
+      throw StateError('Android Keystore returned an empty recovery key');
+    }
+    return DatabasePassphrase(value);
+  }
+
+  Future<void> deleteGenerationPassphrase(String generationId) =>
+      _channel.invokeMethod<void>('deleteGenerationPassphrase', {
+        'generationId': generationId,
+      });
+
+  Future<Set<String>> getGenerationIds() async =>
+      ((await _channel.invokeListMethod<String>('getGenerationIds')) ??
+              const <String>[])
+          .toSet();
+
+  Future<String?> getActiveGenerationId() =>
+      _channel.invokeMethod<String>('getActiveGenerationId');
+
+  Future<Set<String>> getStagingGenerationIds() async =>
+      ((await _channel.invokeListMethod<String>('getStagingGenerationIds')) ??
+              const <String>[])
+          .toSet();
+
+  Future<void> activateGeneration(String generationId) => _channel
+      .invokeMethod<void>('activateGeneration', {'generationId': generationId});
+
+  Future<void> clearAllGenerationPassphrases() =>
+      _channel.invokeMethod<void>('clearAllGenerationPassphrases');
+
   Future<void> debugResetForTests() async {
     await _channel.invokeMethod<void>('debugResetForTests');
   }
