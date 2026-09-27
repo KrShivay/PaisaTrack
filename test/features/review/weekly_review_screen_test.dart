@@ -24,6 +24,26 @@ class _FakeUndoController extends UndoController {
 }
 
 void main() {
+  test('undo controller consumes a token after executing it once', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    var calls = 0;
+    final controller = container.read(undoControllerProvider.notifier);
+    controller.pushUndo(
+      UndoToken(
+        id: 'undo_once',
+        message: 'Undo once',
+        undoAction: () async {
+          calls++;
+        },
+      ),
+    );
+
+    expect(await controller.undo(), isTrue);
+    expect(await controller.undo(), isFalse);
+    expect(calls, 1);
+  });
+
   TransactionReviewItem reviewItem({
     required String id,
     required String displayName,
@@ -210,15 +230,8 @@ void main() {
   }
 
   group('T-159a — _confirmItem', () {
-    // NOTE: _confirmItem calls repo.updateWithFeedback(status: 'confirmed'),
-    // but updateWithFeedback's feedbackRows guard (line 527 of
-    // transaction_repository.dart) silently skips the DB write when no
-    // non-status fields change. These tests therefore characterize the
-    // *current* UI behavior (item removed from queue, undo token pushed)
-    // without asserting the DB write — see spawned task for the fix.
-
     testWidgets(
-        'confirm button removes item from queue and pushes undo token',
+        'Keep persists confirmed status and removes item from visible queue',
         (tester) async {
       final db = await seedDb();
       final container = await pumpSortWithDb(
@@ -247,6 +260,10 @@ void main() {
       final token = container.read(undoControllerProvider);
       expect(token, isNotNull);
       expect(token!.message, contains('confirmed'));
+      final transaction = await (db.select(db.transactions)
+            ..where((row) => row.id.equals('txn_001')))
+          .getSingle();
+      expect(transaction.status, 'confirmed');
 
       await db.close();
     });
@@ -280,6 +297,10 @@ void main() {
       // Item re-inserted into _stableQueue.
       expect(find.text('Swiggy'), findsOneWidget);
       expect(find.text('Inbox Zero!'), findsNothing);
+      final transaction = await (db.select(db.transactions)
+            ..where((row) => row.id.equals('txn_001')))
+          .getSingle();
+      expect(transaction.status, 'needs_review');
 
       await db.close();
     });

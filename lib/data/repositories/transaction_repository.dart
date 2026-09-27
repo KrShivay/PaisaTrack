@@ -490,7 +490,8 @@ WHERE t.status = 'needs_review'
       if (merchantRaw.present && merchantRaw.value != row.merchantRaw) {
         companion = companion.copyWith(merchantRaw: merchantRaw);
       }
-      if (status.present && status.value != row.status) {
+      final statusChanged = status.present && status.value != row.status;
+      if (statusChanged) {
         companion = companion.copyWith(status: status);
       }
 
@@ -524,7 +525,9 @@ WHERE t.status = 'needs_review'
         );
       }
 
-      if (feedbackRows.isEmpty) return 0;
+      // Status is persisted transaction state, not a learning signal. Keep a
+      // status-only confirmation/undo durable even when no feedback row exists.
+      if (feedbackRows.isEmpty && !statusChanged) return 0;
 
       await (_database.update(_database.transactions)
             ..where((t) => t.id.equals(txnId)))

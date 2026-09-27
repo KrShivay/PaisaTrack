@@ -1,20 +1,28 @@
 # Current Handoff
 
-## 2026-09-27 — Independent reviews and release version metadata
+## 2026-09-27 — T-180 review persistence and release metadata
 
 - T-157b and PV-02 passed independent review and were removed from In Review.
   T-176 and T-179a remain open for physical-device acceptance.
-- Added T-180 for Weekly Review status persistence: Keep must persist
-  `confirmed`; Undo must persist `needs_review` and restore the queue row once.
+- T-180: Weekly Review Keep and Undo now persist `confirmed` and `needs_review`
+  even when no feedback row is generated. Repository tests cover empty-feedback
+  transitions, queue membership after fresh queries, and status with a real
+  feedback edit. Widget tests cover visible Keep/Undo behavior and the undo
+  controller's single-use token contract. Awaiting independent review.
+- Validation: focused repository/review tests 26/26; full Flutter suite
+  786/786; `flutter analyze --no-pub` clean; `git diff --check` clean.
+  GitNexus change analysis: 5 files, 8 symbols, LOW risk, no affected
+  processes, no partial/truncated result.
 - Published signed Android release `0.1.1+3` at the existing stable APK URL.
   The ARM64 artifact is 56,553,692 bytes (56.55 MB decimal), SHA-256
   `44fbae3736a939af1dfe707b8bd4675e50c2de715da308f380c65b98b4dbd940`.
   Signed install and explicit activity launch passed on the explicit ARM64 API
-  35 emulator. Physical `192.168.1.10:5555` was unreachable; T-176 and T-179a
-  physical acceptance remain open.
-- Independent review ran 26 focused Flutter tests and `flutter analyze
-  --no-pub`; all passed. No fresh application tests were run for this docs-only
-  release record.
+  35 emulator. The physical phone later reconnected and accepted `v2003` via
+  `install -r`; signer, `firstInstallTime`, and data inodes were preserved, and
+  Home opened populated. Exact transaction/review counts and T-176/T-179a
+  physical acceptance remain unverified.
+- Release metadata update was documentation-only; T-180 validation above is
+  fresh for the current implementation.
 
 ## 2026-09-27 — T-179a safe key-loss recovery
 

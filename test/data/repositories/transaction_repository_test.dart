@@ -114,6 +114,74 @@ void main() {
     expect(summary.highestImpactLabel, isNotEmpty);
   });
 
+  test('status-only Keep and Undo persist and move one row in the review queue',
+      () async {
+    await _insertTxn(
+      database,
+      id: 'review_status_only',
+      status: 'needs_review',
+    );
+    final repository = TransactionRepository(database);
+
+    final keepFeedbackCount = await repository.updateWithFeedback(
+      txnId: 'review_status_only',
+      status: const Value('confirmed'),
+      context: 'sort_confirm',
+    );
+
+    expect(keepFeedbackCount, 0);
+    final keptTransaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('review_status_only')))
+        .getSingle();
+    expect(keptTransaction.status, 'confirmed');
+    expect(await repository.watchReviewQueue().first, isEmpty);
+    expect(await database.select(database.feedback).get(), isEmpty);
+
+    final undoFeedbackCount = await repository.updateWithFeedback(
+      txnId: 'review_status_only',
+      status: const Value('needs_review'),
+      context: 'undo_sort',
+    );
+
+    expect(undoFeedbackCount, 0);
+    final undoneTransaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('review_status_only')))
+        .getSingle();
+    expect(undoneTransaction.status, 'needs_review');
+    final restoredQueue = await repository.watchReviewQueue().first;
+    expect(restoredQueue.map((item) => item.id).toList(), [
+      'review_status_only',
+    ]);
+    expect(await database.select(database.feedback).get(), isEmpty);
+  });
+
+  test('status and a feedback edit persist together', () async {
+    await _insertTxn(
+      database,
+      id: 'review_status_with_feedback',
+      status: 'needs_review',
+    );
+    final repository = TransactionRepository(database);
+
+    final feedbackCount = await repository.updateWithFeedback(
+      txnId: 'review_status_with_feedback',
+      categoryId: const Value('food_dining'),
+      status: const Value('confirmed'),
+      context: 'sort_categorize',
+    );
+
+    expect(feedbackCount, 1);
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('review_status_with_feedback')))
+        .getSingle();
+    expect(transaction.categoryId, 'food_dining');
+    expect(transaction.status, 'confirmed');
+    final feedback = await database.select(database.feedback).get();
+    expect(feedback, hasLength(1));
+    expect(feedback.single.field, 'category_id');
+    expect(await repository.watchReviewQueue().first, isEmpty);
+  });
+
   test('Activity page does not report more for exactly 100 visible rows',
       () async {
     for (var index = 0; index < 100; index++) {

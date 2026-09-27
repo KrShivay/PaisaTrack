@@ -10,6 +10,22 @@ later hardening.
 
 ## In Review
 
+- [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore
+  persisted state.
+  - Acceptance: Keep writes `confirmed` even when no feedback row is needed;
+    the transaction disappears from `watchReviewQueue` after a fresh query.
+    Undo writes `needs_review`, restores one row in the query and one visible
+    card, and the undo controller consumes its action once. Cover the empty-
+    feedback path and a status change alongside a real feedback edit.
+  - Dependencies: none. No schema or migration change.
+  - Privacy: status stays in the existing local database; no new data or
+    retention.
+  - Rollback: revert the focused repository/test change; persisted status
+    values remain compatible with the existing review query.
+  - Verification: repository/widget focused tests 26/26; full Flutter suite
+    786/786; `flutter analyze --no-pub` and `git diff --check` clean. GitNexus
+    change analysis: 5 files, 8 symbols, LOW risk, no affected processes.
+
 - [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
       Verification: 768 Flutter tests passed; analyzer and diff check clean;
       Android keystore unit tests and app Kotlin compile passed; API 35 ARM64
@@ -232,7 +248,6 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Transaction integrity, data model, and performance
 
-- [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore persisted state. Acceptance: Keep writes `confirmed` and the item stays out of the review query after refresh; tapping Undo writes `needs_review` and restores the item exactly once. Regression tests assert database status and visible queue across both actions, including the empty-feedback case.
 - [ ] T-164a [P0] Add repository tests for keyset ordering under identical timestamps, deleted rows, duplicate-suppressed rows, and newly inserted rows between pages.
 - [ ] T-164b [P1] Move Activity filtering/search to SQL with indexed fields and paged results; preserve every current filter semantic.
 - [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.
