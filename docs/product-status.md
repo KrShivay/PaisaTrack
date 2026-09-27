@@ -64,7 +64,7 @@ large-text acceptance, or participant pass.
 | Android platform | SMS permission, live receiver, inbox paging, notifications, document picker, model bridges, Keystore plugin | `android/app/src/main/kotlin/`, `packages/paisatrack_keystore/` |
 | Capture | Live/history/resume ingestion, template → generic → optional local-LLM parsing, deduplication, typed misses | `lib/capture/` |
 | Domain/data | Drift schema v7 on SQLCipher, repositories, corrections/rules, identities, payment-source semantics | `lib/data/`, `lib/enrichment/` |
-| Intelligence | Recurring, anomalies, forecasts, insights, local classifier, grounded assistant | `lib/intelligence/` |
+| Intelligence | Recurring, anomalies, forecasts, insights, local classifier, grounded assistant with taxonomy-aware category scopes and dashboard-aligned settled spending totals | `lib/intelligence/` |
 | Presentation | Riverpod state with four-tab Bloom shell and task sheets/pages | `lib/features/`, `lib/core/widgets/` |
 
 See `docs/architecture.md`, `docs/schema.md`, and `docs/privacy.md` for the

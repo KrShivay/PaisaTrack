@@ -1,3 +1,5 @@
+import 'assistant_intent.dart';
+
 class AssistantIntentClassifier {
   const AssistantIntentClassifier();
 
@@ -5,6 +7,7 @@ class AssistantIntentClassifier {
     String question, {
     required DateTime today,
     required Iterable<String> categoryNames,
+    Iterable<AssistantCategoryOption>? categoryOptions,
   }) {
     final normalized = _normalize(question);
     if (normalized.isEmpty) return null;
@@ -12,7 +15,13 @@ class AssistantIntentClassifier {
         _isClearlyUnsupported(normalized)) {
       return {'intent': 'unsupported'};
     }
-    final category = _matchCategory(normalized, categoryNames);
+    final options = categoryOptions?.toList(growable: false) ??
+        categoryNames
+            .map((name) => AssistantCategoryOption(id: name, name: name))
+            .toList(growable: false);
+    final categoryResolution = _matchCategories(normalized, options);
+    if (categoryResolution.ambiguous) return {'intent': 'unsupported'};
+    final categories = categoryResolution.categories;
     final metric = _metric(normalized);
     final aggregation = _aggregation(normalized);
     final range = _range(normalized, today);
@@ -62,7 +71,12 @@ class AssistantIntentClassifier {
     }
 
     final filter = <String, Object?>{};
-    if (category != null) filter['category'] = category;
+    if (categories.length == 1) {
+      filter['category_id'] = categories.single.id;
+    } else if (categories.length > 1) {
+      filter['category_ids'] =
+          categories.map((category) => category.id).toList();
+    }
     if (_direction(normalized) case final direction?) {
       filter['direction'] = direction;
     }
@@ -95,11 +109,12 @@ class AssistantIntentClassifier {
         'intent': 'category_breakdown',
         'metric': metric,
         'aggregation': 'breakdown',
+        if (filter.isNotEmpty) 'filter': filter,
         'time_range': range ?? _monthRange(today),
       };
     }
 
-    final merchant = category == null ? _merchant(question) : null;
+    final merchant = categories.isEmpty ? _merchant(question) : null;
     if (merchant != null) {
       filter['merchant'] = merchant;
       return {
@@ -111,7 +126,9 @@ class AssistantIntentClassifier {
       };
     }
 
-    if (!_looksLikeFinancialTotal(normalized) && category == null) return null;
+    if (!_looksLikeFinancialTotal(normalized) && categories.isEmpty) {
+      return null;
+    }
     if (range == null && _hasUnresolvedTimeReference(normalized)) return null;
     return {
       'intent': 'period_total',
@@ -186,10 +203,12 @@ class AssistantIntentClassifier {
   }
 
   static Map<String, Object?>? _range(String text, DateTime today) {
-    if (_containsAny(
-      text,
-      const ['all time', 'all-time', 'ever', 'lifetime'],
-    )) {
+    if (_containsAny(text, const [
+      'all time',
+      'all-time',
+      'ever',
+      'lifetime',
+    ])) {
       return const {'kind': 'all_time'};
     }
     if (_containsPhrase(text, 'today')) {
@@ -224,23 +243,26 @@ class AssistantIntentClassifier {
     }
     if (_explicitDateRange(text) case final explicit?) return explicit;
     if (_mentionsExplicitDateRange(text)) return null;
-    final quarterMatch =
-        RegExp(r'\bq([1-4])(?:\s+(20\d{2}))?\b').firstMatch(text);
+    final quarterMatch = RegExp(
+      r'\bq([1-4])(?:\s+(20\d{2}))?\b',
+    ).firstMatch(text);
     if (quarterMatch != null) {
       final quarter = int.parse(quarterMatch.group(1)!);
       final year = int.tryParse(quarterMatch.group(2) ?? '') ?? today.year;
       return _quarterRange(year, quarter);
     }
-    final dayMatch =
-        RegExp(r'\b(?:last|past)\s+(\d{1,4})\s+days?\b').firstMatch(text);
+    final dayMatch = RegExp(
+      r'\b(?:last|past)\s+(\d{1,4})\s+days?\b',
+    ).firstMatch(text);
     if (dayMatch != null) {
       final days = int.parse(dayMatch.group(1)!);
       if (days >= 1 && days <= 3660) {
         return {'kind': 'last_n_days', 'n_days': days};
       }
     }
-    final weekMatch =
-        RegExp(r'\b(?:last|past)\s+(\d{1,3})\s+weeks?\b').firstMatch(text);
+    final weekMatch = RegExp(
+      r'\b(?:last|past)\s+(\d{1,3})\s+weeks?\b',
+    ).firstMatch(text);
     if (weekMatch != null) {
       final days = int.parse(weekMatch.group(1)!) * 7;
       if (days <= 3660) return {'kind': 'last_n_days', 'n_days': days};
@@ -267,10 +289,10 @@ class AssistantIntentClassifier {
 
     for (var index = 0; index < _months.length; index++) {
       final name = _months[index];
-      final match =
-          RegExp('\\b$name(?:uary|ruary|ch|il|e|y|ust|tember|ober|ember)?'
-                  r'(?:\s+(20\d{2}))?\b')
-              .firstMatch(text);
+      final match = RegExp(
+        '\\b$name(?:uary|ruary|ch|il|e|y|ust|tember|ober|ember)?'
+        r'(?:\s+(20\d{2}))?\b',
+      ).firstMatch(text);
       if (match == null) continue;
       var year = int.tryParse(match.group(1) ?? '') ?? today.year;
       final month = index + 1;
@@ -304,10 +326,7 @@ class AssistantIntentClassifier {
   ) {
     final explicitMonths = _mentionedMonths(text, today);
     if (explicitMonths.length >= 2) {
-      return (
-        _monthRange(explicitMonths[0]),
-        _monthRange(explicitMonths[1]),
-      );
+      return (_monthRange(explicitMonths[0]), _monthRange(explicitMonths[1]));
     }
     final quarters = _mentionedQuarters(text, today);
     if (quarters.length >= 2) {
@@ -428,9 +447,7 @@ class AssistantIntentClassifier {
 
   static bool _hasUnresolvedTimeReference(String text) =>
       _mentionsExplicitDateRange(text) ||
-      _containsAny(text, const [
-        'fiscal year',
-      ]);
+      _containsAny(text, const ['fiscal year']);
 
   static bool _mentionsExplicitDateRange(String text) =>
       RegExp(r'\b(?:from|between)\s+\d{1,4}').hasMatch(text);
@@ -456,8 +473,9 @@ class AssistantIntentClassifier {
       );
     }
     if (_containsPhrase(text, 'next week')) {
-      final start =
-          day.add(Duration(days: DateTime.daysPerWeek - day.weekday + 1));
+      final start = day.add(
+        Duration(days: DateTime.daysPerWeek - day.weekday + 1),
+      );
       return _inclusiveRange(
         start,
         start.add(const Duration(days: DateTime.daysPerWeek - 1)),
@@ -470,8 +488,9 @@ class AssistantIntentClassifier {
       final start = DateTime(day.year, day.month + 1);
       return _inclusiveRange(start, DateTime(day.year, day.month + 2, 0));
     }
-    final daysMatch =
-        RegExp(r'\b(?:next|coming)\s+(\d{1,3})\s+days?\b').firstMatch(text);
+    final daysMatch = RegExp(
+      r'\b(?:next|coming)\s+(\d{1,3})\s+days?\b',
+    ).firstMatch(text);
     if (daysMatch != null) {
       final days = int.parse(daysMatch.group(1)!);
       if (days >= 1 && days <= 366) {
@@ -533,10 +552,8 @@ class AssistantIntentClassifier {
             '${value.month.toString().padLeft(2, '0')}',
       };
 
-  static Map<String, Object?> _yearRange(int year) => _inclusiveRange(
-        DateTime(year),
-        DateTime(year, 12, 31),
-      );
+  static Map<String, Object?> _yearRange(int year) =>
+      _inclusiveRange(DateTime(year), DateTime(year, 12, 31));
 
   static Map<String, Object?> _quarterRange(int year, int quarter) {
     final start = DateTime(year, (quarter - 1) * 3 + 1);
@@ -598,43 +615,101 @@ class AssistantIntentClassifier {
   static bool _containsAny(String text, Iterable<String> values) =>
       values.any(text.contains);
 
-  /// Resolves a category filter from [normalized], tolerating single-token
-  /// references like "food" for "Food & Dining".
-  ///
-  /// A full normalized-name phrase match always wins (longest on ties). Failing
-  /// that, a single distinctive token is accepted only when it belongs to
-  /// exactly one category, so shared/ambiguous words (e.g. "food" when both
-  /// "Food & Dining" and "Fast Food" exist) fail closed rather than guessing.
-  static String? _matchCategory(
+  /// Resolves exact named scopes first, then only unambiguous category tokens.
+  /// If a token names a parent and its descendants, retain the parent scope;
+  /// unrelated matches remain ambiguous and fail closed.
+  static _CategoryResolution _matchCategories(
     String normalized,
-    Iterable<String> categoryNames,
+    List<AssistantCategoryOption> options,
   ) {
-    final names = categoryNames.toList(growable: false);
-    final full = names
-        .where((name) => _containsPhrase(normalized, _normalize(name)))
-        .fold<String?>(
-          null,
-          (best, name) =>
-              best == null || name.length > best.length ? name : best,
-        );
-    if (full != null) return full;
+    final exactMatches = options
+        .where((option) => _containsPhrase(normalized, _normalize(option.name)))
+        .toList(growable: false);
+    if (_hasDuplicateCategoryNames(exactMatches)) {
+      return const _CategoryResolution([], ambiguous: true);
+    }
+    final specificMatches = exactMatches.where((candidate) {
+      return !exactMatches.any(
+        (other) =>
+            other.id != candidate.id &&
+            _isDescendant(other.id, candidate.id, options),
+      );
+    }).toList(growable: false);
+    final remainingText = _removeCategoryPhrases(normalized, specificMatches);
 
-    final tokenOwners = <String, Set<String>>{};
-    for (final name in names) {
-      for (final token in _categoryTokens(name)) {
-        (tokenOwners[token] ??= <String>{}).add(name);
+    final tokenOwners = <String, Set<AssistantCategoryOption>>{};
+    for (final option in options) {
+      for (final token in _categoryTokens(option.name)) {
+        (tokenOwners[token] ??= <AssistantCategoryOption>{}).add(option);
       }
     }
-    String? matched;
+    final matched = <AssistantCategoryOption>{};
     for (final entry in tokenOwners.entries) {
-      if (entry.value.length != 1) continue; // token shared across categories
-      if (!_containsPhrase(normalized, entry.key)) continue;
-      final owner = entry.value.first;
-      // Tokens from two different categories in one question are ambiguous.
-      if (matched != null && matched != owner) return null;
-      matched = owner;
+      if (_containsCategoryToken(remainingText, entry.key)) {
+        matched.addAll(entry.value);
+      }
     }
-    return matched;
+    if (matched.isEmpty) return _CategoryResolution(specificMatches);
+    if (_hasDuplicateCategoryNames(matched.toList(growable: false))) {
+      return const _CategoryResolution([], ambiguous: true);
+    }
+    final roots = matched.where((candidate) {
+      return !matched.any(
+        (other) =>
+            other.id != candidate.id &&
+            _isDescendant(candidate.id, other.id, options),
+      );
+    }).toList(growable: false);
+    if (roots.length == 1 &&
+        matched.every(
+          (candidate) =>
+              candidate.id == roots.single.id ||
+              _isDescendant(candidate.id, roots.single.id, options),
+        )) {
+      return _CategoryResolution([...specificMatches, ...roots]);
+    }
+    return const _CategoryResolution([], ambiguous: true);
+  }
+
+  static bool _hasDuplicateCategoryNames(
+    List<AssistantCategoryOption> categories,
+  ) {
+    final names = <String>{};
+    for (final category in categories) {
+      if (!names.add(_normalize(category.name))) return true;
+    }
+    return false;
+  }
+
+  static String _removeCategoryPhrases(
+    String text,
+    List<AssistantCategoryOption> categories,
+  ) {
+    var result = text;
+    for (final category in categories) {
+      final phrase = _normalize(category.name);
+      if (phrase.isEmpty) continue;
+      result = result.replaceAll(
+        RegExp('(^|\\s)${RegExp.escape(phrase)}(?=\\s|\$)'),
+        ' ',
+      );
+    }
+    return result.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  static bool _isDescendant(
+    String categoryId,
+    String possibleAncestorId,
+    List<AssistantCategoryOption> options,
+  ) {
+    final parents = {for (final option in options) option.id: option.parentId};
+    var parentId = parents[categoryId];
+    final seen = <String>{};
+    while (parentId != null && seen.add(parentId)) {
+      if (parentId == possibleAncestorId) return true;
+      parentId = parents[parentId];
+    }
+    return false;
   }
 
   /// Distinctive, matchable tokens of a category name: normalized words of at
@@ -651,12 +726,25 @@ class AssistantIntentClassifier {
       'expense',
       'expenses',
     };
-    for (final token in _normalize(name).split(' ')) {
+    for (final rawToken in _normalize(name).split(' ')) {
+      final token = rawToken.endsWith('ies') && rawToken.length > 4
+          ? '${rawToken.substring(0, rawToken.length - 3)}y'
+          : rawToken.endsWith('s') && rawToken.length > 4
+              ? rawToken.substring(0, rawToken.length - 1)
+              : rawToken;
       if (token.length < 3) continue;
       if (int.tryParse(token) != null) continue;
       if (stopwords.contains(token)) continue;
       yield token;
     }
+  }
+
+  static bool _containsCategoryToken(String text, String token) {
+    if (_containsPhrase(text, token)) return true;
+    final plural = token.endsWith('y') && token.length > 3
+        ? '${token.substring(0, token.length - 1)}ies'
+        : '${token}s';
+    return _containsPhrase(text, plural);
   }
 
   static bool _containsPhrase(String text, String phrase) =>
@@ -682,4 +770,10 @@ class AssistantIntentClassifier {
     'nov',
     'dec',
   ];
+}
+
+class _CategoryResolution {
+  const _CategoryResolution(this.categories, {this.ambiguous = false});
+  final List<AssistantCategoryOption> categories;
+  final bool ambiguous;
 }

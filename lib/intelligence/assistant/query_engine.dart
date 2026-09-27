@@ -81,6 +81,18 @@ class AssistantQueryEngine {
     AssistantIntent intent,
     AssistantTimeRange range,
   ) async {
+    final categories = await database.select(database.categories).get();
+    final selectedIds = intent.categoryIds.isNotEmpty
+        ? intent.categoryIds.toSet()
+        : {if (intent.categoryId != null) intent.categoryId!};
+    final categoryParents = {
+      for (final category in categories) category.id: category.parentId,
+    };
+    final categoryScope = _descendantCategoryIds(selectedIds, categoryParents);
+    final nonSpendingIds = categories
+        .where((category) => !category.isSpending)
+        .map((category) => category.id)
+        .toSet();
     final query = database.select(database.transactions)
       ..where((row) {
         Expression<bool> predicate =
@@ -89,9 +101,15 @@ class AssistantQueryEngine {
                 row.isDeleted.equals(false) &
                 row.duplicateOfTxnId.isNull() &
                 row.isAnalyticsExcluded.equals(false) &
-                row.ownedTransferId.isNull();
-        if (intent.categoryId != null) {
-          predicate &= row.categoryId.equals(intent.categoryId!);
+                row.ownedTransferId.isNull() &
+                row.lifecycleState.equals('settled');
+        if (categoryScope.isNotEmpty) {
+          predicate &= row.categoryId.isIn(categoryScope);
+        }
+        if (intent.metric == AssistantMetric.spend &&
+            nonSpendingIds.isNotEmpty) {
+          predicate &=
+              row.categoryId.isNull() | row.categoryId.isNotIn(nonSpendingIds);
         }
         if (intent.direction != null) {
           predicate &= row.direction.equals(intent.direction!);
@@ -175,6 +193,9 @@ class AssistantQueryEngine {
         aggregation: AssistantAggregation.sum,
         range: intent.compareRange,
         categoryId: intent.categoryId,
+        categoryIds: intent.categoryIds,
+        categoryNames: intent.categoryNames,
+        categoryName: intent.categoryName,
         merchant: intent.merchant,
         direction: intent.direction,
       ),
@@ -235,6 +256,27 @@ class AssistantQueryEngine {
         AssistantMetric.income => row.direction == 'credit',
         AssistantMetric.net => true,
       };
+
+  static Set<String> _descendantCategoryIds(
+    Set<String> selectedIds,
+    Map<String, String?> parents,
+  ) {
+    final included = {...selectedIds};
+    var changed = true;
+    while (changed) {
+      changed = false;
+      for (final entry in parents.entries) {
+        if (!included.contains(entry.key) &&
+            entry.value != null &&
+            included.contains(entry.value)) {
+          included.add(entry.key);
+          changed = true;
+        }
+      }
+    }
+    return included;
+  }
+
   static double _signed(Transaction row, AssistantMetric metric) =>
       metric == AssistantMetric.net && row.direction == 'debit'
           ? -row.amount

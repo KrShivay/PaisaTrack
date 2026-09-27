@@ -61,32 +61,33 @@ void main() {
   });
 
   test(
-      'rejects unsupported, unknown category, malformed date, and SQL-shaped fields',
-      () {
-    expect(
-      validator().validate({'intent': 'unsupported'}),
-      isA<InvalidIntent>(),
-    );
-    expect(
-      validator().validate({
-        'intent': 'period_total',
-        'filter': {'category': 'Dining'},
-        'time_range': {'kind': 'month', 'month': '2026-07'},
-      }),
-      isA<InvalidIntent>(),
-    );
-    expect(
-      validator().validate({
-        'intent': 'period_total',
-        'time_range': {'kind': 'month', 'month': '2026-13'},
-      }),
-      isA<InvalidIntent>(),
-    );
-    expect(
-      assistantIntentSchema['properties'].toString(),
-      isNot(contains('sql')),
-    );
-  });
+    'rejects unsupported, unknown category, malformed date, and SQL-shaped fields',
+    () {
+      expect(
+        validator().validate({'intent': 'unsupported'}),
+        isA<InvalidIntent>(),
+      );
+      expect(
+        validator().validate({
+          'intent': 'period_total',
+          'filter': {'category': 'Dining'},
+          'time_range': {'kind': 'month', 'month': '2026-07'},
+        }),
+        isA<InvalidIntent>(),
+      );
+      expect(
+        validator().validate({
+          'intent': 'period_total',
+          'time_range': {'kind': 'month', 'month': '2026-13'},
+        }),
+        isA<InvalidIntent>(),
+      );
+      expect(
+        assistantIntentSchema['properties'].toString(),
+        isNot(contains('sql')),
+      );
+    },
+  );
 
   test('category resolution is exact then case-insensitive', () {
     final result = validator().validate({
@@ -96,5 +97,94 @@ void main() {
     }) as ValidIntent;
     expect(result.intent.categoryId, 'food');
     expect(result.intent.categoryName, 'Food');
+  });
+
+  test('validates multiple canonical categories into typed category IDs', () {
+    final result = validator().validate({
+      'intent': 'period_total',
+      'filter': {
+        'categories': ['Food', 'Travel'],
+      },
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    }) as ValidIntent;
+
+    expect(result.intent.categoryIds, ['food', 'travel']);
+    expect(result.intent.categoryNames, ['Food', 'Travel']);
+    expect(result.intent.categoryId, isNull);
+  });
+
+  test('local category IDs stay stable and duplicate names fail closed', () {
+    final byId = validator().validate({
+      'intent': 'period_total',
+      'filter': {'category_id': 'travel'},
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    }) as ValidIntent;
+    expect(byId.intent.categoryId, 'travel');
+    expect(byId.intent.categoryName, 'Travel');
+
+    final duplicateName = IntentValidator(
+      categories: const {'travel': 'Travel', 'other_travel': 'Travel'},
+      clock: () => now,
+    ).validate({
+      'intent': 'period_total',
+      'filter': {'category': 'Travel'},
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+    expect(duplicateName, isA<InvalidIntent>());
+  });
+
+  test('malformed multi-category values are rejected, never dropped', () {
+    final result = validator().validate({
+      'intent': 'period_total',
+      'filter': {
+        'categories': ['Food', 42],
+      },
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+    expect(result, isA<InvalidIntent>());
+  });
+
+  test('rejects mixed single and multiple category encodings', () {
+    final nameAndNames = validator().validate({
+      'intent': 'period_total',
+      'filter': {
+        'category': 'Food',
+        'categories': ['Food', 'Travel'],
+      },
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+    final idAndIds = validator().validate({
+      'intent': 'period_total',
+      'filter': {
+        'category_id': 'food',
+        'category_ids': ['food', 'travel'],
+      },
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+
+    expect(nameAndNames, isA<InvalidIntent>());
+    expect(idAndIds, isA<InvalidIntent>());
+  });
+
+  test('rejects present null category arrays and malformed filters', () {
+    final nullNames = validator().validate({
+      'intent': 'period_total',
+      'filter': {'categories': null},
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+    final nullIds = validator().validate({
+      'intent': 'period_total',
+      'filter': {'category_ids': null},
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+    final malformedFilter = validator().validate({
+      'intent': 'period_total',
+      'filter': null,
+      'time_range': {'kind': 'month', 'month': '2026-07'},
+    });
+
+    expect(nullNames, isA<InvalidIntent>());
+    expect(nullIds, isA<InvalidIntent>());
+    expect(malformedFilter, isA<InvalidIntent>());
   });
 }

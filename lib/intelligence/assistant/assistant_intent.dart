@@ -14,6 +14,18 @@ enum AssistantMetric { spend, income, net }
 
 enum AssistantAggregation { sum, count, average, breakdown }
 
+class AssistantCategoryOption {
+  const AssistantCategoryOption({
+    required this.id,
+    required this.name,
+    this.parentId,
+  });
+
+  final String id;
+  final String name;
+  final String? parentId;
+}
+
 class AssistantTimeRange {
   const AssistantTimeRange(this.start, this.end, {required this.label});
   final DateTime start;
@@ -30,6 +42,8 @@ class AssistantIntent {
     this.compareRange,
     this.categoryId,
     this.categoryName,
+    this.categoryIds = const [],
+    this.categoryNames = const [],
     this.merchant,
     this.direction,
   });
@@ -41,6 +55,8 @@ class AssistantIntent {
   final AssistantTimeRange? compareRange;
   final String? categoryId;
   final String? categoryName;
+  final List<String> categoryIds;
+  final List<String> categoryNames;
   final String? merchant;
   final String? direction;
 }
@@ -108,6 +124,12 @@ const assistantIntentSchema = <String, Object?>{
       'additionalProperties': false,
       'properties': {
         'category': {'type': 'string'},
+        'categories': {
+          'type': 'array',
+          'items': {'type': 'string'},
+          'minItems': 2,
+          'maxItems': 5,
+        },
         'merchant': {'type': 'string'},
         'direction': {
           'type': 'string',
@@ -148,17 +170,82 @@ class IntentValidator {
       );
     }
     final filter = _stringMap(json['filter']);
-    final categoryHint = filter?['category'] as String?;
-    String? categoryId;
-    String? categoryName;
-    if (categoryHint != null) {
-      final match = categories.entries
-          .where(
-            (entry) =>
-                entry.value.toLowerCase() == categoryHint.trim().toLowerCase(),
-          )
-          .firstOrNull;
-      if (match == null) {
+    if (json.containsKey('filter') && filter == null) {
+      return const InvalidIntent(
+        AssistantRefusal(
+          'I could not resolve the requested filters safely.',
+          suggestions: suggestions,
+        ),
+      );
+    }
+    final categoryEncodings = [
+      'category',
+      'categories',
+      'category_id',
+      'category_ids',
+    ].where((key) => filter?.containsKey(key) == true).length;
+    final rawCategoryNames = filter?['categories'];
+    if (categoryEncodings > 1 ||
+        (filter?.containsKey('category') == true &&
+            filter?['category'] is! String) ||
+        (filter?.containsKey('category_id') == true &&
+            filter?['category_id'] is! String) ||
+        (filter?.containsKey('categories') == true &&
+            (rawCategoryNames is! List ||
+                rawCategoryNames.length < 2 ||
+                rawCategoryNames.length > 5 ||
+                rawCategoryNames.any((value) => value is! String)))) {
+      return const InvalidIntent(
+        AssistantRefusal(
+          'I could not resolve the requested categories safely.',
+          suggestions: suggestions,
+        ),
+      );
+    }
+    final categoryHints = <String>[
+      if (filter?['category'] case final String category) category,
+      if (rawCategoryNames is List<Object?>) ...rawCategoryNames.cast<String>(),
+    ];
+    final selectedCategories = <MapEntry<String, String>>[];
+    final categoryIdHints = <String>[
+      if (filter?['category_id'] case final String categoryId) categoryId,
+    ];
+    final rawCategoryIds = filter?['category_ids'];
+    if (filter?.containsKey('category_ids') == true &&
+        (rawCategoryIds is! List ||
+            rawCategoryIds.length < 2 ||
+            rawCategoryIds.length > 5 ||
+            rawCategoryIds.any((value) => value is! String))) {
+      return const InvalidIntent(
+        AssistantRefusal(
+          'I could not resolve the requested categories safely.',
+          suggestions: suggestions,
+        ),
+      );
+    }
+    if (rawCategoryIds is List<Object?>) {
+      categoryIdHints.addAll(rawCategoryIds.cast<String>());
+    }
+    for (final categoryId in categoryIdHints) {
+      final name = categories[categoryId];
+      if (name == null) {
+        return InvalidIntent(
+          AssistantRefusal(
+            "I don't see a category called '$categoryId'.",
+            suggestions: suggestions,
+          ),
+        );
+      }
+      if (!selectedCategories.any((item) => item.key == categoryId)) {
+        selectedCategories.add(MapEntry(categoryId, name));
+      }
+    }
+    for (final categoryHint in categoryHints) {
+      final matches = categories.entries.where((entry) {
+        return entry.value.trim().toLowerCase() ==
+            categoryHint.trim().toLowerCase();
+      }).toList(growable: false);
+      if (matches.isEmpty) {
         return InvalidIntent(
           AssistantRefusal(
             "I don't see a category called '$categoryHint'.",
@@ -166,8 +253,18 @@ class IntentValidator {
           ),
         );
       }
-      categoryId = match.key;
-      categoryName = match.value;
+      if (matches.length > 1) {
+        return InvalidIntent(
+          AssistantRefusal(
+            "I found more than one category called '${categoryHint.trim()}'. Please choose a category with a unique name.",
+            suggestions: suggestions,
+          ),
+        );
+      }
+      final match = matches.single;
+      if (!selectedCategories.any((item) => item.key == match.key)) {
+        selectedCategories.add(match);
+      }
     }
     final merchant = (filter?['merchant'] as String?)?.trim();
     if (kind == AssistantIntentKind.merchantLookup &&
@@ -230,8 +327,14 @@ class IntentValidator {
         aggregation: aggregation,
         range: range,
         compareRange: compare,
-        categoryId: categoryId,
-        categoryName: categoryName,
+        categoryId: selectedCategories.length == 1
+            ? selectedCategories.single.key
+            : null,
+        categoryName: selectedCategories.length == 1
+            ? selectedCategories.single.value
+            : null,
+        categoryIds: selectedCategories.map((item) => item.key).toList(),
+        categoryNames: selectedCategories.map((item) => item.value).toList(),
         merchant: merchant,
         direction: filter?['direction'] as String?,
       ),

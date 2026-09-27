@@ -1,16 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/intelligence/assistant/assistant_intent.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent_classifier.dart';
+
+import 'category_test_data.dart';
 
 void main() {
   const classifier = AssistantIntentClassifier();
   final today = DateTime(2026, 7, 13);
   const categories = ['Food', 'Bank Fees', 'Travel'];
 
-  Map<String, Object?>? classify(String question) => classifier.classify(
-        question,
-        today: today,
-        categoryNames: categories,
-      );
+  Map<String, Object?>? classify(String question) =>
+      classifier.classify(question, today: today, categoryNames: categories);
 
   test('classifies common totals without invoking a language model', () {
     expect(classify('How much did I spend this month?'), {
@@ -59,7 +59,7 @@ void main() {
       'intent': 'period_total',
       'metric': 'spend',
       'aggregation': 'sum',
-      'filter': {'category': 'Bank Fees'},
+      'filter': {'category_id': 'Bank Fees'},
       'time_range': {'kind': 'month', 'month': '2026-07'},
     });
     expect(classify('How much did I spend at Amazon this month?'), {
@@ -103,30 +103,94 @@ void main() {
     // falling through to a merchant lookup that returns nothing.
     const multiWord = AssistantIntentClassifier();
     Map<String, Object?>? ask(String q, List<String> cats) =>
-        multiWord.classify(
-          q,
-          today: today,
-          categoryNames: cats,
-        );
+        multiWord.classify(q, today: today, categoryNames: cats);
 
     expect(
-        ask('How much did I spend on food this month?', const [
-          'Food & Dining',
-          'Travel',
-        ]),
-        {
-          'intent': 'period_total',
-          'metric': 'spend',
-          'aggregation': 'sum',
-          'filter': {'category': 'Food & Dining'},
-          'time_range': {'kind': 'month', 'month': '2026-07'},
-        });
+      ask('How much did I spend on food this month?', const [
+        'Food & Dining',
+        'Travel',
+      ]),
+      {
+        'intent': 'period_total',
+        'metric': 'spend',
+        'aggregation': 'sum',
+        'filter': {'category_id': 'Food & Dining'},
+        'time_range': {'kind': 'month', 'month': '2026-07'},
+      },
+    );
 
-    // A token shared by two categories is ambiguous, so it must NOT auto-pick a
-    // category (fail closed) — it falls through to a merchant lookup here.
-    final ambiguous =
-        ask('How much on food this month?', const ['Fast Food', 'Food Court']);
-    expect(ambiguous?['filter'], isNot(contains('category')));
+    // A token shared by unrelated categories is refused before merchant
+    // fallback, so it cannot produce a fake zero for a guessed payee.
+    final ambiguous = ask('How much on food this month?', const [
+      'Fast Food',
+      'Food Court',
+    ]);
+    expect(ambiguous, {'intent': 'unsupported'});
+  });
+
+  test('uses seeded parent scope, exact child scope, and multiple scopes', () {
+    final options = seededCategoryOptions();
+    Map<String, Object?>? ask(String q) => classifier.classify(
+          q,
+          today: today,
+          categoryNames: options.map((option) => option.name),
+          categoryOptions: options,
+        );
+
+    expect(ask('How much did I spend on food this month?')?['filter'], {
+      'category_id': 'food_dining',
+    });
+    expect(
+      ask('How much did I spend on food delivery this month?')?['filter'],
+      {'category_id': 'food_delivery'},
+    );
+    expect(ask('How much did I spend on grocery this month?')?['filter'], {
+      'category_id': 'groceries',
+    });
+    expect(
+      ask(
+        'How much did I spend on food delivery and groceries this month?',
+      )?['filter'],
+      {
+        'category_ids': ['food_delivery', 'groceries'],
+      },
+    );
+    final broadAndGroceries = ask(
+      'How much did I spend on food and groceries this month?',
+    )?['filter']! as Map<String, Object?>;
+    expect(
+      (broadAndGroceries['category_ids'] as List).toSet(),
+      {'food_dining', 'groceries'},
+    );
+  });
+
+  test('same-name categories are ambiguous even when their IDs differ', () {
+    final result = classifier.classify(
+      'How much did I spend on Food this month?',
+      today: today,
+      categoryNames: const ['Food', 'Food'],
+      categoryOptions: const [
+        AssistantCategoryOption(id: 'food_one', name: 'Food'),
+        AssistantCategoryOption(id: 'food_two', name: 'Food'),
+      ],
+    );
+
+    expect(result, {'intent': 'unsupported'});
+  });
+
+  test('unrelated food matches are refused before merchant fallback', () {
+    final options = [
+      ...seededCategoryOptions(),
+      const AssistantCategoryOption(id: 'fast_food', name: 'Fast Food'),
+    ];
+    final result = classifier.classify(
+      'How much did I spend on food this month?',
+      today: today,
+      categoryNames: options.map((option) => option.name),
+      categoryOptions: options,
+    );
+
+    expect(result, {'intent': 'unsupported'});
   });
 
   test('resolves years, quarters, and explicit ranges locally', () {
@@ -259,12 +323,8 @@ void main() {
 
   test('leaves ambiguous and unsupported filters for the guarded fallback', () {
     expect(classify('Analyse my finances in your own way'), isNull);
-    expect(classify('Show payments above ₹5,000'), {
-      'intent': 'unsupported',
-    });
-    expect(classify('Which stock should I buy?'), {
-      'intent': 'unsupported',
-    });
+    expect(classify('Show payments above ₹5,000'), {'intent': 'unsupported'});
+    expect(classify('Which stock should I buy?'), {'intent': 'unsupported'});
     expect(classify('Spend from 2026-02-30 to 2026-03-02'), isNull);
     expect(classify('How much did I spend in fiscal year 2025?'), isNull);
   });
@@ -336,9 +396,7 @@ void main() {
     expect(classify('Which payments are coming up?'), {
       'intent': 'upcoming_recurring',
     });
-    expect(classify('Any spending anomalies?'), {
-      'intent': 'active_insights',
-    });
+    expect(classify('Any spending anomalies?'), {'intent': 'active_insights'});
     expect(classify('Show expenses from the past week'), {
       'intent': 'period_total',
       'metric': 'spend',

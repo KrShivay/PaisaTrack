@@ -22,6 +22,11 @@ void main() {
           question,
           today: DateTime(2026, 7, 12),
           categoryNames: const ['Food', 'Shopping', 'Travel'],
+          categoryOptions: const [
+            AssistantCategoryOption(id: 'food', name: 'Food'),
+            AssistantCategoryOption(id: 'shopping', name: 'Shopping'),
+            AssistantCategoryOption(id: 'travel', name: 'Travel'),
+          ],
         );
         expect(json, isNotNull, reason: '$group.id: $question');
         final result = validator.validate(json!);

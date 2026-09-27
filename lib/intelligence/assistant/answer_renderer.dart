@@ -5,7 +5,10 @@ import 'query_engine.dart';
 class AnswerRenderer {
   const AnswerRenderer();
 
-  String render(AssistantIntent intent, AssistantQueryResult result) =>
+  String render(
+    AssistantIntent intent,
+    AssistantQueryResult result,
+  ) =>
       switch (result) {
         TotalQueryResult(:final value, :final count, :final label) => count == 0
             ? 'Period: $label\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
@@ -17,7 +20,7 @@ class AnswerRenderer {
           :final current,
           :final previous,
           :final delta,
-          :final percent
+          :final percent,
         ) =>
           'Current: ${formatInr(current)}. Previous: ${formatInr(previous)}. Difference: ${formatInr(delta)}${percent == null ? '' : ' (${(percent * 100).toStringAsFixed(1)}%)'}.',
         RecurringQueryResult(:final items) => items.isEmpty
@@ -45,7 +48,10 @@ class AnswerRenderer {
   static String _filters(AssistantIntent intent) {
     final filters = <String>[
       _metric(intent.metric),
-      if (intent.categoryName != null) intent.categoryName!,
+      if (intent.categoryNames.isNotEmpty)
+        intent.categoryNames.join(' + ')
+      else if (intent.categoryName != null)
+        intent.categoryName!,
       if (intent.merchant != null) intent.merchant!,
       if (intent.direction != null) intent.direction!,
     ];

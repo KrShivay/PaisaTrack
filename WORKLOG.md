@@ -1,5 +1,22 @@
 # Current Handoff
 
+## 2026-09-27 — T-181 Ask category query scopes
+
+- Independent review accepted. The local classifier uses category IDs from the
+  seeded taxonomy; parent filters expand to descendants, exact children stay
+  narrow, and multiple explicit scopes survive validation and SQL filtering.
+  Unrelated or duplicate-name ambiguity refuses before merchant lookup.
+  Spending queries now require settled eligible transactions in spending
+  categories.
+- Added seeded taxonomy classifier/query tests, controller end-to-end tests,
+  compact multi-category intent coverage, malformed-intent and duplicate-name
+  rejection tests, category-scoped breakdown coverage, and ADR 0014. Malformed
+  filters (including null arrays and mixed single/list encodings) fail closed.
+- Validation: focused assistant suite 42/42; full Flutter suite 799/799;
+  `flutter analyze --no-pub`, Dart formatting, and `git diff --check` clean.
+  GitNexus `detect-changes --scope all`: 15 files, 42 symbols, 5 affected
+  processes, MEDIUM risk, no partial/truncated result. No phone/archive access.
+
 ## 2026-09-27 — PaisaTrack 0.1.2+4 Android release
 
 - Built the signed ARM64 production APK from `main` at `b06d315`, with the
@@ -47,24 +64,3 @@
   by successful MainActivity launch. Physical phone and original backup untouched.
 - GitNexus refreshed; `detect-changes --scope all` reported 20 files, 319
   symbols, 6 affected flows, HIGH overall impact, no partial/truncated result.
-
-## 2026-09-27 — PV-02 aggregate parity and truthful dashboard scope
-
-- Added a corpus-seeded SQL parity test that seeds all 20 current corpus rows and
-  pins eligible spending/credit IDs, excluded IDs, totals, category totals, and
-  trend totals. The corpus `long_history` descriptor says 125 rows but contains
-  only two; no broader-history or performance claim is made.
-- Added visible dashboard period, settled-spending and credit eligibility,
-  known-exclusion, and local-record coverage explanations. Loading/error states
-  do not present an exclusion amount as if aggregation succeeded.
-- Kept the monthly budget action ahead of the detailed disclosure. Placed the
-  disclosure after Recent so the lazy final transaction row remains reachable;
-  geometry coverage verifies both it and the final disclosure line clear the
-  floating navigation pill.
-- Verified: focused dashboard/shell/corpus suite **16/16**; analyzer clean; full
-  Flutter suite **764/764**, exit code 0; `git diff --check` clean. The initial
-  full run caught a dashboard navigation geometry regression; the disclosure
-  was moved after Recent and the final test verifies it clears the nav pill.
-  GitNexus change map: 8 files / 14 indexed symbols, LOW risk, no affected
-  processes. Flow inventory is bounded, so missing flows are not treated as
-  proof of no impact.

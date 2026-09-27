@@ -168,6 +168,12 @@ Ambiguous supported questions use a compact strict-schema model fallback.
 `IntentValidator` produces a typed intent, `AssistantQueryEngine` reads local
 repositories, and `AnswerRenderer` interpolates only deterministic query fields.
 Model prose and model-authored numbers cannot reach the answer.
+Category filters resolve against the stored taxonomy: a parent includes its
+descendants, an exact child stays narrow, and explicitly named categories are
+queried together. Unrelated or duplicate-name ambiguity is refused before
+merchant lookup. Spending totals use settled, non-excluded transactions in
+spending categories, matching dashboard eligibility. Category typo-tolerance
+and arbitrary fuzzy matching remain unsupported.
 
 ## Future extension boundaries
 
