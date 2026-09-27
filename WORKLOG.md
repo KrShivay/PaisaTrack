@@ -6,11 +6,15 @@
   T-176 and T-179a remain open for physical-device acceptance.
 - Added T-180 for Weekly Review status persistence: Keep must persist
   `confirmed`; Undo must persist `needs_review` and restore the queue row once.
-- Set the next Android release metadata to `0.1.1+3`. The download link still
-  serves the published `0.1.0+2` APK; its replacement size will be recorded
-  after the signed artifact is built and verified.
+- Published signed Android release `0.1.1+3` at the existing stable APK URL.
+  The ARM64 artifact is 56,553,692 bytes (56.55 MB decimal), SHA-256
+  `44fbae3736a939af1dfe707b8bd4675e50c2de715da308f380c65b98b4dbd940`.
+  Signed install and explicit activity launch passed on the explicit ARM64 API
+  35 emulator. Physical `192.168.1.10:5555` was unreachable; T-176 and T-179a
+  physical acceptance remain open.
 - Independent review ran 26 focused Flutter tests and `flutter analyze
-  --no-pub`; all passed. No APK or device action was performed.
+  --no-pub`; all passed. No fresh application tests were run for this docs-only
+  release record.
 
 ## 2026-09-27 — T-179a safe key-loss recovery
 
