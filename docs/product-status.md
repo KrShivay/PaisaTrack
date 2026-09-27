@@ -1,10 +1,10 @@
 # Product Status
 
-Status date: 2026-09-04
-Code baseline: current `main` worktree, including T-126 calendar/eligibility
-semantics, T-156a dialog consolidation, T-157b shared correction/undo, and
-PV-02 truthful dashboard aggregates (loading/error no longer fall back to the
-bounded transaction feed)
+Status date: 2026-09-27
+Code baseline: isolated PV-02 worktree from 333beda, including T-126
+calendar/eligibility semantics, T-156a dialog consolidation, T-157b shared
+correction/undo, and PV-02 period, eligibility, coverage, and exclusion
+disclosure with SQL/corpus aggregate parity.
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -78,7 +78,7 @@ normative boundaries.
 | Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm, Punjab National Bank and generic coverage exist; sanitized salary-credit templates and sender-agnostic fallback are proven end to end; PNB has a public-source fixture matrix with an exact-parse gate; developer diagnostics expose content-free native live/batch filter and unknown-sender counters | Public PNB templates remain capped at 0.85 until device confirmation; counters reset with the app process; further bank breadth still requires sanitized evidence and exact parser assertions |
 | Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI, explicit Activity page exhaustion, strict Activity keyset paging, continuation while filtered | Activity search still covers only the loaded page; SQL-backed cross-page search remains future work, and query failures still need actionable error states |
 | Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates and shared correction/undo sequencing | Queue remains capped at 100; cursor/persistence work is T-153 |
-| Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful guidance, global monthly budget prototype, recurring totals | Error states remain incomplete |
+| Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful loading/error states, period and eligibility disclosure, known exclusions, local-data coverage caveat, global monthly budget prototype, recurring totals | Bank-wide capture completeness cannot be known from local records |
 | Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Eligibility diagnostics are absent |
 | Categories and identities | Category manager, SQL-backed paged payee labels/search, payment-source naming/ownership/exclusion | Duplicate suggestions remain review-only; several secondary screens retain legacy surfaces |
 | Assistant | Deterministic intents and queries with guarded local-model fallback | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
@@ -114,7 +114,7 @@ Exact owners, dependencies, acceptance criteria, and next actions are in
 
 | Intended outcome | Actual gap |
 | --- | --- |
-| Trustworthy spending guidance | Dashboard can mix periods and render sample financial claims as real |
+| Trustworthy spending guidance | Dashboard states its selected period, spending eligibility, known exclusions, and that records missing from PaisaTrack cannot be detected |
 | Recoverable, user-controlled local data | Some errors point to reset; delete-everything is incomplete |
 | Automatic SMS capture with clear recovery | Permanent denial recovery actions do not open system settings |
 | Complete, scalable financial history | Activity and Review operate on bounded client-side windows |
@@ -140,16 +140,26 @@ Historical full-suite evidence, recorded on 2026-07-26:
 - `flutter analyze --no-pub`: **one lint**, at
   `test/features/insights/insights_recurring_test.dart:102`.
 
-Current workspace verification, 2026-08-08:
+Current PV-02 worktree verification, 2026-09-27:
 
-- Focused T-155/T-156 regression suite: **25/25 passed**.
-- Focused T-157b Review/Detail correction suite: **20/20 passed**.
-- `flutter analyze --no-pub`: **no issues found**.
-- GitNexus clean rebuild: status confirms the current `main` commit is indexed
-  and up to date.
+- Dashboard aggregate corpus parity and dashboard/shell rendering suite:
+  **16/16 passed**. The SQL aggregate test seeded all 20 transactions currently
+  in `corpus.json` and pinned eligible and excluded row IDs as well as totals.
+- `flutter analyze --no-pub`: **no issues found**; `git diff --check` clean.
+- After correcting the dashboard navigation geometry regression, the definitive
+  full host suite `flutter test --no-pub --concurrency=1` passed **764/764**;
+  captured exit code was **0**.
+- GitNexus `detect-changes --scope all`: 8 files / 14 indexed symbols, LOW risk,
+  no affected processes. The repository-wide flow inventory is bounded and
+  omitted candidates are not evidence of unaffected paths; dashboard callers
+  and related tests were checked directly.
 
 - GitNexus taint enumeration remains unavailable because the index has no PDG
   layer; this is not evidence that taint risks are absent.
+
+- The existing corpus `long_history` descriptor claims 125 rows but contains
+  only two. PV-02 parity covers the full current corpus; 125-row breadth and
+  performance remain unverified until the fixture is expanded.
 
 Not verified: physical-device SMS delivery/resume, permanent-denial settings
 round-trip, WorkManager execution, TalkBack, large text, model download/inference

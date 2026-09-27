@@ -79,8 +79,7 @@ class BloomHeroRing extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final slices =
-        ref.watch(categoryBreakdownProvider).valueOrNull ?? const [];
+    final slices = ref.watch(categoryBreakdownProvider).valueOrNull ?? const [];
     final selectedMetric = ref.watch(selectedDashboardMetricProvider);
     final showPaise = ref.watch(showPaiseProvider);
 
@@ -391,46 +390,107 @@ class _MetricPillButton extends StatelessWidget {
   }
 }
 
-/// Completeness note explaining spending excluded from the headline total by
-/// self-transfer / analytics-excluded flags. Renders only on a successful
-/// aggregate with a non-zero excluded amount, so it never fabricates a figure
-/// during loading or error (PV-02).
+/// Explains the period, spending eligibility, known exclusions, and data
+/// coverage behind dashboard totals. Numeric exclusion details are shown only
+/// after a successful aggregate, so loading and error never resemble zero.
 class BloomExclusionsNote extends ConsumerWidget {
   const BloomExclusionsNote({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final aggregate = ref.watch(dashboardAggregateProvider);
     final exclusions = ref.watch(dashboardExclusionsProvider).valueOrNull;
-    if (exclusions == null || exclusions.total <= 0) {
-      return const SizedBox.shrink();
-    }
+    final period = ref.watch(dashboardPeriodProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showPaise = ref.watch(showPaiseProvider);
-    var amount = formatInr(exclusions.total);
-    if (!showPaise) {
-      final idx = amount.lastIndexOf('.');
-      if (idx != -1) amount = amount.substring(0, idx);
-    }
-    final n = exclusions.count;
-    final color = isDark
+    final primary =
+        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    final secondary = isDark
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
+    final surface =
+        isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
+    final outline =
+        isDark ? AppColorTokens.bloomDarkOutline : AppColorTokens.bloomHairline;
+    String? aggregateStatus;
+    if (aggregate.isLoading) {
+      aggregateStatus = 'Updating totals for this period…';
+    } else if (aggregate.hasError) {
+      aggregateStatus =
+          'Totals are unavailable while transaction data could not be loaded.';
+    }
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+    var excludedAmount =
+        exclusions == null ? null : formatInr(exclusions.total);
+    if (excludedAmount != null && !showPaise) {
+      final idx = excludedAmount.lastIndexOf('.');
+      if (idx != -1) excludedAmount = excludedAmount.substring(0, idx);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 13, color: color),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              '$amount across $n ${n == 1 ? 'transfer/excluded item' : 'transfers & excluded items'} '
-              'not counted in spending',
-              textAlign: TextAlign.center,
-              style: AppTheme.bloomDisplay(11, FontWeight.w500, color: color),
-            ),
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 15, color: secondary),
+              const SizedBox(width: 6),
+              Text(
+                'About these totals',
+                style:
+                    AppTheme.bloomDisplay(12, FontWeight.w600, color: primary),
+              ),
+            ],
           ),
+          const SizedBox(height: 6),
+          Text(
+            'Period: ${period.label}',
+            style: AppTheme.bloomDisplay(11, FontWeight.w600, color: primary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Spending counts settled debit transactions in spending categories. '
+            'Transactions without a category count as spending unless another rule excludes them.',
+            style: AppTheme.bloomDisplay(11, FontWeight.w400, color: secondary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'For spending, pending, reversed or failed transactions, deleted or '
+            'duplicate rows, owned transfers, non-spending categories, and transactions '
+            'excluded from analytics are left out. Credit totals count settled credits '
+            'except deleted, duplicate, owned-transfer, or excluded-source rows.',
+            style: AppTheme.bloomDisplay(11, FontWeight.w400, color: secondary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'These totals include only activity recorded in PaisaTrack; missing or unrecorded transactions are not visible here.',
+            style: AppTheme.bloomDisplay(11, FontWeight.w400, color: secondary),
+          ),
+          if (aggregateStatus != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              aggregateStatus,
+              style:
+                  AppTheme.bloomDisplay(11, FontWeight.w600, color: secondary),
+            ),
+          ] else if (exclusions != null &&
+              exclusions.total > 0 &&
+              excludedAmount != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Owned transfers and transactions excluded from analytics: '
+              '$excludedAmount across ${exclusions.count} settled spending '
+              '${exclusions.count == 1 ? 'debit' : 'debits'} not counted.',
+              style:
+                  AppTheme.bloomDisplay(11, FontWeight.w600, color: secondary),
+            ),
+          ],
         ],
       ),
     );

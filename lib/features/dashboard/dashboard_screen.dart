@@ -202,10 +202,6 @@ class DashboardScreen extends ConsumerWidget {
             // Metric Switcher Pills (Safe today, Net flow, Burn, Runway)
             const BloomMetricSwitcherPills(),
 
-            // Completeness note: spending excluded from the headline total.
-            const BloomExclusionsNote(),
-            const SizedBox(height: 24),
-
             // Budget Card
             const BloomBudgetCard(),
             const SizedBox(height: 24),
@@ -232,6 +228,11 @@ class DashboardScreen extends ConsumerWidget {
                 );
               },
             ),
+            const SizedBox(height: 24),
+
+            // Keep the detailed eligibility disclosure after the primary
+            // dashboard content so it does not push lazy content out of reach.
+            const BloomExclusionsNote(),
           ],
         ),
       ),

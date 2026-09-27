@@ -114,6 +114,11 @@ merges without replacing raw source fields.
 - Dashboard providers read SQL totals and grouped category, merchant, and trend
   aggregates. Transaction feeds load 100 newest rows at a time; recent cards use
   a separate six-row period query.
+- Dashboard totals show the active period, the settled-spending eligibility
+  rules, the known exclusion classes, and that totals cover only activity
+  recorded in PaisaTrack. The dynamic exclusion amount covers settled spending
+  debits marked as owned transfers or excluded from analytics; it is not a
+  measure of unrecorded bank activity.
 - Payment sources can be named, marked owned/active, and excluded from analytics.
   Conservatively paired transfers between owned sources are also excluded from
   aggregates without hiding either transaction.

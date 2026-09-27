@@ -62,6 +62,14 @@ void main() {
       final itemRect = tester.getRect(finalDashboardItem);
       expect(itemRect.bottom, lessThanOrEqualTo(navRect.top));
 
+      final finalDisclosureLine = find.textContaining(
+        'missing or unrecorded transactions are not visible',
+      );
+      await tester.ensureVisible(finalDisclosureLine);
+      await tester.pump(const Duration(milliseconds: 100));
+      final disclosureRect = tester.getRect(finalDisclosureLine);
+      expect(disclosureRect.bottom, lessThanOrEqualTo(navRect.top));
+
       await database.close();
     });
 

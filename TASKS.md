@@ -27,13 +27,21 @@ later hardening.
       Flutter analyzer reports no issues; `git diff --check` clean. The four
       handlers now call `TransactionCorrectionController.apply` and retain
       their existing optimistic UI, repository contexts, and undo callbacks.
-- [ ] PV-02 [P0] Truthful dashboard aggregates on loading/error and
-      completeness/exclusions. Depends: T-126.
-      Implemented: dashboard/insights derived providers use
-      `dashboardAggregateProvider` as `AsyncValue`, render loading/error states,
-      and report excluded spending totals/counts with a completeness note.
-      Verification: analyze clean, full suite green, and repository/provider/
-      widget coverage added.
+- [ ] PV-02 [P0] Dashboard aggregate eligibility and completeness disclosure.
+      Dashboard/insights aggregates retain explicit loading/error states. The
+      dashboard explains its selected period, settled-spending and credit
+      eligibility, known exclusions, and that only PaisaTrack-recorded activity
+      is visible. The primary budget action stays ahead of the detailed
+      disclosure; the final transaction row and disclosure scroll above the
+      navigation pill.
+      Verification: corpus-seeded SQL parity covers all 20 checked-in rows and
+      pins eligible/excluded IDs and totals; focused dashboard/shell/corpus
+      suite 16/16 passed; analyzer clean; full Flutter suite 764/764 passed
+      (exit 0); GitNexus change map 8 files / 14 symbols, LOW risk, 0 affected
+      processes.
+      Scope note: the existing `long_history` fixture description says 125 rows
+      but contains only two; this work makes no 125-row coverage/performance
+      claim. Expand that corpus before claiming broader-history coverage.
 
 ## Ready
 

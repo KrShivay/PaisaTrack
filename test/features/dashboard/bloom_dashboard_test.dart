@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,6 +106,9 @@ void main() {
       final database = AppDatabase(NativeDatabase.memory());
       await pumpDashboard(tester, database);
 
+      // The primary budget action must be discoverable without scrolling past
+      // the eligibility disclosure at a common phone-sized viewport.
+      expect(find.text('Set monthly budget'), findsOneWidget);
       await tester.tap(find.text('Set monthly budget'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -143,6 +148,9 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWith((ref) async => database),
+            dashboardPeriodProvider.overrideWith(
+              (ref) => DashboardPeriod.month(DateTime(2026, 7, 15)),
+            ),
             dashboardAggregateProvider.overrideWith(
               (ref) async => const DashboardAggregateSnapshot(
                 debitTotal: 500,
@@ -165,7 +173,121 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(
-        find.textContaining('not counted in spending'),
+        find.textContaining(
+          'Owned transfers and transactions excluded from analytics',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Period: July 2026'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'settled debit transactions in spending categories',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'missing or unrecorded transactions are not visible',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('For spending, pending, reversed or failed'),
+        findsOneWidget,
+      );
+
+      await database.close();
+    });
+
+    testWidgets(
+        'scope disclosure labels aggregate loading without showing zero',
+        (tester) async {
+      tester.view.physicalSize = const Size(402, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final database = AppDatabase(NativeDatabase.memory());
+      final aggregateCompleter = Completer<DashboardAggregateSnapshot>();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWith((ref) async => database),
+            dashboardAggregateProvider.overrideWith(
+              (ref) => aggregateCompleter.future,
+            ),
+          ],
+          child: const MaterialApp(
+            home: BloomUndoToastHost(child: DashboardScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Updating totals for this period…'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Owned transfers and transactions excluded from analytics',
+        ),
+        findsNothing,
+      );
+
+      aggregateCompleter.complete(
+        const DashboardAggregateSnapshot(
+          debitTotal: 0,
+          creditTotal: 0,
+          previousSpend: 0,
+          categories: [],
+          merchants: [],
+          trendByMonth: {},
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Updating totals for this period…'), findsNothing);
+      expect(
+        find.textContaining(
+          'Owned transfers and transactions excluded from analytics',
+        ),
+        findsNothing,
+      );
+
+      await database.close();
+    });
+
+    testWidgets('scope disclosure marks aggregate errors as unavailable',
+        (tester) async {
+      tester.view.physicalSize = const Size(402, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final database = AppDatabase(NativeDatabase.memory());
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWith((ref) async => database),
+            dashboardAggregateProvider.overrideWith(
+              (ref) => Future.error(StateError('database unavailable')),
+            ),
+          ],
+          child: const MaterialApp(
+            home: BloomUndoToastHost(child: DashboardScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.text(
+          'Totals are unavailable while transaction data could not be loaded.',
+        ),
         findsOneWidget,
       );
 

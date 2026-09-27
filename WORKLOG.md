@@ -1,5 +1,26 @@
 # Current Handoff
 
+## 2026-09-27 — PV-02 aggregate parity and truthful dashboard scope
+
+- Added a corpus-seeded SQL parity test that seeds all 20 current corpus rows and
+  pins eligible spending/credit IDs, excluded IDs, totals, category totals, and
+  trend totals. The corpus `long_history` descriptor says 125 rows but contains
+  only two; no broader-history or performance claim is made.
+- Added visible dashboard period, settled-spending and credit eligibility,
+  known-exclusion, and local-record coverage explanations. Loading/error states
+  do not present an exclusion amount as if aggregation succeeded.
+- Kept the monthly budget action ahead of the detailed disclosure. Placed the
+  disclosure after Recent so the lazy final transaction row remains reachable;
+  geometry coverage verifies both it and the final disclosure line clear the
+  floating navigation pill.
+- Verified: focused dashboard/shell/corpus suite **16/16**; analyzer clean; full
+  Flutter suite **764/764**, exit code 0; `git diff --check` clean. The initial
+  full run caught a dashboard navigation geometry regression; the disclosure
+  was moved after Recent and the final test verifies it clears the nav pill.
+  GitNexus change map: 8 files / 14 indexed symbols, LOW risk, no affected
+  processes. Flow inventory is bounded, so missing flows are not treated as
+  proof of no impact.
+
 ## 2026-09-26 — Smart assistance planning and documentation cleanup
 
 - Added the smart transaction assistance plan, T-177a–g briefs, proposed ADR
@@ -41,29 +62,3 @@
   flag-driven exclusion (owned transfer / analytics-excluded) is disclosed. The
   two tests previously asserted the removed merchant-pattern heuristics.
 - Verified: `flutter analyze --no-pub` clean; full `flutter test` all green.
-
-## 2026-09-04 — PV-02 truthful dashboard aggregates + review fixes
-
-- **PV-02 (loading/error half):** The ~10 dashboard/insights aggregate-derived
-  providers (`monthDirectionTotals`, `monthNet`, `dailyAverageSpend`,
-  `safeToday`, `runway`, `projectedMonthEnd`, `monthOverMonthSpend`,
-  `categoryBreakdown`, `topMerchants`, `sixMonthTrend`) now project
-  `dashboardAggregateProvider` as `AsyncValue` and no longer fall back to the
-  bounded 100-row `transactionListProvider`. Hero ring, budget card,
-  top-categories, and the four insights sections render distinct loading/error
-  states (skeleton / inline error). Removed `_countsAsSpending` (weaker than the
-  SQL `FinancialEligibility` contract; it omitted `lifecycle_state='settled'`).
-  Completeness/exclusion disclosure remains open on PV-02.
-- **Trend timezone:** `_loadTrend` no longer uses SQLite `'localtime'`; it
-  buckets with an explicit `DashboardQueryWindow.timeZoneOffset` threaded from
-  `FinancialCalendar`, so month grouping honours the same calendar as the rest
-  of analytics and is deterministic under an injected offset.
-- **Sender blacklist:** added a "Block a sender" control + dialog in Settings —
-  `pausedSenders` was enforced/displayed/removable but had no add path.
-- **Docs:** refreshed `product-status.md` (status date; stale BloomCategoryTile
-  fallback-glyph claim); updated PV-02 scope note in `TASKS.md`.
-- Verified: `flutter analyze --no-pub` clean; full `flutter test` **732 passed,
-  2 failed** — both failures (`exclusion_explanation_test.dart`) are
-  **pre-existing on `main`** (they assert the CC-bill exclusion behaviour that
-  T-158d intentionally removed), unrelated to this change. `detect_changes`:
-  50 symbols / 4 processes, all expected.
