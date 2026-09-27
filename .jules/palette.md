@@ -1,0 +1,3 @@
+## 2024-09-28 - Dashboard metric pills a11y and interaction
+**Learning:** For custom metric pills containing text (like Safe today, Net flow, etc), using `GestureDetector` on a decorated `Container` misses a11y focus states and tap ripple effects. Wrapping in `Semantics` with `button: true`, `selected: isSelected`, `excludeSemantics: true` explicitly defined with `onTap` provides clean single-element announcements.
+**Action:** Always prefer `Material` + `InkWell` wrapped with explicit `Semantics` instead of bare `GestureDetector` for custom interactive pills to ensure both keyboard navigation states and tactile feedback.

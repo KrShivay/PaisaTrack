@@ -366,22 +366,31 @@ class _MetricPillButton extends StatelessWidget {
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      excludeSemantics: true,
+      onTapHint: label,
       onTap: onTap,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : inactiveBg,
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTheme.bloomDisplay(
-              12,
-              isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? activeFg : inactiveFg,
+      child: Material(
+        color: isSelected ? activeBg : inactiveBg,
+        borderRadius: BorderRadius.circular(15),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            height: 30,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Center(
+              child: Text(
+                label,
+                style: AppTheme.bloomDisplay(
+                  12,
+                  isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? activeFg : inactiveFg,
+                ),
+              ),
             ),
           ),
         ),
