@@ -29,13 +29,13 @@ PaisaTrack enforces release signing security for production builds.
 
 ## Published APK
 
-The currently published download is `0.1.1+3` (set in `pubspec.yaml`), an
+The currently published download is `0.1.2+4` (set in `pubspec.yaml`), an
 ARM64 APK for 64-bit ARM Android devices. Its size is 56,553,692 bytes
 (56.55 MB decimal), and its SHA-256 is
-`44fbae3736a939af1dfe707b8bd4675e50c2de715da308f380c65b98b4dbd940`.
-Signed installation and explicit activity launch passed on the explicit
-ARM64 API 35 emulator. The physical device at `192.168.1.10:5555` was
-unreachable, so T-176 and T-179a physical-device acceptance remain open.
+`9965dcdae9b1011c5325a5f0c5a83f317d69d6fca38cacb5a007ec9e3c211746`.
+The production signature was verified; install and launch passed on the
+connected ARM64 phone. T-176 and T-179a physical-device acceptance remain open
+because the full screen-inset and key-recovery scenarios were not exercised.
 Resolve dependencies, then build from the repository root with:
 
 ```bash

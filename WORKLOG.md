@@ -1,5 +1,15 @@
 # Current Handoff
 
+## 2026-09-27 — PaisaTrack 0.1.2+4 Android release
+
+- Built the signed ARM64 production APK from `main` at `b06d315`, with the
+  installable build number incremented to `0.1.2+4`.
+- APK size: 56,553,692 bytes; SHA-256:
+  `9965dcdae9b1011c5325a5f0c5a83f317d69d6fca38cacb5a007ec9e3c211746`.
+- Production signing certificate matches the existing published APK. Install
+  and launch passed on the connected ARM64 phone. Full T-176/T-179a physical
+  acceptance remains open.
+
 ## 2026-09-27 — T-180 review persistence and release metadata
 
 - T-157b and PV-02 passed independent review and were removed from In Review.
