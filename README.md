@@ -6,7 +6,7 @@ on-device. No cloud inference path exists.
 
 ## Android release
 
-Download the [PaisaTrack 0.1.0 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.5 MB). This build is for 64-bit ARM Android devices.
+Download the currently published [PaisaTrack 0.1.0+2 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.5 MB). The next validated build is version 0.1.1+3; this link will be updated after its signed APK passes update and launch checks. For 64-bit ARM Android devices.
 
 ## Current product
 

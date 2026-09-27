@@ -29,7 +29,10 @@ PaisaTrack enforces release signing security for production builds.
 
 ## Published APK
 
-The current `0.1.0+2` release is an ARM64 APK for 64-bit ARM Android devices.
+The next release target is `0.1.1+3` (set in `pubspec.yaml`). The currently
+published download remains `0.1.0+2` until the replacement is built and passes
+signing, update, and launch checks. It is an ARM64 APK for 64-bit ARM Android
+devices.
 Resolve dependencies, then build from the repository root with:
 
 ```bash
@@ -40,9 +43,10 @@ Resolve dependencies, then build from the repository root with:
 The command produces `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 After verifying the signing certificate and installing it on ARM64 Android,
 copy that file to `app-release-arm64.apk` on the `apk-downloads` GitHub branch.
-The README links directly to that file. The current APK is 56.49 MB; GitHub
-warns above 50 MB and rejects individual files of 100 MB or more, so use a
-GitHub Release asset if a future APK exceeds that limit.
+The README links directly to that file. The currently published APK is 56.49
+MB; record the new artifact's actual size after it is built. GitHub warns above
+50 MB and rejects individual files of 100 MB or more, so use a GitHub Release
+asset if a future APK exceeds that limit.
 
 The current local signing files are `android/paisatrack-release.jks` and
 `android/keystore.properties`. Both are git-ignored. Back up both files in a

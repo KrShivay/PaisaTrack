@@ -1,10 +1,11 @@
 # Product Status
 
 Status date: 2026-09-27
-Code baseline: isolated PV-02 worktree from 333beda, including T-126
-calendar/eligibility semantics, T-156a dialog consolidation, T-157b shared
-correction/undo, and PV-02 period, eligibility, coverage, and exclusion
-disclosure with SQL/corpus aggregate parity.
+Code baseline: main at `be9e9cb`, including T-126 calendar/eligibility
+semantics, T-156a dialog consolidation, the reviewed T-157b shared
+correction/undo controller, PV-02 period/eligibility/coverage disclosure with
+SQL/corpus parity, and generation-based key-loss recovery. Physical-device
+acceptance for T-176 and T-179a remains open.
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -140,7 +141,7 @@ Historical full-suite evidence, recorded on 2026-07-26:
 - `flutter analyze --no-pub`: **one lint**, at
   `test/features/insights/insights_recurring_test.dart:102`.
 
-Current PV-02 worktree verification, 2026-09-27:
+PV-02 verification on main, 2026-09-27:
 
 - Dashboard aggregate corpus parity and dashboard/shell rendering suite:
   **16/16 passed**. The SQL aggregate test seeded all 20 transactions currently

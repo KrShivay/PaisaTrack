@@ -31,27 +31,6 @@ later hardening.
       Next: review the test-only diff; repeat live navigation/keyboard checks
       after safe physical-device recovery.
 
-- [ ] T-157b (@codex) [P2] Shared category-correction + undo controller.
-      Verification: focused Review/Detail correction suite 20/20 passed;
-      Flutter analyzer reports no issues; `git diff --check` clean. The four
-      handlers now call `TransactionCorrectionController.apply` and retain
-      their existing optimistic UI, repository contexts, and undo callbacks.
-- [ ] PV-02 [P0] Dashboard aggregate eligibility and completeness disclosure.
-      Dashboard/insights aggregates retain explicit loading/error states. The
-      dashboard explains its selected period, settled-spending and credit
-      eligibility, known exclusions, and that only PaisaTrack-recorded activity
-      is visible. The primary budget action stays ahead of the detailed
-      disclosure; the final transaction row and disclosure scroll above the
-      navigation pill.
-      Verification: corpus-seeded SQL parity covers all 20 checked-in rows and
-      pins eligible/excluded IDs and totals; focused dashboard/shell/corpus
-      suite 16/16 passed; analyzer clean; full Flutter suite 764/764 passed
-      (exit 0); GitNexus change map 8 files / 14 symbols, LOW risk, 0 affected
-      processes.
-      Scope note: the existing `long_history` fixture description says 125 rows
-      but contains only two; this work makes no 125-row coverage/performance
-      claim. Expand that corpus before claiming broader-history coverage.
-
 ## Ready
 
 <!-- P1 tasks ready for next phase -->
@@ -173,10 +152,11 @@ T-154a.
 Completed T-145a/b, T-146a/b, T-147a/b, T-148a/b, and T-152a are mapped in
 `docs/archive/planning-cleanup-2026-09.md`.
 
-Follow `PLAN.md` for delivery priority: T-176 and the T-157b/PV-02 reviews, then
-T-177a. Recheck T-153a integration only if its implementation is still needed;
-T-151b remains open pending a supported affordability intent and deterministic
-verdict contract.
+Follow `PLAN.md` for delivery priority: finish T-176 and T-179a physical-device
+acceptance, then T-177a. T-157b and PV-02 passed independent review and were
+removed from the active board. Recheck T-153a integration only if its
+implementation is still needed; T-151b remains open pending a supported
+affordability intent and deterministic verdict contract.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`
 
@@ -191,8 +171,8 @@ historical mapping in `docs/archive/planning-cleanup-2026-09.md`.
 | **T-158c** | P2 | ~M | Extract sub-widgets into `detail/` | T-158a (complete) |
 | **T-159c** | P3 | ~M | Convert remaining shallow render tests to behavioral | T-158c |
 
-Completed T-156b, T-157a/c, T-158a/d, and T-159a/b are mapped in
-`docs/archive/planning-cleanup-2026-09.md`. T-157b remains only in In Review.
+Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
+`docs/archive/planning-cleanup-2026-09.md`.
 
 ## Backlog
 
@@ -252,6 +232,7 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Transaction integrity, data model, and performance
 
+- [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore persisted state. Acceptance: Keep writes `confirmed` and the item stays out of the review query after refresh; tapping Undo writes `needs_review` and restores the item exactly once. Regression tests assert database status and visible queue across both actions, including the empty-feedback case.
 - [ ] T-164a [P0] Add repository tests for keyset ordering under identical timestamps, deleted rows, duplicate-suppressed rows, and newly inserted rows between pages.
 - [ ] T-164b [P1] Move Activity filtering/search to SQL with indexed fields and paged results; preserve every current filter semantic.
 - [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.

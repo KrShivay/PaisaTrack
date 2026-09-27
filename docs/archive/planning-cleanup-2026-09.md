@@ -14,7 +14,8 @@ T-141a, T-142a, and T-144a–b. T-140's implemented scope is historical; current
 production integration and baseline gaps are tracked by T-177a/b.
 
 T-168b duplicated T-157b's shared correction/undo controller and detail/review
-parity acceptance; the board now tracks T-157b once, in In Review. The former
+parity acceptance; at the time of this cleanup, the board tracked T-157b once,
+in In Review. T-157b later passed independent review. The former
 LUNA-01–06 umbrella entries were removed because their actionable child tickets
 remain on the board. LUNA-07 / T-172e's explicit waiver and evidence boundary
 remain documented in `docs/tasks/T-172.md`.

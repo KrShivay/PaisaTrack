@@ -24,7 +24,8 @@ Source review at commit `a429994f345a81814620c8b49a9953e840f6011d`:
   `transaction_repository.dart`: this-payment, future, historical and group
   scopes already exist. Extend these; do not build a parallel correction path.
 - `TransactionCorrectionController`: shared correction/undo sequencing exists;
-  T-157b still needs independent review. Verify full rule/feedback undo semantics.
+  T-157b passed independent review. Full rule/feedback undo semantics remain
+  part of T-177c's scope.
 - `DecisionPolicy`: auto/ask/review routing exists. Confidence scores must be
   validated against real confirmed outcomes before widening automation.
 - Payee aliases, local classifier training, and Sort exist. Production history
@@ -125,9 +126,9 @@ not. No new network permission or cloud inference is proposed.
 | 5 | T-177f | Shadow evaluation and staged opt-in release | Precision/effort/device gates met; fallback and rollback verified |
 | Later | T-177g | Receipt/screenshot matching discovery | Local OCR feasibility, consent and evidence contract reviewed |
 
-Implement one child at a time after grooming. T-176 remains the current task.
-T-157b review must pass before extending corrections. Reuse T-143 shadow work
-if verified; its board/brief status conflicts and must be resolved first.
+Implement one child at a time after grooming. T-176 and T-179a remain open for
+physical-device acceptance. Reuse T-143 shadow work if verified; its board/brief
+status conflicts and must be resolved first.
 T-102 statement reconciliation remains separate and is not an MVP dependency.
 
 ## Acceptance and measurement

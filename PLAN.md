@@ -1,6 +1,6 @@
 # PaisaTrack — delivery plan
 
-Updated 2026-09-26. This is future direction, not a shipped-feature checklist.
+Updated 2026-09-27. This is future direction, not a shipped-feature checklist.
 Current behavior: [architecture](docs/architecture.md) and
 [product status](docs/product-status.md). Executable queue: [TASKS.md](TASKS.md).
 
@@ -12,8 +12,9 @@ about uncertainty. Then explain and forecast recorded spending with evidence.
 
 ## Delivery order
 
-1. Finish the current T-176 navigation-inset task and outstanding T-157b/PV-02
-   reviews; retain capture, visibility and recovery release blockers on the board.
+1. Finish T-176 and T-179a physical-device acceptance; retain capture,
+   visibility and recovery release blockers on the board. T-157b and PV-02
+   passed independent review and are complete.
 2. T-177a: baseline and production-wiring audit. Resolve contradictory legacy
    completion claims before adding duplicate implementations.
 3. T-177b–f: safe recognition/memory, scoped correction/undo, grouped review,
