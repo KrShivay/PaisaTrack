@@ -6,18 +6,21 @@ state; Git history and `docs/archive/` retain completed evidence.
 Priority: P0 release blocker, P1 high-impact, P2 important, P3 planned, P4/P5
 later hardening.
 
-## In Progress
+## In Review
 
 - [ ] T-176 [P1] Apply global bottom-inset contract to all screens.
       Module: all primary screens (Dashboard, Activity, Review, Insights,
       Settings, Assistant, Review/Sort card view).
       Gap: content at the bottom of each screen underlaps the bottom navigation
       bar; FABs and action button rows are not consistently lifted above it.
-      Next: centralize shell inset geometry, apply it to explicit scroll padding
-      and fixed action rows, then verify gesture-navigation geometry across tabs
-      and nested routes.
-
-## In Review
+      Verification: focused inset suite 11/11, full Flutter suite 764/764,
+      analyzer clean, `git diff --check` clean. Widget coverage exercises
+      gesture inset scrolling, three-button nested Activity/Sort geometry,
+      and Manual Entry with the keyboard open. AVD live nav/keyboard acceptance
+      is inconclusive because API 35 SystemUI/IME did not expose navigation
+      insets or render the keyboard; logcat has no PaisaTrack crash.
+      Next: review the test-only diff; repeat live navigation/keyboard checks
+      after safe physical-device recovery.
 
 - [ ] T-157b (@codex) [P2] Shared category-correction + undo controller.
       Verification: focused Review/Detail correction suite 20/20 passed;

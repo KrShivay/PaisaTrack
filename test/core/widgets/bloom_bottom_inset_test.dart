@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,8 +13,12 @@ import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/settings/category_manager_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
+import 'package:paisatrack/features/transactions/manual_entry_screen.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
+import 'package:paisatrack/features/home/home_shell.dart';
+import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
+import 'package:paisatrack/features/review/weekly_review_providers.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import '../../support/fake_activity_transaction_page_controller.dart';
@@ -48,14 +54,18 @@ Widget _underFloatingNavigation(Widget child) {
   );
 }
 
-void _setGestureNavigationMetrics(WidgetTester tester) {
+void _setNavigationMetrics(
+  WidgetTester tester, {
+  double systemBottomInset = 24,
+}) {
   tester.view.physicalSize = const Size(402, 874);
   tester.view.devicePixelRatio = 1;
-  tester.view.viewPadding = const FakeViewPadding(bottom: 24);
+  tester.view.viewPadding = FakeViewPadding(bottom: systemBottomInset);
   addTearDown(() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
     tester.view.resetViewPadding();
+    tester.view.resetViewInsets();
   });
 }
 
@@ -190,7 +200,7 @@ void main() {
   testWidgets(
       'last category row scrolls fully above the floating navigation pill',
       (tester) async {
-    _setGestureNavigationMetrics(tester);
+    _setNavigationMetrics(tester);
     final database = AppDatabase(NativeDatabase.memory());
     try {
       final categories = CategoryRepository(database);
@@ -238,7 +248,7 @@ void main() {
   testWidgets(
       'last populated Activity transaction scrolls fully above navigation',
       (tester) async {
-    _setGestureNavigationMetrics(tester);
+    _setNavigationMetrics(tester);
     final now = DateTime.utc(2026, 9, 26, 12);
     final rows = [
       for (var index = 0; index < 30; index++)
@@ -284,9 +294,94 @@ void main() {
     expect(rowRect.bottom, lessThanOrEqualTo(navRect.top));
   });
 
+  testWidgets('HomeShell Activity nested Navigator receives three-button inset',
+      (tester) async {
+    _setNavigationMetrics(tester, systemBottomInset: 48);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith(
+            (ref) => Completer<AppDatabase>().future,
+          ),
+          appSettingsControllerProvider
+              .overrideWith(() => _FakeAppSettingsController()),
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
+          transactionListProvider.overrideWith(
+            (ref) => Stream.value(const <TransactionListItem>[]),
+          ),
+          activityTransactionPageProvider.overrideWith(
+            () => FakeActivityTransactionPageController(
+              const ActivityTransactionPage(rows: [], hasMore: false),
+            ),
+          ),
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+          reviewQueueProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: MaterialApp(
+          home: const HomeShell(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    ProviderScope.containerOf(
+      tester.element(find.byType(HomeShell)),
+      listen: false,
+    ).read(homeTabControllerProvider.notifier).state = 1;
+    await tester.pumpAndSettle();
+    expect(find.byType(TransactionsScreen), findsOneWidget);
+    final shellScreen = tester.element(find.byType(TransactionsScreen));
+    expect(MediaQuery.paddingOf(shellScreen).bottom, 48 + 64 + 20);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('manual entry Save can scroll above an open keyboard',
+      (tester) async {
+    _setNavigationMetrics(tester, systemBottomInset: 48);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: const MaterialApp(home: ManualEntryScreen()),
+      ),
+    );
+
+    final amount = find.widgetWithText(TextFormField, 'Amount');
+    await tester.tap(amount);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    await tester.pump();
+    await tester.enterText(amount, '250');
+    await tester.pump();
+
+    final list = find.descendant(
+      of: find.byType(ManualEntryScreen),
+      matching: find.byType(ListView),
+    );
+    await tester.drag(list, const Offset(0, -1000));
+    await tester.pump();
+    final save = find.widgetWithText(FilledButton, 'Save');
+    expect(save, findsOneWidget);
+    await tester.ensureVisible(save);
+    await tester.pump();
+
+    const keyboardTop = 874 - 320;
+    expect(tester.getRect(save).bottom, lessThanOrEqualTo(keyboardTop));
+    expect(save.hitTestable(), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('populated Sort action row clears the floating navigation',
       (tester) async {
-    _setGestureNavigationMetrics(tester);
+    _setNavigationMetrics(tester);
     final item = TransactionReviewItem(
       id: 'sort_inset_fixture',
       ts: DateTime.utc(2026, 9, 26, 12),
@@ -320,9 +415,62 @@ void main() {
     final navRect = tester.getRect(find.byKey(_navKey));
     expect(actionRect.bottom, lessThanOrEqualTo(navRect.top));
   });
+
+  testWidgets('last populated Sort list row clears three-button navigation',
+      (tester) async {
+    _setNavigationMetrics(tester, systemBottomInset: 48);
+    final items = [
+      for (var index = 0; index < 28; index++)
+        TransactionReviewItem(
+          id: 'sort_list_inset_$index',
+          ts: DateTime.utc(2026, 9, 26, 12).subtract(Duration(days: index)),
+          amount: 123.45 + index,
+          direction: TransactionDirection.debit,
+          displayName: index == 27
+              ? 'Final Sort list inset fixture'
+              : 'Sort list inset fixture $index',
+          categoryName: 'Food',
+          categoryId: 'food',
+          categoryIcon: 'food',
+          status: 'needs_review',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+          reviewViewProvider.overrideWith(_ListReviewViewNotifier.new),
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+          appSettingsControllerProvider.overrideWith(
+            () => _FakeAppSettingsController(),
+          ),
+        ],
+        child: _underFloatingNavigation(const WeeklyReviewScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final list = find.byType(ListView);
+    expect(list, findsOneWidget);
+    await tester.drag(list, const Offset(0, -6000));
+    await tester.pumpAndSettle();
+
+    final finalRow = find.text('Final Sort list inset fixture');
+    expect(finalRow, findsOneWidget);
+    final rowRect = tester.getRect(finalRow);
+    final navRect = tester.getRect(find.byKey(_navKey));
+    expect(rowRect.bottom, lessThanOrEqualTo(navRect.top));
+  });
 }
 
 class _FakeAppSettingsController extends AppSettingsController {
   @override
   Future<AppSettings> build() async => const AppSettings();
+}
+
+class _ListReviewViewNotifier extends ReviewViewNotifier {
+  @override
+  ReviewViewState build() =>
+      const ReviewViewState(viewMode: ReviewViewMode.list);
 }
