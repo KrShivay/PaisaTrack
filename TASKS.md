@@ -192,6 +192,18 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
+- [ ] T-183 [P0] Guard live SMS lifecycle classification before extraction.
+  - Acceptance: Production live ingestion supplies deterministic message-kind
+    classification to parsing and prevents local LLM fallback from turning
+    OTP, promo, balance-only, declined/failed, or reversal SMS into settled
+    transactions. Settled debit/credit, pending, failed, and reversed records
+    retain correct lifecycle labels. Provider-level tests exercise production
+    wiring with synthetic messages and model outputs.
+  - Dependencies: T-182 generic parser abstention; no sender-filter expansion.
+  - Privacy: local inference only; no raw-SMS retention or cloud changes.
+  - Priority: required before the next release claims live parser lifecycle
+    safety.
+
 <!-- Groom future work here before promoting it to Ready. -->
 
 Before promoting an item to `Ready`, keep its brief actionable and include

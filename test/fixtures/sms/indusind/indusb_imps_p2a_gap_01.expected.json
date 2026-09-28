@@ -6,7 +6,7 @@
       "amount": 1.0,
       "direction": "credit",
       "channel": "netbanking",
-      "merchant_raw": "account XXXXXXX2210/RAPIPAY FI (IMPS",
+      "merchant_raw": "report issue-IndusInd Bank",
       "counterparty_vpa": null,
       "account_hint": "xx4521",
       "balance_after": null,

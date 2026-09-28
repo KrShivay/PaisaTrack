@@ -459,6 +459,53 @@ void main() {
     expect(parser.parseCalls, 1);
   });
 
+  test(
+      'generic-only model-unavailable ingest keeps supported payment review-only and abstains on lifecycle negatives',
+      () async {
+    final ingestor = SmsIngestor(
+      database: database,
+      parser: const ParserCascade(
+        templateMatcher: TemplateMatcher(registries: []),
+      ),
+    );
+    final messages = [
+      _message(
+        'sms_generic_charge',
+        body: 'Your card XX1234 was charged Rs. 725.00 at SANITIZED STORE',
+      ),
+      _message(
+        'sms_generic_failed',
+        body: 'A/c XX1234 failed for Rs. 500.00 via UPI',
+      ),
+      _message(
+        'sms_generic_reversal',
+        body: 'Reversal of INR 300.00 credited back to A/c XX1234',
+      ),
+      _message(
+        'sms_generic_future',
+        body: 'Rs. 500 will be debited from A/c XX1234 tomorrow via UPI',
+      ),
+    ];
+
+    for (final message in messages) {
+      await ingestor.ingest(message);
+    }
+
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions, hasLength(1));
+    expect(transactions.single.id, 'txn_sms_generic_charge');
+    expect(transactions.single.status, 'needs_review');
+    // This intentionally exercises only the generic parser with the model
+    // unavailable; production provider lifecycle guarding remains T-183.
+    expect(transactions.single.messageKind, 'settledDebit');
+    final rawRows = await database.select(database.rawSms).get();
+    expect(rawRows, hasLength(messages.length));
+    for (final raw in rawRows.where((row) => row.id != 'sms_generic_charge')) {
+      expect(raw.processed, isFalse, reason: raw.id);
+      expect(raw.failureReason, SmsFailureReason.unparsed, reason: raw.id);
+    }
+  });
+
   test('retries a retained failure after a parser-version upgrade', () async {
     final parser = FakeParserCascade.ok(_sampleRecord())
       ..setError(ParseFailure.unparsed);

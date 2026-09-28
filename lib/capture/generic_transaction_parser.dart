@@ -8,7 +8,7 @@ import 'template_engine/field_normalizer.dart';
 /// Mirrors the ordered guard checks in [GenericTransactionParser.parse] so the
 /// unparsed dev screen can explain a miss without a schema change (T-070).
 enum GenericParseRejection {
-  /// Body matched a hard-reject term (OTP, promo, "will be debited", ...).
+  /// Body matched a hard-reject term (OTP, promo, failed payment, etc.).
   hardRejectTerm,
 
   /// No debit/credit direction keyword was found.
@@ -44,7 +44,7 @@ class GenericTransactionParser {
     r'(?<![a-zA-Z0-9._%+-])([a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z][a-zA-Z0-9-]+)(?![a-zA-Z0-9.-])',
   );
   static final RegExp _balance = RegExp(
-    r'(?:Avl(?:\.|bl)?\s*Bal|Balance|Bal)[:\s]*(?:INR|Rs\.?|₹)?\s*[\d,]+(?:\.\d{1,2})?',
+    r'(?:Avl(?:\.|bl)?\s*Bal|Available\s+Balance|(?:Clear|Current)\s+Balance|Bal\s+in\s+a/c(?:\s*[Xx*\d]{3,6})?|Balance|Bal)(?:\s+(?:is|of))?[:\s]*(?:INR|Rs\.?|₹)?\s*[\d,]+(?:\.\d{1,2})?',
     caseSensitive: false,
   );
   static final RegExp _ref = RegExp(
@@ -52,12 +52,16 @@ class GenericTransactionParser {
     caseSensitive: false,
   );
   static final RegExp _merchant = RegExp(
-    r'\b(?:at|to|from|towards)\s+(.{1,40}?)(?=\s+(?:on|ref)\b|[.,]|$)',
+    r'\b(at|to|from|towards)\s+(.{1,40}?)(?=\s+(?:via|through|from|to|on|ref)\b|[.,;]|$)',
+    caseSensitive: false,
+  );
+  static final RegExp _merchantContext = RegExp(
+    r'\b(?:a/c|acct|account)\b|\b(?:upi|imps|neft|rtgs|atm|pos|card)\b',
     caseSensitive: false,
   );
   static final RegExp _salary = RegExp(r'\bsalary\b', caseSensitive: false);
   static final RegExp _hardReject = RegExp(
-    r'\b(?:otp|one time password|verification code|cashback offer|pre-approved|apply now|discount coupon|limited period offer|is due|due on|payment due|bill due|minimum amount due|statement|statement.*generated|e-statement|monthly statement|account statement|available balance|bal in a/c|clear balance|current balance|ac bal)\b',
+    r'\b(?:otp|one time password|verification code|cashback offer|pre-approved|apply now|discount coupon|limited period offer|is due|due on|payment due|bill due|minimum amount due|statement|statement.*generated|e-statement|monthly statement|account statement|declined|failed|unsuccessful|could not be processed|reversed|reversal|refund(?:ed)?|credited back|will be (?:debited|credited|charged|transferred|deposited|added to)|(?:expected\s+)?to\s+be\s+(?:debited|credited|charged|transferred|deposited|added to)|(?:scheduled|due)\s+to\s+be\s+(?:debited|credited|charged|transferred|deposited|added to)|(?:payment|transaction|transfer|debit|credit)\b.{0,30}\b(?:scheduled|pending)|\b(?:scheduled|pending)\s+(?:payment|transaction|transfer|debit|credit))\b',
     caseSensitive: false,
   );
 
@@ -117,9 +121,22 @@ class GenericTransactionParser {
       return (record: null, rejection: GenericParseRejection.noContextSignal);
     }
 
+    final merchantCandidates = _merchant
+        .allMatches(body)
+        // `from` commonly introduces the source account; it is not enough to
+        // establish a counterparty without a separately verified identity.
+        .where((match) => match.group(1)!.toLowerCase() != 'from')
+        .map((match) => match.group(2)!.trim())
+        .where(
+          (candidate) =>
+              candidate.isNotEmpty && !_merchantContext.hasMatch(candidate),
+        )
+        .toList(growable: false);
     final merchant = _salary.hasMatch(body)
         ? 'Salary'
-        : _merchant.firstMatch(body)?.group(1)?.trim();
+        : merchantCandidates.isEmpty
+            ? null
+            : merchantCandidates.first;
     final evidence = <FieldEvidence>[
       FieldEvidence(
         field: 'amount',
@@ -185,14 +202,14 @@ class GenericTransactionParser {
       (
         value: TransactionDirection.debit,
         pattern: RegExp(
-          r'\bdebited\b|\bspent\b|\bwithdrawn\b|\bpaid\b|\bsent\b|\bdr\b|\bpurchase of\b|\bdeclined\b|\bfailed\b|\btxn of\b.*\bat\b',
+          r'\bdebited\b|\bspent\b|\bwithdrawn\b|\bpaid\b|\bsent\b|\bdr\b|\bpurchased\b|\bcharged\b|\btransferred from\b|\bpurchase of\b|\btxn of\b.*\bat\b',
           caseSensitive: false,
         ),
       ),
       (
         value: TransactionDirection.credit,
         pattern: RegExp(
-          r'\bcredited\b|\breceived\b|\bdeposited\b|\brefund\b|\breversal\b|\badded back\b|\bcr\b',
+          r'\bcredited\b|\breceived\b|\bdeposited\b|\badded to\b|\bcr\b',
           caseSensitive: false,
         ),
       ),

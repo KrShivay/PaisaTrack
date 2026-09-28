@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
+import 'package:paisatrack/capture/span_verifier.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/capture/template_engine/template_registry.dart';
 import 'package:paisatrack/core/result.dart';
@@ -49,6 +50,53 @@ void main() {
     expect(record.refId, 'ABCDEF123');
     expect(record.parseSource, ParseSource.generic);
     expect(record.parseConfidence, lessThanOrEqualTo(0.6));
+  });
+
+  test('parses INR, Rs, and rupee payment wording after template miss',
+      () async {
+    const cascade = ParserCascade(
+      templateMatcher: TemplateMatcher(registries: []),
+    );
+    const examples = <({String body, double amount})>[
+      (
+        body: 'Your UPI payment of INR 1,250.50 was debited from A/C XX1234 '
+            'to SANITIZED SHOP',
+        amount: 1250.5,
+      ),
+      (
+        body: 'Rs. 245.00 was paid from A/C XX2345 via card at SANITIZED STORE',
+        amount: 245,
+      ),
+      (
+        body: '₹350.00 withdrawn from A/C XX3456 by ATM',
+        amount: 350,
+      ),
+    ];
+
+    for (final example in examples) {
+      final result = await cascade.parse(
+        RawSms(
+          id: 'synthetic-${example.amount}',
+          sender: 'VK-HDFCBK',
+          body: example.body,
+          receivedAt: DateTime.utc(2026, 7, 10),
+        ),
+      );
+      final record = (result as Ok).value;
+
+      expect(record.amount, example.amount);
+      expect(record.direction, TransactionDirection.debit);
+      expect(record.parseSource, ParseSource.generic);
+      expect(record.parseConfidence, lessThanOrEqualTo(0.6));
+      expect(
+        const SpanVerifier().verify(
+          body: example.body,
+          evidence: record.evidence,
+          record: record,
+        ),
+        isTrue,
+      );
+    }
   });
 
   test('template parse takes precedence over the generic fallback', () async {
@@ -155,6 +203,10 @@ void main() {
     'Get Rs. 500 cashback with this limited offer.',
     'Your card bill of Rs. 1200 is due on 20-07-26.',
     'Your account statement is ready. Balance Rs. 1200.',
+    'Available balance is INR 1,000.00 for A/c XX1234',
+    'Transaction of INR 500 on card XX1234 has been declined',
+    'A/c XX1234 failed for Rs. 500.00 via UPI',
+    'Reversal of INR 300.00 credited back to A/c XX1234',
   ]) {
     test('generic fallback rejects non-transaction SMS: $body', () async {
       const cascade = ParserCascade(

@@ -37,6 +37,13 @@ void main() {
         cases.where((fixture) => fixture.expected.containsKey('err'));
 
     expect(negativeCases, isNotEmpty);
+    expect(
+      negativeCases.map((fixture) => fixture.id),
+      containsAll([
+        'indusind/indusb_declined_wrong_pin',
+        'indusind/indusb_reversal_future_credit',
+      ]),
+    );
     for (final fixture in negativeCases) {
       final actual = await parseFixtureCase(cascade, fixture);
       expect(
@@ -72,7 +79,13 @@ void main() {
         if (jsonEncode(actual) == jsonEncode(fixture.expected)) {
           matched++;
         } else {
-          mismatches.add(fixture.id);
+          final actualRecord = actual['ok'];
+          final expectedRecord = fixture.expected['ok'];
+          final mismatchedFields = actualRecord is Map && expectedRecord is Map
+              ? expectedRecord.keys
+                  .where((key) => actualRecord[key] != expectedRecord[key])
+              : const [];
+          mismatches.add('${fixture.id}[${mismatchedFields.join(',')}]');
         }
       }
 
@@ -95,6 +108,9 @@ void main() {
     final cases = await SmsFixtureRunner(
       root: Directory('test/fixtures/sms'),
     ).loadCases();
+    // Expected-error fixtures (including the named decline and future
+    // reversal above) are lifecycle negatives, checked separately instead of
+    // inflating the settled-transaction recall denominator.
     final positives =
         cases.where((fixture) => fixture.expected.containsKey('ok'));
     var parsed = 0;

@@ -7,6 +7,7 @@ import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
+import 'package:paisatrack/capture/template_engine/template_registry.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
@@ -20,9 +21,37 @@ void main() {
     database = AppDatabase(NativeDatabase.memory());
     final cueFile = File('assets/seed/message_cues_in.json');
     classifier = MessageKindClassifier.fromJson(cueFile.readAsStringSync());
-    const parser = ParserCascade(
-      templateMatcher: TemplateMatcher(registries: []),
-      genericTransactionParser: GenericTransactionParser(),
+    final parser = ParserCascade(
+      templateMatcher: TemplateMatcher(
+        registries: [
+          TemplateRegistry(
+            senderPatterns: [RegExp(r'^(?:JX-AXISBK|VK-HDFCBK)$')],
+            templates: [
+              SmsTemplate(
+                id: 'test_declined_card',
+                regex: RegExp(
+                  r'Transaction of (?<amount>INR [\d,]+) on Axis Bank Credit Card XX(?<account>\d{4}) has been declined',
+                  caseSensitive: false,
+                ),
+                direction: 'debit',
+                channel: 'card',
+                dateFormat: null,
+              ),
+              SmsTemplate(
+                id: 'test_reversal_credit',
+                regex: RegExp(
+                  r'Reversal of (?<amount>INR [\d,]+) credited back to A/C XX(?<account>\d{4})',
+                  caseSensitive: false,
+                ),
+                direction: 'credit',
+                channel: 'upi',
+                dateFormat: null,
+              ),
+            ],
+          ),
+        ],
+      ),
+      genericTransactionParser: const GenericTransactionParser(),
     );
     ingestor = SmsIngestor(
       database: database,
@@ -36,7 +65,9 @@ void main() {
     await database.close();
   });
 
-  test('failed and reversed transactions persist in DB with lifecycle_state and are excluded from spending totals', () async {
+  test(
+      'failed and reversed transactions persist in DB with lifecycle_state and are excluded from spending totals',
+      () async {
     // 1. Settled transaction
     await ingestor.ingest(
       RawSms(
@@ -47,12 +78,14 @@ void main() {
       ),
     );
 
-    // 2. Failed transaction (narrowed _hardReject now parses amount and direction)
+    // Explicit template evidence lets this routing test exercise the classifier
+    // without teaching the generic fallback to settle failed payments.
     await ingestor.ingest(
       RawSms(
         id: 'sms_failed_1',
         sender: 'JX-AXISBK',
-        body: 'Transaction of INR 500 on Axis Bank Credit Card XX5678 has been declined due to security reasons',
+        body:
+            'Transaction of INR 500 on Axis Bank Credit Card XX5678 has been declined due to security reasons',
         receivedAt: DateTime.utc(2026, 7, 6),
       ),
     );
@@ -72,7 +105,8 @@ void main() {
       RawSms(
         id: 'sms_reminder_1',
         sender: 'JX-AXISBK-S',
-        body: 'Payment of INR 2086 for your Axis Bank Credit Card no. XX5678 is due on 30-12-25',
+        body:
+            'Payment of INR 2086 for your Axis Bank Credit Card no. XX5678 is due on 30-12-25',
         receivedAt: DateTime.utc(2026, 7, 8),
       ),
     );
@@ -85,12 +119,14 @@ void main() {
     expect(failedTxn.lifecycleReason, 'declined');
     expect(failedTxn.messageKind, 'failed');
 
-    final reversedTxn = transactions.firstWhere((t) => t.smsId == 'sms_reversed_1');
+    final reversedTxn =
+        transactions.firstWhere((t) => t.smsId == 'sms_reversed_1');
     expect(reversedTxn.lifecycleState, 'reversed');
     expect(reversedTxn.lifecycleReason, 'refund_or_reversal');
     expect(reversedTxn.messageKind, 'reversal');
 
-    final settledTxn = transactions.firstWhere((t) => t.smsId == 'sms_settled_1');
+    final settledTxn =
+        transactions.firstWhere((t) => t.smsId == 'sms_settled_1');
     expect(settledTxn.lifecycleState, 'settled');
 
     // Dashboard spending totals should only include settled rows

@@ -33,6 +33,13 @@ void main() {
         receivedAt: DateTime.utc(year, 5, 2, 9, 15),
       );
 
+  RawSms syntheticMessage(String id, String body) => RawSms(
+        id: id,
+        sender: 'VK-HDFCBK',
+        body: body,
+        receivedAt: DateTime.utc(2026, 5, 2, 9, 15),
+      );
+
   SmsBackfiller backfiller(
     SmsInboxReader reader, {
     Set<String> throwIds = const {},
@@ -74,6 +81,59 @@ void main() {
     expect(
       transactions.map((row) => row.id),
       containsAll(['txn_sms_current', 'txn_sms_2022']),
+    );
+  });
+
+  test(
+      'bounded history generic-only import reviews supported payment and abstains on failed or future wording',
+      () async {
+    final messages = [
+      syntheticMessage(
+        'sms_history_charge',
+        'Your card XX1234 was charged Rs. 725.00 at SANITIZED STORE',
+      ),
+      syntheticMessage(
+        'sms_history_failed',
+        'A/c XX1234 failed for Rs. 500.00 via UPI',
+      ),
+      syntheticMessage(
+        'sms_history_reversal',
+        'Reversal of INR 300.00 credited back to A/c XX1234',
+      ),
+      syntheticMessage(
+        'sms_history_pending',
+        'UPI payment of Rs. 500 is pending from A/c XX1234',
+      ),
+    ];
+    final importer = SmsBackfiller(
+      ingestor: SmsIngestor(
+        database: database,
+        parser: const ParserCascade(
+          templateMatcher: TemplateMatcher(registries: []),
+        ),
+      ),
+      reader: FakeInboxReader.single(messages),
+      pageSize: 2,
+    );
+
+    final result = await importer.run();
+
+    expect(result.processed, messages.length);
+    expect(result.parsed, 1);
+    expect(result.unparsed, 3);
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions, hasLength(1));
+    expect(transactions.single.id, 'txn_sms_history_charge');
+    expect(transactions.single.status, 'needs_review');
+    final rawRows = await database.select(database.rawSms).get();
+    expect(rawRows, hasLength(messages.length));
+    expect(
+      rawRows.where((row) => row.id != 'sms_history_charge').every(
+            (row) =>
+                !row.processed &&
+                row.failureReason == SmsFailureReason.unparsed,
+          ),
+      isTrue,
     );
   });
 
