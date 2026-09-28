@@ -19,7 +19,7 @@ object SmsFilter {
         "HDFCBK", "ICICIB", "ICICIT", "SBIINB", "SBICRD", "SBIUPI", "AXISBK",
         "KOTAKB", "PNBSMS", "PNB", "CANBNK", "BOIIND", "YESBNK", "IDFCFB", "INDUSB",
         "CENTBK", "UNIONB", "BOBSMS", "RBLBNK", "AUBANK", "FEDBNK", "IDBIBK",
-        "PAYTMB", "PHONPE", "GPAYUP", "AMZNUP", "MOBKWK", "SLICEIT",
+        "PAYTMB", "PHONPE", "GPAYUP", "AMZNUP", "MOBKWK", "SLICE", "SLICEIT",
     )
 
     private val otpMarkers = setOf(

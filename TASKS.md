@@ -10,6 +10,24 @@ later hardening.
 
 ## In Review
 
+- [ ] T-184 [P1] Verify SLICE sender admission and sent-from SMS parsing.
+  - Acceptance: The user confirmed `SLICE` is the Android sender header. Record
+    that exact header with a sanitized synthetic body, verify native live and
+    inbox admission, and keep signature text from admitting an unknown sender.
+    Verify the generic parser extracts amount, debit, payee, reference, and a
+    valid body transaction date while ignoring fraud-call footer text as
+    merchant evidence. Add only the exact verified sender alias.
+  - Dependencies: confirmed source header; T-162b sender-onboarding evidence
+    gate remains a separate follow-up.
+  - Privacy: synthetic or sanitized messages only; no personal numbers, refs,
+    merchant names, URLs, or body logging.
+  - Rollback: revert the exact sender alias and focused parser/native tests.
+  - Verification: focused parser 16/16; full Flutter suite 821/821; Flutter
+    analyzer and Dart format check clean; Android `SmsFilterTest` and app Kotlin
+    compilation passed with Gradle 9.1. GitNexus detect-changes: 16 symbols,
+    6 files, 7 affected processes, HIGH risk across parser/cascade ingestion
+    flows. Independent review pending.
+
 - [ ] T-183 [P0] Guard live SMS lifecycle classification before extraction.
   - Acceptance: Production live, history, and incremental catch-up providers use
     one deterministic classifier loaded from the existing local cue asset.
@@ -212,17 +230,6 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
-- [ ] T-184 [P1] Verify SLICE sender admission and sent-from SMS parsing.
-  - Acceptance: Determine whether the reported sender label is a real native
-    SMS header or text suffix before changing admission. Use sanitized sender
-    and body fixtures to separate native filtering from parser coverage and
-    verify fraud-call footer text is not mistaken for transaction evidence.
-    Add only a verified sender alias with narrow native and Dart tests; do not
-    broaden the allowlist based on an unverified label.
-  - Dependencies: confirmed source header; T-162b review gate.
-  - Privacy: synthetic or sanitized messages only; no personal numbers, refs,
-    merchant names, URLs, or body logging.
-  - Rollback: revert any verified narrow sender alias and its tests.
 - [ ] T-185 [P1] Add “Not a transaction” action to SMS details.
   - Acceptance: Show a “Not a transaction” action on the SMS details screen
     reached from transaction detail/source navigation. Persist suppression by

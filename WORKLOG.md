@@ -1,5 +1,27 @@
 # Current Handoff
 
+## 2026-09-29 — T-184 verified SLICE SMS capture
+
+- Added exact `SLICE` native sender admission. Synthetic native tests cover
+  live and inbox filtering, plus rejection when `SLICE` appears only in an
+  unknown sender's body signature.
+- The generic parser now extracts the sample payee before the parenthesized UPI
+  reference and uses a valid `on d-MMM-yy` date only when it occurs within the
+  same short transaction clause after the payment verb. Unrelated footer dates
+  and invalid calendar days retain the SMS receive time. Footer-only text is
+  not parsed as a transaction. No schema, cloud, raw-SMS logging, or retention
+  changes; T-162b remains separate. Synthetic data only; no device access.
+- Validation: focused parser suite 16/16; full Flutter suite 821/821;
+  `flutter analyze --no-pub`, Dart formatting, and `git diff --check` clean.
+  Android `SmsFilterTest` and app Kotlin compilation passed with temporary
+  Gradle 9.1 distribution after verifying its SHA-256. GitNexus impact before
+  edits: SmsFilter.isAllowed LOW (2 direct callers; 1 flow), parser MEDIUM
+  (8 direct callers; 2 test processes); SmsFilter class was UNKNOWN but text
+  search confirmed its native paths. Change analysis: 16 symbols across 6 files,
+  7 affected processes, HIGH risk; flows include parser/cascade ingestion,
+  shadow pipeline, and test entrypoints. Independent review pending; no
+  commit/push.
+
 ## 2026-09-28 — T-183 live SMS lifecycle guard
 
 - Wired one local cue classifier into live capture, history import, and
@@ -44,20 +66,3 @@
   0 affected processes, LOW risk, no partial/truncated result. Impact before
   edits was HIGH for the parser and CRITICAL for the cascade; warning was
   surfaced. No phone or backup access.
-
-## 2026-09-27 — T-181 Ask category query scopes
-
-- Independent review accepted. The local classifier uses category IDs from the
-  seeded taxonomy; parent filters expand to descendants, exact children stay
-  narrow, and multiple explicit scopes survive validation and SQL filtering.
-  Unrelated or duplicate-name ambiguity refuses before merchant lookup.
-  Spending queries now require settled eligible transactions in spending
-  categories.
-- Added seeded taxonomy classifier/query tests, controller end-to-end tests,
-  compact multi-category intent coverage, malformed-intent and duplicate-name
-  rejection tests, category-scoped breakdown coverage, and ADR 0014. Malformed
-  filters (including null arrays and mixed single/list encodings) fail closed.
-- Validation: focused assistant suite 42/42; full Flutter suite 799/799;
-  `flutter analyze --no-pub`, Dart formatting, and `git diff --check` clean.
-  GitNexus `detect-changes --scope all`: 15 files, 42 symbols, 5 affected
-  processes, MEDIUM risk, no partial/truncated result. No phone/archive access.

@@ -8,9 +8,9 @@ import 'package:paisatrack/data/models/raw_sms.dart';
 void main() {
   const parser = GenericTransactionParser();
 
-  RawSms sms(String body) => RawSms(
+  RawSms sms(String body, {String sender = 'VK-HDFCBK'}) => RawSms(
         id: body,
-        sender: 'VK-HDFCBK',
+        sender: sender,
         body: body,
         receivedAt: DateTime.utc(2026, 7, 10),
       );
@@ -186,6 +186,90 @@ void main() {
         reason: example.body,
       );
     }
+  });
+
+  test('parses the verified SLICE sent-from alert and ignores its footer', () {
+    const body = 'Rs. 1,531.20 sent from a/c xx1234 on 14-Sep-26 to '
+        'SAMPLE SERVICE STATION (UPI Ref: 111111111111). '
+        'Not you? Call your bank immediately. - slice';
+    final receivedAt = DateTime.utc(2026, 9, 15);
+    final source = RawSms(
+      id: 'synthetic-slice-sent-from',
+      sender: 'SLICE',
+      body: body,
+      receivedAt: receivedAt,
+    );
+
+    final record = parser.parse(source);
+
+    expect(record, isNotNull);
+    expect(record!.amount, 1531.2);
+    expect(record.direction, TransactionDirection.debit);
+    expect(record.channel, TransactionChannel.upi);
+    expect(record.accountHint, 'xx1234');
+    expect(record.merchantRaw, 'SAMPLE SERVICE STATION');
+    expect(record.refId, '111111111111');
+    expect(record.ts, DateTime.utc(2026, 9, 14));
+    expect(record.ts, isNot(receivedAt));
+    expect(
+      record.evidence!
+          .singleWhere((evidence) => evidence.field == 'ts')
+          .verbatim,
+      '14-Sep-26',
+    );
+    expect(
+      const SpanVerifier().verify(
+        body: body,
+        evidence: record.evidence,
+        record: record,
+      ),
+      isTrue,
+    );
+
+    expect(
+      parser
+          .parse(sms('Not you? Call your bank immediately.', sender: 'SLICE')),
+      isNull,
+    );
+  });
+
+  test('uses the received date for unrelated or invalid body dates', () {
+    final receivedAt = DateTime.utc(2026, 9, 15);
+    const bodies = [
+      'Rs. 1,531.20 sent from a/c xx1234 to SAMPLE STORE. '
+          'Not you? Call your bank immediately on 14-Sep-26.',
+      'Rs. 1,531.20 sent from a/c xx1234 on 32-Sep-26 to SAMPLE STORE.',
+    ];
+
+    for (final body in bodies) {
+      final record = parser.parse(
+        RawSms(
+          id: 'synthetic-slice-invalid-date',
+          sender: 'SLICE',
+          body: body,
+          receivedAt: receivedAt,
+        ),
+      );
+
+      expect(record, isNotNull, reason: body);
+      expect(record!.ts, receivedAt, reason: body);
+      expect(
+        record.evidence!
+            .singleWhere((evidence) => evidence.field == 'ts')
+            .verbatim,
+        body,
+        reason: body,
+      );
+    }
+  });
+
+  test('parses the transaction date when its leading word is capitalized', () {
+    final record = parser.parse(
+      sms('Rs. 250.00 sent from a/c xx1234 On 14-Sep-26 via UPI'),
+    );
+
+    expect(record, isNotNull);
+    expect(record!.ts, DateTime.utc(2026, 9, 14));
   });
 
   test('abstains on future, pending, and scheduled payment wording', () {

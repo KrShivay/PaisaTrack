@@ -51,8 +51,12 @@ class GenericTransactionParser {
     r'(?:Ref(?:\s*No)?|UTR|txn(?:\s*id)?)[:\s#]*([A-Za-z0-9]{6,})',
     caseSensitive: false,
   );
+  static final RegExp _transactionDate = RegExp(
+    r'\bon\s+(\d{1,2}-[A-Za-z]{3}-\d{2})\b',
+    caseSensitive: false,
+  );
   static final RegExp _merchant = RegExp(
-    r'\b(at|to|from|towards)\s+(.{1,40}?)(?=\s+(?:via|through|from|to|on|ref)\b|[.,;]|$)',
+    r'\b(at|to|from|towards)\s+(.{1,40}?)(?=\s*\((?:UPI\s+)?Ref\b|\s+(?:via|through|from|to|on|ref)\b|[.,;]|$)',
     caseSensitive: false,
   );
   static final RegExp _merchantContext = RegExp(
@@ -115,6 +119,34 @@ class GenericTransactionParser {
     final account = _account.firstMatch(body)?.group(1);
     final channel = _channel(body);
     final vpa = _vpa.firstMatch(body)?.group(1);
+    RegExpMatch? dateMatch;
+    DateTime? transactionDate;
+    final invalidDate = DateTime.utc(1900);
+    for (final candidate in _transactionDate.allMatches(body)) {
+      if (candidate.start < direction.end ||
+          candidate.start - direction.end > 80) {
+        continue;
+      }
+      final gap = body.substring(direction.end, candidate.start);
+      if (RegExp(r'[.;\n]').hasMatch(gap)) {
+        continue;
+      }
+
+      final value = candidate.group(1)!;
+      final parsedDate = _fieldNormalizer.parseDate(
+        value: value,
+        format: 'dd-MMM-yy',
+        fallback: invalidDate,
+      );
+      final day = int.parse(value.split('-').first);
+      if (parsedDate == invalidDate || parsedDate.day != day) {
+        continue;
+      }
+
+      dateMatch = candidate;
+      transactionDate = parsedDate;
+      break;
+    }
     if (account == null &&
         channel == TransactionChannel.unknown &&
         vpa == null) {
@@ -154,9 +186,14 @@ class GenericTransactionParser {
       ),
       FieldEvidence(
         field: 'ts',
-        start: 0,
-        end: body.length,
-        verbatim: body,
+        start: dateMatch == null
+            ? 0
+            : body.indexOf(dateMatch.group(1)!, dateMatch.start),
+        end: dateMatch == null
+            ? body.length
+            : body.indexOf(dateMatch.group(1)!, dateMatch.start) +
+                dateMatch.group(1)!.length,
+        verbatim: dateMatch?.group(1) ?? body,
         extractor: 'generic_regex',
       ),
     ];
@@ -171,7 +208,7 @@ class GenericTransactionParser {
         accountHint: account == null ? null : 'xx$account',
         balanceAfter: _balanceAmount(body),
         refId: _ref.firstMatch(body)?.group(1),
-        ts: sms.receivedAt,
+        ts: transactionDate ?? sms.receivedAt,
         parseSource: ParseSource.generic,
         parseConfidence:
             amounts.length == 1 && merchant != null && merchant.isNotEmpty

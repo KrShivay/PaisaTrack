@@ -33,6 +33,30 @@ class SmsFilterTest {
     }
 
     @Test
+    fun allowsVerifiedSliceHeaderForSentFromAlert() {
+        val body =
+            "Rs. 1,531.20 sent from a/c xx1234 on 14-Sep-26 to " +
+                "SAMPLE SERVICE STATION (UPI Ref: 111111111111). " +
+                "Not you? Call your bank immediately. - slice"
+
+        assertTrue(
+            SmsFilter.isAllowed("SLICE", body),
+        )
+        assertTrue(SmsFilter.isAllowed("SLICE", body, isBatch = true))
+    }
+
+    @Test
+    fun sliceSignatureInBodyDoesNotAdmitAnUnknownSender() {
+        assertFalse(
+            SmsFilter.isAllowed(
+                "AD-SHOPXY",
+                "Rs. 1,531.20 sent from a/c xx1234 to SAMPLE SERVICE STATION. " +
+                    "Not you? Call your bank immediately. - SLICE",
+            ),
+        )
+    }
+
+    @Test
     fun allowsPnbSenderVariants() {
         val body = "Your a/c XX5788 is credited for INR 20.00 on 05-06-25"
 
