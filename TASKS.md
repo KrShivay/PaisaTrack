@@ -10,6 +10,26 @@ later hardening.
 
 ## In Review
 
+- [ ] T-183 [P0] Guard live SMS lifecycle classification before extraction.
+  - Acceptance: Production live, history, and incremental catch-up providers use
+    one deterministic classifier loaded from the existing local cue asset.
+    OTP, promo/rewards, balance-only, statement, and unclassified messages do
+    not reach parsing/LLM fallback; pending, failed, and reversal messages keep
+    their lifecycle even when an adversarial model returns transactional field
+    snippets. Settled debit/credit with trailing balance context remains
+    supported. Non-settled and uncertain records never enter settled spending
+    and require review where a transaction is retained. Synthetic provider
+    tests exercise actual wiring and model-unavailable behavior; weak rewards
+    copy and ambiguous purchase-of promotion text stay blocked. History stays
+    bounded and model-free.
+  - Dependencies: T-182 generic parser abstention; no sender-filter expansion.
+  - Privacy: local inference only; no raw-SMS retention or cloud changes.
+  - Rollback: revert provider/classifier/ingestion guards and regression tests.
+  - Verification: focused capture/lifecycle/history suite 57/57; full Flutter
+    suite 818/818; analyzer, Dart format check, and diff check clean. GitNexus
+    detect-changes: 12 files, 42 symbols, 13 processes, HIGH risk; index refresh
+    records known truncation and cross-language unresolved edges.
+
 - [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore
   persisted state.
   - Acceptance: Keep writes `confirmed` even when no feedback row is needed;
@@ -192,17 +212,29 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
-- [ ] T-183 [P0] Guard live SMS lifecycle classification before extraction.
-  - Acceptance: Production live ingestion supplies deterministic message-kind
-    classification to parsing and prevents local LLM fallback from turning
-    OTP, promo, balance-only, declined/failed, or reversal SMS into settled
-    transactions. Settled debit/credit, pending, failed, and reversed records
-    retain correct lifecycle labels. Provider-level tests exercise production
-    wiring with synthetic messages and model outputs.
-  - Dependencies: T-182 generic parser abstention; no sender-filter expansion.
-  - Privacy: local inference only; no raw-SMS retention or cloud changes.
-  - Priority: required before the next release claims live parser lifecycle
-    safety.
+- [ ] T-184 [P1] Verify SLICE sender admission and sent-from SMS parsing.
+  - Acceptance: Determine whether the reported sender label is a real native
+    SMS header or text suffix before changing admission. Use sanitized sender
+    and body fixtures to separate native filtering from parser coverage and
+    verify fraud-call footer text is not mistaken for transaction evidence.
+    Add only a verified sender alias with narrow native and Dart tests; do not
+    broaden the allowlist based on an unverified label.
+  - Dependencies: confirmed source header; T-162b review gate.
+  - Privacy: synthetic or sanitized messages only; no personal numbers, refs,
+    merchant names, URLs, or body logging.
+  - Rollback: revert any verified narrow sender alias and its tests.
+- [ ] T-185 [P1] Add “Not a transaction” action to SMS details.
+  - Acceptance: Show a “Not a transaction” action on the SMS details screen
+    reached from transaction detail/source navigation. Persist suppression by
+    stable SMS identity so live replay, history, and catch-up do not recreate
+    it. Provide durable undo that restores normal review behavior. Preserve
+    raw-message retention and do not delete source/device data; do not substitute
+    analytics exclusion or the existing soft-delete flag.
+  - Dependencies: inspect transaction detail → SMS details navigation and
+    durable disposition schema; design migration, replay, and undo together.
+  - Privacy: local-only state; no added raw-SMS retention or cloud path.
+  - Rollback: additive migration must preserve prior rows and provide a tested
+    downgrade/recovery path.
 
 <!-- Groom future work here before promoting it to Ready. -->
 

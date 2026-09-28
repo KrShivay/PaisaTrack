@@ -26,6 +26,7 @@
       "refund of"
     ],
     "reminder": [
+      "\\breminder\\s*:",
       "due on",
       "payment due",
       "bill generated",
@@ -67,28 +68,28 @@
       "limited period offer",
       "congratulations",
       "exclusive offer",
-      "flat discount"
+      "flat discount",
+      "spending without rewards",
+      "\\bearn\\s+\\d+\\s+(?:reward\\s+)?(?:points?|pts?)\\b.*\\bon every\\b"
     ],
     "pendingAuth": [
       "pre-auth",
       "authorized",
       "held on card",
       "pre-authorized",
-      "temp block"
+      "temp block",
+      "(?:payment|transaction|transfer|debit|credit)\\b.{0,25}\\bpending\\b",
+      "\\bpending\\b.{0,25}\\b(?:payment|transaction|transfer|debit|credit)\\b",
+      "\\b(?:(?:will|expected|scheduled|due)\\s+)?to\\s+be\\s+(?:debited|credited|charged|transferred|deposited|added to)\\b"
     ],
     "settledCredit": [
-      "credited",
-      "received",
-      "deposited",
-      "added to"
+      "\\b(?:credited|received|deposited)\\b",
+      "\\badded\\s+to\\b"
     ],
     "settledDebit": [
-      "debited",
-      "spent",
-      "withdrawn",
-      "paid",
-      "sent",
-      "purchase of"
+      "\\b(?:debited|spent|withdrawn|paid|sent|charged)\\b",
+      "\\bpurchase\\s+of\\b",
+      "\\btransferred\\s+from\\b"
     ]
   }
 }

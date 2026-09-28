@@ -12,7 +12,8 @@ enum MessageKind {
   balance('balance'),
   statement('statement'),
   promo('promo'),
-  otp('otp');
+  otp('otp'),
+  unknown('unknown');
 
   const MessageKind(this.wireName);
 
@@ -21,7 +22,7 @@ enum MessageKind {
   static MessageKind fromWireName(String name) {
     return MessageKind.values.firstWhere(
       (e) => e.wireName == name,
-      orElse: () => MessageKind.settledDebit,
+      orElse: () => MessageKind.unknown,
     );
   }
 }
@@ -55,32 +56,180 @@ class MessageKindClassifier {
 
   /// Classifies [body] into exactly one [MessageKind].
   MessageKind classify(String body) {
-    // Priority order evaluation
-    const evaluationOrder = [
+    // Lifecycle and non-transactional cues always outrank payment wording.
+    const protectedOrder = [
       MessageKind.otp,
       MessageKind.failed,
       MessageKind.reversal,
       MessageKind.reminder,
       MessageKind.mandate,
       MessageKind.statement,
-      MessageKind.balance,
-      MessageKind.promo,
       MessageKind.pendingAuth,
-      MessageKind.settledCredit,
-      MessageKind.settledDebit,
     ];
 
-    for (final kind in evaluationOrder) {
-      final regExps = cues[kind];
-      if (regExps == null) continue;
-      for (final regExp in regExps) {
-        if (regExp.hasMatch(body)) {
-          return kind;
+    for (final kind in protectedOrder) {
+      if (_matches(kind, body)) return kind;
+    }
+
+    final hasBalance = _matches(MessageKind.balance, body);
+    final hasCredit = _matches(MessageKind.settledCredit, body);
+    final hasDebit = _matches(MessageKind.settledDebit, body);
+    final hasPromo = _matches(MessageKind.promo, body);
+
+    // Reward copy often includes words such as "spent" and a currency
+    // threshold. Any promotional footer can accompany a real payment, so let
+    // only an amount plus an account/card movement sentence override it.
+    if (hasPromo &&
+        !((hasDebit &&
+                _hasPromotionalPaymentOverride(
+                  body,
+                  credit: false,
+                )) ||
+            (hasCredit &&
+                _hasPromotionalPaymentOverride(
+                  body,
+                  credit: true,
+                )))) {
+      return MessageKind.promo;
+    }
+
+    // Conflicting lifecycle direction cues are not resolved by arbitrary
+    // enum order. Leave them for explicit review instead of inventing a side.
+    if (hasCredit && hasDebit) return MessageKind.unknown;
+
+    if (hasBalance) {
+      if (hasCredit &&
+          _hasStrongPaymentContext(body, credit: true, allowPurchaseOf: true)) {
+        return MessageKind.settledCredit;
+      }
+      if (hasDebit &&
+          _hasStrongPaymentContext(
+            body,
+            credit: false,
+            allowPurchaseOf: true,
+          )) {
+        return MessageKind.settledDebit;
+      }
+      return MessageKind.balance;
+    }
+
+    if (hasCredit) return MessageKind.settledCredit;
+    if (hasDebit) return MessageKind.settledDebit;
+    return MessageKind.unknown;
+  }
+
+  bool _matches(MessageKind kind, String body) =>
+      cues[kind]?.any((regExp) => regExp.hasMatch(body)) ?? false;
+
+  /// Returns a direction cue only when the SMS has exactly one settled side.
+  /// Lifecycle labels (failed, pending, reversal) remain independent.
+  MessageKind? settledDirectionCue(String body) {
+    final hasCredit = _matches(MessageKind.settledCredit, body);
+    final hasDebit = _matches(MessageKind.settledDebit, body);
+    if (hasCredit == hasDebit) return null;
+    return hasCredit ? MessageKind.settledCredit : MessageKind.settledDebit;
+  }
+
+  bool _hasPromotionalPaymentOverride(
+    String body, {
+    required bool credit,
+  }) {
+    final amount = RegExp(
+      r'(?:\binr\b|\brs\.?|₹)\s*[\d,]+(?:\.\d{1,2})?',
+      caseSensitive: false,
+    );
+    final movement = credit
+        ? RegExp(
+            r'\b(?:credited|received|deposited)\b.{0,40}\b(?:to|into)\s+(?:your\s+)?(?:a/c|account|card)\b|\badded\s+to\s+(?:your\s+)?(?:a/c|account|card)\b',
+            caseSensitive: false,
+          )
+        : RegExp(
+            r'\b(?:debited|withdrawn|transferred|sent)\b.{0,40}\bfrom\s+(?:your\s+)?(?:a/c|account|card)\b|\bcharged\b.{0,40}\b(?:on|to)\s+(?:your\s+)?(?:a/c|account|card)\b',
+            caseSensitive: false,
+          );
+
+    for (final clause in _splitClauses(body)) {
+      final amounts = amount.allMatches(clause);
+      final movements = movement.allMatches(clause);
+      for (final amountMatch in amounts) {
+        for (final movementMatch in movements) {
+          final nearMovementStart =
+              (amountMatch.start - movementMatch.start).abs() <= 24;
+          final nearMovementEnd =
+              (amountMatch.end - movementMatch.end).abs() <= 24;
+          if (nearMovementStart || nearMovementEnd) return true;
         }
       }
     }
+    return false;
+  }
 
-    // Default fallback
-    return MessageKind.settledDebit;
+  List<String> _splitClauses(String body) {
+    final clauses = <String>[];
+    var start = 0;
+    for (var i = 0; i < body.length; i++) {
+      final char = body[i];
+      if (char == '!' || char == '?' || char == ';' || char == '\n') {
+        clauses.add(body.substring(start, i));
+        start = i + 1;
+        continue;
+      }
+      if (char != '.') continue;
+      final isDecimal = i > 0 &&
+          i + 1 < body.length &&
+          _isDigit(body.codeUnitAt(i - 1)) &&
+          _isDigit(body.codeUnitAt(i + 1));
+      final isRupeeAbbreviation =
+          i >= 2 && body.substring(i - 2, i).toLowerCase() == 'rs';
+      if (!isDecimal && !isRupeeAbbreviation) {
+        clauses.add(body.substring(start, i));
+        start = i + 1;
+      }
+    }
+    clauses.add(body.substring(start));
+    return clauses;
+  }
+
+  bool _isDigit(int codeUnit) => codeUnit >= 48 && codeUnit <= 57;
+
+  bool _hasStrongPaymentContext(
+    String body, {
+    required bool credit,
+    bool allowPurchaseOf = false,
+  }) {
+    final hasAmount = RegExp(
+      r'(?:\binr\b|\brs\.?|₹)\s*[\d,]+(?:\.\d{1,2})?',
+      caseSensitive: false,
+    ).hasMatch(body);
+    if (!hasAmount) return false;
+
+    final accountMovement = credit
+        ? RegExp(
+            r'\b(?:credited|received|deposited)\b.{0,60}\b(?:to|into)\s+(?:your\s+)?(?:a/c|account|card)\b|\badded\s+to\s+(?:your\s+)?(?:a/c|account|card)\b',
+            caseSensitive: false,
+          )
+        : RegExp(
+            r'\b(?:debited|withdrawn|transferred|sent)\b.{0,60}\bfrom\s+(?:your\s+)?(?:a/c|account|card)\b|\bcharged\b.{0,60}\b(?:on|to)\s+(?:your\s+)?(?:a/c|account|card)\b',
+            caseSensitive: false,
+          );
+    if (accountMovement.hasMatch(body)) return true;
+    if (credit) return false;
+
+    // Older banks often put the purchase verb before the amount, unlike the
+    // account-led template style. Accept those only when the amount is tied to
+    // a concrete merchant/payee, so reward copy such as "Rs 100 spent via UPI"
+    // cannot masquerade as a settled purchase. A bare "purchase of ... for
+    // Rs ..." is ambiguous ad copy and is accepted only beside balance context,
+    // never as the reason to override a promotional cue.
+    final spentOrPaid = RegExp(
+      r'\b(?:spent|paid)\b.{0,24}(?:\binr\b|\brs\.?|₹)\s*[\d,]+(?:\.\d{1,2})?\b.{0,32}\b(?:at|to)\s+[a-z0-9][a-z0-9*._& -]{1,36}\b',
+      caseSensitive: false,
+    );
+    final purchaseOf = RegExp(
+      r'\bpurchase\s+of\b.{1,60}\bfor\s+(?:\binr\b|\brs\.?|₹)\s*[\d,]+(?:\.\d{1,2})?\b',
+      caseSensitive: false,
+    );
+    return spentOrPaid.hasMatch(body) ||
+        (allowPurchaseOf && purchaseOf.hasMatch(body));
   }
 }

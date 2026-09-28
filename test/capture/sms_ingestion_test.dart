@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:paisatrack/capture/captured_sms_source.dart';
+import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
@@ -23,6 +24,7 @@ import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
 import 'package:paisatrack/enrichment/seed_category_map.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
+import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 
 import '../support/fake_sms_permission_gate.dart';
 
@@ -47,6 +49,7 @@ void main() {
     await container.read(appDatabaseProvider.future);
     await container.read(parserCascadeProvider.future);
     await container.read(categorizerProvider.future);
+    await container.read(messageKindClassifierProvider.future);
     await pumpEventQueue();
   }
 
@@ -444,7 +447,11 @@ void main() {
   test('persists an unparsed reason and skips same-version retry', () async {
     final parser = FakeParserCascade.ok(_sampleRecord())
       ..setError(ParseFailure.unparsed);
-    final ingestor = SmsIngestor(database: database, parser: parser);
+    final ingestor = SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    );
     final sms = _message('sms_unparsed_reason');
 
     await ingestor.ingest(sms);
@@ -459,6 +466,93 @@ void main() {
     expect(parser.parseCalls, 1);
   });
 
+  test('an unclassified message fails closed before parser or LLM fallback',
+      () async {
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final ingestor = SmsIngestor(database: database, parser: parser);
+    final sms = _message(
+      'sms_unclassified',
+      body: 'Your monthly account snapshot lists INR 400 in total activity.',
+    );
+
+    await ingestor.ingest(sms);
+
+    expect(parser.parseCalls, 0);
+    expect(await database.select(database.transactions).get(), isEmpty);
+    final raw = (await database.select(database.rawSms).get()).single;
+    expect(raw.processed, isFalse);
+    expect(raw.failureReason, SmsFailureReason.unparsed);
+  });
+
+  test('classifier direction must agree with extracted direction', () async {
+    final parser = FakeParserCascade.ok(
+      NormalizedTransactionRecord(
+        amount: 449,
+        direction: TransactionDirection.credit,
+        channel: TransactionChannel.upi,
+        merchantRaw: 'SANITIZED SHOP',
+        counterpartyVpa: null,
+        accountHint: 'xx1234',
+        balanceAfter: null,
+        refId: null,
+        ts: DateTime.utc(2026, 7, 5, 10, 30),
+        parseSource: ParseSource.localLlm,
+        parseConfidence: 0.6,
+      ),
+    );
+    final ingestor = SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    );
+
+    await ingestor.ingest(
+      _message(
+        'sms_direction_mismatch',
+        body: 'INR 449.00 debited from A/c XX1234 via UPI at SANITIZED SHOP.',
+      ),
+    );
+
+    expect(await database.select(database.transactions).get(), isEmpty);
+    final raw = (await database.select(database.rawSms).get()).single;
+    expect(raw.failureReason, SmsFailureReason.unparsed);
+  });
+
+  test('non-settled cue also rejects contradictory extracted direction',
+      () async {
+    final parser = FakeParserCascade.ok(
+      NormalizedTransactionRecord(
+        amount: 500,
+        direction: TransactionDirection.credit,
+        channel: TransactionChannel.upi,
+        merchantRaw: null,
+        counterpartyVpa: null,
+        accountHint: 'xx1234',
+        balanceAfter: null,
+        refId: null,
+        ts: DateTime.utc(2026, 7, 5, 10, 30),
+        parseSource: ParseSource.localLlm,
+        parseConfidence: 0.4,
+      ),
+    );
+    final ingestor = SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    );
+
+    await ingestor.ingest(
+      _message(
+        'sms_failed_direction_mismatch',
+        body: 'INR 500.00 debited from A/c XX1234; transaction declined.',
+      ),
+    );
+
+    expect(await database.select(database.transactions).get(), isEmpty);
+    final raw = (await database.select(database.rawSms).get()).single;
+    expect(raw.failureReason, SmsFailureReason.unparsed);
+  });
+
   test(
       'generic-only model-unavailable ingest keeps supported payment review-only and abstains on lifecycle negatives',
       () async {
@@ -467,6 +561,7 @@ void main() {
       parser: const ParserCascade(
         templateMatcher: TemplateMatcher(registries: []),
       ),
+      messageKindClassifier: _testMessageKindClassifier,
     );
     final messages = [
       _message(
@@ -506,22 +601,27 @@ void main() {
     }
   });
 
-  test('retries a retained failure after a parser-version upgrade', () async {
+  test('classifier upgrade retries retained failures by default', () async {
     final parser = FakeParserCascade.ok(_sampleRecord())
       ..setError(ParseFailure.unparsed);
     final sms = _message('sms_retry_after_upgrade');
-    await SmsIngestor(database: database, parser: parser).ingest(sms);
+    await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+      parserVersion: smsParserVersion - 1,
+    ).ingest(sms);
 
     parser.setError(null);
     final upgraded = SmsIngestor(
       database: database,
       parser: parser,
-      parserVersion: smsParserVersion + 1,
+      messageKindClassifier: _testMessageKindClassifier,
     );
     await upgraded.ingest(sms);
 
     final raw = (await database.select(database.rawSms).get()).single;
-    expect(raw.parserVersion, smsParserVersion + 1);
+    expect(raw.parserVersion, smsParserVersion);
     expect(raw.failureReason, isNull);
     expect(raw.processed, isTrue);
     expect(parser.parseCalls, 2);
@@ -534,7 +634,11 @@ void main() {
     final sms = _message('sms_processing_error');
 
     await expectLater(
-      SmsIngestor(database: database, parser: parser).ingest(sms),
+      SmsIngestor(
+        database: database,
+        parser: parser,
+        messageKindClassifier: _testMessageKindClassifier,
+      ).ingest(sms),
       throwsA(isA<StateError>()),
     );
 
@@ -794,6 +898,233 @@ void main() {
     expect(transactions.single.refId, record['ref_id']);
     expect(transactions.single.ts, record['ts']);
   });
+
+  test('live provider gates non-transactions and keeps model lifecycle labels',
+      () async {
+    final controller = StreamController<Object?>();
+    final model = AdversarialLlmRuntime((prompt) {
+      if (prompt.contains('INR 500.00')) {
+        return {
+          'amount_text': 'INR 500.00',
+          'direction_text': 'debited',
+          'message_kind': 'transactional',
+        };
+      }
+      if (prompt.contains('INR 880.00')) {
+        return {
+          'amount_text': 'INR 880.00',
+          'direction_text': 'credited',
+          'message_kind': 'transactional',
+        };
+      }
+      if (prompt.contains('INR 300.00')) {
+        return {
+          'amount_text': 'INR 300.00',
+          'direction_text': 'credited',
+          'message_kind': 'transactional',
+        };
+      }
+      if (prompt.contains('INR 200.00')) {
+        return {
+          'amount_text': 'INR 200.00',
+          'direction_text': 'debited',
+          'message_kind': 'transactional',
+        };
+      }
+      if (prompt.contains('INR 449.00')) {
+        return {
+          'amount_text': 'INR 449.00',
+          'direction_text': 'debited',
+          'message_kind': 'transactional',
+        };
+      }
+      if (prompt.contains('INR 700.00')) {
+        return {
+          'amount_text': 'INR 700.00',
+          'direction_text': 'debited',
+          'message_kind': 'transactional',
+        };
+      }
+      if (prompt.contains('INR 1,250.00')) {
+        return {
+          'amount_text': 'INR 1,250.00',
+          'direction_text': 'credited',
+          'message_kind': 'transactional',
+        };
+      }
+      return {
+        'amount_text': 'INR 400',
+        'direction_text': 'debited',
+        'message_kind': 'transactional',
+      };
+    });
+    final container = ProviderContainer(
+      overrides: [
+        smsPermissionGateProvider.overrideWithValue(
+          FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+        ),
+        appDatabaseProvider.overrideWith((ref) async => database),
+        capturedSmsSourceProvider.overrideWithValue(
+          PlatformCapturedSmsSource(
+            channel: FakeCapturedSmsChannel(controller.stream),
+          ),
+        ),
+        llmRuntimeProvider.overrideWithValue(model),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(controller.close);
+
+    final bootstrap = container.listen<void>(
+      smsCaptureBootstrapProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(bootstrap.close);
+    await waitForCaptureReady(container);
+
+    final bodies = <String, String>{
+      'sms_live_debit_balance':
+          'INR 449.00 debited from A/c XX1234 via UPI at SANITIZED SHOP. '
+              'Available balance INR 1,500.00.',
+      'sms_live_debit_with_rewards_footer':
+          'INR 700.00 debited from A/c XX1234 via UPI at SYNTHETIC SHOP. '
+              'Earn 3 points on every Rs 100 spent. Apply: example.test',
+      'sms_live_credit_balance':
+          'INR 1,250.00 credited to A/c XX1234 from SANITIZED PAYROLL. '
+              'Available balance INR 15,200.00.',
+      'sms_live_failed':
+          'INR 500.00 was debited from A/c XX1234 via UPI; transaction declined.',
+      'sms_live_direction_mismatch':
+          'INR 880.00 was debited from A/c XX1234 via UPI; transaction declined.',
+      'sms_live_reversal':
+          'INR 300.00 credited back to A/c XX1234 following reversal.',
+      'sms_live_pending':
+          'INR 200.00 debited from A/c XX1234 via UPI; transaction pending.',
+      'sms_live_otp':
+          'OTP for transaction INR 500 is 482910. Do not share this code.',
+      'sms_live_balance_only':
+          'Available balance INR 500.00. Monthly view shows Rs 100 spent this month.',
+      'sms_live_rewards_promo':
+          'Still spending without rewards? Link SYNTHETIC UPI RuPay CC to earn '
+              '3 pts on every Rs 100 spent. Apply: https://example.test',
+      'sms_live_unknown':
+          'Your monthly account snapshot lists INR 400 in total activity.',
+    };
+    for (final entry in bodies.entries) {
+      controller.add({
+        'id': entry.key,
+        'sender': 'SYNTHETIC-BANK',
+        'body': entry.value,
+        'receivedAtEpochMillis':
+            DateTime.utc(2026, 9, 28, 12).millisecondsSinceEpoch,
+      });
+    }
+    await pumpEventQueue(times: 20);
+
+    final transactions = await database.select(database.transactions).get();
+    final bySmsId = {for (final row in transactions) row.smsId!: row};
+    expect(
+      bySmsId.keys,
+      containsAll(<String>[
+        'sms_live_debit_balance',
+        'sms_live_debit_with_rewards_footer',
+        'sms_live_credit_balance',
+        'sms_live_failed',
+        'sms_live_reversal',
+        'sms_live_pending',
+      ]),
+    );
+    expect(bySmsId.keys, isNot(contains('sms_live_otp')));
+    expect(bySmsId.keys, isNot(contains('sms_live_balance_only')));
+    expect(bySmsId.keys, isNot(contains('sms_live_rewards_promo')));
+    expect(bySmsId.keys, isNot(contains('sms_live_unknown')));
+    expect(bySmsId.keys, isNot(contains('sms_live_direction_mismatch')));
+
+    expect(bySmsId['sms_live_debit_balance']!.lifecycleState, 'settled');
+    expect(bySmsId['sms_live_debit_balance']!.direction, 'debit');
+    expect(
+      bySmsId['sms_live_debit_with_rewards_footer']!.lifecycleState,
+      'settled',
+    );
+    expect(bySmsId['sms_live_debit_with_rewards_footer']!.direction, 'debit');
+    expect(bySmsId['sms_live_credit_balance']!.lifecycleState, 'settled');
+    expect(bySmsId['sms_live_credit_balance']!.direction, 'credit');
+    expect(bySmsId['sms_live_failed']!.lifecycleState, 'failed');
+    expect(bySmsId['sms_live_failed']!.status, 'needs_review');
+    expect(bySmsId['sms_live_reversal']!.lifecycleState, 'reversed');
+    expect(bySmsId['sms_live_reversal']!.status, 'needs_review');
+    expect(bySmsId['sms_live_pending']!.lifecycleState, 'pending');
+    expect(bySmsId['sms_live_pending']!.status, 'needs_review');
+
+    // Only explicit payment candidates and lifecycle records reach the model;
+    // promo-only, balance-only, OTP and unknown messages are gated beforehand.
+    expect(model.extractCalls, 4);
+    expect(
+      model.prompts,
+      everyElement(isNot(contains('Still spending without rewards'))),
+    );
+    expect(
+      model.prompts,
+      everyElement(isNot(contains('Monthly view shows Rs 100 spent'))),
+    );
+    expect(
+      model.prompts,
+      everyElement(isNot(contains('Do not share this code'))),
+    );
+  });
+
+  test('live provider remains safe when the on-device model is unavailable',
+      () async {
+    final controller = StreamController<Object?>();
+    final model = UnavailableLlmRuntime();
+    final container = ProviderContainer(
+      overrides: [
+        smsPermissionGateProvider.overrideWithValue(
+          FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+        ),
+        appDatabaseProvider.overrideWith((ref) async => database),
+        capturedSmsSourceProvider.overrideWithValue(
+          PlatformCapturedSmsSource(
+            channel: FakeCapturedSmsChannel(controller.stream),
+          ),
+        ),
+        llmRuntimeProvider.overrideWithValue(model),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(controller.close);
+
+    final bootstrap = container.listen<void>(
+      smsCaptureBootstrapProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(bootstrap.close);
+    await waitForCaptureReady(container);
+
+    controller.add({
+      'id': 'sms_model_unavailable_debit',
+      'sender': 'SYNTHETIC-BANK',
+      'body': 'INR 725.00 charged on card XX1234 at SANITIZED SHOP.',
+      'receivedAtEpochMillis':
+          DateTime.utc(2026, 9, 28, 12).millisecondsSinceEpoch,
+    });
+    controller.add({
+      'id': 'sms_model_unavailable_decline',
+      'sender': 'SYNTHETIC-BANK',
+      'body': 'INR 500.00 debited from A/c XX1234 but transaction declined.',
+      'receivedAtEpochMillis':
+          DateTime.utc(2026, 9, 28, 12, 1).millisecondsSinceEpoch,
+    });
+    await pumpEventQueue(times: 20);
+
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions, hasLength(1));
+    expect(transactions.single.smsId, 'sms_model_unavailable_debit');
+    expect(transactions.single.lifecycleState, 'settled');
+    expect(model.extractCalls, 1);
+  });
 }
 
 SmsIngestor _ingestorFor(
@@ -808,6 +1139,7 @@ SmsIngestor _ingestorFor(
     parser: recordsById == null
         ? FakeParserCascade.ok(record!)
         : FakeParserCascade.byId(recordsById),
+    messageKindClassifier: _testMessageKindClassifier,
     categorizer: Categorizer(
       rules: RuleRepository(database),
       seedMap: SeedCategoryMap.fromJson('{"amzn":"shopping"}'),
@@ -816,6 +1148,10 @@ SmsIngestor _ingestorFor(
     financialCalendar: financialCalendar,
   );
 }
+
+final _testMessageKindClassifier = MessageKindClassifier.fromJson(
+  File('assets/seed/message_cues_in.json').readAsStringSync(),
+);
 
 RawSms _message(String id, {String? body}) {
   return RawSms(
@@ -891,6 +1227,69 @@ class FakeCapturedSmsChannel implements CapturedSmsChannel {
 
   @override
   Stream<Object?> receiveBroadcastStream() => _stream;
+}
+
+class AdversarialLlmRuntime extends LlmRuntime {
+  AdversarialLlmRuntime(this._responseForPrompt);
+
+  final Map<String, Object?> Function(String prompt) _responseForPrompt;
+  int extractCalls = 0;
+  final prompts = <String>[];
+
+  @override
+  Future<LlmResult<String>> complete(String prompt) async =>
+      const LlmSuccess('');
+
+  @override
+  Future<LlmResult<Map<String, Object?>>> extractJson(
+    String prompt,
+    Map<String, Object?> schema,
+  ) async {
+    extractCalls++;
+    prompts.add(prompt);
+    return LlmSuccess(_responseForPrompt(prompt));
+  }
+
+  @override
+  Future<bool> isModelAvailable() async => true;
+
+  @override
+  Future<bool> isDeviceSupported() async => true;
+
+  @override
+  Future<bool> downloadModel() async => false;
+
+  @override
+  Future<bool> deleteModel() async => true;
+}
+
+class UnavailableLlmRuntime extends LlmRuntime {
+  int extractCalls = 0;
+
+  @override
+  Future<LlmResult<String>> complete(String prompt) async =>
+      const LlmUnavailable(LlmUnavailableReason.modelAbsent);
+
+  @override
+  Future<LlmResult<Map<String, Object?>>> extractJson(
+    String prompt,
+    Map<String, Object?> schema,
+  ) async {
+    extractCalls++;
+    return const LlmUnavailable(LlmUnavailableReason.modelAbsent);
+  }
+
+  @override
+  Future<bool> isModelAvailable() async => false;
+
+  @override
+  Future<bool> isDeviceSupported() async => false;
+
+  @override
+  Future<bool> downloadModel() async => false;
+
+  @override
+  Future<bool> deleteModel() async => true;
 }
 
 class FakeParserCascade extends ParserCascade {

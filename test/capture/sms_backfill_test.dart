@@ -1,11 +1,17 @@
+import 'dart:io';
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_backfill.dart';
 import 'package:paisatrack/capture/sms_import_state.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
+import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/core/result.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -53,6 +59,7 @@ void main() {
           throwIds: throwIds,
           unparsedIds: unparsedIds,
         ),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: reader,
       pageSize: 2,
@@ -111,6 +118,7 @@ void main() {
         parser: const ParserCascade(
           templateMatcher: TemplateMatcher(registries: []),
         ),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: FakeInboxReader.single(messages),
       pageSize: 2,
@@ -305,6 +313,92 @@ void main() {
     expect(marker.markCount, 1);
   });
 
+  test('production catch-up provider uses lifecycle cues without an LLM',
+      () async {
+    final expected = jsonDecode(
+      File('test/fixtures/sms/sbi/sbi_debit_dearupi_01.expected.json')
+          .readAsStringSync(),
+    ) as Map<String, Object?>;
+    final fixtureBody = File(
+      'test/fixtures/sms/sbi/sbi_debit_dearupi_01.txt',
+    ).readAsStringSync();
+    final receivedAt = DateTime.fromMillisecondsSinceEpoch(
+      expected['received_at']! as int,
+      isUtc: true,
+    );
+    final reader = FakeInboxReader.single([
+      RawSms(
+        id: 'sms_provider_fixture',
+        sender: expected['sender']! as String,
+        body: fixtureBody,
+        receivedAt: receivedAt,
+      ),
+      syntheticMessage(
+        'sms_provider_balance',
+        'Available balance INR 500.00. Monthly view shows Rs 100 spent.',
+      ),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWith((ref) async => database),
+        smsInboxReaderProvider.overrideWithValue(reader),
+        backfillMarkerProvider.overrideWithValue(
+          FakeBackfillMarker(version: smsHistoryImportVersion),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final catchUp = await container.read(smsIncrementalCatchUpProvider.future);
+    final result = await catchUp.run();
+
+    expect(result.processed, 2);
+    final transactions = await database.select(database.transactions).get();
+    expect(
+      transactions,
+      hasLength(1),
+      reason: 'unexpected synthetic transaction SMS IDs: '
+          '${transactions.map((row) => row.smsId).toList()}',
+    );
+    expect(transactions.single.smsId, 'sms_provider_fixture');
+    expect(transactions.single.lifecycleState, 'settled');
+    final rawRows = await database.select(database.rawSms).get();
+    final balanceRaw = rawRows.singleWhere(
+      (row) => row.id == 'sms_provider_balance',
+    );
+    expect(balanceRaw.processed, isTrue);
+    expect(balanceRaw.failureReason, isNull);
+  });
+
+  test('production history provider uses lifecycle cues without an LLM',
+      () async {
+    final reader = FakeInboxReader.single([
+      syntheticMessage(
+        'sms_history_balance',
+        'Available balance INR 500.00. Monthly view shows Rs 100 spent.',
+      ),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWith((ref) async => database),
+        smsInboxReaderProvider.overrideWithValue(reader),
+        backfillMarkerProvider.overrideWithValue(FakeBackfillMarker()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final importer =
+        await container.read(smsHistoryImportRunnerProvider.future);
+    final result = await importer.run(force: true);
+
+    expect(result.processed, 1);
+    expect(await database.select(database.transactions).get(), isEmpty);
+    final raw = (await database.select(database.rawSms).get()).single;
+    expect(raw.id, 'sms_history_balance');
+    expect(raw.processed, isTrue);
+    expect(raw.failureReason, isNull);
+  });
+
   test('current import version skips automatic scan', () async {
     final marker = FakeBackfillMarker(version: smsHistoryImportVersion);
     final reader = FakeInboxReader.single([message('sms_a')]);
@@ -417,6 +511,7 @@ void main() {
       ingestor: SmsIngestor(
         database: database,
         parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: reader,
       marker: FakeBackfillMarker(version: smsHistoryImportVersion),
@@ -444,6 +539,7 @@ void main() {
         _sampleRecord,
         unparsedIds: {'sms_failed'},
       ),
+      messageKindClassifier: _testMessageKindClassifier,
     ).ingest(message('sms_failed'));
 
     final reader = FakeInboxReader.single([message('sms_failed')]);
@@ -452,6 +548,7 @@ void main() {
       ingestor: SmsIngestor(
         database: database,
         parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
         parserVersion: smsParserVersion + 1,
       ),
       reader: reader,
@@ -481,6 +578,7 @@ void main() {
       ingestor: SmsIngestor(
         database: database,
         parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: reader,
       marker: FakeBackfillMarker(version: smsHistoryImportVersion),
@@ -498,6 +596,7 @@ void main() {
       ingestor: SmsIngestor(
         database: database,
         parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: FakeInboxReader.single([]),
       marker: FakeBackfillMarker(version: smsHistoryImportVersion),
@@ -515,6 +614,7 @@ void main() {
       ingestor: SmsIngestor(
         database: database,
         parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: FakeInboxReader.single([message('sms_single')]),
       marker: FakeBackfillMarker(version: smsHistoryImportVersion),
@@ -536,6 +636,7 @@ void main() {
       ingestor: SmsIngestor(
         database: database,
         parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
       ),
       reader: reader,
       marker: FakeBackfillMarker(version: smsHistoryImportVersion - 1),
@@ -547,6 +648,10 @@ void main() {
     expect(reader.readCount, 0);
   });
 }
+
+final _testMessageKindClassifier = MessageKindClassifier.fromJson(
+  File('assets/seed/message_cues_in.json').readAsStringSync(),
+);
 
 final _sampleRecord = NormalizedTransactionRecord(
   amount: 449,

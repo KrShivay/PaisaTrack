@@ -69,6 +69,14 @@ final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
   );
 });
 
+/// Loads the deterministic lifecycle cues once for every ingestion path.
+final messageKindClassifierProvider =
+    FutureProvider<MessageKindClassifier>((ref) async {
+  final cueJson =
+      await rootBundle.loadString('assets/seed/message_cues_in.json');
+  return MessageKindClassifier.fromJson(cueJson);
+});
+
 /// Coordinates live Android SMS events into raw capture rows and transactions.
 final smsCaptureBootstrapProvider = Provider<void>((ref) {
   final permission = ref.watch(smsPermissionControllerProvider);
@@ -81,13 +89,16 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
   final source = ref.watch(capturedSmsSourceProvider);
   final parser = ref.watch(parserCascadeProvider).valueOrNull;
   final categorizer = ref.watch(categorizerProvider).valueOrNull;
-  if (parser == null || categorizer == null) {
+  final messageKindClassifier =
+      ref.watch(messageKindClassifierProvider).valueOrNull;
+  if (parser == null || categorizer == null || messageKindClassifier == null) {
     return;
   }
   final ingestor = SmsIngestor(
     database: database,
     parser: parser,
     categorizer: categorizer,
+    messageKindClassifier: messageKindClassifier,
     merchantResolver: ref.watch(merchantResolverProvider(database)),
     // Deliberately ref.read (lazy, at decision time) — NOT ref.watch.
     // Watching the settings controller here rebuilt this provider on every
@@ -266,8 +277,8 @@ class SmsIngestor {
               ),
             );
 
-        final kind = _messageKindClassifier?.classify(sms.body) ??
-            MessageKind.settledDebit;
+        final kind =
+            _messageKindClassifier?.classify(sms.body) ?? MessageKind.unknown;
 
         if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
           final parseResult = await _parser.parse(sms);
@@ -322,6 +333,20 @@ class SmsIngestor {
           return;
         }
 
+        if (kind == MessageKind.otp ||
+            kind == MessageKind.promo ||
+            kind == MessageKind.balance ||
+            kind == MessageKind.statement ||
+            kind == MessageKind.unknown) {
+          await _markRawSmsOutcome(
+            sms.id,
+            processed: kind != MessageKind.unknown,
+            failureReason:
+                kind == MessageKind.unknown ? SmsFailureReason.unparsed : null,
+          );
+          return;
+        }
+
         final (lifecycleState, lifecycleReason) = switch (kind) {
           MessageKind.settledDebit || MessageKind.settledCredit => (
               'settled',
@@ -330,27 +355,55 @@ class SmsIngestor {
           MessageKind.pendingAuth => ('pending', 'authorized'),
           MessageKind.failed => ('failed', 'declined'),
           MessageKind.reversal => ('reversed', 'refund_or_reversal'),
-          _ => ('settled', null),
+          MessageKind.reminder ||
+          MessageKind.mandate ||
+          MessageKind.balance ||
+          MessageKind.statement ||
+          MessageKind.promo ||
+          MessageKind.otp ||
+          MessageKind.unknown =>
+            throw StateError(
+              'Non-transactional kind reached transaction route',
+            ),
         };
 
         final parseResult = await _parser.parse(sms);
         switch (parseResult) {
           case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
+            final directionCue =
+                _messageKindClassifier?.settledDirectionCue(sms.body);
+            final requiredDirection = switch (directionCue) {
+              MessageKind.settledDebit => TransactionDirection.debit,
+              MessageKind.settledCredit => TransactionDirection.credit,
+              _ => null,
+            };
+            if (requiredDirection != null &&
+                value.direction != requiredDirection) {
+              await _markRawSmsOutcome(
+                sms.id,
+                processed: false,
+                failureReason: SmsFailureReason.unparsed,
+              );
+              return;
+            }
+
             final duplicateOfTxnId = await _findDuplicateOfExisting(value);
             final merchant = await _merchantResolver?.resolve(value);
             final categorization = await _categorizer?.categorize(
               value,
               merchantEmbedding: merchant?.embedding,
             );
-            final initialStatus = duplicateOfTxnId != null
-                ? DecisionStatus.auto
-                : _fixedStatus ??
-                    (merchant?.needsReview == true
-                        ? DecisionStatus.needsReview
-                        : await _decideStatus(
-                            value,
-                            categorization: categorization,
-                          ));
+            final initialStatus = lifecycleState != 'settled'
+                ? DecisionStatus.needsReview
+                : duplicateOfTxnId != null
+                    ? DecisionStatus.auto
+                    : _fixedStatus ??
+                        (merchant?.needsReview == true
+                            ? DecisionStatus.needsReview
+                            : await _decideStatus(
+                                value,
+                                categorization: categorization,
+                              ));
             final status = SpanVerifier.enforceWriteGuard(
               body: sms.body,
               record: value,

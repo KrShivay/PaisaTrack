@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,11 +28,8 @@ void main() {
         trustLedger: TemplateTrustLedger(database),
       ),
     );
-    final classifier = MessageKindClassifier(
-      cues: {
-        MessageKind.reminder: [RegExp(r'reminder', caseSensitive: false)],
-        MessageKind.mandate: [RegExp(r'mandate|autopay', caseSensitive: false)],
-      },
+    final classifier = MessageKindClassifier.fromJson(
+      File('assets/seed/message_cues_in.json').readAsStringSync(),
     );
     ingestor = SmsIngestor(
       database: database,
@@ -202,10 +201,8 @@ void main() {
           ],
         ),
       ),
-      messageKindClassifier: MessageKindClassifier(
-        cues: {
-          MessageKind.reminder: [RegExp(r'reminder', caseSensitive: false)],
-        },
+      messageKindClassifier: MessageKindClassifier.fromJson(
+        File('assets/seed/message_cues_in.json').readAsStringSync(),
       ),
       now: () => expectedDate,
     );

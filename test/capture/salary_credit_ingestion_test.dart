@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
@@ -33,6 +34,9 @@ void main() {
               .map((file) => TemplateRegistry.fromJson(file.readAsStringSync()))
               .toList(growable: false),
         ),
+      ),
+      messageKindClassifier: MessageKindClassifier.fromJson(
+        File('assets/seed/message_cues_in.json').readAsStringSync(),
       ),
       categorizer: Categorizer(
         rules: RuleRepository(database),

@@ -452,10 +452,13 @@ final smsHistoryImportRunnerProvider =
     templateMatcher: await ref.watch(templateMatcherProvider.future),
   );
   final categorizer = await ref.watch(categorizerProvider.future);
+  final messageKindClassifier =
+      await ref.watch(messageKindClassifierProvider.future);
   final ingestor = SmsIngestor(
     database: database,
     parser: parser,
     categorizer: categorizer,
+    messageKindClassifier: messageKindClassifier,
     fixedStatus: DecisionStatus.needsReview,
     knownTransactionIds: knownTransactionIds,
     // Avoid one embedding-model invocation per new historical merchant. Raw
@@ -480,12 +483,15 @@ final smsIncrementalCatchUpProvider =
     templateMatcher: await ref.watch(templateMatcherProvider.future),
   );
   final categorizer = await ref.watch(categorizerProvider.future);
+  final messageKindClassifier =
+      await ref.watch(messageKindClassifierProvider.future);
   return SmsIncrementalCatchUp(
     database: database,
     ingestor: SmsIngestor(
       database: database,
       parser: parser,
       categorizer: categorizer,
+      messageKindClassifier: messageKindClassifier,
       fixedStatus: DecisionStatus.needsReview,
       askDailyBudgetResolver: () =>
           ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
