@@ -138,10 +138,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
       showBack: true,
-      builder: (context) => CategoryPickerSheet(
-        categories: categories,
-        title: 'Change Category',
-      ),
+      builder: (context) =>
+          CategoryPickerSheet(categories: categories, title: 'Change Category'),
     );
     if (chosen == null || !mounted) return;
 
@@ -155,7 +153,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       context: 'activity_swipe',
     );
 
-    ref.read(undoControllerProvider.notifier).pushUndo(
+    ref
+        .read(undoControllerProvider.notifier)
+        .pushUndo(
           UndoToken(
             id: 'categorize_${item.id}',
             message: 'Filed under ${chosen.name}',
@@ -181,7 +181,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       context: 'activity_confirm',
     );
 
-    ref.read(undoControllerProvider.notifier).pushUndo(
+    ref
+        .read(undoControllerProvider.notifier)
+        .pushUndo(
           UndoToken(
             id: 'confirm_${item.id}',
             message: 'Marked confirmed',
@@ -207,8 +209,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final grouped = _groupByDay(filtered);
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      backgroundColor: isDark
+          ? AppColorTokens.bloomDarkBase
+          : AppColorTokens.bloomBase,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -369,63 +372,59 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               child: pageAsync.isLoading && filtered.isEmpty
                   ? const Center(child: BloomSkeleton(width: 280, height: 160))
                   : filtered.isEmpty
-                      ? Column(
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: BloomBottomInset.contentPadding(
-                                    context,
-                                  ),
-                                ),
-                                child: _EmptyState(
-                                  isDark: isDark,
-                                  query: _query,
-                                  onClearFilters: () {
-                                    setState(() {
-                                      _query = '';
-                                      _searchController.clear();
-                                      _activeFilter = ActivityFilterChoice.all;
-                                    });
-                                  },
-                                ),
-                              ),
+                  ? Column(
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              bottom: BloomBottomInset.contentPadding(context),
                             ),
-                            if (hasMore)
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: BloomBottomInset.contentPadding(
-                                    context,
-                                  ),
-                                ),
-                                child: _loadMoreButton(),
-                              ),
-                          ],
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            0,
-                            20,
-                            BloomBottomInset.contentPadding(context),
-                          ),
-                          itemCount: grouped.length + (hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == grouped.length) {
-                              return _loadMoreButton();
-                            }
-                            final group = grouped[index];
-                            return _DayGroupSection(
-                              header: group.header,
-                              dayTotal: group.total,
-                              items: group.items,
+                            child: _EmptyState(
                               isDark: isDark,
-                              onTap: _openDetail,
-                              onSwipeRight: _confirmItem,
-                              onSwipeLeft: _recategorizeItem,
-                            );
-                          },
+                              query: _query,
+                              onClearFilters: () {
+                                setState(() {
+                                  _query = '';
+                                  _searchController.clear();
+                                  _activeFilter = ActivityFilterChoice.all;
+                                });
+                              },
+                            ),
+                          ),
                         ),
+                        if (hasMore)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: BloomBottomInset.contentPadding(context),
+                            ),
+                            child: _loadMoreButton(),
+                          ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        0,
+                        20,
+                        BloomBottomInset.contentPadding(context),
+                      ),
+                      itemCount: grouped.length + (hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == grouped.length) {
+                          return _loadMoreButton();
+                        }
+                        final group = grouped[index];
+                        return _DayGroupSection(
+                          header: group.header,
+                          dayTotal: group.total,
+                          items: group.items,
+                          isDark: isDark,
+                          onTap: _openDetail,
+                          onSwipeRight: _confirmItem,
+                          onSwipeLeft: _recategorizeItem,
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -434,12 +433,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   String _filterLabel(ActivityFilterChoice choice) => switch (choice) {
-        ActivityFilterChoice.all => 'All',
-        ActivityFilterChoice.expenses => 'Expenses',
-        ActivityFilterChoice.income => 'Income',
-        ActivityFilterChoice.transfers => 'Transfers',
-        ActivityFilterChoice.unsorted => 'Unsorted',
-      };
+    ActivityFilterChoice.all => 'All',
+    ActivityFilterChoice.expenses => 'Expenses',
+    ActivityFilterChoice.income => 'Income',
+    ActivityFilterChoice.transfers => 'Transfers',
+    ActivityFilterChoice.unsorted => 'Unsorted',
+  };
 
   Widget _loadMoreButton() {
     return Padding(
@@ -474,7 +473,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
 
       map.putIfAbsent(header, () => []).add(item);
-      totals[header] = (totals[header] ?? 0) +
+      totals[header] =
+          (totals[header] ?? 0) +
           (item.direction == TransactionDirection.debit
               ? -item.amount
               : item.amount);
@@ -491,19 +491,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   String _shortMonth(int month) => const [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ][month - 1];
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][month - 1];
 }
 
 class _DayGroup {
@@ -534,27 +534,37 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeBg = isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink;
-    final inactiveBg =
-        isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip;
+    final inactiveBg = isDark
+        ? AppColorTokens.bloomDarkCard
+        : AppColorTokens.bloomChip;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      excludeSemantics: true,
+      onTapHint: 'Select $label filter',
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : inactiveBg,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: AppTheme.bloomDisplay(
-            12,
-            isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected
-                ? Colors.white
-                : (isDark
-                    ? AppColorTokens.bloomDarkTextSecondary
-                    : AppColorTokens.inkSecondary),
+      child: Material(
+        color: isSelected ? activeBg : inactiveBg,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            child: Text(
+              label,
+              style: AppTheme.bloomDisplay(
+                12,
+                isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : AppColorTokens.inkSecondary),
+              ),
+            ),
           ),
         ),
       ),
@@ -603,11 +613,7 @@ class _DayGroupSection extends StatelessWidget {
                       : AppColorTokens.inkTertiary,
                 ),
               ),
-              BloomAmount(
-                amount: dayTotal,
-                size: 12,
-                weight: FontWeight.w500,
-              ),
+              BloomAmount(amount: dayTotal, size: 12, weight: FontWeight.w500),
             ],
           ),
         ),
@@ -746,8 +752,9 @@ class _DismissibleTransactionRow extends StatelessWidget {
   }
 
   String _formatTime(DateTime date) {
-    final h =
-        date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final h = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final m = date.minute.toString().padLeft(2, '0');
     final ampm = date.hour >= 12 ? 'pm' : 'am';
     return '$h:$m $ampm';
