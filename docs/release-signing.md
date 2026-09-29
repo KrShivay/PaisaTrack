@@ -29,8 +29,10 @@ PaisaTrack enforces release signing security for production builds.
 
 ## Published APK
 
-The currently published download is `0.1.2+4` (set in `pubspec.yaml`), an
-ARM64 APK for 64-bit ARM Android devices. Its size is 56,553,692 bytes
+The currently published download is `0.1.2+4`, an ARM64 APK for 64-bit ARM
+Android devices. That version was set in `pubspec.yaml` at the source revision
+used for the published build; the current candidate source has advanced to
+`0.1.3+2007`. The published APK's size is 56,553,692 bytes
 (56.55 MB decimal), and its SHA-256 is
 `9965dcdae9b1011c5325a5f0c5a83f317d69d6fca38cacb5a007ec9e3c211746`.
 The production signature was verified; install and launch passed on the
