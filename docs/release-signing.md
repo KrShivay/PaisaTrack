@@ -50,6 +50,29 @@ The README links directly to that file. GitHub warns above
 50 MB and rejects individual files of 100 MB or more, so use a GitHub Release
 asset if a future APK exceeds that limit.
 
+## Current Release Candidate (not published)
+
+The T-192 candidate uses source version `0.1.3+2007` from `pubspec.yaml`.
+Flutter's `--split-per-abi` build applies the ARM64 version-code offset of
+`2000`, so the effective APK version code is `4007`. This exceeds the installed
+phone build's code `2006` and preserves in-place upgrade ordering. The output
+is `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (56,685,036
+bytes; SHA-256
+`1b3ba4a18f43e9c66fe65c752f2d69393df4a90e05701094bc0c7e439129215b`). Its
+package is `com.paisatrack`, version name is `0.1.3`, and its release
+certificate SHA-256
+`6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163` matches
+the installed production signer. It is about 131 KB larger than the currently
+published APK. The signed APK installed and cold-started on a newly created
+API 35 ARM64 emulator; Home, Activity, Trends, and Ask routes opened, and a
+force-stop/relaunch kept `MainActivity` resumed with no AndroidRuntime,
+Flutter, or WorkManager error logs. Manual Entry opened, but synthetic
+transaction save and backup export/import were not verified. The existing
+`PaisaTrackApi35Arm64` AVD contained the same package signed by a different
+certificate; it was left intact, and the candidate smoke used a fresh AVD.
+Flutter tests (894/894), Flutter analysis, and Android unit tests passed.
+This candidate has not been installed on the physical phone or published.
+
 The current local signing files are `android/paisatrack-release.jks` and
 `android/keystore.properties`. Both are git-ignored. Back up both files in a
 secure location and preserve them for every future update: Android will reject

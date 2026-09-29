@@ -1,5 +1,31 @@
 # Current Handoff
 
+## 2026-09-29 — T-192 release candidate preparation
+
+- Started on a fresh branch from reviewed main `d8a09a8`. Target package version
+  is `0.1.3+2007`; the existing release key is present in the primary checkout
+  and will be accessed without printing its contents. The only connected
+  physical device is the user's phone, so all run/install/log commands will be
+  explicitly emulator-scoped. No APK publication or phone mutation is planned
+  during candidate preparation; backup export is still pending.
+- Candidate: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`,
+  56,685,036 bytes, SHA-256
+  `1b3ba4a18f43e9c66fe65c752f2d69393df4a90e05701094bc0c7e439129215b`.
+  Package `com.paisatrack`, name `0.1.3`, effective ARM64 code `4007` (Flutter
+  split-per-ABI offset +2000 from source code 2007). Certificate SHA-256
+  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163` matches
+  the installed production signer. Candidate is 131,344 bytes larger than the
+  published APK.
+- Verification: signed release cold-started on fresh synthetic AVD
+  `emulator-5556`; Home, Activity, Trends, and Ask routes opened; force-stop /
+  relaunch returned to resumed `MainActivity` with no filtered AndroidRuntime,
+  Flutter, or WorkManager errors. Flutter suite 894/894, `flutter analyze
+  --no-pub`, Android `:app:testDebugUnitTest`, and `git diff --check` passed.
+  Existing AVD had a differently signed app and was left intact; a fresh AVD
+  was used. Manual Entry opened, but saving a synthetic transaction and backup
+  export/import were not verified. Candidate is not published and was not
+  installed on the phone; physical backup/acceptance remains pending.
+
 ## 2026-09-29 — T-167c responsive large-text layouts
 
 - Fixed the confirmed narrow 2× overflow in the floating navigation pill,
@@ -40,26 +66,3 @@
   GitNexus detect-changes: 3 files, 17 symbols, one affected flow, MEDIUM risk
   (the geometry test exercises `ForTabContent`); no production code changed.
   Independent review pending.
-
-## 2026-09-29 — T-187 source-currency fidelity (review passed)
-
-- Carries explicit source currency and symbol through parsers, schema v18,
-  recurring series/status memory, expected-event reconciliation, analytics,
-  Ask responses, transaction UI, exports, and both backup formats. USD and
-  unknown-dollar amounts stay separate; legacy rows without evidence remain
-  unknown. INR-only budget math is labelled, and the dashboard exposes separate
-  foreign/unknown subtotals. Trends now labels its INR-only charts and lists
-  other currency buckets separately. Ask category breakdowns use stable
-  label/currency ordering instead of ranking nominal totals across currencies.
-  No FX conversion or phone data access.
-- Regression coverage includes adjacent prefix/suffix parsing, duplicate
-  account/amount digits, bare-dollar vs USD event matching, historical v1 and
-  chunked-v3 backup defaults, migration compatibility, per-currency analytics,
-  source-aware UI/export, and 2× text-scale layout. Unknown reminders reconcile
-  only with unknown debits sharing VPA/amount/date constraints.
-- Validation: full Flutter suite 1,030/1,030; `flutter analyze --no-pub`,
-  changed-file Dart format check, and `git diff --check` clean. GitNexus
-  compare with main: 89 files, 143 symbols, 47 affected flows, CRITICAL risk;
-  post-review working-tree detect-changes: 9 files, 8 symbols, 0 flows, LOW
-  risk. Impact warnings were surfaced before edits. Independent review passed
-  on `a5e2e61`; main was fast-forwarded and pushed to the same revision.
