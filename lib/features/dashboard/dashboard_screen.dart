@@ -93,8 +93,12 @@ class DashboardScreen extends ConsumerWidget {
                         );
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: MediaQuery.sizeOf(context).width < 400 ||
+                                  MediaQuery.textScalerOf(context).scale(1) >=
+                                      1.5
+                              ? 8
+                              : 12,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
@@ -103,14 +107,36 @@ class DashboardScreen extends ConsumerWidget {
                               : const Color(0xFFFFF0D6),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: MediaQuery.sizeOf(context).width < 400
-                            ? const SizedBox(
-                                width: 48,
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: MediaQuery.sizeOf(context).width < 400 ||
+                                MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                            ? SizedBox(
                                 height: 48,
-                                child: Icon(
-                                  Icons.local_fire_department_rounded,
-                                  size: 20,
-                                  color: AppColorTokens.bloomGold,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.local_fire_department_rounded,
+                                      size: 16,
+                                      color: AppColorTokens.bloomGold,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '$streak d',
+                                      key: const ValueKey(
+                                        'dashboard_streak_count',
+                                      ),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      style: AppTheme.bloomDisplay(
+                                        10,
+                                        FontWeight.w600,
+                                        color: isDark
+                                            ? AppColorTokens.bloomGold
+                                            : const Color(0xFF8A5A00),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               )
                             : Row(
@@ -172,44 +198,48 @@ class DashboardScreen extends ConsumerWidget {
                               : AppColorTokens.bloomHairline,
                         ),
                       ),
-                      child: MediaQuery.sizeOf(context).width < 360 ||
-                              MediaQuery.textScalerOf(context).scale(1) >= 1.5
-                          ? const SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: Icon(Icons.calendar_today_rounded),
-                            )
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.calendar_today_rounded,
-                                  size: 13,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextSecondary
-                                      : AppColorTokens.inkSecondary,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  period.label,
-                                  style: AppTheme.bloomDisplay(
-                                    12,
-                                    FontWeight.w600,
-                                    color: isDark
-                                        ? AppColorTokens.bloomDarkTextPrimary
-                                        : AppColorTokens.ink,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextTertiary
-                                      : AppColorTokens.inkTertiary,
-                                ),
-                              ],
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.sizeOf(context).width - 66,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 16,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextSecondary
+                                  : AppColorTokens.inkSecondary,
                             ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                period.label,
+                                key: const ValueKey('dashboard_period_label'),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.bloomDisplay(
+                                  12,
+                                  FontWeight.w600,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextPrimary
+                                      : AppColorTokens.ink,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

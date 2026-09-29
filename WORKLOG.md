@@ -11,10 +11,15 @@
   Manual Entry, and transaction detail. The full HomeShell fixture hangs during
   Drift stream teardown, so the nav presentation is tested directly; physical
   device acceptance remains open.
+- Reviewer follow-up keeps nav labels hidden when large text would wrap in the
+  fixed-size tab cells, preserves Dashboard streak/period text, labels the Ask
+  orb, and lets long foreign-currency Activity amounts wrap to a second line.
 - Validation: responsive route suite 42/42; focused changed-screen/inset suite
-  56/56; full Flutter suite 885/885; `flutter analyze`, changed-file format
-  check, and `git diff --check` clean. GitNexus detect-changes: 14 files, 51
-  symbols, 3 affected flows, MEDIUM risk. Independent review pending.
+  56/56; reviewer follow-up focused suite 24/24; full Flutter suite 894/894;
+  analyzer, changed-file format check, and diff check clean. Follow-up GitNexus
+  impact: Dashboard/nav/Activity row MEDIUM, Ask LOW; shared `BloomAmount`
+  impact HIGH was avoided. Detect-changes: 8 files, 9 symbols, 0 processes,
+  LOW. Independent review pending.
 
 ## 2026-09-29 — T-176 global bottom-inset acceptance
 

@@ -109,4 +109,32 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final width in [320.0, 402.0]) {
+    for (final textScale in [1.5, 2.0]) {
+      testWidgets(
+        'dashboard keeps streak and period visible at ${width.toInt()}px/${textScale}x',
+        (tester) async {
+          await pumpDashboard(
+            tester,
+            const [],
+            size: Size(width, 568),
+            textScale: textScale,
+          );
+
+          final streak = find.byKey(const ValueKey('dashboard_streak_count'));
+          final period = find.byKey(const ValueKey('dashboard_period_label'));
+          expect(streak, findsOneWidget);
+          expect(period, findsOneWidget);
+          expect(tester.getSize(streak).width, greaterThan(0));
+          expect(tester.getSize(period).height, greaterThan(0));
+          expect(
+            tester.getSize(find.byTooltip('Settings & Streak')).height,
+            greaterThanOrEqualTo(48),
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 }

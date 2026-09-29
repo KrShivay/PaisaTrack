@@ -259,7 +259,8 @@ class HomeFloatingNavPill extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final tabWidth = (constraints.maxWidth - 56) / destinations.length;
-          final showLabels = tabWidth >= 68;
+          final showLabels =
+              tabWidth >= 68 && MediaQuery.textScalerOf(context).scale(1) < 1.5;
           return Row(
             children: [
               // Four tabs left-aligned with equal spacing
@@ -386,59 +387,63 @@ class _AskOrbButtonState extends State<_AskOrbButton>
   Widget build(BuildContext context) {
     final reduceMotion = useReduceMotion(context);
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: SizedBox(
-        width: AppSizes.minTouchTarget,
-        height: AppSizes.minTouchTarget,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Pulsing ring animation
-            if (!reduceMotion)
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, _) {
-                  final t = _pulseController.value;
-                  final scale = 1.0 + (0.35 * t);
-                  final opacity = (0.5 * (1 - t)).clamp(0.0, 1.0);
+    return Semantics(
+      button: true,
+      label: 'Ask PaisaTrack',
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: SizedBox(
+          width: AppSizes.minTouchTarget,
+          height: AppSizes.minTouchTarget,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Pulsing ring animation
+              if (!reduceMotion)
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, _) {
+                    final t = _pulseController.value;
+                    final scale = 1.0 + (0.35 * t);
+                    final opacity = (0.5 * (1 - t)).clamp(0.0, 1.0);
 
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColorTokens.bloomEmerald.withValues(
-                            alpha: opacity,
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColorTokens.bloomEmerald.withValues(
+                              alpha: opacity,
+                            ),
+                            width: 2,
                           ),
-                          width: 2,
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            // Orb
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColorTokens.bloomEmeraldGradient,
-                boxShadow: AppColorTokens.bloomAskOrbGlow,
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 20,
-                  color: AppColorTokens.ink,
+                    );
+                  },
+                ),
+              // Orb
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColorTokens.bloomEmeraldGradient,
+                  boxShadow: AppColorTokens.bloomAskOrbGlow,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 20,
+                    color: AppColorTokens.ink,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

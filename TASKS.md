@@ -14,16 +14,23 @@ later hardening.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
     Activity header, and Trends header. Add narrow/wide viewport checks at
     1.5×/2× text for navigation, Activity/list and transaction entry/detail
-    flows, and Trends. Preserve visible navigation, accessible labels, and
-    minimum 48dp tap targets.
+    flows, and Trends. Preserve visible streak count and period context in
+    compact Dashboard layouts, label Ask accessibly, and keep long foreign-
+    currency amounts readable. Preserve visible navigation, accessible labels,
+    and minimum 48dp tap targets.
   - Scope: flexible/wrapping/adaptive layout fixes only; no device mutation.
   - Verification: responsive route suite 42/42; focused changed-screen/inset
-    suite 56/56; full Flutter suite 885/885; `flutter analyze`, changed-file
-    formatting, and `git diff --check` clean. GitNexus detect-changes: 14 files,
-    51 symbols, 3 affected flows, MEDIUM risk. HomeShell route fixture cleanup
+    suite 56/56; reviewer follow-up focused suite 24/24; full Flutter suite
+    894/894; `flutter analyze`, changed-file formatting, and `git diff --check`
+    clean. GitNexus follow-up impact: Dashboard MEDIUM, nav MEDIUM, Ask LOW,
+    Activity row MEDIUM; shared `BloomAmount` impact was HIGH and its code was
+    left unchanged. Follow-up detect-changes: 8 files, 9 symbols, 0 processes,
+    LOW. HomeShell route fixture cleanup
     hangs on Drift streams, so navigation pill geometry, semantics, and tap
-    behavior are covered directly; Dashboard is covered with a direct screen
-    fixture. Physical-device acceptance remains open.
+    behavior are covered directly. Dashboard coverage asserts visible streak /
+    period values at 320 / 402 px and 1.5× / 2×; Ask semantics and two-line
+    foreign-currency amounts are covered. Physical-device acceptance remains
+    open.
   - Independent review pending.
 
 - [ ] T-167a [P0] Audit primary screens for loading, error, empty, and retry

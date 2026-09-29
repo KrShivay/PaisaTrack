@@ -789,6 +789,8 @@ class _DismissibleTransactionRow extends StatelessWidget {
       currencySymbol: item.currencySymbol,
       size: 15,
       weight: FontWeight.w500,
+      maxLines: 2,
+      textAlign: TextAlign.end,
     );
 
     return Dismissible(

@@ -108,6 +108,37 @@ void main() {
     expect(find.text('No transactions found'), findsOneWidget);
   });
 
+  testWidgets('keeps long foreign-currency amounts readable at 2× text',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      [
+        item(
+          id: 'long-usd-amount',
+          ts: DateTime(2026, 9, 29, 10),
+          amount: 1234567890123.45,
+          direction: TransactionDirection.debit,
+          displayName: 'International merchant',
+          currencyCode: 'USD',
+          currencySymbol: r'$',
+        ),
+      ],
+      size: const Size(320, 568),
+      textScale: 2,
+    );
+
+    final amount = find.byWidgetPredicate(
+      (widget) =>
+          widget is Text &&
+          widget.data?.contains('1234567890123.45') == true &&
+          widget.maxLines == 2,
+    );
+    expect(amount, findsOneWidget);
+    expect(tester.widget<Text>(amount).maxLines, 2);
+    expect(tester.getSize(amount).height, greaterThan(36));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Activity header has no overflow at 320×568 and 2× text',
       (tester) async {
     await pumpScreen(
