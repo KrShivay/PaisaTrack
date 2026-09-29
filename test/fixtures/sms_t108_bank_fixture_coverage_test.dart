@@ -48,7 +48,7 @@ void main() {
     final mismatches = <String>[];
     for (final fixture in positives) {
       final actual = await parseFixtureCase(cascade, fixture);
-      if (jsonEncode(actual) == jsonEncode(fixture.expected)) {
+      if (_matchesExpected(actual, fixture.expected)) {
         matched++;
       } else {
         mismatches.add(
@@ -62,5 +62,22 @@ void main() {
       greaterThanOrEqualTo(0.9),
       reason: 'pnb matched $matched/${positives.length}: $mismatches',
     );
+  });
+}
+
+bool _matchesExpected(
+  Map<String, Object?> actual,
+  Map<String, Object?> expected,
+) {
+  // These public fixtures were authored before source-currency fields existed.
+  return expected.entries.every((entry) {
+    final actualValue = actual[entry.key];
+    final expectedValue = entry.value;
+    if (actualValue is Map && expectedValue is Map) {
+      return expectedValue.entries.every(
+        (field) => actualValue[field.key] == field.value,
+      );
+    }
+    return actualValue == expectedValue;
   });
 }

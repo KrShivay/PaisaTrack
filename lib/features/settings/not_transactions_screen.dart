@@ -51,7 +51,13 @@ class _NotTransactionsScreenState extends ConsumerState<NotTransactionsScreen> {
                       .toString()
                       .substring(0, 16),
                 ),
-                trailing: Text(formatInr(transaction.amount)),
+                trailing: Text(
+                  formatSourceAmount(
+                    transaction.amount,
+                    currencyCode: transaction.currencyCode,
+                    currencySymbol: transaction.currencySymbol,
+                  ),
+                ),
                 onTap: () async {
                   final database = await ref.read(appDatabaseProvider.future);
                   final dispositions = SmsDispositionRepository(database);

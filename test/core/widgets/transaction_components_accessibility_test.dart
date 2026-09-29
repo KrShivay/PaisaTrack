@@ -18,6 +18,8 @@ void main() {
               merchantName:
                   'Bharat Petroleum Corporation Limited Merchant Terminal',
               amount: 123456789.01,
+              currencyCode: 'INR',
+              currencySymbol: '₹',
               direction: TransactionDirection.debit,
               categoryLabel: 'Transport',
               timeLabel: 'Today · 3:54 PM',

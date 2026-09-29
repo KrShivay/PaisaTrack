@@ -149,5 +149,59 @@ void main() {
       expect(result!.matchedTransactionId, 'txn_auth_1');
       expect(result.linkType, TransactionLinkType.settles);
     });
+
+    test('does not correlate bare dollar with USD, but matches USD codes', () {
+      final record = NormalizedTransactionRecord(
+        amount: 25,
+        currencyCode: 'USD',
+        currencySymbol: r'$',
+        direction: TransactionDirection.debit,
+        channel: TransactionChannel.card,
+        merchantRaw: 'SHOP',
+        counterpartyVpa: null,
+        accountHint: null,
+        balanceAfter: null,
+        refId: 'ABCDEF123456',
+        ts: DateTime.utc(2026, 7, 12),
+        parseSource: ParseSource.generic,
+        parseConfidence: 0.8,
+      );
+      Transaction candidate({required String? code, required String? symbol}) =>
+          Transaction(
+            id: 'currency-$code-$symbol',
+            ts: DateTime.utc(2026, 7, 12).millisecondsSinceEpoch,
+            amount: 25,
+            currencyCode: code,
+            currencySymbol: symbol,
+            direction: 'debit',
+            channel: 'card',
+            merchantRaw: 'SHOP',
+            refId: 'ABCDEF123456',
+            parseSource: 'generic',
+            confidenceJson: '{}',
+            status: 'auto',
+            isDeleted: false,
+            isNotTransaction: false,
+            isAnalyticsExcluded: false,
+            lifecycleState: 'settled',
+            createdAt: DateTime.utc(2026, 7, 12),
+            updatedAt: DateTime.utc(2026, 7, 12),
+          );
+
+      expect(
+        correlator.correlate(
+          record: record,
+          candidates: [candidate(code: null, symbol: r'$')],
+        ),
+        isNull,
+      );
+      expect(
+        correlator.correlate(
+          record: record,
+          candidates: [candidate(code: 'USD', symbol: null)],
+        ),
+        isNotNull,
+      );
+    });
   });
 }

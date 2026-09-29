@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -76,7 +75,7 @@ void main() {
       final mismatches = <String>[];
       for (final fixture in entry.value) {
         final actual = await parseFixtureCase(cascade, fixture);
-        if (jsonEncode(actual) == jsonEncode(fixture.expected)) {
+        if (_matchesExpected(actual, fixture.expected)) {
           matched++;
         } else {
           final actualRecord = actual['ok'];
@@ -141,5 +140,23 @@ void main() {
       reason:
           'generic fallback parsed only $parsed/${positives.length}; misses: $misses',
     );
+  });
+}
+
+bool _matchesExpected(
+  Map<String, Object?> actual,
+  Map<String, Object?> expected,
+) {
+  // Older public fixtures predate the source-currency fields. Compare their
+  // authored fields while focused currency tests cover newly captured data.
+  return expected.entries.every((entry) {
+    final actualValue = actual[entry.key];
+    final expectedValue = entry.value;
+    if (actualValue is Map && expectedValue is Map) {
+      return expectedValue.entries.every(
+        (field) => actualValue[field.key] == field.value,
+      );
+    }
+    return actualValue == expectedValue;
   });
 }

@@ -98,6 +98,23 @@ void main() {
     expect(record?.merchantRaw, 'Salary');
   });
 
+  test('preserves explicit USD and keeps bare dollar as unknown ISO bucket',
+      () {
+    final usd = parser.parse(
+      sms('Your card XX1234 was charged USD 25.00 at SANITIZED STORE'),
+    );
+    final ambiguous = parser.parse(
+      sms(r'Your card XX1234 was charged $25.00 at SANITIZED STORE'),
+    );
+
+    expect(usd?.amount, 25);
+    expect(usd?.currencyCode, 'USD');
+    expect(usd?.currencySymbol, r'$');
+    expect(ambiguous?.amount, 25);
+    expect(ambiguous?.currencyCode, isNull);
+    expect(ambiguous?.currencySymbol, r'$');
+  });
+
   test('keeps a debit when available balance trails the transaction', () {
     const body = 'Your account XX1234 was debited INR 250.00 via UPI at '
         'SANITIZED SHOP. Available balance is INR 1,000.00';

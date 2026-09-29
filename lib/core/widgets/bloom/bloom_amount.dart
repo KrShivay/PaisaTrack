@@ -13,22 +13,28 @@ class BloomAmount extends StatelessWidget {
   const BloomAmount({
     super.key,
     required this.amount,
+    this.currencyCode,
+    this.currencySymbol,
     this.size = 15,
     this.weight = FontWeight.w500,
     this.letterSpacing = -0.03,
     this.showPaise = true,
+    this.maxLines = 1,
     this.showSign = false,
     this.color,
     this.textAlign,
   });
 
   final double amount;
+  final String? currencyCode;
+  final String? currencySymbol;
   final double size;
   final FontWeight weight;
   final double letterSpacing;
 
   /// When false, strips the decimal portion for cleaner display.
   final bool showPaise;
+  final int maxLines;
 
   /// When true, prefixes positive amounts with '+'.
   final bool showSign;
@@ -55,20 +61,21 @@ class BloomAmount extends StatelessWidget {
         color: resolvedColor,
       ),
       textAlign: textAlign,
-      maxLines: 1,
+      maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
     );
   }
 
   String _format() {
-    var text = formatInr(amount);
+    var text = formatSourceAmount(
+      amount,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
+    );
 
     if (!showPaise) {
-      // Remove the ".XX" decimal portion.
-      final dotIndex = text.lastIndexOf('.');
-      if (dotIndex != -1) {
-        text = text.substring(0, dotIndex);
-      }
+      // Remove only the numeric paise suffix; preserve currency labels.
+      text = text.replaceFirst(RegExp(r'\.\d{2}(?=\s|$)'), '');
     }
 
     if (showSign && amount > 0) {

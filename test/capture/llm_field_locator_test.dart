@@ -13,7 +13,8 @@ void main() {
     receivedAt: DateTime.utc(2026, 7, 12, 12),
   );
 
-  test('returns a verified record when model returns verbatim quotations', () async {
+  test('returns a verified record when model returns verbatim quotations',
+      () async {
     final locator = LlmFieldLocator(
       _JsonRuntime({
         'amount_text': '1250.00',
@@ -30,10 +31,53 @@ void main() {
     expect(record?.direction, TransactionDirection.debit);
     expect(record?.parseSource, ParseSource.localLlm);
     expect(record?.evidence, isNotNull);
-    expect(record?.evidence, hasLength(3));
+    expect(record?.evidence, hasLength(4));
   });
 
-  test('drops hallucinated merchant and account while retaining core fields', () async {
+  test('reads explicit USD from source-quoted trailing amount token', () async {
+    final dollarSms = RawSms(
+      id: 'unknown-usd',
+      sender: 'XX-NEWBANK',
+      body: 'Amount 25 USD debited from card',
+      receivedAt: sms.receivedAt,
+    );
+    final record = await LlmFieldLocator(
+      _JsonRuntime({
+        'amount_text': '25 USD',
+        'direction_text': 'debited',
+        'message_kind': 'transactional',
+      }),
+    ).locate(dollarSms);
+
+    expect(record?.amount, 25);
+    expect(record?.currencyCode, 'USD');
+    expect(record?.currencySymbol, r'$');
+  });
+
+  test('reads adjacent source USD when quoted amount is numeric only',
+      () async {
+    final dollarSms = RawSms(
+      id: 'unknown-usd-numeric',
+      sender: 'XX-NEWBANK',
+      body: 'Amount 25 USD debited from card',
+      receivedAt: sms.receivedAt,
+    );
+    final record = await LlmFieldLocator(
+      _JsonRuntime({
+        'amount_text': '25',
+        'direction_text': 'debited',
+        'message_kind': 'transactional',
+      }),
+    ).locate(dollarSms);
+
+    expect(record?.amount, 25);
+    expect(record?.currencyCode, 'USD');
+    expect(record?.currencySymbol, r'$');
+    expect(record?.evidence?.any((span) => span.field == 'currency'), isTrue);
+  });
+
+  test('drops hallucinated merchant and account while retaining core fields',
+      () async {
     final locator = LlmFieldLocator(
       _JsonRuntime({
         'amount_text': '1250.00',
@@ -76,7 +120,8 @@ void main() {
     expect(record?.accountHint, 'xx1234');
   });
 
-  test('does not cite a hallucinated date quotation as timestamp evidence', () async {
+  test('does not cite a hallucinated date quotation as timestamp evidence',
+      () async {
     final locator = LlmFieldLocator(
       _JsonRuntime({
         'amount_text': '1250.00',
@@ -87,9 +132,8 @@ void main() {
     );
 
     final record = await locator.locate(sms);
-    final timestampEvidence = record?.evidence
-        ?.where((evidence) => evidence.field == 'ts')
-        .single;
+    final timestampEvidence =
+        record?.evidence?.where((evidence) => evidence.field == 'ts').single;
 
     expect(record, isNotNull);
     expect(record?.ts, sms.receivedAt);
@@ -100,7 +144,8 @@ void main() {
   test('refuses adversarial hallucinated amount not in body text', () async {
     final locator = LlmFieldLocator(
       _JsonRuntime({
-        'amount_text': '999.00', // Plausible but absent from body ("Rs 1250.00 debited...")
+        'amount_text':
+            '999.00', // Plausible but absent from body ("Rs 1250.00 debited...")
         'direction_text': 'debited',
         'message_kind': 'transactional',
       }),
@@ -111,7 +156,9 @@ void main() {
     expect(record, isNull);
   });
 
-  test('refuses verbatim formatting mismatch (1,250.00 vs 1250.00) rather than coercing', () async {
+  test(
+      'refuses verbatim formatting mismatch (1,250.00 vs 1250.00) rather than coercing',
+      () async {
     final locator = LlmFieldLocator(
       _JsonRuntime({
         'amount_text': '1,250.00', // Formatting differs from "1250.00" in body

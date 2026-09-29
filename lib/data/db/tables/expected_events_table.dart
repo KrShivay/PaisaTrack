@@ -13,10 +13,13 @@ class ExpectedEvents extends Table {
   IntColumn get expectedAmountPaise => integer()();
   IntColumn get amountLowPaise => integer().nullable()();
   IntColumn get amountHighPaise => integer().nullable()();
+  TextColumn get currencyCode => text().nullable()();
+  TextColumn get currencySymbol => text().nullable()();
   DateTimeColumn get expectedDate => dateTime()();
   IntColumn get dateWindowDays => integer().withDefault(const Constant(3))();
   TextColumn get cadence => text().nullable()();
-  TextColumn get state => text()(); // 'expected' | 'fulfilled' | 'missed' | 'cancelled' | 'snoozed'
+  TextColumn get state =>
+      text()(); // 'expected' | 'fulfilled' | 'missed' | 'cancelled' | 'snoozed'
   TextColumn get fulfilledTxnId => text().nullable()();
   RealColumn get confidence => real()();
   TextColumn get dedupKey => text()();

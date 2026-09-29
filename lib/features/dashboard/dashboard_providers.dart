@@ -265,7 +265,8 @@ final commitmentsTotalProvider = Provider<double>((ref) {
   final now = DateTime.now();
   var sum = 0.0;
   for (final series in upcoming) {
-    if (series.nextExpectedDate.year == now.year &&
+    if (series.currencyCode == 'INR' &&
+        series.nextExpectedDate.year == now.year &&
         series.nextExpectedDate.month == now.month) {
       sum += series.expectedAmount;
     }

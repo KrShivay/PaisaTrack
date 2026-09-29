@@ -1,5 +1,23 @@
 # Current Handoff
 
+## 2026-09-29 — T-187 source-currency fidelity (review-ready)
+
+- Carries explicit source currency and symbol through parsers, schema v18,
+  recurring series/status memory, expected-event reconciliation, analytics,
+  Ask responses, transaction UI, exports, and both backup formats. USD and
+  unknown-dollar amounts stay separate; legacy rows without evidence remain
+  unknown. INR-only budget math is labelled, and the dashboard exposes separate
+  foreign/unknown subtotals. No FX conversion or phone data access.
+- Regression coverage includes adjacent prefix/suffix parsing, duplicate
+  account/amount digits, bare-dollar vs USD event matching, historical v1 and
+  chunked-v3 backup defaults, migration compatibility, per-currency analytics,
+  source-aware UI/export, and 2× text-scale layout. Unknown reminders reconcile
+  only with unknown debits sharing VPA/amount/date constraints.
+- Validation: full Flutter suite 1,028/1,028; `flutter analyze --no-pub`,
+  changed-file Dart format check, and `git diff --check` clean. GitNexus
+  detect-changes: 81 files, 133 symbols, 41 affected flows, CRITICAL risk;
+  impact warnings were surfaced before edits. Independent review pending.
+
 ## 2026-09-29 — T-186 transaction detail keyboard layout
 
 - The transaction detail Scaffold now lets its containing sheet own keyboard

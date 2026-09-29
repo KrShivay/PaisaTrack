@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../data/db/database.dart';
+import '../../data/models/source_currency.dart';
 import 'assistant_intent.dart';
 
 sealed class AssistantQueryResult {
@@ -14,16 +15,40 @@ class TotalQueryResult extends AssistantQueryResult {
     required this.value,
     required this.count,
     required this.label,
+    this.currencyBuckets = const [],
   });
   final double value;
   final int count;
   final String label;
+  final List<AssistantCurrencyBucket> currencyBuckets;
+}
+
+class AssistantCurrencyBucket {
+  const AssistantCurrencyBucket({
+    required this.amount,
+    required this.count,
+    this.currencyCode,
+    this.currencySymbol,
+  });
+  final double amount;
+  final int count;
+  final String? currencyCode;
+  final String? currencySymbol;
+  String get key =>
+      SourceCurrency(code: currencyCode, symbol: currencySymbol).bucketKey;
 }
 
 class BreakdownItem {
-  const BreakdownItem(this.label, this.total);
+  const BreakdownItem(
+    this.label,
+    this.total, {
+    this.currencyCode,
+    this.currencySymbol,
+  });
   final String label;
   final double total;
+  final String? currencyCode;
+  final String? currencySymbol;
 }
 
 class BreakdownQueryResult extends AssistantQueryResult {
@@ -32,18 +57,37 @@ class BreakdownQueryResult extends AssistantQueryResult {
 }
 
 class ComparisonQueryResult extends AssistantQueryResult {
-  const ComparisonQueryResult({required this.current, required this.previous});
+  const ComparisonQueryResult({
+    required this.current,
+    required this.previous,
+    this.currencyBuckets = const [],
+  });
   final double current;
   final double previous;
+  final List<
+      ({
+        double current,
+        double previous,
+        String? currencyCode,
+        String? currencySymbol
+      })> currencyBuckets;
   double get delta => current - previous;
   double? get percent => previous == 0 ? null : delta / previous;
 }
 
 class RecurringQueryItem {
-  const RecurringQueryItem(this.label, this.amount, this.date);
+  const RecurringQueryItem(
+    this.label,
+    this.amount,
+    this.date, {
+    this.currencyCode,
+    this.currencySymbol,
+  });
   final String label;
   final double amount;
   final DateTime date;
+  final String? currencyCode;
+  final String? currencySymbol;
 }
 
 class RecurringQueryResult extends AssistantQueryResult {
@@ -146,20 +190,47 @@ class AssistantQueryEngine {
 
   Future<TotalQueryResult> _total(AssistantIntent intent) async {
     final rows = await _transactions(intent, intent.range!);
-    final values = rows
-        .where((row) => _included(row, intent.metric))
-        .map((row) => _signed(row, intent.metric))
-        .toList();
-    final value = switch (intent.aggregation) {
-      AssistantAggregation.count => values.length.toDouble(),
-      AssistantAggregation.average =>
-        values.isEmpty ? 0.0 : values.reduce((a, b) => a + b) / values.length,
-      _ => values.fold<double>(0, (sum, value) => sum + value),
-    };
+    final selected =
+        rows.where((row) => _included(row, intent.metric)).toList();
+    final grouped = <String, List<Transaction>>{};
+    for (final row in selected) {
+      grouped
+          .putIfAbsent(
+            SourceCurrency(
+              code: row.currencyCode,
+              symbol: row.currencySymbol,
+            ).bucketKey,
+            () => [],
+          )
+          .add(row);
+    }
+    final buckets = grouped.values.map((bucketRows) {
+      final amounts = bucketRows.map((row) => _signed(row, intent.metric));
+      final amount = switch (intent.aggregation) {
+        AssistantAggregation.count => bucketRows.length.toDouble(),
+        AssistantAggregation.average => amounts.isEmpty
+            ? 0.0
+            : amounts.reduce((a, b) => a + b) / bucketRows.length,
+        _ => amounts.fold<double>(0, (sum, value) => sum + value),
+      };
+      final first = bucketRows.first;
+      return AssistantCurrencyBucket(
+        amount: amount,
+        count: bucketRows.length,
+        currencyCode: first.currencyCode,
+        currencySymbol: first.currencySymbol,
+      );
+    }).toList(growable: false);
+    final value = intent.aggregation == AssistantAggregation.count
+        ? selected.length.toDouble()
+        : buckets.length == 1
+            ? buckets.single.amount
+            : 0.0;
     return TotalQueryResult(
       value: value,
-      count: values.length,
+      count: selected.length,
       label: intent.range!.label,
+      currencyBuckets: buckets,
     );
   }
 
@@ -169,18 +240,30 @@ class AssistantQueryEngine {
       for (final row in await database.select(database.categories).get())
         row.id: row.name,
     };
-    final totals = <String, double>{};
+    final totals =
+        <(String, String), ({double amount, String? code, String? symbol})>{};
     for (final row in rows.where((row) => _included(row, intent.metric))) {
       final label = categories[row.categoryId] ?? 'Uncategorised';
-      totals.update(
-        label,
-        (value) => value + _signed(row, intent.metric),
-        ifAbsent: () => _signed(row, intent.metric),
+      final currency =
+          SourceCurrency(code: row.currencyCode, symbol: row.currencySymbol)
+              .bucketKey;
+      final key = (label, currency);
+      final prior = totals[key];
+      totals[key] = (
+        amount: (prior?.amount ?? 0) + _signed(row, intent.metric),
+        code: row.currencyCode,
+        symbol: row.currencySymbol
       );
     }
-    final items = totals.entries
-        .map((e) => BreakdownItem(e.key, e.value))
-        .toList()
+    final items = totals.entries.map((e) {
+      final label = e.key.$1;
+      return BreakdownItem(
+        label,
+        e.value.amount,
+        currencyCode: e.value.code,
+        currencySymbol: e.value.symbol,
+      );
+    }).toList()
       ..sort((a, b) => b.total.compareTo(a.total));
     return BreakdownQueryResult(items);
   }
@@ -204,6 +287,18 @@ class AssistantQueryEngine {
     return ComparisonQueryResult(
       current: current.value,
       previous: previous.value,
+      currencyBuckets: [
+        for (final bucket in current.currencyBuckets)
+          if (previous.currencyBuckets.any((prior) => prior.key == bucket.key))
+            (
+              current: bucket.amount,
+              previous: previous.currencyBuckets
+                  .firstWhere((prior) => prior.key == bucket.key)
+                  .amount,
+              currencyCode: bucket.currencyCode,
+              currencySymbol: bucket.currencySymbol
+            ),
+      ],
     );
   }
 
@@ -221,6 +316,8 @@ class AssistantQueryEngine {
             row.label,
             row.expectedAmount,
             row.nextExpectedDate,
+            currencyCode: row.currencyCode,
+            currencySymbol: row.currencySymbol,
           ),
         )
         .toList()

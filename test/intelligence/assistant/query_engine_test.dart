@@ -52,12 +52,16 @@ void main() {
     String direction = 'debit',
     String categoryId = 'food',
     String lifecycleState = 'settled',
+    String? currencyCode,
+    String? currencySymbol,
   }) =>
       database.into(database.transactions).insert(
             TransactionsCompanion.insert(
               id: id,
               ts: date.millisecondsSinceEpoch,
               amount: amount,
+              currencyCode: Value(currencyCode),
+              currencySymbol: Value(currencySymbol),
               direction: direction,
               channel: 'upi',
               merchantId: const Value('swiggy'),
@@ -119,6 +123,51 @@ void main() {
       expect(comparison.percent, 1);
     },
   );
+
+  test('assistant totals keep explicit USD and bare dollar in separate buckets',
+      () async {
+    await txn(
+      'inr',
+      DateTime.utc(2026, 7, 2),
+      100,
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+    );
+    await txn(
+      'usd',
+      DateTime.utc(2026, 7, 3),
+      100,
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+    );
+    await txn(
+      'bare-dollar',
+      DateTime.utc(2026, 7, 4),
+      100,
+      currencySymbol: r'$',
+    );
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.periodTotal,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+      ),
+    ) as TotalQueryResult;
+
+    expect(result.count, 3);
+    expect(
+      result.value,
+      0,
+      reason: 'multi-currency scalar is intentionally unavailable',
+    );
+    expect(result.currencyBuckets, hasLength(3));
+    expect(result.currencyBuckets.map((bucket) => bucket.key).toSet(), {
+      'code:INR',
+      'code:USD',
+      r'symbol:$',
+    });
+  });
 
   test(
     'upcoming recurring and active insights exclude out-of-scope rows',

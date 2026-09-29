@@ -841,6 +841,8 @@ class _SortCard extends StatelessWidget {
               amount: item.direction == TransactionDirection.debit
                   ? -item.amount
                   : item.amount,
+              currencyCode: item.currencyCode,
+              currencySymbol: item.currencySymbol,
               size: 48,
               weight: FontWeight.w600,
             ),
@@ -1074,12 +1076,19 @@ class _ReviewListRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            BloomAmount(
-              amount: item.direction == TransactionDirection.debit
-                  ? -item.amount
-                  : item.amount,
-              size: 15,
-              weight: FontWeight.w500,
+            SizedBox(
+              width: 112,
+              child: BloomAmount(
+                amount: item.direction == TransactionDirection.debit
+                    ? -item.amount
+                    : item.amount,
+                currencyCode: item.currencyCode,
+                currencySymbol: item.currencySymbol,
+                size: 15,
+                weight: FontWeight.w500,
+                maxLines: 2,
+                textAlign: TextAlign.end,
+              ),
             ),
           ],
         ),

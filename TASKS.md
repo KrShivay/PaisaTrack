@@ -10,6 +10,19 @@ later hardening.
 
 ## In Review
 
+- [ ] T-187 [P1] Preserve source currency through parsing, storage, recurring
+      series, analytics, Ask answers, exports, and transaction UI. Foreign and
+      unknown-source amounts remain visible in separate buckets; no implicit FX
+      conversion is performed. Schema v18 leaves legacy rows unknown and keeps
+      older backup formats compatible.
+  - Verification: full Flutter suite 1,028/1,028; `flutter analyze --no-pub`,
+    changed-file Dart format check, and `git diff --check` clean. Synthetic
+    coverage includes USD, bare `$`, unknown legacy rows, currency-safe
+    reconciliation, archive compatibility, analytics, and 2× text-scale UI.
+  - GitNexus final detect-changes: 81 files, 133 symbols, 41 affected flows,
+    CRITICAL risk. HIGH/CRITICAL impact warnings were surfaced before edits;
+    independent final review pending.
+
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Verification: focused inset suite 11/11, full Flutter suite 764/764,
     analyzer clean, and `git diff --check` clean. Widget coverage exercises
@@ -190,19 +203,6 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 `docs/archive/planning-cleanup-2026-09.md`.
 
 ## Backlog
-
-- [ ] T-187 [P1] Preserve subscription currency instead of formatting every
-      amount as INR.
-  - Acceptance: Trace currency from supported source evidence into recurring
-    series; store and display the currency code faithfully, keep foreign-currency
-    totals separate from INR commitments, and never invent a conversion rate.
-    Existing rows with unknown source currency must be identified rather than
-    silently relabeled. Add migration, detector, and UI tests.
-  - Dependencies: audit source parsers and recurring detector before selecting
-    the additive schema; align with PLAN.md's no-implicit-conversion rule.
-  - Privacy: no network exchange-rate lookup or longer SMS retention.
-  - Rollback: additive migration keeps original numeric amounts and defaults;
-    downgrade preserves rows and marks unsupported currency state unknown.
 
 - [ ] T-188 [P2] Define Trends notification inbox lifecycle.
   - Acceptance: Specify when a threshold crossing creates an inbox item, how

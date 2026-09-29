@@ -55,6 +55,20 @@ class DashboardMerchantAggregate {
   final double total;
 }
 
+class DashboardCurrencyAggregate {
+  const DashboardCurrencyAggregate({
+    required this.currencyCode,
+    required this.currencySymbol,
+    required this.debitTotal,
+    required this.creditTotal,
+  });
+
+  final String? currencyCode;
+  final String? currencySymbol;
+  final double debitTotal;
+  final double creditTotal;
+}
+
 class DashboardAggregateSnapshot {
   const DashboardAggregateSnapshot({
     required this.debitTotal,
@@ -63,6 +77,7 @@ class DashboardAggregateSnapshot {
     required this.categories,
     required this.merchants,
     required this.trendByMonth,
+    this.currencyTotals = const [],
     this.excludedDebitTotal = 0,
     this.excludedDebitCount = 0,
   });
@@ -73,6 +88,10 @@ class DashboardAggregateSnapshot {
   final List<DashboardCategoryAggregate> categories;
   final List<DashboardMerchantAggregate> merchants;
   final Map<String, double> trendByMonth;
+
+  /// Current-period totals kept in their source currency buckets. Includes
+  /// legacy rows with no currency evidence so the UI can disclose them.
+  final List<DashboardCurrencyAggregate> currencyTotals;
 
   /// Amount of settled spending debit removed from [debitTotal] by exclusion
   /// flags (owned self-transfers and analytics-excluded sources) in the current
@@ -99,6 +118,7 @@ class DashboardRepository {
       _loadMerchants(window),
       _loadTrend(window),
       _loadExcluded(window),
+      _loadCurrencyTotals(window),
     ]);
     final totals = results[0] as ({
       double debit,
@@ -113,9 +133,48 @@ class DashboardRepository {
       categories: results[1] as List<DashboardCategoryAggregate>,
       merchants: results[2] as List<DashboardMerchantAggregate>,
       trendByMonth: results[3] as Map<String, double>,
+      currencyTotals: results[5] as List<DashboardCurrencyAggregate>,
       excludedDebitTotal: excluded.total,
       excludedDebitCount: excluded.count,
     );
+  }
+
+  Future<List<DashboardCurrencyAggregate>> _loadCurrencyTotals(
+    DashboardQueryWindow window,
+  ) async {
+    final rows = await _database.customSelect(
+      '''
+SELECT t.currency_code, MAX(t.currency_symbol) AS currency_symbol,
+  COALESCE(SUM(CASE
+    WHEN t.direction = 'debit' AND COALESCE(c.is_spending, 1) = 1
+      THEN t.amount ELSE 0 END), 0) AS debit,
+  COALESCE(SUM(CASE
+    WHEN t.direction = 'credit' THEN t.amount ELSE 0 END), 0) AS credit
+FROM transactions t
+LEFT JOIN categories c ON c.id = t.category_id
+WHERE t.ts >= ? AND t.ts < ?
+  AND ${FinancialEligibility.baseSql}
+GROUP BY CASE
+  WHEN t.currency_code IS NOT NULL THEN 'code:' || t.currency_code
+  WHEN t.currency_symbol IS NOT NULL THEN 'symbol:' || t.currency_symbol
+  ELSE 'unknown' END
+ORDER BY t.currency_code, t.currency_symbol
+''',
+      variables: [
+        Variable.withInt(window.start.millisecondsSinceEpoch),
+        Variable.withInt(window.end.millisecondsSinceEpoch),
+      ],
+      readsFrom: {_database.transactions, _database.categories},
+    ).get();
+    return [
+      for (final row in rows)
+        DashboardCurrencyAggregate(
+          currencyCode: row.readNullable<String>('currency_code'),
+          currencySymbol: row.readNullable<String>('currency_symbol'),
+          debitTotal: row.read<double>('debit'),
+          creditTotal: row.read<double>('credit'),
+        ),
+    ];
   }
 
   /// Spending debit removed from the headline total by exclusion flags
@@ -134,6 +193,7 @@ WHERE t.ts >= ? AND t.ts < ?
   AND t.duplicate_of_txn_id IS NULL
   AND t.lifecycle_state = 'settled'
   AND t.direction = 'debit'
+  AND t.currency_code = 'INR'
   AND COALESCE(c.is_spending, 1) = 1
   AND (t.owned_transfer_id IS NOT NULL OR t.is_analytics_excluded = 1)
 ''',
@@ -167,6 +227,7 @@ SELECT
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE ${FinancialEligibility.baseSql}
+  AND t.currency_code = 'INR'
 ''',
       variables: [
         Variable.withInt(window.start.millisecondsSinceEpoch),
@@ -196,6 +257,7 @@ FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
   AND ${FinancialEligibility.spendingDebitSql}
+  AND t.currency_code = 'INR'
 GROUP BY t.category_id, c.name, c.icon
 ORDER BY total DESC, name ASC
 ''',
@@ -229,6 +291,7 @@ LEFT JOIN merchants m ON m.id = t.merchant_id
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
   AND ${FinancialEligibility.spendingDebitSql}
+  AND t.currency_code = 'INR'
 GROUP BY name
 ORDER BY total DESC, name ASC
 LIMIT 5
@@ -264,6 +327,7 @@ FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
   AND ${FinancialEligibility.spendingDebitSql}
+  AND t.currency_code = 'INR'
 GROUP BY month_key
 ''',
       variables: [

@@ -34,6 +34,8 @@ class Transactions extends Table {
   TextColumn get id => text()();
   IntColumn get ts => integer()();
   RealColumn get amount => real()();
+  TextColumn get currencyCode => text().nullable()();
+  TextColumn get currencySymbol => text().nullable()();
   TextColumn get direction => text()();
   TextColumn get channel => text()();
   TextColumn get accountHint => text().nullable()();

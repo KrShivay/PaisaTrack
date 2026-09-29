@@ -19,6 +19,8 @@ TransactionListItem testItem({
     id: id,
     ts: ts ?? DateTime.now(),
     amount: amount,
+    currencyCode: 'INR',
+    currencySymbol: '₹',
     direction: direction,
     displayName: name,
     categoryName: 'Food',

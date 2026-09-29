@@ -72,6 +72,8 @@ void main() {
           (ref) async => FakeParserCascade.ok(
             NormalizedTransactionRecord(
               amount: 449,
+              currencyCode: 'USD',
+              currencySymbol: r'$',
               direction: TransactionDirection.debit,
               channel: TransactionChannel.upi,
               merchantRaw: 'AMZN*MKTPLC',
@@ -101,7 +103,7 @@ void main() {
     controller.add({
       'id': 'sms_live_1',
       'sender': 'VK-HDFCBK',
-      'body': 'Spent Rs 449',
+      'body': 'Spent USD 449',
       'receivedAtEpochMillis':
           DateTime.utc(2026, 7, 5, 10, 31).millisecondsSinceEpoch,
     });
@@ -117,6 +119,8 @@ void main() {
     expect(transactions.single.id, 'txn_sms_live_1');
     expect(transactions.single.smsId, 'sms_live_1');
     expect(transactions.single.amount, 449);
+    expect(transactions.single.currencyCode, 'USD');
+    expect(transactions.single.currencySymbol, r'$');
     expect(transactions.single.direction, 'debit');
     expect(transactions.single.channel, 'upi');
     expect(transactions.single.status, 'needs_review');

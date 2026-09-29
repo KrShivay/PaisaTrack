@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart';
 
 import '../data/db/database.dart';
+import '../data/models/source_currency.dart';
 import 'models/embedder.dart';
 
 const _foregroundScanCheckpointKey = 'recurring_foreground_scan_checkpoint_v2';
@@ -23,6 +24,8 @@ class RecurringDetection {
     required this.occurrences,
     required this.status,
     required this.kind,
+    this.currencyCode,
+    this.currencySymbol,
   });
 
   final String id;
@@ -37,6 +40,8 @@ class RecurringDetection {
   final int occurrences;
   final String status;
   final String kind;
+  final String? currencyCode;
+  final String? currencySymbol;
 }
 
 /// Nightly deterministic recurring-series scanner (PLAN §7.6).
@@ -90,12 +95,19 @@ class RecurringDetector {
         merchantId = 'merchant_evidence_$normalized';
         fallbackLabels.putIfAbsent(merchantId, () => evidence!.trim());
       }
-      grouped.putIfAbsent('$merchantId\u0000${txn.direction}', () => []).add(
+      grouped
+          .putIfAbsent(
+            '$merchantId\u0000${txn.direction}\u0000${SourceCurrency(code: txn.currencyCode, symbol: txn.currencySymbol).bucketKey}',
+            () => [],
+          )
+          .add(
             _TransactionPoint(
               id: txn.id,
               merchantId: merchantId,
               direction: txn.direction,
               amount: txn.amount,
+              currencyCode: txn.currencyCode,
+              currencySymbol: txn.currencySymbol,
               categoryId: txn.categoryId,
               timestamp: DateTime.fromMillisecondsSinceEpoch(
                 txn.ts,
@@ -181,6 +193,8 @@ class RecurringDetector {
                 occurrences: detection.occurrences,
                 status: detection.status,
                 kind: detection.kind,
+                currencyCode: Value(detection.currencyCode),
+                currencySymbol: Value(detection.currencySymbol),
               ),
             );
       }
@@ -278,7 +292,7 @@ class RecurringDetector {
         amounts.fold<double>(0, (sum, amount) => sum + amount) / amounts.length;
 
     return RecurringDetection(
-      id: 'rec:${last.merchantId}:${last.direction}:${ordered.first.id}',
+      id: 'rec:${last.merchantId}:${last.direction}:${last.currencyCode ?? last.currencySymbol ?? "unknown"}:${ordered.first.id}',
       merchantId: last.merchantId,
       label: label,
       expectedAmount: expectedAmount,
@@ -290,6 +304,8 @@ class RecurringDetector {
       occurrences: ordered.length,
       status: today.isAfter(nextExpected.add(grace)) ? 'missed' : 'active',
       kind: kind,
+      currencyCode: last.currencyCode,
+      currencySymbol: last.currencySymbol,
     );
   }
 
@@ -500,6 +516,8 @@ class _TransactionPoint {
     required this.merchantId,
     required this.direction,
     required this.amount,
+    this.currencyCode,
+    this.currencySymbol,
     this.categoryId,
     required this.timestamp,
   });
@@ -508,6 +526,8 @@ class _TransactionPoint {
   final String merchantId;
   final String direction;
   final double amount;
+  final String? currencyCode;
+  final String? currencySymbol;
   final String? categoryId;
   final DateTime timestamp;
 }
@@ -526,7 +546,9 @@ class _PendingRecurringWrite {
 double computeTotalMonthlyCommitmentLoad(List<RecurringDetection> detections) {
   var total = 0.0;
   for (final d in detections) {
-    if (d.status != 'active' || d.kind == 'income') continue;
+    if (d.status != 'active' || d.kind == 'income' || d.currencyCode != 'INR') {
+      continue;
+    }
     final monthlyAmount = switch (d.period) {
       'weekly' => d.expectedAmount * (365 / 7 / 12),
       'fortnightly' => d.expectedAmount * (365 / 14 / 12),

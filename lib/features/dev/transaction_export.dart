@@ -35,6 +35,8 @@ class TransactionJsonExporter {
           'id': row.id,
           'ts': row.ts,
           'amount': row.amount,
+          'currency_code': row.currencyCode,
+          'currency_symbol': row.currencySymbol,
           'direction': row.direction,
           'channel': row.channel,
           'account_hint': row.accountHint,
@@ -115,7 +117,7 @@ class TransactionCsvExporter {
 
     final buffer = StringBuffer();
     buffer.write(
-      'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status\r\n',
+      'Date,Merchant,Amount,Currency Code,Currency Symbol,Direction,Channel,Category,Account,Reference,Status\r\n',
     );
 
     for (final row in rows) {
@@ -128,6 +130,8 @@ class TransactionCsvExporter {
       );
       final merchant = _escapeCsv(row.merchantRaw ?? '');
       final amount = _escapeCsv(row.amount.toStringAsFixed(2));
+      final currencyCode = _escapeCsv(row.currencyCode ?? '');
+      final currencySymbol = _escapeCsv(row.currencySymbol ?? '');
       final direction = _escapeCsv(row.direction);
       final channel = _escapeCsv(row.channel);
       final category = _escapeCsv(categoryNames[row.categoryId] ?? '');
@@ -136,7 +140,7 @@ class TransactionCsvExporter {
       final status = _escapeCsv(row.status);
 
       buffer.write(
-        '$date,$merchant,$amount,$direction,$channel,$category,$account,$ref,$status\r\n',
+        '$date,$merchant,$amount,$currencyCode,$currencySymbol,$direction,$channel,$category,$account,$ref,$status\r\n',
       );
     }
     return buffer.toString();

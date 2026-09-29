@@ -50,6 +50,8 @@ void main() {
               id: fixture['id']! as String,
               ts: timestamp.millisecondsSinceEpoch,
               amount: (fixture['amountPaise']! as num).toDouble() / 100,
+              currencyCode: const Value('INR'),
+              currencySymbol: const Value('₹'),
               direction: fixture['direction']! as String,
               channel: fixture['channel']! as String,
               categoryId: Value(fixture['categoryId'] as String?),

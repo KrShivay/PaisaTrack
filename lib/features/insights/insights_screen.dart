@@ -389,7 +389,7 @@ class _NarrativeInsightCard extends StatelessWidget {
           return _InsightDisplaySpec(
             title: 'Fees & Charges Alert',
             body:
-                'You spent ${formatInr(total)} in fees this month. Check subscription renewal details.',
+                'You spent ${formatSourceAmount(total, currencyCode: payload['currency_code'] as String?, currencySymbol: payload['currency_symbol'] as String?)} in fees this month. Check subscription renewal details.',
             icon: Icons.account_balance_wallet_outlined,
           );
         case 'category_delta':
@@ -397,24 +397,35 @@ class _NarrativeInsightCard extends StatelessWidget {
           final delta = (payload['delta_fraction'] as num?)?.toDouble() ?? 0.0;
           final pct = (delta.abs() * 100).toStringAsFixed(0);
           final direction = delta > 0 ? 'increased' : 'decreased';
+          final currency = _currencyDisclosure(
+            payload['currency_code'] as String?,
+            payload['currency_symbol'] as String?,
+          );
           return _InsightDisplaySpec(
             title: 'Category Shift',
             body:
-                '$category spending $direction by $pct% compared to last month.',
+                '$category spending $direction by $pct% in $currency compared to last month.',
             icon: Icons.trending_up_rounded,
           );
         case 'duplicate_subscription':
           final label = payload['label'] ?? 'Service';
+          final monthlyTotal = (payload['monthly_total'] as num?)?.toDouble();
+          final totalText = monthlyTotal == null
+              ? ''
+              : ' (${formatSourceAmount(monthlyTotal, currencyCode: payload['currency_code'] as String?, currencySymbol: payload['currency_symbol'] as String?)} per month)';
           return _InsightDisplaySpec(
             title: 'Duplicate Subscription',
-            body: 'Multiple active subscriptions detected for $label.',
+            body:
+                'Multiple active subscriptions detected for $label$totalText.',
             icon: Icons.copy_rounded,
           );
         case 'price_creep':
           final label = payload['label'] ?? 'Service';
+          final summary = payload['summary'] as String?;
           return _InsightDisplaySpec(
             title: 'Price Creep Detected',
-            body: 'Amount for $label has increased in recent billing cycles.',
+            body: summary ??
+                'Amount for $label has increased in recent billing cycles.',
             icon: Icons.show_chart_rounded,
           );
         default:
@@ -432,6 +443,10 @@ class _NarrativeInsightCard extends StatelessWidget {
       );
     }
   }
+
+  String _currencyDisclosure(String? code, String? symbol) =>
+      code ??
+      (symbol == null ? 'currency unknown' : '$symbol (currency unknown)');
 }
 
 class _InsightDisplaySpec {

@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -16,7 +17,9 @@ void main() {
     await database.close();
   });
 
-  test('Series crossing ±5% tolerance raises exactly 1 insight citing amounts; noise inside tolerance raises none', () async {
+  test(
+      'Series crossing ±5% tolerance raises exactly 1 insight citing amounts; noise inside tolerance raises none',
+      () async {
     final now = DateTime.utc(2026, 7, 10);
     await database.into(database.merchants).insert(
           MerchantsCompanion.insert(
@@ -42,6 +45,8 @@ void main() {
             merchantId: 'm_spotify',
             label: 'Spotify',
             expectedAmount: 119.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             period: 'monthly',
             periodDays: 30,
             nextExpectedDate: now.add(const Duration(days: 15)),
@@ -61,6 +66,8 @@ void main() {
             merchantId: 'm_netflix',
             label: 'Netflix',
             expectedAmount: 499.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             period: 'monthly',
             periodDays: 30,
             nextExpectedDate: now.add(const Duration(days: 15)),
@@ -80,6 +87,6 @@ void main() {
     final priceCreep = insights.where((i) => i.kind == 'price_creep').toList();
 
     expect(priceCreep, hasLength(1));
-    expect(priceCreep.first.payloadJson, contains('Spotify ₹119 → ₹149'));
+    expect(priceCreep.first.payloadJson, contains('Spotify ₹119.00 → ₹149.00'));
   });
 }

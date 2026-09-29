@@ -63,6 +63,8 @@ Future<void> _insertTxn(
           id: id,
           ts: now.millisecondsSinceEpoch,
           amount: 250,
+          currencyCode: const Value('INR'),
+          currencySymbol: const Value('₹'),
           direction: 'debit',
           channel: 'upi',
           merchantId: Value(merchantId),

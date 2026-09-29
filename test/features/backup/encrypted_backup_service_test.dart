@@ -104,6 +104,76 @@ void main() {
     expect(restoredDisposition.smsId, 'synthetic_sms_id');
   });
 
+  test('legacy and chunked backups preserve bare-dollar source buckets',
+      () async {
+    final now = DateTime.utc(2026, 7, 16);
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'merchant_bare_dollar',
+            canonicalName: 'Dollar service',
+            firstSeen: now,
+            lastSeen: now,
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_bare_dollar',
+            ts: now.millisecondsSinceEpoch,
+            amount: 25,
+            currencySymbol: const Value(r'$'),
+            direction: 'debit',
+            channel: 'card',
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await database.into(database.recurringSeries).insert(
+          RecurringSeriesCompanion.insert(
+            id: 'rec_bare_dollar',
+            merchantId: 'merchant_bare_dollar',
+            label: 'Dollar service',
+            expectedAmount: 25,
+            currencySymbol: const Value(r'$'),
+            tolerancePct: 0.05,
+            period: 'monthly',
+            periodDays: 30,
+            nextExpectedDate: now,
+            lastAmount: 25,
+            amountTrend: 'flat',
+            occurrences: 3,
+            status: 'active',
+            kind: 'subscription',
+          ),
+        );
+
+    const passphrase = 'bare-dollar-backup-passphrase';
+    final legacy = await service().exportBytes(passphrase: passphrase);
+    final chunked = await service().exportToFile(
+      directory: directory,
+      passphrase: passphrase,
+    );
+
+    for (final format in ['legacy', 'chunked']) {
+      await database.delete(database.recurringSeries).go();
+      await database.delete(database.transactions).go();
+      if (format == 'legacy') {
+        await service().importBytes(bytes: legacy, passphrase: passphrase);
+      } else {
+        await service().importFromFile(file: chunked, passphrase: passphrase);
+      }
+      final txn = await database.select(database.transactions).getSingle();
+      final series =
+          await database.select(database.recurringSeries).getSingle();
+      expect(txn.currencyCode, isNull);
+      expect(txn.currencySymbol, r'$');
+      expect(series.currencyCode, isNull);
+      expect(series.currencySymbol, r'$');
+    }
+  });
+
   test('legacy v3 archive without dispositions defaults marked state to false',
       () async {
     final now = DateTime.utc(2026, 7, 16);

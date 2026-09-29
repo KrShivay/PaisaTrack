@@ -24,7 +24,8 @@ void main() {
     expect(MoneyUtils.toRupees(0), 0.0);
   });
 
-  test('Dashboard and burn rate forecaster aggregates match expectations', () async {
+  test('Dashboard and burn rate forecaster aggregates match expectations',
+      () async {
     final ts = DateTime.utc(2026, 7, 10, 10, 0).millisecondsSinceEpoch;
 
     // Settled transaction
@@ -33,6 +34,8 @@ void main() {
             id: 'txn_1',
             ts: ts,
             amount: 1500.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'upi',
             parseSource: 'generic',

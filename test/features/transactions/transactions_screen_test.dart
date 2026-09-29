@@ -27,6 +27,8 @@ void main() {
     String channel = 'unknown',
     String? note,
     String? reference,
+    String? currencyCode = 'INR',
+    String? currencySymbol = '₹',
     String status = 'confirmed',
     String parseSource = 'unknown',
   }) {
@@ -34,6 +36,8 @@ void main() {
       id: id,
       ts: ts,
       amount: amount,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
       direction: direction,
       displayName: displayName,
       categoryName: categoryName,

@@ -1,6 +1,7 @@
 import '../core/constants.dart';
 import '../data/db/database.dart';
 import '../data/models/normalized_transaction_record.dart';
+import '../data/models/source_currency.dart';
 
 /// Link type for graph connections between correlated transactions.
 enum TransactionLinkType {
@@ -80,6 +81,21 @@ class EventCorrelator {
     return false;
   }
 
+  /// Correlation is only meaningful inside the same evidenced currency bucket.
+  /// Legacy unknown rows can still correlate with other unknown rows, while an
+  /// explicit USD, INR, or bare-$ record cannot match across buckets.
+  static bool _sameCurrency(
+    NormalizedTransactionRecord record,
+    Transaction row,
+  ) {
+    return SourceCurrency(
+      code: record.currencyCode,
+      symbol: record.currencySymbol,
+    ).sameBucket(
+      SourceCurrency(code: row.currencyCode, symbol: row.currencySymbol),
+    );
+  }
+
   /// Evaluates candidates against [record] using the ordered correlation ladder.
   /// First tier to match wins; ref disagreement vetoes candidate pairing.
   EventCorrelationResult? correlate({
@@ -93,7 +109,9 @@ class EventCorrelator {
       for (final candidate in candidates) {
         final candNormRef = normalizeRefId(candidate.refId);
         if (candNormRef == normRef) {
-          final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
+          if (!_sameCurrency(record, candidate)) continue;
+          final diffMs =
+              (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
           if (diffMs <= _matchWindow.inMilliseconds) {
             final linkType = record.direction.wireName != candidate.direction
                 ? TransactionLinkType.reverses
@@ -113,17 +131,25 @@ class EventCorrelator {
     final recordAccount = record.accountHint?.toUpperCase();
     final recordMerchant = record.merchantRaw?.toUpperCase();
     for (final candidate in candidates) {
+      if (!_sameCurrency(record, candidate)) continue;
       if (hasRefDisagreement(record.refId, candidate.refId)) continue;
 
       final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
       if (diffMs <= _authSettleWindow.inMilliseconds) {
-        final amountRatio = candidate.amount == 0 ? 0.0 : (record.amount - candidate.amount).abs() / candidate.amount;
+        final amountRatio = candidate.amount == 0
+            ? 0.0
+            : (record.amount - candidate.amount).abs() / candidate.amount;
         if (amountRatio <= 0.02) {
           final candAccount = candidate.accountHint?.toUpperCase();
           final candMerchant = candidate.merchantRaw?.toUpperCase();
 
-          final accountMatch = recordAccount != null && candAccount != null && recordAccount == candAccount;
-          final merchantMatch = recordMerchant != null && candMerchant != null && (recordMerchant == candMerchant || recordMerchant.startsWith('$candMerchant '));
+          final accountMatch = recordAccount != null &&
+              candAccount != null &&
+              recordAccount == candAccount;
+          final merchantMatch = recordMerchant != null &&
+              candMerchant != null &&
+              (recordMerchant == candMerchant ||
+                  recordMerchant.startsWith('$candMerchant '));
 
           if (accountMatch || merchantMatch) {
             return EventCorrelationResult(
@@ -139,6 +165,7 @@ class EventCorrelator {
 
     // Tier 3: Reversal match within +/- 30 days (opposite direction, matching amount)
     for (final candidate in candidates) {
+      if (!_sameCurrency(record, candidate)) continue;
       if (hasRefDisagreement(record.refId, candidate.refId)) continue;
 
       if (record.direction.wireName != candidate.direction) {
@@ -158,6 +185,7 @@ class EventCorrelator {
 
     // Tier 4: Echo match within +/- 10 minutes (existing semantics, same direction & amount)
     for (final candidate in candidates) {
+      if (!_sameCurrency(record, candidate)) continue;
       if (hasRefDisagreement(record.refId, candidate.refId)) continue;
 
       if (record.direction.wireName == candidate.direction) {
@@ -177,9 +205,11 @@ class EventCorrelator {
 
     // Tier 5: Transfer leg match within +/- 60 minutes between owned payment sources
     for (final candidate in candidates) {
+      if (!_sameCurrency(record, candidate)) continue;
       if (hasRefDisagreement(record.refId, candidate.refId)) continue;
 
-      if (record.direction.wireName != candidate.direction && candidate.paymentSourceId != null) {
+      if (record.direction.wireName != candidate.direction &&
+          candidate.paymentSourceId != null) {
         final diffMs = (record.ts.millisecondsSinceEpoch - candidate.ts).abs();
         if (diffMs <= _transferLegWindow.inMilliseconds) {
           if ((record.amount - candidate.amount).abs() <= 0.01) {
@@ -213,10 +243,12 @@ class EventCorrelator {
     // Tier 1: Exact UTR / Ref match within 30 days
     if (normRef != null) {
       for (final candidate in candidates) {
+        if (!_sameCurrency(refundRecord, candidate)) continue;
         if (candidate.direction != 'debit') continue;
         final candNormRef = normalizeRefId(candidate.refId);
         if (candNormRef == normRef) {
-          final diffMs = (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
+          final diffMs =
+              (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
           if (diffMs <= _matchWindow.inMilliseconds) {
             return EventCorrelationResult(
               matchedTransactionId: candidate.id,
@@ -234,14 +266,22 @@ class EventCorrelator {
     final matchingCandidates = <Transaction>[];
 
     for (final candidate in candidates) {
+      if (!_sameCurrency(refundRecord, candidate)) continue;
       if (candidate.direction != 'debit') continue;
       if (hasRefDisagreement(refundRecord.refId, candidate.refId)) continue;
 
-      final diffMs = (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
+      final diffMs =
+          (refundRecord.ts.millisecondsSinceEpoch - candidate.ts).abs();
       if (diffMs <= _matchWindow.inMilliseconds) {
-        final amountMatch = (refundRecord.amount - candidate.amount).abs() <= 0.01 || refundRecord.amount <= candidate.amount;
+        final amountMatch =
+            (refundRecord.amount - candidate.amount).abs() <= 0.01 ||
+                refundRecord.amount <= candidate.amount;
         final candMerchant = candidate.merchantRaw?.toUpperCase();
-        final merchantMatch = recordMerchant != null && candMerchant != null && (recordMerchant == candMerchant || recordMerchant.startsWith(candMerchant) || candMerchant.startsWith(recordMerchant));
+        final merchantMatch = recordMerchant != null &&
+            candMerchant != null &&
+            (recordMerchant == candMerchant ||
+                recordMerchant.startsWith(candMerchant) ||
+                candMerchant.startsWith(recordMerchant));
 
         if (amountMatch && merchantMatch) {
           matchingCandidates.add(candidate);
@@ -255,8 +295,12 @@ class EventCorrelator {
       return EventCorrelationResult(
         matchedTransactionId: match.id,
         linkType: TransactionLinkType.refunds,
-        basis: isFullRefund ? 'refund_full_counterparty_match' : 'refund_partial_counterparty_match',
-        confidence: isFullRefund ? AppConstants.refundFullMatchConfidence : AppConstants.refundPartialMatchConfidence,
+        basis: isFullRefund
+            ? 'refund_full_counterparty_match'
+            : 'refund_partial_counterparty_match',
+        confidence: isFullRefund
+            ? AppConstants.refundFullMatchConfidence
+            : AppConstants.refundPartialMatchConfidence,
       );
     }
 

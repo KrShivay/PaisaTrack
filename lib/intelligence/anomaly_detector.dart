@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../core/financial_calendar.dart';
 import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
+import '../data/models/source_currency.dart';
 import '../data/repositories/feature_flag_repository.dart';
 
 /// Incremental weekly-category and monthly-merchant anomaly scanner.
@@ -95,13 +96,22 @@ class AnomalyDetector {
     final groups = <String, List<Transaction>>{};
     for (final txn in rows) {
       final identity = identityOf(txn);
-      if (identity != null) groups.putIfAbsent(identity, () => []).add(txn);
+      if (identity != null) {
+        final bucket = SourceCurrency(
+          code: txn.currencyCode,
+          symbol: txn.currencySymbol,
+        ).bucketKey;
+        groups.putIfAbsent('$identity|$bucket', () => []).add(txn);
+      }
     }
 
     final activeSeries = await (_database.select(_database.recurringSeries)
           ..where((s) => s.status.equals('active')))
         .get();
-    final recurringMerchantIds = {for (final s in activeSeries) s.merchantId};
+    final recurringMerchantIds = {
+      for (final s in activeSeries)
+        '${s.merchantId}|${SourceCurrency(code: s.currencyCode, symbol: s.currencySymbol).bucketKey}',
+    };
 
     var flags = 0;
     for (final entry in groups.entries) {
@@ -118,9 +128,16 @@ class AnomalyDetector {
           ? double.infinity
           : existing.mean + flagsState.anomalyAlertSigma * existing.std;
 
-      final isBelowFloor = aggregate < flagsState.anomalyAlertFloorAmount;
+      final first = entry.value.first;
+      final isBelowFloor = first.currencyCode == 'INR' &&
+          aggregate < flagsState.anomalyAlertFloorAmount;
+      final merchantIdentity = entry.value.first.merchantId;
+      final currencyBucket = SourceCurrency(
+        code: entry.value.first.currencyCode,
+        symbol: entry.value.first.currencySymbol,
+      ).bucketKey;
       final isRecurring = keyPrefix == 'mer:'
-          ? recurringMerchantIds.contains(entry.key)
+          ? recurringMerchantIds.contains('$merchantIdentity|$currencyBucket')
           : false;
       final isSuppressed = isBelowFloor || isRecurring;
       final suppressionReason = isBelowFloor
@@ -140,6 +157,8 @@ class AnomalyDetector {
                 payloadJson: jsonEncode({
                   'baseline_key': key,
                   'aggregate': aggregate,
+                  'currency_code': entry.value.first.currencyCode,
+                  'currency_symbol': entry.value.first.currencySymbol,
                   'threshold': threshold,
                   'top_transaction_ids': [
                     for (final txn in contributors.take(3)) txn.id,

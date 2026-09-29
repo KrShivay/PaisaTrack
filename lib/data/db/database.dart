@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/constants.dart';
 import '../dedup/duplicate_match_rule.dart';
+import '../models/source_currency.dart';
 import '../../enrichment/payee_identity_key.dart';
 import 'tables/baselines_table.dart';
 import 'tables/categories_table.dart';
@@ -108,7 +109,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -241,6 +242,9 @@ class AppDatabase extends _$AppDatabase {
           await migrator.createIndex(idxTransactionsNotTransaction);
           await migrator.createTable(smsDispositions);
         }
+        if (from < 18) {
+          await _ensureSourceCurrencyColumns(migrator);
+        }
         if (from < 15) await _backfillPayeeEvidence();
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.
@@ -264,6 +268,57 @@ class AppDatabase extends _$AppDatabase {
         await _ensurePaymentSourceTrigger();
       },
     );
+  }
+
+  Future<void> _ensureSourceCurrencyColumns(Migrator migrator) async {
+    final tables = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    ).get();
+    final tableNames = tables.map((row) => row.read<String>('name')).toSet();
+    if (!tableNames.contains('transactions')) {
+      await migrator.createTable(transactions);
+    }
+    if (!tableNames.contains('recurring_series')) {
+      await migrator.createTable(recurringSeries);
+    }
+    if (!tableNames.contains('expected_events')) {
+      await migrator.createTable(expectedEvents);
+    }
+
+    Future<Set<String>> columns(String table) async {
+      final rows = await customSelect('PRAGMA table_info("$table")').get();
+      return rows.map((row) => row.read<String>('name')).toSet();
+    }
+
+    final transactionColumns = await columns('transactions');
+    if (!transactionColumns.contains('currency_code')) {
+      await migrator.addColumn(transactions, transactions.currencyCode);
+    }
+    if (!transactionColumns.contains('currency_symbol')) {
+      await migrator.addColumn(transactions, transactions.currencySymbol);
+    }
+
+    final recurringColumns = await columns('recurring_series');
+    if (!recurringColumns.contains('currency_code')) {
+      await migrator.addColumn(
+        recurringSeries,
+        recurringSeries.currencyCode,
+      );
+    }
+    if (!recurringColumns.contains('currency_symbol')) {
+      await migrator.addColumn(
+        recurringSeries,
+        recurringSeries.currencySymbol,
+      );
+    }
+
+    final eventColumns = await columns('expected_events');
+    if (!eventColumns.contains('currency_code')) {
+      await migrator.addColumn(expectedEvents, expectedEvents.currencyCode);
+    }
+    if (!eventColumns.contains('currency_symbol')) {
+      await migrator.addColumn(expectedEvents, expectedEvents.currencySymbol);
+    }
   }
 
   Future<void> _backfillPayeeEvidence() async {
@@ -344,14 +399,24 @@ class AppDatabase extends _$AppDatabase {
         echo.merchantRaw,
       );
       final matches = candidates.where(
-        (existing) => rule.matches(
-          direction: echo.direction,
-          amount: echo.amount,
-          ts: echoTs,
-          refId: echo.refId,
-          counterpartyKey: echoKey,
-          existing: existing,
-        ),
+        (existing) =>
+            rule.matches(
+              direction: echo.direction,
+              amount: echo.amount,
+              ts: echoTs,
+              refId: echo.refId,
+              counterpartyKey: echoKey,
+              existing: existing,
+            ) &&
+            SourceCurrency(
+              code: echo.currencyCode,
+              symbol: echo.currencySymbol,
+            ).sameBucket(
+              SourceCurrency(
+                code: existing.currencyCode,
+                symbol: existing.currencySymbol,
+              ),
+            ),
       );
 
       if (matches.length == 1) {

@@ -24,11 +24,15 @@ void main() {
       String? reference,
       String status = 'confirmed',
       String? categoryName = 'Food & Dining',
+      String? currencyCode,
+      String? currencySymbol,
     }) =>
         TransactionListItem(
           id: id,
           ts: DateTime.utc(2026, 7, 26, 12, 30, 0),
           amount: amount,
+          currencyCode: currencyCode,
+          currencySymbol: currencySymbol,
           direction: direction,
           displayName: displayName,
           categoryName: categoryName,
@@ -47,7 +51,12 @@ void main() {
       final csv = utf8.decode(bytes);
 
       // Verify header (after BOM).
-      expect(csv, contains('Date,Time,Merchant,Category,Amount,Direction'));
+      expect(
+        csv,
+        contains(
+          'Date,Time,Merchant,Category,Amount,Currency Code,Currency Symbol,Direction',
+        ),
+      );
       expect(csv, contains('Channel,Account,Status,Note,Reference'));
 
       // Verify data row.
@@ -59,6 +68,13 @@ void main() {
       expect(csv, contains('Food & Dining'));
       expect(csv, contains('Lunch'));
       expect(csv, contains('REF123'));
+    });
+
+    test('exports source currency alongside nominal amount', () {
+      final csv = utf8.decode(
+        service.exportToCsv([makeItem(currencySymbol: r'$')]),
+      );
+      expect(csv, contains('450.00,,\$,Debit'));
     });
 
     test('excludes raw SMS, confidence JSON, and internal IDs', () {

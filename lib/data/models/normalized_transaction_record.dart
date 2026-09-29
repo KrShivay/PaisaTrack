@@ -18,6 +18,8 @@ class NormalizedTransactionRecord {
     required this.parseConfidence,
     this.templateId,
     this.templateProvenance,
+    this.currencyCode,
+    this.currencySymbol,
     this.evidence,
   });
 
@@ -43,6 +45,12 @@ class NormalizedTransactionRecord {
   /// Fixture evidence tier associated with [templateId], when present.
   final String? templateProvenance;
 
+  /// ISO code only when explicitly evidenced by the source (e.g. USD/INR).
+  final String? currencyCode;
+
+  /// Source symbol, retained even when its ISO currency is ambiguous (`$`).
+  final String? currencySymbol;
+
   /// Verifying span evidence linking record values back to raw source text.
   final List<FieldEvidence>? evidence;
 
@@ -62,6 +70,8 @@ class NormalizedTransactionRecord {
       parseConfidence: parseConfidence,
       templateId: templateId,
       templateProvenance: templateProvenance,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
       evidence: evidence,
     );
   }
@@ -82,6 +92,8 @@ class NormalizedTransactionRecord {
       parseConfidence: confidence,
       templateId: templateId,
       templateProvenance: templateProvenance,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
       evidence: evidence,
     );
   }
@@ -100,6 +112,8 @@ class NormalizedTransactionRecord {
       'ts': ts.millisecondsSinceEpoch,
       'parse_source': parseSource.wireName,
       'parse_confidence': parseConfidence,
+      'currency_code': currencyCode,
+      'currency_symbol': currencySymbol,
       if (includeEvidence && evidence != null)
         'evidence': evidence!.map((e) => e.toJson()).toList(),
     };

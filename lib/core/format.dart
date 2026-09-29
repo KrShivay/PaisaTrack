@@ -22,6 +22,25 @@ String formatInr(double amount) {
   return '$sign₹${groups.join(',')},$lastThree.$decimals';
 }
 
+/// Formats a parsed source amount without implying an exchange rate or
+/// assigning an ISO currency to an ambiguous symbol.
+String formatSourceAmount(
+  double amount, {
+  String? currencyCode,
+  String? currencySymbol,
+}) {
+  if (currencyCode == 'INR') return formatInr(amount);
+  final sign = amount.isNegative ? '-' : '';
+  final value = amount.abs().toStringAsFixed(2);
+  if (currencyCode != null) {
+    return '$sign${currencySymbol ?? currencyCode}$value $currencyCode';
+  }
+  if (currencySymbol != null) {
+    return '$sign$currencySymbol$value (currency unknown)';
+  }
+  return '$sign$value (currency unknown)';
+}
+
 /// Compact rupee format for charts and stats (e.g. ₹4.5k, ₹1.2L).
 String formatInrCompact(double amount) {
   final absVal = amount.abs();

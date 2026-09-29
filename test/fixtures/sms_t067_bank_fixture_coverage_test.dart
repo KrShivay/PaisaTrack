@@ -48,7 +48,7 @@ void main() {
       final mismatches = <String>[];
       for (final fixture in positives) {
         final actual = await parseFixtureCase(cascade, fixture);
-        if (jsonEncode(actual) == jsonEncode(fixture.expected)) {
+        if (_matchesExpected(actual, fixture.expected)) {
           matched++;
         } else {
           mismatches.add(
@@ -64,4 +64,22 @@ void main() {
       );
     });
   }
+}
+
+bool _matchesExpected(
+  Map<String, Object?> actual,
+  Map<String, Object?> expected,
+) {
+  // Older sourced fixtures don't include currency fields; focused tests check
+  // the new fields while this coverage check retains its historical contract.
+  return expected.entries.every((entry) {
+    final actualValue = actual[entry.key];
+    final expectedValue = entry.value;
+    if (actualValue is Map && expectedValue is Map) {
+      return expectedValue.entries.every(
+        (field) => actualValue[field.key] == field.value,
+      );
+    }
+    return actualValue == expectedValue;
+  });
 }

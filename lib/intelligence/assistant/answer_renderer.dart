@@ -10,25 +10,45 @@ class AnswerRenderer {
     AssistantQueryResult result,
   ) =>
       switch (result) {
-        TotalQueryResult(:final value, :final count, :final label) => count == 0
-            ? 'Period: $label\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
-            : 'Period: $label\nResult: ${_metric(intent.metric)} ${_value(intent.aggregation, value)} across $count transactions.\nFilters: ${_filters(intent)}',
+        TotalQueryResult(
+          :final value,
+          :final count,
+          :final label,
+          :final currencyBuckets
+        ) =>
+          count == 0
+              ? 'Period: $label\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
+              : 'Period: $label\nResult: ${_metric(intent.metric)} ${_totalValue(intent.aggregation, currencyBuckets, count, value)} across $count transactions.\nFilters: ${_filters(intent)}',
         BreakdownQueryResult(:final items) => items.isEmpty
             ? 'Period: ${intent.range!.label}\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
-            : 'Period: ${intent.range!.label}\nResult:\n${items.map((item) => '${item.label}: ${formatInr(item.total)}').join('\n')}\nFilters: ${_filters(intent)}',
+            : 'Period: ${intent.range!.label}\nResult:\n${items.map((item) => '${item.label}: ${formatSourceAmount(item.total, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}').join('\n')}\nFilters: ${_filters(intent)}',
         ComparisonQueryResult(
-          :final current,
-          :final previous,
-          :final delta,
-          :final percent,
+          :final currencyBuckets,
         ) =>
-          'Current: ${formatInr(current)}. Previous: ${formatInr(previous)}. Difference: ${formatInr(delta)}${percent == null ? '' : ' (${(percent * 100).toStringAsFixed(1)}%)'}.',
+          currencyBuckets.isEmpty
+              ? 'No same-currency comparison is available.'
+              : currencyBuckets.map((bucket) {
+                  final change = bucket.current - bucket.previous;
+                  final ratio =
+                      bucket.previous == 0 ? null : change / bucket.previous;
+                  final currentValue = formatSourceAmount(
+                    bucket.current,
+                    currencyCode: bucket.currencyCode,
+                    currencySymbol: bucket.currencySymbol,
+                  );
+                  final previousValue = formatSourceAmount(
+                    bucket.previous,
+                    currencyCode: bucket.currencyCode,
+                    currencySymbol: bucket.currencySymbol,
+                  );
+                  return 'Current: $currentValue. Previous: $previousValue. Difference: ${formatSourceAmount(change, currencyCode: bucket.currencyCode, currencySymbol: bucket.currencySymbol)}${ratio == null ? '' : ' (${(ratio * 100).toStringAsFixed(1)}%)'}.';
+                }).join('\n'),
         RecurringQueryResult(:final items) => items.isEmpty
             ? 'No recurring payments are due in ${intent.range!.label}.'
             : items
                 .map(
                   (item) =>
-                      '${item.label}: ${formatInr(item.amount)} on ${_date(item.date)}',
+                      '${item.label}: ${formatSourceAmount(item.amount, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)} on ${_date(item.date)}',
                 )
                 .join('\n'),
         InsightsQueryResult(:final items) => items.isEmpty
@@ -41,10 +61,25 @@ class AnswerRenderer {
         AssistantMetric.income => 'Income',
         AssistantMetric.net => 'Net amount',
       };
-  static String _value(AssistantAggregation aggregation, double value) =>
-      aggregation == AssistantAggregation.count
-          ? value.round().toString()
-          : formatInr(value);
+  static String _totalValue(
+    AssistantAggregation aggregation,
+    List<AssistantCurrencyBucket> buckets,
+    int count,
+    double value,
+  ) {
+    if (aggregation == AssistantAggregation.count) return count.toString();
+    if (buckets.isEmpty) return formatSourceAmount(value);
+    return buckets
+        .map(
+          (bucket) => formatSourceAmount(
+            bucket.amount,
+            currencyCode: bucket.currencyCode,
+            currencySymbol: bucket.currencySymbol,
+          ),
+        )
+        .join(' · ');
+  }
+
   static String _filters(AssistantIntent intent) {
     final filters = <String>[
       _metric(intent.metric),

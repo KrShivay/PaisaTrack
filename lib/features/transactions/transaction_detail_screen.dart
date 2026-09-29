@@ -310,6 +310,8 @@ class _TransactionDetailScreenState
                   // Hero Amount 44px
                   BloomAmount(
                     amount: isDebit ? -txn.amount : txn.amount,
+                    currencyCode: txn.currencyCode,
+                    currencySymbol: txn.currencySymbol,
                     size: 44,
                     weight: FontWeight.w600,
                   ),

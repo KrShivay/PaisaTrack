@@ -102,7 +102,8 @@ class AskNowPayloadBuilder {
     return AskNowPayload(
       txnId: item.id,
       title: 'Categorize ${isCredit ? 'income' : 'spend'}',
-      body: '${item.displayName} ${formatInr(item.amount)}',
+      body:
+          '${item.displayName} ${formatSourceAmount(item.amount, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}',
       actions: actions,
     );
   }

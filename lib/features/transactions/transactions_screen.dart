@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
@@ -417,7 +418,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             final group = grouped[index];
                             return _DayGroupSection(
                               header: group.header,
-                              dayTotal: group.total,
+                              dayTotals: group.totals,
                               items: group.items,
                               isDark: isDark,
                               onTap: _openDetail,
@@ -453,7 +454,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   List<_DayGroup> _groupByDay(List<TransactionListItem> items) {
     final Map<String, List<TransactionListItem>> map = {};
-    final Map<String, double> totals = {};
+    final Map<String, ({double amount, String? code, String? symbol})> totals =
+        {};
 
     final now = DateTime.now();
     final todayStr = '${now.year}-${now.month}-${now.day}';
@@ -474,17 +476,27 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
 
       map.putIfAbsent(header, () => []).add(item);
-      totals[header] = (totals[header] ?? 0) +
-          (item.direction == TransactionDirection.debit
-              ? -item.amount
-              : item.amount);
+      final bucket = '${item.currencyCode ?? ""}|${item.currencySymbol ?? ""}';
+      final totalKey = '$header|$bucket';
+      final prior = totals[totalKey];
+      totals[totalKey] = (
+        amount: (prior?.amount ?? 0) +
+            (item.direction == TransactionDirection.debit
+                ? -item.amount
+                : item.amount),
+        code: item.currencyCode,
+        symbol: item.currencySymbol,
+      );
     }
 
     return [
       for (final entry in map.entries)
         _DayGroup(
           header: entry.key,
-          total: totals[entry.key] ?? 0,
+          totals: [
+            for (final total in totals.entries)
+              if (total.key.startsWith('${entry.key}|')) total.value,
+          ],
           items: entry.value,
         ),
     ];
@@ -509,12 +521,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 class _DayGroup {
   const _DayGroup({
     required this.header,
-    required this.total,
+    required this.totals,
     required this.items,
   });
 
   final String header;
-  final double total;
+  final List<({double amount, String? code, String? symbol})> totals;
   final List<TransactionListItem> items;
 }
 
@@ -565,7 +577,7 @@ class _FilterChip extends StatelessWidget {
 class _DayGroupSection extends StatelessWidget {
   const _DayGroupSection({
     required this.header,
-    required this.dayTotal,
+    required this.dayTotals,
     required this.items,
     required this.isDark,
     required this.onTap,
@@ -574,7 +586,7 @@ class _DayGroupSection extends StatelessWidget {
   });
 
   final String header;
-  final double dayTotal;
+  final List<({double amount, String? code, String? symbol})> dayTotals;
   final List<TransactionListItem> items;
   final bool isDark;
   final ValueChanged<TransactionListItem> onTap;
@@ -603,10 +615,22 @@ class _DayGroupSection extends StatelessWidget {
                       : AppColorTokens.inkTertiary,
                 ),
               ),
-              BloomAmount(
-                amount: dayTotal,
-                size: 12,
-                weight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  dayTotals
+                      .map(
+                        (bucket) => formatSourceAmount(
+                          bucket.amount,
+                          currencyCode: bucket.code,
+                          currencySymbol: bucket.symbol,
+                        ),
+                      )
+                      .join(' · '),
+                  textAlign: TextAlign.end,
+                  style: AppTheme.bloomDisplay(12, FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -727,6 +751,8 @@ class _DismissibleTransactionRow extends StatelessWidget {
                 amount: item.direction == TransactionDirection.debit
                     ? -item.amount
                     : item.amount,
+                currencyCode: item.currencyCode,
+                currencySymbol: item.currencySymbol,
                 size: 15,
                 weight: FontWeight.w500,
               ),

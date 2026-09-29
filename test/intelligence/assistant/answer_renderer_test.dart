@@ -18,7 +18,7 @@ void main() {
     );
     const result = TotalQueryResult(value: 1234.5, count: 2, label: 'July');
     final answer = const AnswerRenderer().render(intent, result);
-    expect(answer, contains('1,234.50'));
+    expect(answer, contains('1234.50 (currency unknown)'));
     expect(answer, contains('2 transactions'));
     expect(answer, isNot(contains(hostileModelText)));
     expect(answer, isNot(contains('999999')));

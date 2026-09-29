@@ -20,7 +20,9 @@ void main() {
     await database.close();
   });
 
-  test('An annual premium in a detected recurring series raises a suppressed anomaly', () async {
+  test(
+      'An annual premium in a detected recurring series raises a suppressed anomaly',
+      () async {
     final now = DateTime.utc(2026, 7, 10);
     final monthStart = DateTime.utc(2026, 7, 1);
 
@@ -36,7 +38,7 @@ void main() {
     // Baseline for merchant 'm_lic' (mean ₹100, std 10, 10 periods)
     await database.into(database.baselines).insert(
           BaselinesCompanion.insert(
-            key: 'mer:m_lic:month',
+            key: 'mer:m_lic|code:INR:month',
             mean: 100.0,
             std: 10.0,
             n: 10,
@@ -51,6 +53,8 @@ void main() {
             merchantId: 'm_lic',
             label: 'LIC Insurance',
             expectedAmount: 15000.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             period: 'yearly',
             periodDays: 365,
             nextExpectedDate: now,
@@ -69,6 +73,8 @@ void main() {
             id: 'txn_lic',
             ts: monthStart.add(const Duration(days: 2)).millisecondsSinceEpoch,
             amount: 15000.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'card',
             merchantId: const Value('m_lic'),
@@ -87,17 +93,21 @@ void main() {
     final anomalies = insights.where((i) => i.kind == 'anomaly').toList();
     expect(anomalies, hasLength(1));
     expect(anomalies.first.payloadJson, contains('"suppressed":true'));
-    expect(anomalies.first.payloadJson, contains('"suppression_reason":"recurring_series"'));
+    expect(
+      anomalies.first.payloadJson,
+      contains('"suppression_reason":"recurring_series"'),
+    );
   });
 
-  test('A small-rupee swing below the floor raises a suppressed anomaly', () async {
+  test('A small-rupee swing below the floor raises a suppressed anomaly',
+      () async {
     final now = DateTime.utc(2026, 7, 10);
     final weekStart = DateTime.utc(2026, 7, 6); // Monday
 
     // Baseline for category 'food_dining' (mean ₹20, std 5, 10 periods)
     await database.into(database.baselines).insert(
           BaselinesCompanion.insert(
-            key: 'cat:food_dining:week',
+            key: 'cat:food_dining|code:INR:week',
             mean: 20.0,
             std: 5.0,
             n: 10,
@@ -111,6 +121,8 @@ void main() {
             id: 'txn_small',
             ts: weekStart.add(const Duration(days: 1)).millisecondsSinceEpoch,
             amount: 150.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'upi',
             categoryId: const Value('food_dining'),
@@ -129,10 +141,15 @@ void main() {
     final anomalies = insights.where((i) => i.kind == 'anomaly').toList();
     expect(anomalies, hasLength(1));
     expect(anomalies.first.payloadJson, contains('"suppressed":true'));
-    expect(anomalies.first.payloadJson, contains('"suppression_reason":"below_floor"'));
+    expect(
+      anomalies.first.payloadJson,
+      contains('"suppression_reason":"below_floor"'),
+    );
   });
 
-  test('A genuine large deviation above floor without recurring series raises an active anomaly flag', () async {
+  test(
+      'A genuine large deviation above floor without recurring series raises an active anomaly flag',
+      () async {
     final now = DateTime.utc(2026, 7, 10);
     final monthStart = DateTime.utc(2026, 7, 1);
 
@@ -148,7 +165,7 @@ void main() {
     // Baseline for merchant 'm_hospital' (mean ₹1000, std 200, 10 periods)
     await database.into(database.baselines).insert(
           BaselinesCompanion.insert(
-            key: 'mer:m_hospital:month',
+            key: 'mer:m_hospital|code:INR:month',
             mean: 1000.0,
             std: 200.0,
             n: 10,
@@ -162,6 +179,8 @@ void main() {
             id: 'txn_hospital',
             ts: monthStart.add(const Duration(days: 2)).millisecondsSinceEpoch,
             amount: 25000.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'card',
             merchantId: const Value('m_hospital'),
@@ -178,6 +197,43 @@ void main() {
 
     final insights = await database.select(database.insights).get();
     final anomaly = insights.firstWhere((i) => i.kind == 'anomaly');
+    expect(anomaly.payloadJson, contains('"suppressed":false'));
+  });
+
+  test('INR alert floor does not suppress source-currency anomalies', () async {
+    final now = DateTime.utc(2026, 7, 10);
+    final weekStart = DateTime.utc(2026, 7, 6);
+    await database.into(database.baselines).insert(
+          BaselinesCompanion.insert(
+            key: 'cat:food_dining|code:USD:week',
+            mean: 100,
+            std: 10,
+            n: 10,
+            updatedAt: weekStart.subtract(const Duration(days: 10)),
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'usd_food',
+            ts: weekStart.add(const Duration(days: 1)).millisecondsSinceEpoch,
+            amount: 400,
+            currencyCode: const Value('USD'),
+            currencySymbol: const Value(r'$'),
+            direction: 'debit',
+            channel: 'card',
+            categoryId: const Value('food_dining'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+    expect(await detector.run(today: now), 1);
+    final anomaly = (await database.select(database.insights).get())
+        .singleWhere((row) => row.kind == 'anomaly');
+    expect(anomaly.payloadJson, contains('"currency_code":"USD"'));
     expect(anomaly.payloadJson, contains('"suppressed":false'));
   });
 }

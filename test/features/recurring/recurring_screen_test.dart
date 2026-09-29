@@ -12,12 +12,16 @@ void main() {
     String label = 'Netflix',
     String kind = 'subscription',
     String status = 'active',
+    String? currencyCode = 'INR',
+    String? currencySymbol = '₹',
   }) {
     return RecurringSery(
       id: id,
       merchantId: 'merchant_$id',
       label: label,
       expectedAmount: 499,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
       tolerancePct: 0.05,
       period: 'monthly',
       periodDays: 30,
@@ -79,7 +83,36 @@ void main() {
     expect(find.byType(BloomAmount), findsWidgets);
   });
 
-  testWidgets('renders recharge and investment kinds with valid visuals', (tester) async {
+  testWidgets('commitments are subtotaled by source currency', (tester) async {
+    await pumpScreen(tester, [
+      series(id: 'inr', label: 'INR plan'),
+      series(
+        id: 'usd',
+        label: 'USD plan',
+        currencyCode: 'USD',
+        currencySymbol: r'$',
+      ),
+      series(
+        id: 'bare',
+        label: 'Dollar-symbol plan',
+        currencyCode: null,
+        currencySymbol: r'$',
+      ),
+    ]);
+
+    expect(find.text('INR MONTHLY COMMITMENTS'), findsOneWidget);
+    expect(find.textContaining('USD · 1 active'), findsOneWidget);
+    expect(find.textContaining(r'$499.00 USD/mo'), findsOneWidget);
+    expect(
+      find.textContaining(r'$499.00 (currency unknown)/mo'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('no exchange rate'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('renders recharge and investment kinds with valid visuals',
+      (tester) async {
     await pumpScreen(tester, [
       series(id: '3', label: 'Jio', kind: 'recharge'),
       series(id: '4', label: 'Mutual Fund', kind: 'investment'),
@@ -87,14 +120,18 @@ void main() {
 
     expect(find.text('Jio'), findsAtLeast(1));
     expect(find.text('Mutual Fund'), findsAtLeast(1));
-    
+
     // Check that we find tiles (may be 4 due to dual-rendering in upcoming + all sections)
-    final tiles = tester.widgetList<BloomCategoryTile>(find.byType(BloomCategoryTile));
+    final tiles =
+        tester.widgetList<BloomCategoryTile>(find.byType(BloomCategoryTile));
     expect(tiles.length, greaterThanOrEqualTo(2));
 
     // Verify neither resolved to fallback color (0xFF94A3B8)
     for (final tile in tiles) {
-      expect(CategoryVisuals.color(tile.categoryId).toARGB32(), isNot(0xFF94A3B8));
+      expect(
+        CategoryVisuals.color(tile.categoryId).toARGB32(),
+        isNot(0xFF94A3B8),
+      );
     }
   });
 }

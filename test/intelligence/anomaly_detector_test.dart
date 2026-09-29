@@ -18,6 +18,8 @@ void main() {
             id: id,
             ts: date.millisecondsSinceEpoch,
             amount: amount,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'card',
             categoryId: const Value('shopping'),
@@ -49,7 +51,7 @@ void main() {
     expect(await detector.run(today: DateTime.utc(2026, 7, 9)), 0);
 
     final baseline = await (database.select(database.baselines)
-          ..where((b) => b.key.equals('cat:shopping:week')))
+          ..where((b) => b.key.equals('cat:shopping|code:INR:week')))
         .getSingle();
     expect(baseline.mean, 100);
     expect(baseline.std, 0);
@@ -69,7 +71,7 @@ void main() {
         );
     await database.into(database.baselines).insert(
           BaselinesCompanion.insert(
-            key: 'cat:shopping:week',
+            key: 'cat:shopping|code:INR:week',
             mean: 400,
             std: 40,
             n: 8,

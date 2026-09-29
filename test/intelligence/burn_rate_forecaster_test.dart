@@ -24,6 +24,8 @@ void main() {
             id: id,
             ts: date.millisecondsSinceEpoch,
             amount: amount,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: direction,
             channel: 'card',
             parseSource: 'template',

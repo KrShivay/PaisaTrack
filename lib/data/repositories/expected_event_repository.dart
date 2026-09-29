@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../db/database.dart';
+import '../models/source_currency.dart';
 
 /// Repository for managing ExpectedEvents (T-138b).
 /// Expected events capture bill-due reminders, mandates, and upcoming obligations.
@@ -16,13 +17,22 @@ class ExpectedEventRepository {
     String? counterpartyId,
     String? cadence,
     required int amountPaise,
+    String? currencyCode,
+    String? currencySymbol,
   }) {
     final cpty =
         counterpartyId ?? label.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
     final cad = cadence ?? 'monthly';
     // Group amount into ~100 INR buckets (10000 paise) to absorb minor fee variations
     final roughAmt = (amountPaise / 10000).round();
-    return '${cpty}_${cad}_$roughAmt';
+    final currency = SourceCurrency(
+      code: currencyCode,
+      symbol: currencySymbol,
+    );
+    final suffix = currencyCode != null || currencySymbol != null
+        ? '_${currency.bucketKey}'
+        : '';
+    return '${cpty}_${cad}_$roughAmt$suffix';
   }
 
   /// Ingest an expected event, deduplicating on (dedup_key, expected_date).
@@ -35,6 +45,8 @@ class ExpectedEventRepository {
     required int expectedAmountPaise,
     int? amountLowPaise,
     int? amountHighPaise,
+    String? currencyCode,
+    String? currencySymbol,
     required DateTime expectedDate,
     int dateWindowDays = 3,
     String? cadence,
@@ -45,6 +57,8 @@ class ExpectedEventRepository {
       counterpartyId: counterpartyId,
       cadence: cadence,
       amountPaise: expectedAmountPaise,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
     );
 
     final id = 'ee_${dedupKey}_${expectedDate.millisecondsSinceEpoch}';
@@ -62,6 +76,8 @@ class ExpectedEventRepository {
             expectedAmountPaise: expectedAmountPaise,
             amountLowPaise: Value(amountLowPaise),
             amountHighPaise: Value(amountHighPaise),
+            currencyCode: Value(currencyCode),
+            currencySymbol: Value(currencySymbol),
             expectedDate: expectedDate,
             dateWindowDays: Value(dateWindowDays),
             cadence: Value(cadence),
@@ -106,6 +122,10 @@ class ExpectedEventRepository {
       final eventIdsByTxn = <String, Set<String>>{};
       final hasPotentialMatch = <String, bool>{};
       for (final event in pendingEvents) {
+        final eventCurrency = SourceCurrency(
+          code: event.currencyCode,
+          symbol: event.currencySymbol,
+        );
         final counterparty = _normalizedVpa(event.counterpartyId);
         final bounds = _amountBounds(event);
         if (counterparty.isEmpty || bounds == null) {
@@ -139,9 +159,14 @@ class ExpectedEventRepository {
                     ),
               ))
             .get();
-        final identityMatches = candidates
-            .where((txn) => _normalizedVpa(txn.counterpartyVpa) == counterparty)
-            .toList(growable: false);
+        final identityMatches = candidates.where((txn) {
+          final transactionCurrency = SourceCurrency(
+            code: txn.currencyCode,
+            symbol: txn.currencySymbol,
+          );
+          return _normalizedVpa(txn.counterpartyVpa) == counterparty &&
+              eventCurrency.sameBucket(transactionCurrency);
+        }).toList(growable: false);
         candidatesByEvent[event.id] = identityMatches;
         hasPotentialMatch[event.id] = identityMatches.isNotEmpty;
         for (final txn in identityMatches) {

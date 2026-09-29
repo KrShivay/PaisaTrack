@@ -78,6 +78,8 @@ void main() {
     final events = await repository.getExpectedEvents();
     expect(events, hasLength(1));
     expect(events.first.expectedAmountPaise, 450000);
+    expect(events.first.currencyCode, 'INR');
+    expect(events.first.currencySymbol, '₹');
     expect(events.first.label, contains('HDFCBK'));
     expect(
       events.first.expectedDate.millisecondsSinceEpoch,
@@ -103,10 +105,29 @@ void main() {
     final events = await repository.getExpectedEvents();
     expect(events, hasLength(1));
     expect(events.single.expectedAmountPaise, 125000);
+    expect(events.single.currencyCode, 'INR');
     expect(
       events.single.expectedDate.millisecondsSinceEpoch,
       DateTime.utc(2026, 7, 15).millisecondsSinceEpoch,
     );
+  });
+
+  test('USD reminders preserve source currency without matching INR spending',
+      () async {
+    final now = DateTime.utc(2026, 7, 10);
+    await ingestor.ingest(
+      RawSms(
+        id: 'sms_rem_usd',
+        sender: 'FOREIGN-SERVICE',
+        body: 'Reminder: charge of USD 45.00 is due on 15-Jul-2026.',
+        receivedAt: now,
+      ),
+    );
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.expectedAmountPaise, 4500);
+    expect(event.currencyCode, 'USD');
+    expect(event.currencySymbol, r'$');
   });
 
   test('comma-formatted reminder range preserves both bounds', () async {
@@ -169,6 +190,8 @@ void main() {
             id: 'prior_debit',
             ts: expectedDate.millisecondsSinceEpoch,
             amount: 4500,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'upi',
             counterpartyVpa: const Value('billpay@upi'),

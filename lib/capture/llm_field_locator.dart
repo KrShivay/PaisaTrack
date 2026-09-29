@@ -1,5 +1,6 @@
 import '../core/constants.dart';
 import '../data/models/normalized_transaction_record.dart';
+import '../data/models/source_currency.dart';
 import '../data/models/raw_sms.dart';
 import '../intelligence/llm/llm_request.dart';
 import '../intelligence/llm/llm_runtime.dart';
@@ -84,7 +85,8 @@ class LlmFieldLocator {
     final dirIndex = body.toLowerCase().indexOf(directionText.toLowerCase());
     if (dirIndex == -1) return null;
 
-    final actualDirText = body.substring(dirIndex, dirIndex + directionText.length);
+    final actualDirText =
+        body.substring(dirIndex, dirIndex + directionText.length);
 
     // Parse values from verbatim substrings through FieldNormalizer
     final double amount;
@@ -143,6 +145,23 @@ class LlmFieldLocator {
       );
     }
 
+    final amountCurrencyToken = RegExp(
+          r'^\s*(USD|US\$|INR|Rs\.?|₹|\$)',
+          caseSensitive: false,
+        ).firstMatch(amountText)?.group(1) ??
+        RegExp(r'(USD|US\$|INR|Rs\.?|₹|\$)\s*$', caseSensitive: false)
+            .firstMatch(amountText)
+            ?.group(1);
+    final adjacentCurrency = _fieldNormalizer.currencyEvidenceAtAmount(
+      body,
+      amountIndex,
+      amountIndex + amountText.length,
+    );
+    if (amountCurrencyToken == null && adjacentCurrency != null) {
+      evidence.add(adjacentCurrency.evidence);
+    }
+    final currency = SourceCurrency.fromToken(amountCurrencyToken) ??
+        adjacentCurrency?.currency;
     final record = NormalizedTransactionRecord(
       amount: amount,
       direction: direction,
@@ -155,6 +174,8 @@ class LlmFieldLocator {
       ts: ts,
       parseSource: ParseSource.localLlm,
       parseConfidence: AppConstants.llmParseConfidence,
+      currencyCode: currency?.code,
+      currencySymbol: currency?.symbol,
       evidence: evidence,
     );
 
@@ -168,10 +189,12 @@ class LlmFieldLocator {
 
   TransactionDirection? _parseDirection(String text) {
     final lower = text.toLowerCase();
-    if (RegExp(r'\b(?:debited|spent|withdrawn|paid|sent|dr)\b').hasMatch(lower)) {
+    if (RegExp(r'\b(?:debited|spent|withdrawn|paid|sent|dr)\b')
+        .hasMatch(lower)) {
       return TransactionDirection.debit;
     }
-    if (RegExp(r'\b(?:credited|received|deposited|refund|reversal|cr)\b').hasMatch(lower)) {
+    if (RegExp(r'\b(?:credited|received|deposited|refund|reversal|cr)\b')
+        .hasMatch(lower)) {
       return TransactionDirection.credit;
     }
     return null;
@@ -180,11 +203,17 @@ class LlmFieldLocator {
   TransactionChannel _inferChannel(String body) {
     final lower = body.toLowerCase();
     if (lower.contains('upi')) return TransactionChannel.upi;
-    if (lower.contains('card') || lower.contains('pos')) return TransactionChannel.card;
-    if (lower.contains('neft') || lower.contains('imps') || lower.contains('rtgs')) {
+    if (lower.contains('card') || lower.contains('pos')) {
+      return TransactionChannel.card;
+    }
+    if (lower.contains('neft') ||
+        lower.contains('imps') ||
+        lower.contains('rtgs')) {
       return TransactionChannel.netbanking;
     }
-    if (lower.contains('atm') || lower.contains('cash')) return TransactionChannel.atm;
+    if (lower.contains('atm') || lower.contains('cash')) {
+      return TransactionChannel.atm;
+    }
     return TransactionChannel.unknown;
   }
 

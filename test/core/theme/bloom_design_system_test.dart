@@ -251,7 +251,7 @@ void main() {
     testWidgets('renders formatted positive amount', (tester) async {
       await pumpBloomWidget(
         tester,
-        const BloomAmount(amount: 1240.50),
+        const BloomAmount(amount: 1240.50, currencyCode: 'INR'),
       );
 
       expect(find.text('₹1,240.50'), findsOneWidget);
@@ -260,7 +260,11 @@ void main() {
     testWidgets('hides paise when showPaise is false', (tester) async {
       await pumpBloomWidget(
         tester,
-        const BloomAmount(amount: 28410.00, showPaise: false),
+        const BloomAmount(
+          amount: 28410.00,
+          currencyCode: 'INR',
+          showPaise: false,
+        ),
       );
 
       expect(find.text('₹28,410'), findsOneWidget);
@@ -269,7 +273,7 @@ void main() {
     testWidgets('renders with IBM Plex Mono', (tester) async {
       await pumpBloomWidget(
         tester,
-        const BloomAmount(amount: 100),
+        const BloomAmount(amount: 100, currencyCode: 'INR'),
       );
 
       final textWidget = tester.widget<Text>(find.textContaining('₹'));
@@ -279,7 +283,7 @@ void main() {
     testWidgets('uses credit color for positive amounts', (tester) async {
       await pumpBloomWidget(
         tester,
-        const BloomAmount(amount: 500),
+        const BloomAmount(amount: 500, currencyCode: 'INR'),
       );
 
       final textWidget = tester.widget<Text>(find.textContaining('₹'));
@@ -289,7 +293,7 @@ void main() {
     testWidgets('uses debit color for negative amounts', (tester) async {
       await pumpBloomWidget(
         tester,
-        const BloomAmount(amount: -500),
+        const BloomAmount(amount: -500, currencyCode: 'INR'),
       );
 
       final textWidget = tester.widget<Text>(find.textContaining('₹'));
@@ -299,7 +303,7 @@ void main() {
     testWidgets('dark mode uses dark credit color', (tester) async {
       await pumpBloomWidget(
         tester,
-        const BloomAmount(amount: 500),
+        const BloomAmount(amount: 500, currencyCode: 'INR'),
         brightness: Brightness.dark,
       );
 

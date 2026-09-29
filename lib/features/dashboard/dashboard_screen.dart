@@ -206,6 +206,9 @@ class DashboardScreen extends ConsumerWidget {
             const BloomBudgetCard(),
             const SizedBox(height: 24),
 
+            const BloomSourceCurrencyActivity(),
+            const SizedBox(height: 24),
+
             // Where it went (Top 3 categories)
             BloomTopCategoriesSection(
               onViewAll: () {

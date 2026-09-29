@@ -1,7 +1,7 @@
 import 'package:drift/native.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
 import 'package:paisatrack/intelligence/llm/llm_request.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
@@ -78,6 +78,26 @@ void main() {
   });
 
   test('expands compact current and comparison month ranges', () async {
+    final now = DateTime.utc(2026, 7, 1);
+    for (final (id, month) in [('current', 7), ('previous', 6)]) {
+      final date = DateTime.utc(2026, month, 10);
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: id,
+              ts: date.millisecondsSinceEpoch,
+              amount: 10,
+              direction: 'debit',
+              channel: 'upi',
+              parseSource: 'test',
+              confidenceJson: '{}',
+              status: 'confirmed',
+              currencyCode: const Value('INR'),
+              currencySymbol: const Value('₹'),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    }
     final answer = await askWith({
       'i': 'c',
       'q': 's',

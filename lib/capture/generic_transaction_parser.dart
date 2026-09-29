@@ -1,5 +1,6 @@
 import '../core/constants.dart';
 import '../data/models/normalized_transaction_record.dart';
+import '../data/models/source_currency.dart';
 import '../data/models/raw_sms.dart';
 import 'template_engine/field_normalizer.dart';
 
@@ -33,7 +34,7 @@ class GenericTransactionParser {
   final FieldNormalizer _fieldNormalizer;
 
   static final RegExp _amount = RegExp(
-    r'(?:INR|Rs\.?|₹)[.\s]*([\d,]+(?:\.\d{1,2})?)',
+    r'(?<currency>USD|US\$|INR|Rs\.?|₹|\$)[.\s]*(?<amount>[\d,]+(?:\.\d{1,2})?)',
     caseSensitive: false,
   );
   static final RegExp _account = RegExp(
@@ -44,7 +45,7 @@ class GenericTransactionParser {
     r'(?<![a-zA-Z0-9._%+-])([a-zA-Z0-9][a-zA-Z0-9._-]*@[a-zA-Z][a-zA-Z0-9-]+)(?![a-zA-Z0-9.-])',
   );
   static final RegExp _balance = RegExp(
-    r'(?:Avl(?:\.|bl)?\s*Bal|Available\s+Balance|(?:Clear|Current)\s+Balance|Bal\s+in\s+a/c(?:\s*[Xx*\d]{3,6})?|Balance|Bal)(?:\s+(?:is|of))?[:\s]*(?:INR|Rs\.?|₹)?\s*[\d,]+(?:\.\d{1,2})?',
+    r'(?:Avl(?:\.|bl)?\s*Bal|Available\s+Balance|(?:Clear|Current)\s+Balance|Bal\s+in\s+a/c(?:\s*[Xx*\d]{3,6})?|Balance|Bal)(?:\s+(?:is|of))?[:\s]*(?:USD|US\$|INR|Rs\.?|₹|\$)?\s*[\d,]+(?:\.\d{1,2})?',
     caseSensitive: false,
   );
   static final RegExp _ref = RegExp(
@@ -111,7 +112,9 @@ class GenericTransactionParser {
     }
 
     final amountMatch = _nearest(amounts, direction.index);
-    final amount = _parseAmount(amountMatch.group(1));
+    final amount = _parseAmount(amountMatch.namedGroup('amount'));
+    final currency =
+        SourceCurrency.fromToken(amountMatch.namedGroup('currency'));
     if (amount == null) {
       return (record: null, rejection: GenericParseRejection.noAmount);
     }
@@ -214,6 +217,8 @@ class GenericTransactionParser {
             amounts.length == 1 && merchant != null && merchant.isNotEmpty
                 ? AppConstants.genericHighParseConfidence
                 : AppConstants.genericLowParseConfidence,
+        currencyCode: currency?.code,
+        currencySymbol: currency?.symbol,
         evidence: evidence,
       ),
       rejection: null,
@@ -305,6 +310,6 @@ class GenericTransactionParser {
     final match = _balance.firstMatch(body);
     if (match == null) return null;
     final amount = _amount.firstMatch(match.group(0)!);
-    return amount == null ? null : _parseAmount(amount.group(1));
+    return amount == null ? null : _parseAmount(amount.namedGroup('amount'));
   }
 }

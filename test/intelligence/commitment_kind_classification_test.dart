@@ -17,7 +17,8 @@ void main() {
     await database.close();
   });
 
-  test('Classifies EMI, subscription, and bill commitment kinds accurately', () async {
+  test('Classifies EMI, subscription, and bill commitment kinds accurately',
+      () async {
     final now = DateTime.utc(2026, 7, 10);
     // EMI transactions
     for (var i = 0; i < 3; i++) {
@@ -26,6 +27,8 @@ void main() {
               id: 'emi_$i',
               ts: now.subtract(Duration(days: 30 * i)).millisecondsSinceEpoch,
               amount: 12500.0,
+              currencyCode: const Value('INR'),
+              currencySymbol: const Value('₹'),
               direction: 'debit',
               channel: 'upi',
               parseSource: 'template',
@@ -56,6 +59,8 @@ void main() {
               id: 'ambig_$i',
               ts: now.subtract(Duration(days: 30 * i)).millisecondsSinceEpoch,
               amount: 500.0,
+              currencyCode: const Value('INR'),
+              currencySymbol: const Value('₹'),
               direction: 'debit',
               channel: 'upi',
               parseSource: 'template',
@@ -69,7 +74,8 @@ void main() {
     }
 
     final detections = await detector.run(today: now);
-    final ambigDetection = detections.firstWhere((d) => d.label.contains('Unknown'));
+    final ambigDetection =
+        detections.firstWhere((d) => d.label.contains('Unknown'));
     expect(ambigDetection.kind, 'unclassified');
   });
 }

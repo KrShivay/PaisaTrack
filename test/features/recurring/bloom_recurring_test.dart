@@ -16,6 +16,8 @@ RecurringSery testSeries({
     merchantId: 'm_$id',
     label: label,
     expectedAmount: amount,
+    currencyCode: 'INR',
+    currencySymbol: '₹',
     tolerancePct: 0.05,
     period: 'monthly',
     periodDays: 30,
@@ -47,9 +49,7 @@ void main() {
         overrides: [
           recurringSeriesProvider.overrideWith(
             (ref) => Stream.value(
-              seriesList
-                  .map((r) => RecurringSeriesItem(series: r))
-                  .toList(),
+              seriesList.map((r) => RecurringSeriesItem(series: r)).toList(),
             ),
           ),
         ],
@@ -67,7 +67,7 @@ void main() {
       await pumpRecurring(tester, const []);
 
       expect(find.text('Recurring'), findsOneWidget);
-      expect(find.text('MONTHLY COMMITMENTS'), findsOneWidget);
+      expect(find.text('INR MONTHLY COMMITMENTS'), findsOneWidget);
       expect(find.text('No recurring payments detected yet'), findsOneWidget);
     });
 

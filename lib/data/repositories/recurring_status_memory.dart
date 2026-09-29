@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../db/database.dart';
+import '../models/source_currency.dart';
 
 /// Keeps user-controlled recurring statuses stable when a detector rebuild
 /// changes a series ID or temporarily cannot detect the series.
@@ -10,9 +11,19 @@ abstract final class RecurringStatusMemory {
   static bool isUserControlled(String status) =>
       status == 'paused' || status == 'cancelled' || status == 'muted';
 
-  static String identity(RecurringSery series) =>
-      '${series.merchantId}|${series.kind}|${series.period}|'
-      '${series.periodDays}|${series.expectedAmount.toStringAsFixed(0)}';
+  static String identity(RecurringSery series) {
+    final currency = SourceCurrency(
+      code: series.currencyCode,
+      symbol: series.currencySymbol,
+    );
+    final currencyIdentity =
+        series.currencyCode == null && series.currencySymbol == null
+            ? ''
+            : '${currency.bucketKey}|';
+    return '${series.merchantId}|${series.kind}|$currencyIdentity'
+        '${series.period}|${series.periodDays}|'
+        '${series.expectedAmount.toStringAsFixed(0)}';
+  }
 
   static Future<Map<String, String>> read(AppDatabase database) async {
     final row = await (database.select(database.modelMeta)

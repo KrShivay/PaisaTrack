@@ -19,6 +19,8 @@ void main() {
 
     expect(record.toJson(), {
       'amount': 449,
+      'currency_code': null,
+      'currency_symbol': null,
       'direction': 'debit',
       'channel': 'upi',
       'merchant_raw': 'AMZN*MKTPLC',
@@ -54,7 +56,8 @@ void main() {
     expect(reconstructed, equals(evidence));
   });
 
-  test('NormalizedTransactionRecord includes evidence in toJson when present', () {
+  test('NormalizedTransactionRecord includes evidence in toJson when present',
+      () {
     const evidenceList = [
       FieldEvidence(
         field: 'amount',

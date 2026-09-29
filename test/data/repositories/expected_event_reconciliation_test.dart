@@ -26,6 +26,8 @@ void main() {
       counterpartyId: 'billpay@upi',
       label: 'Electricity Bill',
       expectedAmountPaise: 450000,
+      currencyCode: 'INR',
+      currencySymbol: '₹',
       expectedDate: expectedDate,
       confidence: 0.95,
     );
@@ -36,6 +38,8 @@ void main() {
             id: 'txn_debit_1',
             ts: expectedDate.millisecondsSinceEpoch,
             amount: 4500.0,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: 'debit',
             channel: 'upi',
             counterpartyVpa: const Value(' BillPay@UPI '),
@@ -82,6 +86,64 @@ void main() {
     final event = (await repository.getExpectedEvents()).single;
     expect(event.state, 'expected');
     expect(event.fulfilledTxnId, isNull);
+  });
+
+  test('USD expectation never fulfils against a same-nominal INR debit',
+      () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      counterpartyId: 'billpay@upi',
+      label: 'Foreign bill',
+      expectedAmountPaise: 450000,
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+      expectedDate: expectedDate,
+      confidence: 0.95,
+    );
+    await _insertDebit(
+      database,
+      id: 'inr_debit',
+      ts: expectedDate,
+      amount: 4500,
+      counterpartyVpa: 'billpay@upi',
+    );
+
+    await repository.reconcileExpectedEvents(today: expectedDate);
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.currencyCode, 'USD');
+    expect(event.state, 'expected');
+    expect(event.fulfilledTxnId, isNull);
+  });
+
+  test('unknown legacy expectation matches only unknown legacy debit',
+      () async {
+    final expectedDate = DateTime.utc(2026, 7, 10);
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      counterpartyId: 'billpay@upi',
+      label: 'Legacy bill',
+      expectedAmountPaise: 450000,
+      expectedDate: expectedDate,
+      confidence: 0.95,
+    );
+    await _insertDebit(
+      database,
+      id: 'legacy_unknown_debit',
+      ts: expectedDate,
+      amount: 4500,
+      counterpartyVpa: 'billpay@upi',
+      currencyCode: null,
+      currencySymbol: null,
+    );
+
+    await repository.reconcileExpectedEvents(today: expectedDate);
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.currencyCode, isNull);
+    expect(event.state, 'fulfilled');
+    expect(event.fulfilledTxnId, 'legacy_unknown_debit');
   });
 
   test('ambiguous overlapping expectations do not share one debit', () async {
@@ -229,6 +291,8 @@ void main() {
       'counterpartyId': 'billpay@upi',
       'label': 'Electricity Bill',
       'expectedAmountPaise': 450000,
+      'currencyCode': 'INR',
+      'currencySymbol': '₹',
       'expectedDate': expectedDate,
       'confidence': 0.95,
     };
@@ -237,6 +301,8 @@ void main() {
       counterpartyId: event['counterpartyId']! as String,
       label: event['label']! as String,
       expectedAmountPaise: event['expectedAmountPaise']! as int,
+      currencyCode: event['currencyCode']! as String,
+      currencySymbol: event['currencySymbol']! as String,
       expectedDate: event['expectedDate']! as DateTime,
       confidence: event['confidence']! as double,
     );
@@ -253,6 +319,8 @@ void main() {
       counterpartyId: event['counterpartyId']! as String,
       label: event['label']! as String,
       expectedAmountPaise: event['expectedAmountPaise']! as int,
+      currencyCode: event['currencyCode']! as String,
+      currencySymbol: event['currencySymbol']! as String,
       expectedDate: event['expectedDate']! as DateTime,
       confidence: event['confidence']! as double,
     );
@@ -315,6 +383,8 @@ Future<void> _insertDebit(
   required String? counterpartyVpa,
   String status = 'confirmed',
   String lifecycleState = 'settled',
+  String? currencyCode = 'INR',
+  String? currencySymbol = '₹',
   bool isDeleted = false,
   String? duplicateOfTxnId,
 }) async {
@@ -323,6 +393,8 @@ Future<void> _insertDebit(
           id: id,
           ts: ts.millisecondsSinceEpoch,
           amount: amount,
+          currencyCode: Value(currencyCode),
+          currencySymbol: Value(currencySymbol),
           direction: 'debit',
           channel: 'upi',
           counterpartyVpa: Value(counterpartyVpa),

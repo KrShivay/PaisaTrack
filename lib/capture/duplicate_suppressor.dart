@@ -2,6 +2,7 @@ import '../core/constants.dart';
 import '../data/db/database.dart';
 import '../data/dedup/duplicate_match_rule.dart';
 import '../data/models/normalized_transaction_record.dart';
+import '../data/models/source_currency.dart';
 
 /// Detects when a newly parsed transaction is a cross-source echo of an
 /// already-stored one — e.g. a bank debit alert and a wallet/UPI app's own
@@ -37,6 +38,17 @@ class DuplicateSuppressor {
     Transaction existing,
   ) {
     if (existing.isDeleted || existing.duplicateOfTxnId != null) return false;
+    if (!SourceCurrency(
+      code: candidate.currencyCode,
+      symbol: candidate.currencySymbol,
+    ).sameBucket(
+      SourceCurrency(
+        code: existing.currencyCode,
+        symbol: existing.currencySymbol,
+      ),
+    )) {
+      return false;
+    }
 
     return DuplicateMatchRule(
       window: window,

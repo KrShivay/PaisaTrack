@@ -36,6 +36,8 @@ void main() {
     String? categoryId,
     required DateTime date,
     required double amount,
+    String? currencyCode,
+    String? currencySymbol,
     String direction = 'debit',
   }) {
     return database.into(database.transactions).insert(
@@ -43,6 +45,8 @@ void main() {
             id: id,
             ts: date.millisecondsSinceEpoch,
             amount: amount,
+            currencyCode: Value(currencyCode),
+            currencySymbol: Value(currencySymbol),
             direction: direction,
             channel: 'card',
             merchantId: Value(merchantId),
@@ -86,6 +90,43 @@ void main() {
     expect(rows.single.occurrences, 4);
     expect(rows.single.kind, 'subscription');
     expect(rows.single.status, 'active');
+  });
+
+  test('detects separate recurring series per currency bucket', () async {
+    await merchant('currency-service', 'Currency Service');
+    final dates = [
+      DateTime.utc(2026, 1, 1),
+      DateTime.utc(2026, 1, 31),
+      DateTime.utc(2026, 3, 2),
+    ];
+    for (var i = 0; i < dates.length; i++) {
+      await txn(
+        id: 'inr-$i',
+        merchantId: 'currency-service',
+        date: dates[i],
+        amount: 100,
+        currencyCode: 'INR',
+        currencySymbol: '₹',
+      );
+      await txn(
+        id: 'usd-$i',
+        merchantId: 'currency-service',
+        date: dates[i],
+        amount: 100,
+        currencyCode: 'USD',
+        currencySymbol: i == 1 ? null : r'$',
+      );
+    }
+
+    await RecurringDetector(database).run(today: DateTime.utc(2026, 4, 15));
+    final series = await database.select(database.recurringSeries).get();
+
+    expect(series, hasLength(2));
+    expect(series.map((row) => row.currencyCode).toSet(), {'INR', 'USD'});
+    expect(
+      series.where((row) => row.currencyCode == 'USD').single.occurrences,
+      3,
+    );
   });
 
   test('classifies EMI and rising last-three amounts', () async {

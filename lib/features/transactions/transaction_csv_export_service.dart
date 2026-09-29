@@ -27,7 +27,7 @@ class TransactionCsvExportService {
 
     // Header row.
     buffer.writeln(
-      'Date,Time,Merchant,Category,Amount,Direction,'
+      'Date,Time,Merchant,Category,Amount,Currency Code,Currency Symbol,Direction,'
       'Channel,Account,Status,Note,Reference',
     );
 
@@ -44,6 +44,8 @@ class TransactionCsvExportService {
           _escape(item.displayName),
           _escape(item.categoryName ?? ''),
           _escape(item.amount.toStringAsFixed(2)),
+          _escape(item.currencyCode ?? ''),
+          _escape(item.currencySymbol ?? ''),
           _escape(
             item.direction == TransactionDirection.debit ? 'Debit' : 'Credit',
           ),

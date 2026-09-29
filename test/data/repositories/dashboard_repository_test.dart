@@ -25,12 +25,16 @@ void main() {
     String? categoryId = 'food_dining',
     bool analyticsExcluded = false,
     String? ownedTransferId,
+    String? currencyCode = 'INR',
+    String? currencySymbol = '₹',
   }) {
     return database.into(database.transactions).insert(
           TransactionsCompanion.insert(
             id: id,
             ts: timestamp.millisecondsSinceEpoch,
             amount: amount,
+            currencyCode: Value(currencyCode),
+            currencySymbol: Value(currencySymbol),
             direction: direction,
             channel: 'upi',
             categoryId: Value(categoryId),
@@ -49,6 +53,27 @@ void main() {
   test('dashboard SQL aggregates preserve analytics inclusion semantics',
       () async {
     await insert('current_debit', DateTime(2026, 7, 10), 100);
+    await insert(
+      'foreign_debit',
+      DateTime(2026, 7, 10),
+      250,
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+    );
+    await insert(
+      'bare_dollar_debit',
+      DateTime(2026, 7, 10),
+      80,
+      currencyCode: null,
+      currencySymbol: r'$',
+    );
+    await insert(
+      'unknown_debit',
+      DateTime(2026, 7, 10),
+      33,
+      currencyCode: null,
+      currencySymbol: null,
+    );
     await insert(
       'current_credit',
       DateTime(2026, 7, 11),
@@ -100,6 +125,14 @@ void main() {
     // by category, not a flag, so it is not part of this figure.
     expect(snapshot.excludedDebitTotal, 1700);
     expect(snapshot.excludedDebitCount, 2);
+    final currencies = {
+      for (final aggregate in snapshot.currencyTotals)
+        '${aggregate.currencyCode ?? ''}|${aggregate.currencySymbol ?? ''}':
+            aggregate.debitTotal,
+    };
+    expect(currencies['USD|\$'], 250);
+    expect(currencies['|\$'], 80);
+    expect(currencies['|'], 33);
   });
 
   test('trend buckets honour the injected timezone offset', () async {

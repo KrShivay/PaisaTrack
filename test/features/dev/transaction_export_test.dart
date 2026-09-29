@@ -113,10 +113,10 @@ void main() {
     expect(
       csvStr,
       contains(
-        'Date,Merchant,Amount,Direction,Channel,Category,Account,Reference,Status',
+        'Date,Merchant,Amount,Currency Code,Currency Symbol,Direction,Channel,Category,Account,Reference,Status',
       ),
     );
-    expect(csvStr, contains('499.00,debit,upi'));
+    expect(csvStr, contains('499.00,,,debit,upi'));
     expect(csvStr, contains('223047328116'));
   });
 

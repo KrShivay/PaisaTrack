@@ -1,4 +1,5 @@
 import '../../data/models/normalized_transaction_record.dart';
+import '../../data/models/source_currency.dart';
 import 'template_registry.dart';
 
 /// Converts named regex captures from SMS templates into domain records.
@@ -19,6 +20,8 @@ class FieldNormalizer {
   }) {
     final amountGroup = _namedGroup(match, 'amount');
     final amount = parseAmount(amountGroup);
+    final currencyEvidence = _currencyEvidenceBeforeAmount(match, amountGroup);
+    final currency = currencyEvidence?.currency;
     final account = _namedGroup(match, 'account');
     final dateGroup = _namedGroup(match, 'date');
     final parsedTs = parseDate(
@@ -44,6 +47,7 @@ class FieldNormalizer {
         );
       }
     }
+    if (currencyEvidence != null) evidence.add(currencyEvidence.evidence);
 
     evidence.add(
       FieldEvidence(
@@ -104,7 +108,124 @@ class FieldNormalizer {
       parseConfidence: 0.97,
       templateId: template.id,
       templateProvenance: template.provenance.wireName,
+      currencyCode: currency?.code,
+      currencySymbol: currency?.symbol,
       evidence: evidence,
+    );
+  }
+
+  ({SourceCurrency currency, FieldEvidence evidence})?
+      _currencyEvidenceBeforeAmount(RegExpMatch match, String? amount) {
+    if (amount == null || amount.isEmpty) return null;
+    var start = match.input.indexOf(amount, match.start);
+    while (start >= 0 && start <= match.end) {
+      final prefixStart = start > 16 ? start - 16 : 0;
+      final prefix = match.input.substring(prefixStart, start);
+      final token = RegExp(
+        r'(?<![A-Za-z])(?:USD|US\$|INR|Rs\.?|₹|\$)\s*$',
+        caseSensitive: false,
+      ).firstMatch(prefix);
+      final tokenText = token?.group(0)?.trim();
+      final currency = SourceCurrency.fromToken(tokenText);
+      if (currency != null && token != null && tokenText != null) {
+        final tokenStart = prefixStart + token.start;
+        return (
+          currency: currency,
+          evidence: FieldEvidence(
+            field: 'currency',
+            start: tokenStart,
+            end: tokenStart + tokenText.length,
+            verbatim: tokenText,
+            extractor: 'template',
+          ),
+        );
+      }
+      final afterAmount = start + amount.length;
+      final suffix = _currencyTokenAfter(
+        match.input,
+        afterAmount,
+        match.end,
+      );
+      if (suffix != null) {
+        final currency = SourceCurrency.fromToken(suffix.verbatim);
+        if (currency != null) {
+          return (currency: currency, evidence: suffix);
+        }
+      }
+      start = match.input.indexOf(amount, start + 1);
+    }
+    return null;
+  }
+
+  /// Reads currency evidence immediately before an exact amount span.
+  /// The local window prevents later balance/limit tokens from labeling it.
+  SourceCurrency? currencyAtAmount(String body, int amountStart) {
+    final start = amountStart < 0
+        ? 0
+        : amountStart > body.length
+            ? body.length
+            : amountStart;
+    final prefix = body.substring(start > 16 ? start - 16 : 0, start);
+    final token = RegExp(
+      r'(?<![A-Za-z])(?:USD|US\$|INR|Rs\.?|₹|\$)\s*$',
+      caseSensitive: false,
+    ).firstMatch(prefix);
+    return SourceCurrency.fromToken(token?.group(0)?.trim());
+  }
+
+  ({SourceCurrency currency, FieldEvidence evidence})? currencyEvidenceAtAmount(
+    String body,
+    int amountStart,
+    int amountEnd,
+  ) {
+    final start = amountStart.clamp(0, body.length);
+    final end = amountEnd.clamp(start, body.length);
+    final prefixStart = start > 16 ? start - 16 : 0;
+    final prefix = body.substring(prefixStart, start);
+    final tokenBefore = RegExp(
+      r'(?<![A-Za-z])(?:USD|US\$|INR|Rs\.?|₹|\$)\s*$',
+      caseSensitive: false,
+    ).firstMatch(prefix);
+    final beforeText = tokenBefore?.group(0)?.trim();
+    final beforeCurrency = SourceCurrency.fromToken(beforeText);
+    if (tokenBefore != null && beforeText != null && beforeCurrency != null) {
+      final tokenStart = prefixStart + tokenBefore.start;
+      return (
+        currency: beforeCurrency,
+        evidence: FieldEvidence(
+          field: 'currency',
+          start: tokenStart,
+          end: tokenStart + beforeText.length,
+          verbatim: beforeText,
+          extractor: 'template',
+        ),
+      );
+    }
+    final suffix = _currencyTokenAfter(body, end, body.length);
+    if (suffix == null) return null;
+    final afterCurrency = SourceCurrency.fromToken(suffix.verbatim);
+    return afterCurrency == null
+        ? null
+        : (currency: afterCurrency, evidence: suffix);
+  }
+
+  FieldEvidence? _currencyTokenAfter(String body, int amountEnd, int limit) {
+    final suffixEnd = (amountEnd + 16).clamp(amountEnd, limit);
+    final suffix = body.substring(amountEnd, suffixEnd);
+    final token = RegExp(
+      r'^\s*(USD|US\$|INR|Rs\.?|₹|\$)(?=\s|$|[.,])',
+      caseSensitive: false,
+    ).firstMatch(suffix);
+    final tokenText = token?.group(1);
+    if (token == null || tokenText == null) return null;
+    final leadingWhitespace = token.group(0)!.length - tokenText.length;
+    final tokenStart = amountEnd + leadingWhitespace;
+    return FieldEvidence(
+      field: 'currency',
+      start: tokenStart,
+      end: tokenStart + tokenText.length,
+      verbatim: tokenText,
+      extractor: 'template',
     );
   }
 
@@ -127,7 +248,10 @@ class FieldNormalizer {
     }
 
     final normalized = value
-        .replaceAll(RegExp(r'(?:rs\.?|inr|₹)', caseSensitive: false), '')
+        .replaceAll(
+          RegExp(r'(?:rs\.?|inr|usd|us\$|₹|\$)', caseSensitive: false),
+          '',
+        )
         .replaceAll(',', '')
         .trim();
     if (normalized.isEmpty) {

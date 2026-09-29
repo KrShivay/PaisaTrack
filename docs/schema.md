@@ -5,7 +5,7 @@ The executable source of truth is the Drift schema under
 
 ## Current schema
 
-- `transactions`: normalized rows, source evidence, status, soft deletion,
+- `transactions`: normalized rows, source-currency code/symbol evidence, status, soft deletion,
   duplicate links, payment-source links, owned-transfer links, and analytics
   exclusion state.
 - `raw_sms`: retained source messages and processing state.
@@ -78,6 +78,13 @@ Schema v12 adds `expected_events` (id, source, origin_sms_id, series_id, counter
 
 Schema v13 adds `feature_flags` (key primary key, value, updated_at) table (T-143a) to store dynamic behavioral thresholds and flags with `AppConstants` acting as static fallbacks. Regression fixture:
 `test/data/db/app_database_v13_migration_test.dart`.
+
+Schema v18 adds nullable `currency_code` and `currency_symbol` columns to
+`transactions`, `recurring_series`, and `expected_events`. Existing rows remain
+unknown unless source evidence is available; a bare `$` retains its symbol
+with no inferred ISO code. Currency groups are never implicitly converted or
+summed together. Reminder reconciliation requires the same source-currency
+bucket, including unknown-to-unknown matches for legacy rows.
 
 Schema v15 adds `payee_evidence` for T-117. It stores one derived row per
 non-empty merchant/VPA evidence field and indexes transaction and normalized

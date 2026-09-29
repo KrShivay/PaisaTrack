@@ -256,6 +256,8 @@ void main() {
           id: 'inset_activity_$index',
           ts: now.subtract(Duration(days: index)),
           amount: 100.0 + index,
+          currencyCode: 'INR',
+          currencySymbol: '₹',
           direction: TransactionDirection.debit,
           displayName:
               index == 29 ? 'Final Activity inset fixture' : 'Activity $index',

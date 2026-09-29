@@ -65,7 +65,8 @@ class BurnRateForecaster {
                   t.isNotTransaction.equals(false) &
                   t.duplicateOfTxnId.isNull() &
                   t.lifecycleState.equals('settled') &
-                  t.direction.equals('debit'),
+                  t.direction.equals('debit') &
+                  t.currencyCode.equals('INR'),
             ))
           .get();
 

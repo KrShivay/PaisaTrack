@@ -44,6 +44,8 @@ class TransactionListItem {
     required this.id,
     required this.ts,
     required this.amount,
+    this.currencyCode,
+    this.currencySymbol,
     required this.direction,
     required this.displayName,
     required this.categoryName,
@@ -67,6 +69,8 @@ class TransactionListItem {
   final String id;
   final DateTime ts;
   final double amount;
+  final String? currencyCode;
+  final String? currencySymbol;
   final TransactionDirection direction;
   final String displayName;
   final String? categoryName;
@@ -131,6 +135,8 @@ class TransactionReviewItem {
     required this.id,
     required this.ts,
     required this.amount,
+    this.currencyCode,
+    this.currencySymbol,
     required this.direction,
     required this.displayName,
     required this.categoryName,
@@ -145,6 +151,8 @@ class TransactionReviewItem {
   final String id;
   final DateTime ts;
   final double amount;
+  final String? currencyCode;
+  final String? currencySymbol;
   final TransactionDirection direction;
   final String displayName;
   final String? categoryName;
@@ -291,7 +299,7 @@ class TransactionRepository {
           '''
 SELECT
   COUNT(*) AS item_count,
-  COALESCE(SUM(t.amount), 0.0) AS total_amount,
+  COALESCE(SUM(CASE WHEN t.currency_code = 'INR' THEN t.amount ELSE 0 END), 0.0) AS total_amount,
   COUNT(DISTINCT COALESCE(
     t.merchant_id,
     t.counterparty_vpa,
@@ -314,6 +322,7 @@ SELECT
       AND highest.is_deleted = 0
       AND highest.is_not_transaction = 0
       AND highest.duplicate_of_txn_id IS NULL
+      AND highest.currency_code = 'INR'
     ORDER BY highest.amount DESC
     LIMIT 1
   ), 'Unknown transaction') AS highest_impact_label
@@ -875,6 +884,8 @@ WHERE t.status = 'needs_review'
             id: id,
             ts: draft.ts.toUtc().millisecondsSinceEpoch,
             amount: draft.amount,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
             direction: draft.direction.wireName,
             channel: draft.channel.wireName,
             categoryId: Value(draft.categoryId),
@@ -932,6 +943,8 @@ WHERE t.status = 'needs_review'
       id: txn.id,
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
       amount: txn.amount,
+      currencyCode: txn.currencyCode,
+      currencySymbol: txn.currencySymbol,
       direction: _directionFromWireName(txn.direction),
       // Presentation-time fallback (merchant -> VPA -> description); the
       // write path keeps the signals independent (ADR 0003). Description
@@ -972,6 +985,8 @@ WHERE t.status = 'needs_review'
       id: txn.id,
       ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
       amount: txn.amount,
+      currencyCode: txn.currencyCode,
+      currencySymbol: txn.currencySymbol,
       direction: _directionFromWireName(txn.direction),
       displayName: merchant?.userLabel ??
           merchant?.canonicalName ??

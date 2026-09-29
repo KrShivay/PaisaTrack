@@ -1242,6 +1242,18 @@ class $ExpectedEventsTable extends ExpectedEvents
   late final GeneratedColumn<int> amountHighPaise = GeneratedColumn<int>(
       'amount_high_paise', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _currencyCodeMeta =
+      const VerificationMeta('currencyCode');
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+      'currency_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _currencySymbolMeta =
+      const VerificationMeta('currencySymbol');
+  @override
+  late final GeneratedColumn<String> currencySymbol = GeneratedColumn<String>(
+      'currency_symbol', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _expectedDateMeta =
       const VerificationMeta('expectedDate');
   @override
@@ -1296,6 +1308,8 @@ class $ExpectedEventsTable extends ExpectedEvents
         expectedAmountPaise,
         amountLowPaise,
         amountHighPaise,
+        currencyCode,
+        currencySymbol,
         expectedDate,
         dateWindowDays,
         cadence,
@@ -1366,6 +1380,18 @@ class $ExpectedEventsTable extends ExpectedEvents
           _amountHighPaiseMeta,
           amountHighPaise.isAcceptableOrUnknown(
               data['amount_high_paise']!, _amountHighPaiseMeta));
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+          _currencyCodeMeta,
+          currencyCode.isAcceptableOrUnknown(
+              data['currency_code']!, _currencyCodeMeta));
+    }
+    if (data.containsKey('currency_symbol')) {
+      context.handle(
+          _currencySymbolMeta,
+          currencySymbol.isAcceptableOrUnknown(
+              data['currency_symbol']!, _currencySymbolMeta));
     }
     if (data.containsKey('expected_date')) {
       context.handle(
@@ -1438,6 +1464,10 @@ class $ExpectedEventsTable extends ExpectedEvents
           .read(DriftSqlType.int, data['${effectivePrefix}amount_low_paise']),
       amountHighPaise: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}amount_high_paise']),
+      currencyCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
+      currencySymbol: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_symbol']),
       expectedDate: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}expected_date'])!,
       dateWindowDays: attachedDatabase.typeMapping
@@ -1471,6 +1501,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
   final int expectedAmountPaise;
   final int? amountLowPaise;
   final int? amountHighPaise;
+  final String? currencyCode;
+  final String? currencySymbol;
   final DateTime expectedDate;
   final int dateWindowDays;
   final String? cadence;
@@ -1488,6 +1520,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
       required this.expectedAmountPaise,
       this.amountLowPaise,
       this.amountHighPaise,
+      this.currencyCode,
+      this.currencySymbol,
       required this.expectedDate,
       required this.dateWindowDays,
       this.cadence,
@@ -1516,6 +1550,12 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
     }
     if (!nullToAbsent || amountHighPaise != null) {
       map['amount_high_paise'] = Variable<int>(amountHighPaise);
+    }
+    if (!nullToAbsent || currencyCode != null) {
+      map['currency_code'] = Variable<String>(currencyCode);
+    }
+    if (!nullToAbsent || currencySymbol != null) {
+      map['currency_symbol'] = Variable<String>(currencySymbol);
     }
     map['expected_date'] = Variable<DateTime>(expectedDate);
     map['date_window_days'] = Variable<int>(dateWindowDays);
@@ -1552,6 +1592,12 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
       amountHighPaise: amountHighPaise == null && nullToAbsent
           ? const Value.absent()
           : Value(amountHighPaise),
+      currencyCode: currencyCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencyCode),
+      currencySymbol: currencySymbol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencySymbol),
       expectedDate: Value(expectedDate),
       dateWindowDays: Value(dateWindowDays),
       cadence: cadence == null && nullToAbsent
@@ -1580,6 +1626,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
           serializer.fromJson<int>(json['expectedAmountPaise']),
       amountLowPaise: serializer.fromJson<int?>(json['amountLowPaise']),
       amountHighPaise: serializer.fromJson<int?>(json['amountHighPaise']),
+      currencyCode: serializer.fromJson<String?>(json['currencyCode']),
+      currencySymbol: serializer.fromJson<String?>(json['currencySymbol']),
       expectedDate: serializer.fromJson<DateTime>(json['expectedDate']),
       dateWindowDays: serializer.fromJson<int>(json['dateWindowDays']),
       cadence: serializer.fromJson<String?>(json['cadence']),
@@ -1602,6 +1650,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
       'expectedAmountPaise': serializer.toJson<int>(expectedAmountPaise),
       'amountLowPaise': serializer.toJson<int?>(amountLowPaise),
       'amountHighPaise': serializer.toJson<int?>(amountHighPaise),
+      'currencyCode': serializer.toJson<String?>(currencyCode),
+      'currencySymbol': serializer.toJson<String?>(currencySymbol),
       'expectedDate': serializer.toJson<DateTime>(expectedDate),
       'dateWindowDays': serializer.toJson<int>(dateWindowDays),
       'cadence': serializer.toJson<String?>(cadence),
@@ -1622,6 +1672,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
           int? expectedAmountPaise,
           Value<int?> amountLowPaise = const Value.absent(),
           Value<int?> amountHighPaise = const Value.absent(),
+          Value<String?> currencyCode = const Value.absent(),
+          Value<String?> currencySymbol = const Value.absent(),
           DateTime? expectedDate,
           int? dateWindowDays,
           Value<String?> cadence = const Value.absent(),
@@ -1643,6 +1695,10 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
         amountHighPaise: amountHighPaise.present
             ? amountHighPaise.value
             : this.amountHighPaise,
+        currencyCode:
+            currencyCode.present ? currencyCode.value : this.currencyCode,
+        currencySymbol:
+            currencySymbol.present ? currencySymbol.value : this.currencySymbol,
         expectedDate: expectedDate ?? this.expectedDate,
         dateWindowDays: dateWindowDays ?? this.dateWindowDays,
         cadence: cadence.present ? cadence.value : this.cadence,
@@ -1664,6 +1720,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
           ..write('expectedAmountPaise: $expectedAmountPaise, ')
           ..write('amountLowPaise: $amountLowPaise, ')
           ..write('amountHighPaise: $amountHighPaise, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('currencySymbol: $currencySymbol, ')
           ..write('expectedDate: $expectedDate, ')
           ..write('dateWindowDays: $dateWindowDays, ')
           ..write('cadence: $cadence, ')
@@ -1686,6 +1744,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
       expectedAmountPaise,
       amountLowPaise,
       amountHighPaise,
+      currencyCode,
+      currencySymbol,
       expectedDate,
       dateWindowDays,
       cadence,
@@ -1706,6 +1766,8 @@ class ExpectedEvent extends DataClass implements Insertable<ExpectedEvent> {
           other.expectedAmountPaise == this.expectedAmountPaise &&
           other.amountLowPaise == this.amountLowPaise &&
           other.amountHighPaise == this.amountHighPaise &&
+          other.currencyCode == this.currencyCode &&
+          other.currencySymbol == this.currencySymbol &&
           other.expectedDate == this.expectedDate &&
           other.dateWindowDays == this.dateWindowDays &&
           other.cadence == this.cadence &&
@@ -1725,6 +1787,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
   final Value<int> expectedAmountPaise;
   final Value<int?> amountLowPaise;
   final Value<int?> amountHighPaise;
+  final Value<String?> currencyCode;
+  final Value<String?> currencySymbol;
   final Value<DateTime> expectedDate;
   final Value<int> dateWindowDays;
   final Value<String?> cadence;
@@ -1743,6 +1807,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
     this.expectedAmountPaise = const Value.absent(),
     this.amountLowPaise = const Value.absent(),
     this.amountHighPaise = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.currencySymbol = const Value.absent(),
     this.expectedDate = const Value.absent(),
     this.dateWindowDays = const Value.absent(),
     this.cadence = const Value.absent(),
@@ -1762,6 +1828,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
     required int expectedAmountPaise,
     this.amountLowPaise = const Value.absent(),
     this.amountHighPaise = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.currencySymbol = const Value.absent(),
     required DateTime expectedDate,
     this.dateWindowDays = const Value.absent(),
     this.cadence = const Value.absent(),
@@ -1788,6 +1856,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
     Expression<int>? expectedAmountPaise,
     Expression<int>? amountLowPaise,
     Expression<int>? amountHighPaise,
+    Expression<String>? currencyCode,
+    Expression<String>? currencySymbol,
     Expression<DateTime>? expectedDate,
     Expression<int>? dateWindowDays,
     Expression<String>? cadence,
@@ -1808,6 +1878,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
         'expected_amount_paise': expectedAmountPaise,
       if (amountLowPaise != null) 'amount_low_paise': amountLowPaise,
       if (amountHighPaise != null) 'amount_high_paise': amountHighPaise,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (currencySymbol != null) 'currency_symbol': currencySymbol,
       if (expectedDate != null) 'expected_date': expectedDate,
       if (dateWindowDays != null) 'date_window_days': dateWindowDays,
       if (cadence != null) 'cadence': cadence,
@@ -1829,6 +1901,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
       Value<int>? expectedAmountPaise,
       Value<int?>? amountLowPaise,
       Value<int?>? amountHighPaise,
+      Value<String?>? currencyCode,
+      Value<String?>? currencySymbol,
       Value<DateTime>? expectedDate,
       Value<int>? dateWindowDays,
       Value<String?>? cadence,
@@ -1847,6 +1921,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
       expectedAmountPaise: expectedAmountPaise ?? this.expectedAmountPaise,
       amountLowPaise: amountLowPaise ?? this.amountLowPaise,
       amountHighPaise: amountHighPaise ?? this.amountHighPaise,
+      currencyCode: currencyCode ?? this.currencyCode,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
       expectedDate: expectedDate ?? this.expectedDate,
       dateWindowDays: dateWindowDays ?? this.dateWindowDays,
       cadence: cadence ?? this.cadence,
@@ -1888,6 +1964,12 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
     if (amountHighPaise.present) {
       map['amount_high_paise'] = Variable<int>(amountHighPaise.value);
     }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (currencySymbol.present) {
+      map['currency_symbol'] = Variable<String>(currencySymbol.value);
+    }
     if (expectedDate.present) {
       map['expected_date'] = Variable<DateTime>(expectedDate.value);
     }
@@ -1927,6 +2009,8 @@ class ExpectedEventsCompanion extends UpdateCompanion<ExpectedEvent> {
           ..write('expectedAmountPaise: $expectedAmountPaise, ')
           ..write('amountLowPaise: $amountLowPaise, ')
           ..write('amountHighPaise: $amountHighPaise, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('currencySymbol: $currencySymbol, ')
           ..write('expectedDate: $expectedDate, ')
           ..write('dateWindowDays: $dateWindowDays, ')
           ..write('cadence: $cadence, ')
@@ -3535,6 +3619,18 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<double> amount = GeneratedColumn<double>(
       'amount', aliasedName, false,
       type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _currencyCodeMeta =
+      const VerificationMeta('currencyCode');
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+      'currency_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _currencySymbolMeta =
+      const VerificationMeta('currencySymbol');
+  @override
+  late final GeneratedColumn<String> currencySymbol = GeneratedColumn<String>(
+      'currency_symbol', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _directionMeta =
       const VerificationMeta('direction');
   @override
@@ -3722,6 +3818,8 @@ class $TransactionsTable extends Transactions
         id,
         ts,
         amount,
+        currencyCode,
+        currencySymbol,
         direction,
         channel,
         accountHint,
@@ -3774,6 +3872,18 @@ class $TransactionsTable extends Transactions
           amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
     } else if (isInserting) {
       context.missing(_amountMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+          _currencyCodeMeta,
+          currencyCode.isAcceptableOrUnknown(
+              data['currency_code']!, _currencyCodeMeta));
+    }
+    if (data.containsKey('currency_symbol')) {
+      context.handle(
+          _currencySymbolMeta,
+          currencySymbol.isAcceptableOrUnknown(
+              data['currency_symbol']!, _currencySymbolMeta));
     }
     if (data.containsKey('direction')) {
       context.handle(_directionMeta,
@@ -3944,6 +4054,10 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.int, data['${effectivePrefix}ts'])!,
       amount: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}amount'])!,
+      currencyCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
+      currencySymbol: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_symbol']),
       direction: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}direction'])!,
       channel: attachedDatabase.typeMapping
@@ -4009,6 +4123,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String id;
   final int ts;
   final double amount;
+  final String? currencyCode;
+  final String? currencySymbol;
   final String direction;
   final String channel;
   final String? accountHint;
@@ -4039,6 +4155,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       {required this.id,
       required this.ts,
       required this.amount,
+      this.currencyCode,
+      this.currencySymbol,
       required this.direction,
       required this.channel,
       this.accountHint,
@@ -4071,6 +4189,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['id'] = Variable<String>(id);
     map['ts'] = Variable<int>(ts);
     map['amount'] = Variable<double>(amount);
+    if (!nullToAbsent || currencyCode != null) {
+      map['currency_code'] = Variable<String>(currencyCode);
+    }
+    if (!nullToAbsent || currencySymbol != null) {
+      map['currency_symbol'] = Variable<String>(currencySymbol);
+    }
     map['direction'] = Variable<String>(direction);
     map['channel'] = Variable<String>(channel);
     if (!nullToAbsent || accountHint != null) {
@@ -4135,6 +4259,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       id: Value(id),
       ts: Value(ts),
       amount: Value(amount),
+      currencyCode: currencyCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencyCode),
+      currencySymbol: currencySymbol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencySymbol),
       direction: Value(direction),
       channel: Value(channel),
       accountHint: accountHint == null && nullToAbsent
@@ -4199,6 +4329,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       id: serializer.fromJson<String>(json['id']),
       ts: serializer.fromJson<int>(json['ts']),
       amount: serializer.fromJson<double>(json['amount']),
+      currencyCode: serializer.fromJson<String?>(json['currencyCode']),
+      currencySymbol: serializer.fromJson<String?>(json['currencySymbol']),
       direction: serializer.fromJson<String>(json['direction']),
       channel: serializer.fromJson<String>(json['channel']),
       accountHint: serializer.fromJson<String?>(json['accountHint']),
@@ -4235,6 +4367,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'id': serializer.toJson<String>(id),
       'ts': serializer.toJson<int>(ts),
       'amount': serializer.toJson<double>(amount),
+      'currencyCode': serializer.toJson<String?>(currencyCode),
+      'currencySymbol': serializer.toJson<String?>(currencySymbol),
       'direction': serializer.toJson<String>(direction),
       'channel': serializer.toJson<String>(channel),
       'accountHint': serializer.toJson<String?>(accountHint),
@@ -4268,6 +4402,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           {String? id,
           int? ts,
           double? amount,
+          Value<String?> currencyCode = const Value.absent(),
+          Value<String?> currencySymbol = const Value.absent(),
           String? direction,
           String? channel,
           Value<String?> accountHint = const Value.absent(),
@@ -4298,6 +4434,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         id: id ?? this.id,
         ts: ts ?? this.ts,
         amount: amount ?? this.amount,
+        currencyCode:
+            currencyCode.present ? currencyCode.value : this.currencyCode,
+        currencySymbol:
+            currencySymbol.present ? currencySymbol.value : this.currencySymbol,
         direction: direction ?? this.direction,
         channel: channel ?? this.channel,
         accountHint: accountHint.present ? accountHint.value : this.accountHint,
@@ -4343,6 +4483,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('id: $id, ')
           ..write('ts: $ts, ')
           ..write('amount: $amount, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('currencySymbol: $currencySymbol, ')
           ..write('direction: $direction, ')
           ..write('channel: $channel, ')
           ..write('accountHint: $accountHint, ')
@@ -4378,6 +4520,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         id,
         ts,
         amount,
+        currencyCode,
+        currencySymbol,
         direction,
         channel,
         accountHint,
@@ -4412,6 +4556,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.id == this.id &&
           other.ts == this.ts &&
           other.amount == this.amount &&
+          other.currencyCode == this.currencyCode &&
+          other.currencySymbol == this.currencySymbol &&
           other.direction == this.direction &&
           other.channel == this.channel &&
           other.accountHint == this.accountHint &&
@@ -4444,6 +4590,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> id;
   final Value<int> ts;
   final Value<double> amount;
+  final Value<String?> currencyCode;
+  final Value<String?> currencySymbol;
   final Value<String> direction;
   final Value<String> channel;
   final Value<String?> accountHint;
@@ -4475,6 +4623,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.id = const Value.absent(),
     this.ts = const Value.absent(),
     this.amount = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.currencySymbol = const Value.absent(),
     this.direction = const Value.absent(),
     this.channel = const Value.absent(),
     this.accountHint = const Value.absent(),
@@ -4507,6 +4657,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String id,
     required int ts,
     required double amount,
+    this.currencyCode = const Value.absent(),
+    this.currencySymbol = const Value.absent(),
     required String direction,
     required String channel,
     this.accountHint = const Value.absent(),
@@ -4548,6 +4700,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? id,
     Expression<int>? ts,
     Expression<double>? amount,
+    Expression<String>? currencyCode,
+    Expression<String>? currencySymbol,
     Expression<String>? direction,
     Expression<String>? channel,
     Expression<String>? accountHint,
@@ -4580,6 +4734,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (id != null) 'id': id,
       if (ts != null) 'ts': ts,
       if (amount != null) 'amount': amount,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (currencySymbol != null) 'currency_symbol': currencySymbol,
       if (direction != null) 'direction': direction,
       if (channel != null) 'channel': channel,
       if (accountHint != null) 'account_hint': accountHint,
@@ -4615,6 +4771,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       {Value<String>? id,
       Value<int>? ts,
       Value<double>? amount,
+      Value<String?>? currencyCode,
+      Value<String?>? currencySymbol,
       Value<String>? direction,
       Value<String>? channel,
       Value<String?>? accountHint,
@@ -4646,6 +4804,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       id: id ?? this.id,
       ts: ts ?? this.ts,
       amount: amount ?? this.amount,
+      currencyCode: currencyCode ?? this.currencyCode,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
       direction: direction ?? this.direction,
       channel: channel ?? this.channel,
       accountHint: accountHint ?? this.accountHint,
@@ -4687,6 +4847,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     }
     if (amount.present) {
       map['amount'] = Variable<double>(amount.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (currencySymbol.present) {
+      map['currency_symbol'] = Variable<String>(currencySymbol.value);
     }
     if (direction.present) {
       map['direction'] = Variable<String>(direction.value);
@@ -4778,6 +4944,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('id: $id, ')
           ..write('ts: $ts, ')
           ..write('amount: $amount, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('currencySymbol: $currencySymbol, ')
           ..write('direction: $direction, ')
           ..write('channel: $channel, ')
           ..write('accountHint: $accountHint, ')
@@ -6792,6 +6960,18 @@ class $RecurringSeriesTable extends RecurringSeries
   late final GeneratedColumn<double> expectedAmount = GeneratedColumn<double>(
       'expected_amount', aliasedName, false,
       type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _currencyCodeMeta =
+      const VerificationMeta('currencyCode');
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+      'currency_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _currencySymbolMeta =
+      const VerificationMeta('currencySymbol');
+  @override
+  late final GeneratedColumn<String> currencySymbol = GeneratedColumn<String>(
+      'currency_symbol', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _tolerancePctMeta =
       const VerificationMeta('tolerancePct');
   @override
@@ -6849,6 +7029,8 @@ class $RecurringSeriesTable extends RecurringSeries
         merchantId,
         label,
         expectedAmount,
+        currencyCode,
+        currencySymbol,
         tolerancePct,
         period,
         periodDays,
@@ -6895,6 +7077,18 @@ class $RecurringSeriesTable extends RecurringSeries
               data['expected_amount']!, _expectedAmountMeta));
     } else if (isInserting) {
       context.missing(_expectedAmountMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+          _currencyCodeMeta,
+          currencyCode.isAcceptableOrUnknown(
+              data['currency_code']!, _currencyCodeMeta));
+    }
+    if (data.containsKey('currency_symbol')) {
+      context.handle(
+          _currencySymbolMeta,
+          currencySymbol.isAcceptableOrUnknown(
+              data['currency_symbol']!, _currencySymbolMeta));
     }
     if (data.containsKey('tolerance_pct')) {
       context.handle(
@@ -6979,6 +7173,10 @@ class $RecurringSeriesTable extends RecurringSeries
           .read(DriftSqlType.string, data['${effectivePrefix}label'])!,
       expectedAmount: attachedDatabase.typeMapping.read(
           DriftSqlType.double, data['${effectivePrefix}expected_amount'])!,
+      currencyCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
+      currencySymbol: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency_symbol']),
       tolerancePct: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}tolerance_pct'])!,
       period: attachedDatabase.typeMapping
@@ -7011,6 +7209,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
   final String merchantId;
   final String label;
   final double expectedAmount;
+  final String? currencyCode;
+  final String? currencySymbol;
   final double tolerancePct;
   final String period;
   final int periodDays;
@@ -7025,6 +7225,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
       required this.merchantId,
       required this.label,
       required this.expectedAmount,
+      this.currencyCode,
+      this.currencySymbol,
       required this.tolerancePct,
       required this.period,
       required this.periodDays,
@@ -7041,6 +7243,12 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
     map['merchant_id'] = Variable<String>(merchantId);
     map['label'] = Variable<String>(label);
     map['expected_amount'] = Variable<double>(expectedAmount);
+    if (!nullToAbsent || currencyCode != null) {
+      map['currency_code'] = Variable<String>(currencyCode);
+    }
+    if (!nullToAbsent || currencySymbol != null) {
+      map['currency_symbol'] = Variable<String>(currencySymbol);
+    }
     map['tolerance_pct'] = Variable<double>(tolerancePct);
     map['period'] = Variable<String>(period);
     map['period_days'] = Variable<int>(periodDays);
@@ -7059,6 +7267,12 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
       merchantId: Value(merchantId),
       label: Value(label),
       expectedAmount: Value(expectedAmount),
+      currencyCode: currencyCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencyCode),
+      currencySymbol: currencySymbol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currencySymbol),
       tolerancePct: Value(tolerancePct),
       period: Value(period),
       periodDays: Value(periodDays),
@@ -7079,6 +7293,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
       merchantId: serializer.fromJson<String>(json['merchantId']),
       label: serializer.fromJson<String>(json['label']),
       expectedAmount: serializer.fromJson<double>(json['expectedAmount']),
+      currencyCode: serializer.fromJson<String?>(json['currencyCode']),
+      currencySymbol: serializer.fromJson<String?>(json['currencySymbol']),
       tolerancePct: serializer.fromJson<double>(json['tolerancePct']),
       period: serializer.fromJson<String>(json['period']),
       periodDays: serializer.fromJson<int>(json['periodDays']),
@@ -7098,6 +7314,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
       'merchantId': serializer.toJson<String>(merchantId),
       'label': serializer.toJson<String>(label),
       'expectedAmount': serializer.toJson<double>(expectedAmount),
+      'currencyCode': serializer.toJson<String?>(currencyCode),
+      'currencySymbol': serializer.toJson<String?>(currencySymbol),
       'tolerancePct': serializer.toJson<double>(tolerancePct),
       'period': serializer.toJson<String>(period),
       'periodDays': serializer.toJson<int>(periodDays),
@@ -7115,6 +7333,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
           String? merchantId,
           String? label,
           double? expectedAmount,
+          Value<String?> currencyCode = const Value.absent(),
+          Value<String?> currencySymbol = const Value.absent(),
           double? tolerancePct,
           String? period,
           int? periodDays,
@@ -7129,6 +7349,10 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
         merchantId: merchantId ?? this.merchantId,
         label: label ?? this.label,
         expectedAmount: expectedAmount ?? this.expectedAmount,
+        currencyCode:
+            currencyCode.present ? currencyCode.value : this.currencyCode,
+        currencySymbol:
+            currencySymbol.present ? currencySymbol.value : this.currencySymbol,
         tolerancePct: tolerancePct ?? this.tolerancePct,
         period: period ?? this.period,
         periodDays: periodDays ?? this.periodDays,
@@ -7146,6 +7370,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
           ..write('merchantId: $merchantId, ')
           ..write('label: $label, ')
           ..write('expectedAmount: $expectedAmount, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('currencySymbol: $currencySymbol, ')
           ..write('tolerancePct: $tolerancePct, ')
           ..write('period: $period, ')
           ..write('periodDays: $periodDays, ')
@@ -7165,6 +7391,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
       merchantId,
       label,
       expectedAmount,
+      currencyCode,
+      currencySymbol,
       tolerancePct,
       period,
       periodDays,
@@ -7182,6 +7410,8 @@ class RecurringSery extends DataClass implements Insertable<RecurringSery> {
           other.merchantId == this.merchantId &&
           other.label == this.label &&
           other.expectedAmount == this.expectedAmount &&
+          other.currencyCode == this.currencyCode &&
+          other.currencySymbol == this.currencySymbol &&
           other.tolerancePct == this.tolerancePct &&
           other.period == this.period &&
           other.periodDays == this.periodDays &&
@@ -7198,6 +7428,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
   final Value<String> merchantId;
   final Value<String> label;
   final Value<double> expectedAmount;
+  final Value<String?> currencyCode;
+  final Value<String?> currencySymbol;
   final Value<double> tolerancePct;
   final Value<String> period;
   final Value<int> periodDays;
@@ -7213,6 +7445,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
     this.merchantId = const Value.absent(),
     this.label = const Value.absent(),
     this.expectedAmount = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.currencySymbol = const Value.absent(),
     this.tolerancePct = const Value.absent(),
     this.period = const Value.absent(),
     this.periodDays = const Value.absent(),
@@ -7229,6 +7463,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
     required String merchantId,
     required String label,
     required double expectedAmount,
+    this.currencyCode = const Value.absent(),
+    this.currencySymbol = const Value.absent(),
     required double tolerancePct,
     required String period,
     required int periodDays,
@@ -7257,6 +7493,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
     Expression<String>? merchantId,
     Expression<String>? label,
     Expression<double>? expectedAmount,
+    Expression<String>? currencyCode,
+    Expression<String>? currencySymbol,
     Expression<double>? tolerancePct,
     Expression<String>? period,
     Expression<int>? periodDays,
@@ -7273,6 +7511,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
       if (merchantId != null) 'merchant_id': merchantId,
       if (label != null) 'label': label,
       if (expectedAmount != null) 'expected_amount': expectedAmount,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (currencySymbol != null) 'currency_symbol': currencySymbol,
       if (tolerancePct != null) 'tolerance_pct': tolerancePct,
       if (period != null) 'period': period,
       if (periodDays != null) 'period_days': periodDays,
@@ -7291,6 +7531,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
       Value<String>? merchantId,
       Value<String>? label,
       Value<double>? expectedAmount,
+      Value<String?>? currencyCode,
+      Value<String?>? currencySymbol,
       Value<double>? tolerancePct,
       Value<String>? period,
       Value<int>? periodDays,
@@ -7306,6 +7548,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
       merchantId: merchantId ?? this.merchantId,
       label: label ?? this.label,
       expectedAmount: expectedAmount ?? this.expectedAmount,
+      currencyCode: currencyCode ?? this.currencyCode,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
       tolerancePct: tolerancePct ?? this.tolerancePct,
       period: period ?? this.period,
       periodDays: periodDays ?? this.periodDays,
@@ -7333,6 +7577,12 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
     }
     if (expectedAmount.present) {
       map['expected_amount'] = Variable<double>(expectedAmount.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (currencySymbol.present) {
+      map['currency_symbol'] = Variable<String>(currencySymbol.value);
     }
     if (tolerancePct.present) {
       map['tolerance_pct'] = Variable<double>(tolerancePct.value);
@@ -7374,6 +7624,8 @@ class RecurringSeriesCompanion extends UpdateCompanion<RecurringSery> {
           ..write('merchantId: $merchantId, ')
           ..write('label: $label, ')
           ..write('expectedAmount: $expectedAmount, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('currencySymbol: $currencySymbol, ')
           ..write('tolerancePct: $tolerancePct, ')
           ..write('period: $period, ')
           ..write('periodDays: $periodDays, ')
@@ -9722,6 +9974,8 @@ typedef $$ExpectedEventsTableInsertCompanionBuilder = ExpectedEventsCompanion
   required int expectedAmountPaise,
   Value<int?> amountLowPaise,
   Value<int?> amountHighPaise,
+  Value<String?> currencyCode,
+  Value<String?> currencySymbol,
   required DateTime expectedDate,
   Value<int> dateWindowDays,
   Value<String?> cadence,
@@ -9742,6 +9996,8 @@ typedef $$ExpectedEventsTableUpdateCompanionBuilder = ExpectedEventsCompanion
   Value<int> expectedAmountPaise,
   Value<int?> amountLowPaise,
   Value<int?> amountHighPaise,
+  Value<String?> currencyCode,
+  Value<String?> currencySymbol,
   Value<DateTime> expectedDate,
   Value<int> dateWindowDays,
   Value<String?> cadence,
@@ -9782,6 +10038,8 @@ class $$ExpectedEventsTableTableManager extends RootTableManager<
             Value<int> expectedAmountPaise = const Value.absent(),
             Value<int?> amountLowPaise = const Value.absent(),
             Value<int?> amountHighPaise = const Value.absent(),
+            Value<String?> currencyCode = const Value.absent(),
+            Value<String?> currencySymbol = const Value.absent(),
             Value<DateTime> expectedDate = const Value.absent(),
             Value<int> dateWindowDays = const Value.absent(),
             Value<String?> cadence = const Value.absent(),
@@ -9801,6 +10059,8 @@ class $$ExpectedEventsTableTableManager extends RootTableManager<
             expectedAmountPaise: expectedAmountPaise,
             amountLowPaise: amountLowPaise,
             amountHighPaise: amountHighPaise,
+            currencyCode: currencyCode,
+            currencySymbol: currencySymbol,
             expectedDate: expectedDate,
             dateWindowDays: dateWindowDays,
             cadence: cadence,
@@ -9820,6 +10080,8 @@ class $$ExpectedEventsTableTableManager extends RootTableManager<
             required int expectedAmountPaise,
             Value<int?> amountLowPaise = const Value.absent(),
             Value<int?> amountHighPaise = const Value.absent(),
+            Value<String?> currencyCode = const Value.absent(),
+            Value<String?> currencySymbol = const Value.absent(),
             required DateTime expectedDate,
             Value<int> dateWindowDays = const Value.absent(),
             Value<String?> cadence = const Value.absent(),
@@ -9839,6 +10101,8 @@ class $$ExpectedEventsTableTableManager extends RootTableManager<
             expectedAmountPaise: expectedAmountPaise,
             amountLowPaise: amountLowPaise,
             amountHighPaise: amountHighPaise,
+            currencyCode: currencyCode,
+            currencySymbol: currencySymbol,
             expectedDate: expectedDate,
             dateWindowDays: dateWindowDays,
             cadence: cadence,
@@ -9908,6 +10172,16 @@ class $$ExpectedEventsTableFilterComposer
 
   ColumnFilters<int> get amountHighPaise => $state.composableBuilder(
       column: $state.table.amountHighPaise,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currencyCode => $state.composableBuilder(
+      column: $state.table.currencyCode,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currencySymbol => $state.composableBuilder(
+      column: $state.table.currencySymbol,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -9992,6 +10266,16 @@ class $$ExpectedEventsTableOrderingComposer
 
   ColumnOrderings<int> get amountHighPaise => $state.composableBuilder(
       column: $state.table.amountHighPaise,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currencyCode => $state.composableBuilder(
+      column: $state.table.currencyCode,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currencySymbol => $state.composableBuilder(
+      column: $state.table.currencySymbol,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -10815,6 +11099,8 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   required String id,
   required int ts,
   required double amount,
+  Value<String?> currencyCode,
+  Value<String?> currencySymbol,
   required String direction,
   required String channel,
   Value<String?> accountHint,
@@ -10848,6 +11134,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String> id,
   Value<int> ts,
   Value<double> amount,
+  Value<String?> currencyCode,
+  Value<String?> currencySymbol,
   Value<String> direction,
   Value<String> channel,
   Value<String?> accountHint,
@@ -10900,6 +11188,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<int> ts = const Value.absent(),
             Value<double> amount = const Value.absent(),
+            Value<String?> currencyCode = const Value.absent(),
+            Value<String?> currencySymbol = const Value.absent(),
             Value<String> direction = const Value.absent(),
             Value<String> channel = const Value.absent(),
             Value<String?> accountHint = const Value.absent(),
@@ -10932,6 +11222,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             id: id,
             ts: ts,
             amount: amount,
+            currencyCode: currencyCode,
+            currencySymbol: currencySymbol,
             direction: direction,
             channel: channel,
             accountHint: accountHint,
@@ -10964,6 +11256,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             required String id,
             required int ts,
             required double amount,
+            Value<String?> currencyCode = const Value.absent(),
+            Value<String?> currencySymbol = const Value.absent(),
             required String direction,
             required String channel,
             Value<String?> accountHint = const Value.absent(),
@@ -10996,6 +11290,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             id: id,
             ts: ts,
             amount: amount,
+            currencyCode: currencyCode,
+            currencySymbol: currencySymbol,
             direction: direction,
             channel: channel,
             accountHint: accountHint,
@@ -11054,6 +11350,16 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<double> get amount => $state.composableBuilder(
       column: $state.table.amount,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currencyCode => $state.composableBuilder(
+      column: $state.table.currencyCode,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currencySymbol => $state.composableBuilder(
+      column: $state.table.currencySymbol,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -11305,6 +11611,16 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<double> get amount => $state.composableBuilder(
       column: $state.table.amount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currencyCode => $state.composableBuilder(
+      column: $state.table.currencyCode,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currencySymbol => $state.composableBuilder(
+      column: $state.table.currencySymbol,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -12425,6 +12741,8 @@ typedef $$RecurringSeriesTableInsertCompanionBuilder = RecurringSeriesCompanion
   required String merchantId,
   required String label,
   required double expectedAmount,
+  Value<String?> currencyCode,
+  Value<String?> currencySymbol,
   required double tolerancePct,
   required String period,
   required int periodDays,
@@ -12442,6 +12760,8 @@ typedef $$RecurringSeriesTableUpdateCompanionBuilder = RecurringSeriesCompanion
   Value<String> merchantId,
   Value<String> label,
   Value<double> expectedAmount,
+  Value<String?> currencyCode,
+  Value<String?> currencySymbol,
   Value<double> tolerancePct,
   Value<String> period,
   Value<int> periodDays,
@@ -12479,6 +12799,8 @@ class $$RecurringSeriesTableTableManager extends RootTableManager<
             Value<String> merchantId = const Value.absent(),
             Value<String> label = const Value.absent(),
             Value<double> expectedAmount = const Value.absent(),
+            Value<String?> currencyCode = const Value.absent(),
+            Value<String?> currencySymbol = const Value.absent(),
             Value<double> tolerancePct = const Value.absent(),
             Value<String> period = const Value.absent(),
             Value<int> periodDays = const Value.absent(),
@@ -12495,6 +12817,8 @@ class $$RecurringSeriesTableTableManager extends RootTableManager<
             merchantId: merchantId,
             label: label,
             expectedAmount: expectedAmount,
+            currencyCode: currencyCode,
+            currencySymbol: currencySymbol,
             tolerancePct: tolerancePct,
             period: period,
             periodDays: periodDays,
@@ -12511,6 +12835,8 @@ class $$RecurringSeriesTableTableManager extends RootTableManager<
             required String merchantId,
             required String label,
             required double expectedAmount,
+            Value<String?> currencyCode = const Value.absent(),
+            Value<String?> currencySymbol = const Value.absent(),
             required double tolerancePct,
             required String period,
             required int periodDays,
@@ -12527,6 +12853,8 @@ class $$RecurringSeriesTableTableManager extends RootTableManager<
             merchantId: merchantId,
             label: label,
             expectedAmount: expectedAmount,
+            currencyCode: currencyCode,
+            currencySymbol: currencySymbol,
             tolerancePct: tolerancePct,
             period: period,
             periodDays: periodDays,
@@ -12568,6 +12896,16 @@ class $$RecurringSeriesTableFilterComposer
 
   ColumnFilters<double> get expectedAmount => $state.composableBuilder(
       column: $state.table.expectedAmount,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currencyCode => $state.composableBuilder(
+      column: $state.table.currencyCode,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get currencySymbol => $state.composableBuilder(
+      column: $state.table.currencySymbol,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -12644,6 +12982,16 @@ class $$RecurringSeriesTableOrderingComposer
 
   ColumnOrderings<double> get expectedAmount => $state.composableBuilder(
       column: $state.table.expectedAmount,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currencyCode => $state.composableBuilder(
+      column: $state.table.currencyCode,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get currencySymbol => $state.composableBuilder(
+      column: $state.table.currencySymbol,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

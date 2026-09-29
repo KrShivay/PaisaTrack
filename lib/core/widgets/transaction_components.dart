@@ -12,12 +12,16 @@ class TransactionAmount extends StatelessWidget {
     super.key,
     required this.amount,
     required this.direction,
+    this.currencyCode,
+    this.currencySymbol,
     this.isSpending = true,
     this.style,
   });
 
   final double amount;
   final TransactionDirection direction;
+  final String? currencyCode;
+  final String? currencySymbol;
   final bool isSpending;
   final TextStyle? style;
 
@@ -34,7 +38,7 @@ class TransactionAmount extends StatelessWidget {
     final sign = isCredit ? '+' : '-';
 
     return Text(
-      '$sign${formatInr(amount)}',
+      '$sign${formatSourceAmount(amount, currencyCode: currencyCode, currencySymbol: currencySymbol)}',
       maxLines: 1,
       softWrap: false,
       style: (style ?? theme.textTheme.titleMedium)?.copyWith(
@@ -96,6 +100,8 @@ class TransactionTile extends StatelessWidget {
     required this.merchantName,
     required this.amount,
     required this.direction,
+    this.currencyCode,
+    this.currencySymbol,
     required this.categoryLabel,
     required this.timeLabel,
     this.categoryId,
@@ -111,6 +117,8 @@ class TransactionTile extends StatelessWidget {
   final String merchantName;
   final double amount;
   final TransactionDirection direction;
+  final String? currencyCode;
+  final String? currencySymbol;
   final String categoryLabel;
   final String timeLabel;
   final String? categoryId;
@@ -140,7 +148,7 @@ class TransactionTile extends StatelessWidget {
     return Semantics(
       button: onTap != null,
       label:
-          '$merchantName, $categoryLabel, ${direction == TransactionDirection.credit ? 'plus' : 'minus'} ${formatInr(amount)}, $timeLabel${status == null || status.isEmpty ? '' : ', $status'}.',
+          '$merchantName, $categoryLabel, ${direction == TransactionDirection.credit ? 'plus' : 'minus'} ${formatSourceAmount(amount, currencyCode: currencyCode, currencySymbol: currencySymbol)}, $timeLabel${status == null || status.isEmpty ? '' : ', $status'}.',
       child: ListTile(
         minVerticalPadding: AppSpacing.sm,
         selected: selected,
@@ -166,6 +174,8 @@ class TransactionTile extends StatelessWidget {
             TransactionAmount(
               amount: amount,
               direction: direction,
+              currencyCode: currencyCode,
+              currencySymbol: currencySymbol,
               isSpending: categoryIsSpending,
             ),
           ],

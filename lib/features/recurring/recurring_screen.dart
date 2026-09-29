@@ -8,6 +8,7 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../data/models/source_currency.dart';
 import '../../data/repositories/recurring_repository.dart';
 import '../transactions/transactions_screen.dart';
 
@@ -83,12 +84,36 @@ class RecurringScreen extends ConsumerWidget {
     final items = seriesAsync.valueOrNull ?? const [];
 
     final activeItems = items
-        .where((i) => i.series.status != 'inactive' && i.series.status != 'cancelled')
+        .where(
+          (i) =>
+              i.series.status != 'inactive' && i.series.status != 'cancelled',
+        )
         .toList();
     final totalCommitted = activeItems.fold<double>(
       0.0,
-      (sum, item) => sum + (item.series.kind != 'income' ? item.series.expectedAmount : 0.0),
+      (sum, item) =>
+          sum +
+          (item.series.kind != 'income' && item.series.currencyCode == 'INR'
+              ? item.series.expectedAmount
+              : 0.0),
     );
+    final nonInrCommitments =
+        <String, ({String? code, String? symbol, double amount, int count})>{};
+    for (final item in activeItems) {
+      final series = item.series;
+      if (series.kind == 'income' || series.currencyCode == 'INR') continue;
+      final currency = SourceCurrency(
+        code: series.currencyCode,
+        symbol: series.currencySymbol,
+      );
+      final previous = nonInrCommitments[currency.bucketKey];
+      nonInrCommitments[currency.bucketKey] = (
+        code: series.currencyCode,
+        symbol: series.currencySymbol,
+        amount: (previous?.amount ?? 0) + series.expectedAmount,
+        count: (previous?.count ?? 0) + 1,
+      );
+    }
 
     final now = DateTime.now();
     final fourteenDaysOut = now.add(const Duration(days: 14));
@@ -127,7 +152,10 @@ class RecurringScreen extends ConsumerWidget {
             // Monthly Commitments Card
             _CommitmentsSummaryCard(
               totalCommitted: totalCommitted,
-              activeCount: activeItems.length,
+              activeCount: activeItems
+                  .where((item) => item.series.currencyCode == 'INR')
+                  .length,
+              otherCurrencyCommitments: nonInrCommitments,
               isDark: isDark,
             ),
             const SizedBox(height: 24),
@@ -264,7 +292,7 @@ class RecurringScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${series.period.toUpperCase()} · ${formatInr(series.expectedAmount)}',
+                '${series.period.toUpperCase()} · ${formatSourceAmount(series.expectedAmount, currencyCode: series.currencyCode, currencySymbol: series.currencySymbol)}',
                 style: AppTheme.bloomDisplay(
                   13,
                   FontWeight.w400,
@@ -292,8 +320,12 @@ class RecurringScreen extends ConsumerWidget {
                   title: const Text('Mark as Cancelled'),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    final repo = await ref.read(recurringRepositoryProvider.future);
-                    await repo.setStatus(seriesId: series.id, status: 'cancelled');
+                    final repo =
+                        await ref.read(recurringRepositoryProvider.future);
+                    await repo.setStatus(
+                      seriesId: series.id,
+                      status: 'cancelled',
+                    );
                   },
                 )
               else
@@ -305,7 +337,8 @@ class RecurringScreen extends ConsumerWidget {
                   title: const Text('Reactivate Series'),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    final repo = await ref.read(recurringRepositoryProvider.future);
+                    final repo =
+                        await ref.read(recurringRepositoryProvider.future);
                     await repo.setStatus(seriesId: series.id, status: 'active');
                   },
                 ),
@@ -321,11 +354,14 @@ class _CommitmentsSummaryCard extends StatelessWidget {
   const _CommitmentsSummaryCard({
     required this.totalCommitted,
     required this.activeCount,
+    required this.otherCurrencyCommitments,
     required this.isDark,
   });
 
   final double totalCommitted;
   final int activeCount;
+  final Map<String, ({String? code, String? symbol, double amount, int count})>
+      otherCurrencyCommitments;
   final bool isDark;
 
   @override
@@ -351,7 +387,7 @@ class _CommitmentsSummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'MONTHLY COMMITMENTS',
+                  'INR MONTHLY COMMITMENTS',
                   style: AppTheme.bloomDisplay(
                     11,
                     FontWeight.w600,
@@ -392,9 +428,42 @@ class _CommitmentsSummaryCard extends StatelessWidget {
               color: isDark ? Colors.white : AppColorTokens.ink,
             ),
           ),
+          for (final entry in otherCurrencyCommitments.entries) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${SourceCurrency(code: entry.value.code, symbol: entry.value.symbol).label} · ${entry.value.count} active',
+                    style: AppTheme.bloomDisplay(
+                      12,
+                      FontWeight.w400,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextSecondary
+                          : const Color(0xFF7E6A45),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 116,
+                  child: Text(
+                    '${formatSourceAmount(entry.value.amount, currencyCode: entry.value.code, currencySymbol: entry.value.symbol)}/mo',
+                    style: AppTheme.bloomMono(
+                      12,
+                      FontWeight.w500,
+                      color: isDark ? Colors.white : AppColorTokens.ink,
+                    ),
+                    textAlign: TextAlign.end,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 4),
           Text(
-            'Committed to rent, EMIs, and monthly subscriptions.',
+            'INR commitments are separate; other source currencies are listed above.',
             style: AppTheme.bloomDisplay(
               12,
               FontWeight.w400,
@@ -408,8 +477,6 @@ class _CommitmentsSummaryCard extends StatelessWidget {
     );
   }
 }
-
-
 
 class _RecurringTileRow extends StatelessWidget {
   const _RecurringTileRow({
@@ -509,10 +576,18 @@ class _RecurringTileRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            BloomAmount(
-              amount: isIncome ? series.expectedAmount : -series.expectedAmount,
-              size: 15,
-              weight: FontWeight.w500,
+            SizedBox(
+              width: 120,
+              child: BloomAmount(
+                amount:
+                    isIncome ? series.expectedAmount : -series.expectedAmount,
+                currencyCode: series.currencyCode,
+                currencySymbol: series.currencySymbol,
+                size: 15,
+                weight: FontWeight.w500,
+                maxLines: 2,
+                textAlign: TextAlign.end,
+              ),
             ),
           ],
         ),

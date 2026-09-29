@@ -9,6 +9,7 @@ import '../core/constants.dart';
 import '../core/financial_calendar.dart';
 import '../core/result.dart';
 import '../data/db/database.dart';
+import '../data/models/source_currency.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
@@ -289,6 +290,7 @@ class SmsIngestor {
           int amountPaise = 0;
           int? amountLowPaise;
           int? amountHighPaise;
+          SourceCurrency? eventCurrency;
           String label = sms.sender;
           String? counterpartyId;
 
@@ -296,15 +298,20 @@ class SmsIngestor {
             amountPaise = (parseResult.value.amount * 100).round();
             label = parseResult.value.merchantRaw ?? sms.sender;
             counterpartyId = parseResult.value.counterpartyVpa;
+            eventCurrency = SourceCurrency(
+              code: parseResult.value.currencyCode,
+              symbol: parseResult.value.currencySymbol,
+            );
           } else {
             const amountNumber =
                 r'(?:\d{1,2}(?:,\d{2})*,\d{3}|\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?';
             final amtMatch = RegExp(
-              '(?:Rs\\.?|INR|₹)\\s*($amountNumber)(?![\\d,.])',
+              r'(Rs\.?|INR|₹|USD|US\$|\$)\s*(' + amountNumber + r')(?![\d,.])',
               caseSensitive: false,
             ).firstMatch(sms.body);
             if (amtMatch != null) {
-              amountPaise = _fallbackAmountPaise(amtMatch.group(1)!) ?? 0;
+              eventCurrency = SourceCurrency.fromToken(amtMatch.group(1));
+              amountPaise = _fallbackAmountPaise(amtMatch.group(2)!) ?? 0;
             }
             final rangeMatch = RegExp(
               '(?:^|[^\\d,.])($amountNumber)\\s*to\\s*($amountNumber)(?![\\d,.])',
@@ -322,6 +329,8 @@ class SmsIngestor {
             counterpartyId: counterpartyId,
             label: label,
             expectedAmountPaise: amountPaise,
+            currencyCode: eventCurrency?.code,
+            currencySymbol: eventCurrency?.symbol,
             amountLowPaise: amountLowPaise,
             amountHighPaise: amountHighPaise,
             expectedDate: _reminderExpectedDate(sms.body, sms.receivedAt),
@@ -740,6 +749,8 @@ class SmsIngestor {
       id: 'txn_$smsId',
       ts: record.ts.toUtc().millisecondsSinceEpoch,
       amount: record.amount,
+      currencyCode: Value(record.currencyCode),
+      currencySymbol: Value(record.currencySymbol),
       direction: record.direction.wireName,
       channel: record.channel.wireName,
       accountHint: Value(record.accountHint),

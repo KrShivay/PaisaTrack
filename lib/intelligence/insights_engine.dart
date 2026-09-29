@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../core/financial_calendar.dart';
+import '../core/format.dart';
 import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
+import '../data/models/source_currency.dart';
 
 /// Result of one deterministic insight recomputation.
 class InsightsRunResult {
@@ -160,7 +162,13 @@ class InsightsEngine {
     final byMerchant = <String, List<RecurringSery>>{};
     for (final series in recurring) {
       if (series.kind != 'subscription' || series.status != 'active') continue;
-      byMerchant.putIfAbsent(series.merchantId, () => []).add(series);
+      final currency = SourceCurrency(
+        code: series.currencyCode,
+        symbol: series.currencySymbol,
+      );
+      byMerchant
+          .putIfAbsent('${series.merchantId}|${currency.bucketKey}', () => [])
+          .add(series);
     }
     for (final entry in byMerchant.entries) {
       if (entry.value.length < 2) continue;
@@ -169,8 +177,10 @@ class InsightsEngine {
         id: 'duplicate_subscription:$period:${entry.key}',
         kind: 'duplicate_subscription',
         payload: {
-          'merchant_id': entry.key,
+          'merchant_id': sorted.first.merchantId,
           'label': sorted.first.label,
+          'currency_code': sorted.first.currencyCode,
+          'currency_symbol': sorted.first.currencySymbol,
           'series_ids': [for (final series in sorted) series.id],
           'monthly_total': sorted.fold<double>(
             0,
@@ -193,17 +203,29 @@ class InsightsEngine {
           (txn.categoryId == 'fees_charges' ||
               categories[txn.categoryId] == 'Fees & Charges'),
     );
-    final rows = fees.toList(growable: false);
-    if (rows.isEmpty) return;
-    yield _InsightSpec(
-      id: 'fees_total:$period',
-      kind: 'fees_total',
-      payload: {
-        'total': rows.fold<double>(0, (sum, txn) => sum + txn.amount),
-        'count': rows.length,
-        'transaction_ids': [for (final txn in rows) txn.id]..sort(),
-      },
-    );
+    final byCurrency = <String, List<Transaction>>{};
+    for (final txn in fees) {
+      final bucket = SourceCurrency(
+        code: txn.currencyCode,
+        symbol: txn.currencySymbol,
+      ).bucketKey;
+      byCurrency.putIfAbsent(bucket, () => []).add(txn);
+    }
+    for (final entry in byCurrency.entries) {
+      final rows = entry.value;
+      final first = rows.first;
+      yield _InsightSpec(
+        id: 'fees_total:$period:${entry.key}',
+        kind: 'fees_total',
+        payload: {
+          'total': rows.fold<double>(0, (sum, txn) => sum + txn.amount),
+          'currency_code': first.currencyCode,
+          'currency_symbol': first.currencySymbol,
+          'count': rows.length,
+          'transaction_ids': [for (final txn in rows) txn.id]..sort(),
+        },
+      );
+    }
   }
 
   Iterable<_InsightSpec> _priceCreep(
@@ -233,6 +255,7 @@ class InsightsEngine {
   ) sync* {
     final current = <String, double>{};
     final previous = <String, double>{};
+    final currencies = <String, SourceCurrency>{};
     for (final txn in transactions) {
       final categoryId = txn.categoryId;
       if (categoryId == null) continue;
@@ -241,21 +264,31 @@ class InsightsEngine {
           !instant.isBefore(currentStart) && instant.isBefore(nextMonth)
               ? current
               : previous;
-      target[categoryId] = (target[categoryId] ?? 0) + txn.amount;
+      final currency = SourceCurrency(
+        code: txn.currencyCode,
+        symbol: txn.currencySymbol,
+      );
+      final key = '$categoryId\u0000${currency.bucketKey}';
+      currencies[key] = currency;
+      target[key] = (target[key] ?? 0) + txn.amount;
     }
-    final ids = {...current.keys, ...previous.keys}.toList()..sort();
-    for (final categoryId in ids) {
-      final currentAmount = current[categoryId] ?? 0;
-      final previousAmount = previous[categoryId] ?? 0;
+    final keys = {...current.keys, ...previous.keys}.toList()..sort();
+    for (final key in keys) {
+      final categoryId = key.split('\u0000').first;
+      final currency = currencies[key]!;
+      final currentAmount = current[key] ?? 0;
+      final previousAmount = previous[key] ?? 0;
       if (previousAmount == 0) continue;
       final delta = (currentAmount - previousAmount) / previousAmount;
       if (delta.abs() <= categoryDeltaThreshold) continue;
       yield _InsightSpec(
-        id: 'category_delta:$period:$categoryId',
+        id: 'category_delta:$period:${key.replaceAll('\u0000', ':')}',
         kind: 'category_delta',
         payload: {
           'category_id': categoryId,
           'category_name': categories[categoryId] ?? categoryId,
+          'currency_code': currency.code,
+          'currency_symbol': currency.symbol,
           'current_total': currentAmount,
           'previous_total': previousAmount,
           'delta_fraction': delta,
@@ -286,7 +319,9 @@ class InsightsEngine {
         'expected_amount': series.expectedAmount,
         'last_amount': series.lastAmount,
         'summary':
-            '${series.label} ₹${series.expectedAmount.round()} → ₹${series.lastAmount.round()}',
+            '${series.label} ${formatSourceAmount(series.expectedAmount, currencyCode: series.currencyCode, currencySymbol: series.currencySymbol)} → ${formatSourceAmount(series.lastAmount, currencyCode: series.currencyCode, currencySymbol: series.currencySymbol)}',
+        'currency_code': series.currencyCode,
+        'currency_symbol': series.currencySymbol,
         'next_expected_date': series.nextExpectedDate.toIso8601String(),
         'kind': series.kind,
       };

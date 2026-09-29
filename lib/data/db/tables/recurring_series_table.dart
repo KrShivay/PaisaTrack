@@ -13,6 +13,8 @@ class RecurringSeries extends Table {
   TextColumn get merchantId => text().references(Merchants, #id)();
   TextColumn get label => text()();
   RealColumn get expectedAmount => real()();
+  TextColumn get currencyCode => text().nullable()();
+  TextColumn get currencySymbol => text().nullable()();
   RealColumn get tolerancePct => real()();
   TextColumn get period => text()();
   IntColumn get periodDays => integer()();

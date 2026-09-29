@@ -10,7 +10,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Recurring Series Category Tint (T-146b)', () {
-    testWidgets('recurring row for a food merchant carries the food hue, not slate', (tester) async {
+    testWidgets(
+        'recurring row for a food merchant carries the food hue, not slate',
+        (tester) async {
       tester.view.physicalSize = const Size(402, 874);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -24,6 +26,8 @@ void main() {
         merchantId: 'm_swiggy',
         label: 'Swiggy One',
         expectedAmount: 149.0,
+        currencyCode: 'INR',
+        currencySymbol: '₹',
         tolerancePct: 0.1,
         period: 'monthly',
         periodDays: 30,
