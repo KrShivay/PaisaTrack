@@ -35,6 +35,12 @@ const _chunkedBackupMagic = <int>[0x50, 0x54, 0x52, 0x4b]; // PTRK
 const _chunkedBackupVersion = 2;
 const _chunkedHeaderMaxBytes = 64 * 1024;
 const _archiveRowPageSize = 256;
+const _optionalArchiveTables = {
+  'sms_dispositions',
+  'counterparties',
+  'expected_events',
+  'transaction_links',
+};
 
 enum EncryptedBackupProgressPhase {
   preparing,
@@ -741,6 +747,7 @@ class EncryptedBackupService {
         }
         await restorer.finish();
         await PayeeEvidenceRepository(_database).rebuild();
+        await _assertRestoredForeignKeys(_database);
       });
 
       if (finalManifest == null || chunkCount == 0) {
@@ -834,6 +841,9 @@ class EncryptedBackupService {
     'payment_sources',
     'transactions',
     'sms_dispositions',
+    'transaction_links',
+    'counterparties',
+    'expected_events',
     'rules',
     'feedback',
     'baselines',
@@ -921,6 +931,24 @@ class EncryptedBackupService {
     await writeTable(
       'sms_dispositions',
       (offset, limit) => (_database.select(_database.smsDispositions)
+            ..limit(limit, offset: offset))
+          .get(),
+    );
+    await writeTable(
+      'transaction_links',
+      (offset, limit) => (_database.select(_database.transactionLinks)
+            ..limit(limit, offset: offset))
+          .get(),
+    );
+    await writeTable(
+      'counterparties',
+      (offset, limit) => (_database.select(_database.counterparties)
+            ..limit(limit, offset: offset))
+          .get(),
+    );
+    await writeTable(
+      'expected_events',
+      (offset, limit) => (_database.select(_database.expectedEvents)
             ..limit(limit, offset: offset))
           .get(),
     );
@@ -1053,6 +1081,18 @@ class EncryptedBackupService {
           _database.smsDispositions,
           tableName: 'sms_dispositions',
         ),
+        'transaction_links': await _rows(
+          _database.transactionLinks,
+          tableName: 'transaction_links',
+        ),
+        'counterparties': await _rows(
+          _database.counterparties,
+          tableName: 'counterparties',
+        ),
+        'expected_events': await _rows(
+          _database.expectedEvents,
+          tableName: 'expected_events',
+        ),
         'rules': await _rows(_database.rules, tableName: 'rules'),
         'feedback': await _rows(_database.feedback, tableName: 'feedback'),
         'baselines': await _rows(_database.baselines, tableName: 'baselines'),
@@ -1109,23 +1149,22 @@ class EncryptedBackupService {
     final retainedRawSmsIds = <String>{};
 
     await database.transaction(() async {
-      await database.delete(database.recurringSeries).go();
-      await database.delete(database.modelMeta).go();
-      await database.delete(database.insights).go();
-      await database.delete(database.baselines).go();
-      await database.delete(database.feedback).go();
-      await database.delete(database.rules).go();
-      await database.delete(database.merchantAliases).go();
-      await database.delete(database.payeeEvidence).go();
-      await database.delete(database.smsDispositions).go();
-      await database.delete(database.transactions).go();
-      await database.delete(database.paymentSources).go();
-      await database.delete(database.rawSms).go();
-      await database.delete(database.merchants).go();
-      await database.delete(database.categories).go();
+      await _clearDatabaseForRestore(database);
 
-      for (final row in _tableRows(tables, 'categories')) {
-        await database.into(database.categories).insert(Category.fromJson(row));
+      final categoryRows = _tableRows(tables, 'categories');
+      for (final row in categoryRows) {
+        _archiveNullableString(row['parentId'], 'categories.parentId');
+        await database.into(database.categories).insert(
+              Category.fromJson({...row, 'parentId': null}),
+            );
+      }
+      for (final row in categoryRows) {
+        final parentId = row['parentId'];
+        if (parentId is String) {
+          await (database.update(database.categories)
+                ..where((category) => category.id.equals(row['id'] as String)))
+              .write(CategoriesCompanion(parentId: Value(parentId)));
+        }
       }
       for (final row in _tableRows(tables, 'merchants')) {
         await database.into(database.merchants).insert(
@@ -1157,12 +1196,22 @@ class EncryptedBackupService {
             .into(database.paymentSources)
             .insert(PaymentSource.fromJson(row));
       }
-      for (final row in _tableRows(tables, 'transactions')) {
+      final transactionRows = _tableRows(tables, 'transactions');
+      final duplicateParentIds = <String, String>{};
+      for (final row in transactionRows) {
         final transactionRow = Map<String, dynamic>.from(row);
         final smsId = transactionRow['smsId'];
+        final duplicateOfTxnId = _archiveNullableString(
+          transactionRow['duplicateOfTxnId'],
+          'transactions.duplicateOfTxnId',
+        );
+        if (duplicateOfTxnId != null) {
+          duplicateParentIds[transactionRow['id'] as String] = duplicateOfTxnId;
+        }
         if (smsId is String && !retainedRawSmsIds.contains(smsId)) {
           transactionRow['smsId'] = null;
         }
+        transactionRow['duplicateOfTxnId'] = null;
         await database.into(database.transactions).insert(
               Transaction.fromJson({
                 'paymentSourceId': null,
@@ -1177,6 +1226,23 @@ class EncryptedBackupService {
         await database.into(database.smsDispositions).insert(
               SmsDisposition.fromJson(row),
             );
+      }
+      for (final entry in duplicateParentIds.entries) {
+        await (database.update(database.transactions)
+              ..where((transaction) => transaction.id.equals(entry.key)))
+            .write(
+          TransactionsCompanion(duplicateOfTxnId: Value(entry.value)),
+        );
+      }
+      for (final row in _optionalTableRows(tables, 'transaction_links')) {
+        await database
+            .into(database.transactionLinks)
+            .insert(TransactionLink.fromJson(row));
+      }
+      for (final row in _optionalTableRows(tables, 'counterparties')) {
+        await database
+            .into(database.counterparties)
+            .insert(Counterparty.fromJson(row));
       }
       for (final row in _tableRows(tables, 'rules')) {
         await database.into(database.rules).insert(Rule.fromJson(row));
@@ -1202,7 +1268,18 @@ class EncryptedBackupService {
             .into(database.recurringSeries)
             .insert(RecurringSery.fromJson(row));
       }
+      for (final row in _optionalTableRows(tables, 'expected_events')) {
+        final eventRow = Map<String, dynamic>.from(row);
+        final originSmsId = eventRow['originSmsId'];
+        if (originSmsId is String && !retainedRawSmsIds.contains(originSmsId)) {
+          eventRow['originSmsId'] = null;
+        }
+        await database
+            .into(database.expectedEvents)
+            .insert(ExpectedEvent.fromJson(eventRow));
+      }
       await PayeeEvidenceRepository(database).rebuild();
+      await _assertRestoredForeignKeys(database);
     });
   }
 
@@ -1599,6 +1676,8 @@ class _ChunkedArchiveRestorer {
   final _NdjsonLineBuffer _lines = _NdjsonLineBuffer();
   final _tableCounts = <String, int>{};
   final _retainedRawSmsIds = <String>{};
+  final _duplicateParentIdsByTransaction = <String, String>{};
+  final _categoryParentIdsByCategory = <String, String>{};
   var _processedRows = 0;
   var _sawHeader = false;
   var _sawFooter = false;
@@ -1607,20 +1686,9 @@ class _ChunkedArchiveRestorer {
 
   Future<void> clearDatabase() async {
     _retainedRawSmsIds.clear();
-    await database.delete(database.recurringSeries).go();
-    await database.delete(database.modelMeta).go();
-    await database.delete(database.insights).go();
-    await database.delete(database.baselines).go();
-    await database.delete(database.feedback).go();
-    await database.delete(database.rules).go();
-    await database.delete(database.merchantAliases).go();
-    await database.delete(database.payeeEvidence).go();
-    await database.delete(database.smsDispositions).go();
-    await database.delete(database.transactions).go();
-    await database.delete(database.paymentSources).go();
-    await database.delete(database.rawSms).go();
-    await database.delete(database.merchants).go();
-    await database.delete(database.categories).go();
+    _duplicateParentIdsByTransaction.clear();
+    _categoryParentIdsByCategory.clear();
+    await _clearDatabaseForRestore(database);
   }
 
   Future<void> add(List<int> bytes) async {
@@ -1637,6 +1705,16 @@ class _ChunkedArchiveRestorer {
     }
     if (!_sawHeader || !_sawFooter) {
       throw const EncryptedBackupException('Invalid encrypted export');
+    }
+    for (final entry in _categoryParentIdsByCategory.entries) {
+      await (database.update(database.categories)
+            ..where((row) => row.id.equals(entry.key)))
+          .write(CategoriesCompanion(parentId: Value(entry.value)));
+    }
+    for (final entry in _duplicateParentIdsByTransaction.entries) {
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals(entry.key)))
+          .write(TransactionsCompanion(duplicateOfTxnId: Value(entry.value)));
     }
   }
 
@@ -1688,14 +1766,15 @@ class _ChunkedArchiveRestorer {
           throw const EncryptedBackupException('Invalid encrypted export');
         }
         for (final tableName in _tableNames) {
+          final rowCount = _tableCounts[tableName] ?? 0;
           final archivedCount = counts[tableName];
-          final restoredCount = _tableCounts[tableName] ?? 0;
-          if (archivedCount == null &&
-              tableName == 'sms_dispositions' &&
-              restoredCount == 0) {
+          if (_optionalArchiveTables.contains(tableName) &&
+              archivedCount == null &&
+              rowCount == 0) {
+            // Older v3 chunked archives predate these optional tables.
             continue;
           }
-          if (archivedCount != restoredCount) {
+          if (archivedCount != rowCount) {
             throw const EncryptedBackupException('Invalid encrypted export');
           }
         }
@@ -1708,7 +1787,16 @@ class _ChunkedArchiveRestorer {
   Future<void> _insertRow(String tableName, Map<String, dynamic> row) async {
     switch (tableName) {
       case 'categories':
-        await database.into(database.categories).insert(Category.fromJson(row));
+        final parentId = _archiveNullableString(
+          row['parentId'],
+          'categories.parentId',
+        );
+        if (parentId != null) {
+          _categoryParentIdsByCategory[row['id'] as String] = parentId;
+        }
+        await database.into(database.categories).insert(
+              Category.fromJson({...row, 'parentId': null}),
+            );
       case 'merchants':
         await database.into(database.merchants).insert(
               Merchant.fromJson({'userLabel': null, ...row}),
@@ -1737,9 +1825,18 @@ class _ChunkedArchiveRestorer {
       case 'transactions':
         final transactionRow = Map<String, dynamic>.from(row);
         final smsId = transactionRow['smsId'];
+        final duplicateOfTxnId = _archiveNullableString(
+          transactionRow['duplicateOfTxnId'],
+          'transactions.duplicateOfTxnId',
+        );
         if (smsId is String && !_retainedRawSmsIds.contains(smsId)) {
           transactionRow['smsId'] = null;
         }
+        if (duplicateOfTxnId is String) {
+          _duplicateParentIdsByTransaction[transactionRow['id'] as String] =
+              duplicateOfTxnId;
+        }
+        transactionRow['duplicateOfTxnId'] = null;
         await database.into(database.transactions).insert(
               Transaction.fromJson({
                 'paymentSourceId': null,
@@ -1753,6 +1850,14 @@ class _ChunkedArchiveRestorer {
         await database.into(database.smsDispositions).insert(
               SmsDisposition.fromJson(row),
             );
+      case 'transaction_links':
+        await database
+            .into(database.transactionLinks)
+            .insert(TransactionLink.fromJson(row));
+      case 'counterparties':
+        await database
+            .into(database.counterparties)
+            .insert(Counterparty.fromJson(row));
       case 'rules':
         await database.into(database.rules).insert(Rule.fromJson(row));
       case 'feedback':
@@ -1771,6 +1876,16 @@ class _ChunkedArchiveRestorer {
         await database
             .into(database.recurringSeries)
             .insert(RecurringSery.fromJson(row));
+      case 'expected_events':
+        final eventRow = Map<String, dynamic>.from(row);
+        final originSmsId = eventRow['originSmsId'];
+        if (originSmsId is String &&
+            !_retainedRawSmsIds.contains(originSmsId)) {
+          eventRow['originSmsId'] = null;
+        }
+        await database
+            .into(database.expectedEvents)
+            .insert(ExpectedEvent.fromJson(eventRow));
       default:
         throw const EncryptedBackupException('Invalid encrypted export');
     }
@@ -1784,6 +1899,9 @@ class _ChunkedArchiveRestorer {
     'payment_sources',
     'transactions',
     'sms_dispositions',
+    'transaction_links',
+    'counterparties',
+    'expected_events',
     'rules',
     'feedback',
     'baselines',
@@ -1791,6 +1909,51 @@ class _ChunkedArchiveRestorer {
     'model_meta',
     'recurring_series',
   };
+}
+
+Future<void> _clearDatabaseForRestore(AppDatabase database) async {
+  await database.delete(database.expectedEvents).go();
+  await database.delete(database.counterparties).go();
+  await database.delete(database.financialEvents).go();
+  await database.delete(database.shadowTransactions).go();
+  await database.delete(database.recurringSeries).go();
+  await database.delete(database.modelMeta).go();
+  await database.delete(database.insights).go();
+  await database.delete(database.baselines).go();
+  await database.delete(database.feedback).go();
+  await database.delete(database.rules).go();
+  await database.delete(database.merchantAliases).go();
+  await database.delete(database.payeeEvidence).go();
+  await database.delete(database.smsDispositions).go();
+  await database.delete(database.transactionLinks).go();
+  await (database.update(database.transactions)).write(
+    const TransactionsCompanion(duplicateOfTxnId: Value(null)),
+  );
+  await database.delete(database.transactions).go();
+  await database.delete(database.paymentSources).go();
+  await database.delete(database.rawSms).go();
+  await database.delete(database.merchants).go();
+  await (database.update(database.categories)).write(
+    const CategoriesCompanion(parentId: Value(null)),
+  );
+  await database.delete(database.categories).go();
+}
+
+Future<void> _assertRestoredForeignKeys(AppDatabase database) async {
+  final violations =
+      await database.customSelect('PRAGMA foreign_key_check').get();
+  if (violations.isNotEmpty) {
+    throw const EncryptedBackupException(
+      'Restored database contains invalid references',
+    );
+  }
+}
+
+String? _archiveNullableString(Object? value, String field) {
+  if (value == null || value is String) return value as String?;
+  throw EncryptedBackupException(
+    'Malformed archive table row: invalid $field',
+  );
 }
 
 class _NdjsonLineBuffer {

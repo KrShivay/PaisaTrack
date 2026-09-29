@@ -187,6 +187,444 @@ void main() {
     expect(await database.select(database.smsDispositions).get(), isEmpty);
   });
 
+  test('legacy and chunked imports replace linked transaction rows safely',
+      () async {
+    for (final format in ['legacy', 'chunked']) {
+      final parentId = 'txn_parent_$format';
+      final duplicateId = 'txn_duplicate_$format';
+      final linkId = 'link_$format';
+      final counterpartyId = 'counterparty_$format';
+      final eventId = 'expected_$format';
+      final categoryParentId = 'category_parent_$format';
+      final categoryChildId = 'category_child_$format';
+      await database.into(database.categories).insert(
+            CategoriesCompanion.insert(
+              id: categoryParentId,
+              name: 'Parent $format',
+              icon: 'folder',
+              isSpending: true,
+              sortOrder: 900,
+              isUserCreated: true,
+            ),
+          );
+      await database.into(database.categories).insert(
+            CategoriesCompanion.insert(
+              id: categoryChildId,
+              name: 'Child $format',
+              parentId: Value(categoryParentId),
+              icon: 'tag',
+              isSpending: true,
+              sortOrder: 901,
+              isUserCreated: true,
+            ),
+          );
+      await _insertTransaction(database, parentId);
+      await _insertTransaction(
+        database,
+        duplicateId,
+        duplicateOfTxnId: parentId,
+      );
+      await database.into(database.transactionLinks).insert(
+            TransactionLinksCompanion.insert(
+              id: linkId,
+              fromTxnId: duplicateId,
+              toTxnId: parentId,
+              linkType: 'refunds',
+              basis: 'synthetic backup regression',
+              createdAt: DateTime.utc(2026, 8, 2).millisecondsSinceEpoch,
+            ),
+          );
+      await database.into(database.counterparties).insert(
+            CounterpartiesCompanion.insert(
+              id: counterpartyId,
+              kind: 'person',
+              identityKey: 'synthetic:$format',
+              displayName: Value('Backup counterparty $format'),
+              firstSeen: DateTime.utc(2026, 8, 1),
+              lastSeen: DateTime.utc(2026, 8, 2),
+            ),
+          );
+      await database.into(database.expectedEvents).insert(
+            ExpectedEventsCompanion.insert(
+              id: eventId,
+              source: 'user',
+              counterpartyId: Value(counterpartyId),
+              label: 'Expected payment $format',
+              expectedAmountPaise: 25000,
+              expectedDate: DateTime.utc(2026, 8, 20),
+              state: 'snoozed',
+              confidence: 1,
+              dedupKey: 'expected:$format',
+            ),
+          );
+
+      final passphrase = 'linked-transactions-$format-passphrase';
+      if (format == 'legacy') {
+        final bytes = await service().exportBytes(passphrase: passphrase);
+        await service().importBytes(bytes: bytes, passphrase: passphrase);
+      } else {
+        final file = await service().exportToFile(
+          directory: directory,
+          passphrase: passphrase,
+        );
+        await service().importFromFile(file: file, passphrase: passphrase);
+      }
+
+      final restoredRows = await (database.select(database.transactions)
+            ..where((row) => row.id.isIn([parentId, duplicateId])))
+          .get();
+      expect(restoredRows, hasLength(2));
+      final restoredCategory = await (database.select(database.categories)
+            ..where((category) => category.id.equals(categoryChildId)))
+          .getSingle();
+      expect(restoredCategory.parentId, categoryParentId);
+      expect(
+        restoredRows
+            .singleWhere((row) => row.id == duplicateId)
+            .duplicateOfTxnId,
+        parentId,
+      );
+      final restoredLink = await (database.select(database.transactionLinks)
+            ..where((row) => row.id.equals(linkId)))
+          .getSingle();
+      expect(restoredLink.fromTxnId, duplicateId);
+      expect(restoredLink.toTxnId, parentId);
+      final restoredCounterparty =
+          await (database.select(database.counterparties)
+                ..where((row) => row.id.equals(counterpartyId)))
+              .getSingle();
+      expect(restoredCounterparty.displayName, 'Backup counterparty $format');
+      final restoredEvent = await (database.select(database.expectedEvents)
+            ..where((row) => row.id.equals(eventId)))
+          .getSingle();
+      expect(restoredEvent.counterpartyId, counterpartyId);
+      expect(restoredEvent.state, 'snoozed');
+      expect(restoredEvent.label, 'Expected payment $format');
+      expect(
+        await database.customSelect('PRAGMA foreign_key_check').get(),
+        isEmpty,
+      );
+    }
+  });
+
+  test('legacy v3 archives without transaction links remain compatible',
+      () async {
+    const passphrase = 'old-archive-compatibility-passphrase';
+    await _insertTransaction(database, 'txn_old_archive');
+    await database.into(database.counterparties).insert(
+          CounterpartiesCompanion.insert(
+            id: 'counterparty_old_archive',
+            kind: 'person',
+            identityKey: 'old:archive',
+            firstSeen: DateTime.utc(2026, 8, 1),
+            lastSeen: DateTime.utc(2026, 8, 2),
+          ),
+        );
+    await database.into(database.expectedEvents).insert(
+          ExpectedEventsCompanion.insert(
+            id: 'expected_old_archive',
+            source: 'user',
+            label: 'Old pending payment',
+            expectedAmountPaise: 10000,
+            expectedDate: DateTime.utc(2026, 8, 20),
+            state: 'expected',
+            confidence: 1,
+            dedupKey: 'old:archive',
+          ),
+        );
+    await database.into(database.financialEvents).insert(
+          FinancialEventsCompanion.insert(
+            id: 'financial_event_old_archive',
+            eventKey: 'old:archive',
+            keyBasis: 'synthetic',
+            kind: 'purchase',
+            netAmountPaise: 10000,
+            openedAt: DateTime.utc(2026, 8, 1).millisecondsSinceEpoch,
+          ),
+        );
+    await database.into(database.shadowTransactions).insert(
+          ShadowTransactionsCompanion.insert(
+            id: 'shadow_old_archive',
+            sourceId: 'synthetic-source',
+            pipelineVersion: 'test-v1',
+            outcome: 'accepted',
+            observedAt: DateTime.utc(2026, 8, 1),
+            updatedAt: DateTime.utc(2026, 8, 2),
+          ),
+        );
+    final currentArchive = await service().exportBytes(
+      passphrase: passphrase,
+    );
+    final oldArchive = await _rewriteLegacyArchive(
+      currentArchive,
+      passphrase: passphrase,
+      rewrite: (archive) {
+        (archive['tables'] as Map<String, dynamic>).remove('transaction_links');
+        final tables = archive['tables'] as Map<String, dynamic>;
+        tables.remove('counterparties');
+        tables.remove('expected_events');
+      },
+    );
+    await database.into(database.featureFlags).insert(
+          FeatureFlagsCompanion.insert(
+            key: 'device_local_flag',
+            value: 'true',
+          ),
+        );
+
+    await service().importBytes(bytes: oldArchive, passphrase: passphrase);
+
+    expect(
+      (await database.select(database.transactions).get()).map((row) => row.id),
+      contains('txn_old_archive'),
+    );
+    expect(await database.select(database.transactionLinks).get(), isEmpty);
+    expect(await database.select(database.counterparties).get(), isEmpty);
+    expect(await database.select(database.expectedEvents).get(), isEmpty);
+    expect(await database.select(database.financialEvents).get(), isEmpty);
+    expect(await database.select(database.shadowTransactions).get(), isEmpty);
+    expect(
+      (await database.select(database.featureFlags).getSingle()).value,
+      'true',
+    );
+  });
+
+  test('older chunked v3 archives may omit optional tables', () async {
+    const passphrase = 'old-chunked-archive-compatibility-passphrase';
+    await _insertTransaction(database, 'txn_old_chunked_archive');
+    await _insertTransaction(database, 'txn_old_chunked_related');
+    await database.into(database.counterparties).insert(
+          CounterpartiesCompanion.insert(
+            id: 'counterparty_old_chunked',
+            kind: 'person',
+            identityKey: 'old:chunked',
+            firstSeen: DateTime.utc(2026, 8, 1),
+            lastSeen: DateTime.utc(2026, 8, 2),
+          ),
+        );
+    await database.into(database.expectedEvents).insert(
+          ExpectedEventsCompanion.insert(
+            id: 'expected_old_chunked',
+            source: 'user',
+            label: 'Old chunked payment',
+            expectedAmountPaise: 10000,
+            expectedDate: DateTime.utc(2026, 8, 20),
+            state: 'expected',
+            confidence: 1,
+            dedupKey: 'old:chunked',
+          ),
+        );
+    await database.into(database.transactionLinks).insert(
+          TransactionLinksCompanion.insert(
+            id: 'link_old_chunked',
+            fromTxnId: 'txn_old_chunked_related',
+            toTxnId: 'txn_old_chunked_archive',
+            linkType: 'echo',
+            basis: 'synthetic old-format regression',
+            createdAt: DateTime.utc(2026, 8, 2).millisecondsSinceEpoch,
+          ),
+        );
+    final currentFile = await service().exportToFile(
+      directory: directory,
+      passphrase: passphrase,
+    );
+    final oldArchive = await _removeChunkedOptionalTables(
+      await currentFile.readAsBytes(),
+      passphrase: passphrase,
+    );
+    final oldFile = File('${directory.path}/old-v3-chunked.ptrack');
+    await oldFile.writeAsBytes(oldArchive);
+
+    await service().importFromFile(file: oldFile, passphrase: passphrase);
+
+    expect(
+      (await database.select(database.transactions).get()).map((row) => row.id),
+      contains('txn_old_chunked_archive'),
+    );
+    expect(await database.select(database.transactionLinks).get(), isEmpty);
+    expect(await database.select(database.counterparties).get(), isEmpty);
+    expect(await database.select(database.expectedEvents).get(), isEmpty);
+  });
+
+  test('failed linked restore rolls back and retains the existing ledger',
+      () async {
+    const passphrase = 'rollback-linked-import-passphrase';
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'category_rollback_parent',
+            name: 'Rollback parent',
+            icon: 'folder',
+            isSpending: true,
+            sortOrder: 990,
+            isUserCreated: true,
+          ),
+        );
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'category_rollback_child',
+            name: 'Rollback child',
+            parentId: const Value('category_rollback_parent'),
+            icon: 'tag',
+            isSpending: true,
+            sortOrder: 991,
+            isUserCreated: true,
+          ),
+        );
+    await _insertTransaction(database, 'txn_rollback_parent');
+    await _insertTransaction(
+      database,
+      'txn_rollback_child',
+      duplicateOfTxnId: 'txn_rollback_parent',
+    );
+    await database.into(database.transactionLinks).insert(
+          TransactionLinksCompanion.insert(
+            id: 'link_rollback',
+            fromTxnId: 'txn_rollback_child',
+            toTxnId: 'txn_rollback_parent',
+            linkType: 'refunds',
+            basis: 'synthetic rollback regression',
+            createdAt: DateTime.utc(2026, 8, 2).millisecondsSinceEpoch,
+          ),
+        );
+    await database.into(database.counterparties).insert(
+          CounterpartiesCompanion.insert(
+            id: 'counterparty_rollback',
+            kind: 'person',
+            identityKey: 'rollback:person',
+            displayName: const Value('Keep after rollback'),
+            firstSeen: DateTime.utc(2026, 8, 1),
+            lastSeen: DateTime.utc(2026, 8, 2),
+          ),
+        );
+    await database.into(database.expectedEvents).insert(
+          ExpectedEventsCompanion.insert(
+            id: 'expected_rollback',
+            source: 'user',
+            counterpartyId: const Value('counterparty_rollback'),
+            label: 'Keep after rollback',
+            expectedAmountPaise: 12000,
+            expectedDate: DateTime.utc(2026, 8, 20),
+            state: 'snoozed',
+            confidence: 1,
+            dedupKey: 'rollback:payment',
+          ),
+        );
+    final originalCategories = await database.select(database.categories).get();
+    final originalTransactions =
+        await database.select(database.transactions).get();
+    final originalLinks =
+        await database.select(database.transactionLinks).get();
+    final originalCounterparties =
+        await database.select(database.counterparties).get();
+    final originalEvents = await database.select(database.expectedEvents).get();
+
+    Future<void> expectDatabaseUnchanged() async {
+      expect(
+        (await database.select(database.categories).get())
+            .map((row) => row.toJson()),
+        originalCategories.map((row) => row.toJson()),
+      );
+      expect(
+        (await database.select(database.transactions).get())
+            .map((row) => row.toJson()),
+        originalTransactions.map((row) => row.toJson()),
+      );
+      expect(
+        (await database.select(database.transactionLinks).get())
+            .map((row) => row.toJson()),
+        originalLinks.map((row) => row.toJson()),
+      );
+      expect(
+        (await database.select(database.counterparties).get())
+            .map((row) => row.toJson()),
+        originalCounterparties.map((row) => row.toJson()),
+      );
+      expect(
+        (await database.select(database.expectedEvents).get())
+            .map((row) => row.toJson()),
+        originalEvents.map((row) => row.toJson()),
+      );
+    }
+
+    final malformedRows = [
+      (
+        table: 'transaction_links',
+        id: 'link_rollback',
+        field: 'toTxnId',
+        value: 'missing_transaction'
+      ),
+      (
+        table: 'categories',
+        id: 'category_rollback_child',
+        field: 'parentId',
+        value: 42
+      ),
+      (
+        table: 'transactions',
+        id: 'txn_rollback_child',
+        field: 'duplicateOfTxnId',
+        value: 42
+      ),
+    ];
+    for (final format in ['legacy', 'chunked']) {
+      for (final malformed in malformedRows) {
+        Uint8List invalidArchive;
+        if (format == 'legacy') {
+          final archive = await service().exportBytes(passphrase: passphrase);
+          invalidArchive = await _rewriteLegacyArchive(
+            archive,
+            passphrase: passphrase,
+            rewrite: (archive) {
+              final rows = (archive['tables']
+                  as Map<String, dynamic>)[malformed.table] as List<dynamic>;
+              (rows.singleWhere(
+                (row) => (row as Map<String, dynamic>)['id'] == malformed.id,
+              ) as Map<String, dynamic>)[malformed.field] = malformed.value;
+            },
+          );
+          await expectLater(
+            service().importBytes(
+              bytes: invalidArchive,
+              passphrase: passphrase,
+            ),
+            throwsA(isA<Exception>()),
+          );
+        } else {
+          final archiveFile = await service().exportToFile(
+            directory: directory,
+            passphrase: passphrase,
+          );
+          invalidArchive = await _rewriteChunkedArchive(
+            await archiveFile.readAsBytes(),
+            passphrase: passphrase,
+            rewriteRecords: (records) {
+              final record = records.singleWhere(
+                (record) =>
+                    record['kind'] == 'row' &&
+                    record['table'] == malformed.table &&
+                    (record['row'] as Map<String, dynamic>)['id'] ==
+                        malformed.id,
+              );
+              (record['row'] as Map<String, dynamic>)[malformed.field] =
+                  malformed.value;
+              return records;
+            },
+          );
+          final invalidFile = File('${directory.path}/invalid-$format.ptrack');
+          await invalidFile.writeAsBytes(invalidArchive);
+          await expectLater(
+            service().importFromFile(
+              file: invalidFile,
+              passphrase: passphrase,
+            ),
+            throwsA(isA<Exception>()),
+          );
+        }
+        await expectDatabaseUnchanged();
+      }
+    }
+  });
+
   test('chunked file export reports monotonic progress and finalizes',
       () async {
     final progress = <EncryptedBackupProgress>[];
@@ -872,6 +1310,277 @@ void main() {
   });
 }
 
+Future<void> _insertTransaction(
+  AppDatabase database,
+  String id, {
+  String? duplicateOfTxnId,
+}) async {
+  final timestamp = DateTime.utc(2026, 8, 2);
+  await database.into(database.transactions).insert(
+        TransactionsCompanion.insert(
+          id: id,
+          ts: timestamp.millisecondsSinceEpoch,
+          amount: 125,
+          direction: 'debit',
+          channel: 'upi',
+          parseSource: 'template',
+          duplicateOfTxnId: Value(duplicateOfTxnId),
+          confidenceJson: '{}',
+          status: 'auto',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        ),
+      );
+}
+
+Future<Uint8List> _rewriteLegacyArchive(
+  Uint8List bytes, {
+  required String passphrase,
+  required void Function(Map<String, dynamic> archive) rewrite,
+}) async {
+  final envelope =
+      Map<String, dynamic>.from(jsonDecode(utf8.decode(bytes)) as Map);
+  final oldKdf = Map<String, dynamic>.from(envelope['kdf'] as Map);
+  final oldCipher = Map<String, dynamic>.from(envelope['cipher'] as Map);
+  final algorithm = Argon2id(
+    memory: oldKdf['memory'] as int,
+    parallelism: oldKdf['parallelism'] as int,
+    iterations: oldKdf['iterations'] as int,
+    hashLength: oldKdf['hash_length'] as int,
+  );
+  final cipher = AesGcm.with256bits();
+  final oldKey = await algorithm.deriveKey(
+    secretKey: SecretKey(utf8.encode(passphrase)),
+    nonce: base64Decode(oldKdf['salt'] as String),
+  );
+  final plaintext = await cipher.decrypt(
+    SecretBox(
+      base64Decode(oldCipher['ciphertext'] as String),
+      nonce: base64Decode(oldCipher['nonce'] as String),
+      mac: Mac(base64Decode(oldCipher['mac'] as String)),
+    ),
+    secretKey: oldKey,
+  );
+  final archive =
+      Map<String, dynamic>.from(jsonDecode(utf8.decode(plaintext)) as Map);
+  rewrite(archive);
+
+  final random = Random.secure();
+  final salt = List<int>.generate(16, (_) => random.nextInt(256));
+  final nonce = List<int>.generate(
+    AesGcm.defaultNonceLength,
+    (_) => random.nextInt(256),
+  );
+  final newKey = await algorithm.deriveKey(
+    secretKey: SecretKey(utf8.encode(passphrase)),
+    nonce: salt,
+  );
+  final box = await cipher.encrypt(
+    utf8.encode(jsonEncode(archive)),
+    secretKey: newKey,
+    nonce: nonce,
+  );
+  envelope['kdf'] = {...oldKdf, 'salt': base64Encode(salt)};
+  envelope['cipher'] = {
+    ...oldCipher,
+    'nonce': base64Encode(box.nonce),
+    'mac': base64Encode(box.mac.bytes),
+    'ciphertext': base64Encode(box.cipherText),
+  };
+  return Uint8List.fromList(utf8.encode(jsonEncode(envelope)));
+}
+
+Future<Uint8List> _removeChunkedOptionalTables(
+  Uint8List bytes, {
+  required String passphrase,
+}) async {
+  return _rewriteChunkedArchive(
+    bytes,
+    passphrase: passphrase,
+    rewriteRecords: (records) {
+      const optionalTables = {
+        'counterparties',
+        'expected_events',
+        'transaction_links',
+      };
+      final removedRowCount = records
+          .where(
+            (record) =>
+                record['kind'] == 'row' &&
+                optionalTables.contains(record['table']),
+          )
+          .length;
+      records.removeWhere(
+        (record) =>
+            record['kind'] == 'row' && optionalTables.contains(record['table']),
+      );
+      for (final record in records.where(
+        (record) => record['kind'] == 'footer',
+      )) {
+        final tables = Map<String, dynamic>.from(record['tables'] as Map)
+          ..removeWhere((table, _) => optionalTables.contains(table));
+        record['tables'] = tables;
+        record['rows'] = (record['rows'] as int) - removedRowCount;
+      }
+      return records;
+    },
+  );
+}
+
+Future<Uint8List> _rewriteChunkedArchive(
+  Uint8List bytes, {
+  required String passphrase,
+  required List<Map<String, dynamic>> Function(
+    List<Map<String, dynamic>> records,
+  ) rewriteRecords,
+}) async {
+  final headerLength = _readUint32(bytes, 5);
+  final originalHeaderBytes = bytes.sublist(9, 9 + headerLength);
+  final header = Map<String, dynamic>.from(
+    jsonDecode(utf8.decode(originalHeaderBytes)) as Map,
+  );
+  final kdfFields = Map<String, dynamic>.from(header['kdf'] as Map);
+  final algorithm = Argon2id(
+    memory: kdfFields['memory'] as int,
+    parallelism: kdfFields['parallelism'] as int,
+    iterations: kdfFields['iterations'] as int,
+    hashLength: kdfFields['hash_length'] as int,
+  );
+  final key = await algorithm.deriveKey(
+    secretKey: SecretKey(utf8.encode(passphrase)),
+    nonce: base64Decode(kdfFields['salt'] as String),
+  );
+  final cipher = AesGcm.with256bits();
+  final baseNonce = base64Decode(header['base_nonce'] as String);
+  final data = BytesBuilder(copy: false);
+  var chunkIndex = 0;
+  var offset = 9 + headerLength;
+  while (offset < bytes.length) {
+    final kind = bytes[offset];
+    final length = _readUint32(bytes, offset + 1);
+    final ciphertext = bytes.sublist(offset + 5, offset + 5 + length);
+    final mac = bytes.sublist(offset + 5 + length, offset + 5 + length + 16);
+    final plaintext = await cipher.decrypt(
+      SecretBox(
+        ciphertext,
+        nonce: _chunkNonceForTest(baseNonce, chunkIndex),
+        mac: Mac(mac),
+      ),
+      secretKey: key,
+      aad: _chunkAadForTest(
+        originalHeaderBytes,
+        chunkIndex,
+        length,
+        kind,
+      ),
+    );
+    offset += 1 + 4 + length + 16;
+    if (kind == 1) {
+      data.add(plaintext);
+      chunkIndex++;
+    } else if (kind == 2) {
+      break;
+    } else {
+      throw StateError('Unexpected chunked record kind');
+    }
+  }
+
+  final records = utf8
+      .decode(data.takeBytes())
+      .split('\n')
+      .where((line) => line.isNotEmpty)
+      .map((line) => Map<String, dynamic>.from(jsonDecode(line) as Map))
+      .toList();
+  final rewrittenRecords = rewriteRecords(records);
+  final rewrittenLines = <String>[];
+  for (final record in rewrittenRecords) {
+    rewrittenLines.add(jsonEncode(record));
+  }
+  final rewrittenData = utf8.encode('${rewrittenLines.join('\n')}\n');
+  final random = Random.secure();
+  final newBaseNonce = List<int>.generate(
+    AesGcm.defaultNonceLength,
+    (_) => random.nextInt(256),
+  );
+  header['base_nonce'] = base64Encode(newBaseNonce);
+  final headerBytes = utf8.encode(jsonEncode(header));
+  final output = BytesBuilder(copy: false)
+    ..add([0x50, 0x54, 0x52, 0x4b, 2])
+    ..add(_testUint32Bytes(headerBytes.length))
+    ..add(headerBytes);
+
+  Future<void> writeRecord(int kind, List<int> plaintext, int index) async {
+    final box = await cipher.encrypt(
+      plaintext,
+      secretKey: key,
+      nonce: _chunkNonceForTest(newBaseNonce, index),
+      aad: _chunkAadForTest(headerBytes, index, plaintext.length, kind),
+    );
+    output
+      ..add([kind])
+      ..add(_testUint32Bytes(plaintext.length))
+      ..add(box.cipherText)
+      ..add(box.mac.bytes);
+  }
+
+  var newChunkCount = 0;
+  for (var start = 0; start < rewrittenData.length; start += 60 * 1024) {
+    final end = min(start + 60 * 1024, rewrittenData.length);
+    await writeRecord(1, rewrittenData.sublist(start, end), newChunkCount);
+    newChunkCount++;
+  }
+  final manifest = utf8.encode(
+    jsonEncode({
+      'version': 2,
+      'chunks': newChunkCount,
+      'plaintext_bytes': rewrittenData.length,
+      'ciphertext_bytes': rewrittenData.length,
+    }),
+  );
+  await writeRecord(2, manifest, newChunkCount);
+  return Uint8List.fromList(output.takeBytes());
+}
+
+List<int> _chunkNonceForTest(List<int> baseNonce, int index) {
+  final nonce = Uint8List.fromList(baseNonce);
+  var value = index;
+  for (var i = nonce.length - 1; i >= nonce.length - 8; i--) {
+    nonce[i] = value & 0xff;
+    value >>= 8;
+  }
+  return nonce;
+}
+
+List<int> _chunkAadForTest(
+  List<int> headerBytes,
+  int index,
+  int length,
+  int kind,
+) =>
+    [
+      ...headerBytes,
+      kind,
+      ..._testUint64Bytes(index),
+      ..._testUint32Bytes(length),
+    ];
+
+List<int> _testUint32Bytes(int value) => [
+      (value >> 24) & 0xff,
+      (value >> 16) & 0xff,
+      (value >> 8) & 0xff,
+      value & 0xff,
+    ];
+
+List<int> _testUint64Bytes(int value) {
+  final bytes = Uint8List(8);
+  var remaining = value;
+  for (var i = 7; i >= 0; i--) {
+    bytes[i] = remaining & 0xff;
+    remaining >>= 8;
+  }
+  return bytes;
+}
+
 int _readUint32(List<int> bytes, int offset) =>
     (bytes[offset] << 24) |
     (bytes[offset + 1] << 16) |
@@ -1008,7 +1717,7 @@ Future<Uint8List> _chunkedArchiveWithoutDispositionTable(
   final output = BytesBuilder(copy: false)
     ..add(const [0x50, 0x54, 0x52, 0x4b])
     ..add([header['version'] as int])
-    ..add(_uint32ForTest(headerBytes.length))
+    ..add(_testUint32Bytes(headerBytes.length))
     ..add(headerBytes);
   var chunkCount = 0;
   for (var start = 0; start < archiveBytes.length; start += chunkSize) {
@@ -1022,7 +1731,7 @@ Future<Uint8List> _chunkedArchiveWithoutDispositionTable(
     );
     output
       ..add([1])
-      ..add(_uint32ForTest(chunk.length))
+      ..add(_testUint32Bytes(chunk.length))
       ..add(box.cipherText)
       ..add(box.mac.bytes);
     chunkCount++;
@@ -1043,52 +1752,11 @@ Future<Uint8List> _chunkedArchiveWithoutDispositionTable(
   );
   output
     ..add([2])
-    ..add(_uint32ForTest(manifest.length))
+    ..add(_testUint32Bytes(manifest.length))
     ..add(manifestBox.cipherText)
     ..add(manifestBox.mac.bytes);
   return output.takeBytes();
 }
-
-List<int> _chunkNonceForTest(List<int> baseNonce, int index) {
-  final nonce = List<int>.from(baseNonce);
-  var value = index;
-  for (var i = nonce.length - 1; i >= nonce.length - 8; i--) {
-    nonce[i] = value & 0xff;
-    value >>= 8;
-  }
-  return nonce;
-}
-
-List<int> _chunkAadForTest(
-  List<int> headerBytes,
-  int index,
-  int length,
-  int kind,
-) =>
-    [
-      ...headerBytes,
-      kind,
-      ..._uint64ForTest(index),
-      ..._uint32ForTest(length),
-    ];
-
-List<int> _uint32ForTest(int value) => [
-      (value >> 24) & 0xff,
-      (value >> 16) & 0xff,
-      (value >> 8) & 0xff,
-      value & 0xff,
-    ];
-
-List<int> _uint64ForTest(int value) => [
-      0,
-      0,
-      0,
-      0,
-      (value >> 24) & 0xff,
-      (value >> 16) & 0xff,
-      (value >> 8) & 0xff,
-      value & 0xff,
-    ];
 
 class _MemoryDocumentGateway extends SystemDocumentGateway {
   _MemoryDocumentGateway() : super();

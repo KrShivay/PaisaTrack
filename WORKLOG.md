@@ -1,5 +1,20 @@
 # Current Handoff
 
+## 2026-09-29 — T-191 linked encrypted backup restore
+
+- Fixed restore ordering for transaction links, duplicate transaction links,
+  and category parent links in legacy JSON and chunked v3 archives. Restores
+  preserve counterparties, expected events, and T-185 dispositions; malformed
+  nullable link values fail closed instead of silently dropping relationships.
+  Failed legacy and chunked restores leave the existing database unchanged.
+- Added synthetic round-trip, `PRAGMA foreign_key_check`, malformed archive,
+  rollback, and old-v3 compatibility coverage. No phone data or live archives
+  were accessed.
+- Validation: focused backup/recovery suites 36/36; full Flutter suite 831/831;
+  `flutter analyze --no-pub`, formatting, and diff checks clean. Independent
+  review passed. GitNexus detect-changes reports 8 files, 31 symbols, 10 flows,
+  HIGH risk; full output. Changes are ready for commit and fast-forward push.
+
 ## 2026-09-29 — T-185 durable SMS disposition
 
 - Added a local `not_transaction` disposition keyed by provider SMS ID and a
@@ -50,28 +65,3 @@
   7 affected processes, HIGH risk; flows include parser/cascade ingestion,
   shadow pipeline, and test entrypoints. Independent review pending; no
   commit/push.
-
-## 2026-09-28 — T-183 live SMS lifecycle guard
-
-- Wired one local cue classifier into live capture, history import, and
-  incremental catch-up. Non-transactional and unknown messages stop before
-  extraction; failed, pending, and reversal records retain explicit lifecycle
-  state and review status. The classifier preserves settled debit/credit with
-  trailing balance context. A promotion footer yields to a specific account/card
-  movement or an amount-led paid/spent/purchase phrase tied to a payee; generic
-  reward copy such as “Rs 100 spent via UPI” remains a promotion. Model direction
-  must agree with an explicit SMS debit/credit cue. A bare “purchase of … for
-  Rs …” may disambiguate a balance message but does not override promotion
-  cues because the wording is ambiguous. Unknown classification fails closed.
-- Bumped the retained-SMS parser contract to version 2 so failures are retried
-  under the new classifier by default. Added actual-provider adversarial and
-  model-unavailable tests, plus history and catch-up provider tests. No sender
-  filter, database schema, cloud, or raw-SMS retention changes. T-184 sender
-  admission and T-185 durable “Not a transaction” remain separate backlog work.
-- Validation: focused capture/lifecycle/history suite 57/57; full Flutter suite
-  818/818; `flutter analyze --no-pub`, Dart format check, and `git diff --check`
-  clean. GitNexus `detect-changes --scope all`: 12 files, 42 symbols, 13
-  processes, HIGH risk. Refreshed index reports unrelated whole-flow truncation
-  and cross-language unresolved property edges; earlier CRITICAL/UNKNOWN
-  warning was surfaced. Independent review pending. No phone, archive, APK, or
-  live SMS access.

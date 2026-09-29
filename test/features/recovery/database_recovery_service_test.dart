@@ -236,6 +236,84 @@ void main() {
     expect(reopened.file.path, generationFile.path);
   });
 
+  test('recovery generation retains transaction links from the archive',
+      () async {
+    final timestamp = DateTime.utc(2026, 9, 2);
+    await sourceDatabase.into(sourceDatabase.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'recovery_parent',
+            ts: timestamp.millisecondsSinceEpoch,
+            amount: 250,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'auto',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+    await sourceDatabase.into(sourceDatabase.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'recovery_child',
+            ts: timestamp.millisecondsSinceEpoch,
+            amount: 250,
+            direction: 'credit',
+            channel: 'upi',
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'auto',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+    await sourceDatabase.into(sourceDatabase.transactionLinks).insert(
+          TransactionLinksCompanion.insert(
+            id: 'recovery_link',
+            fromTxnId: 'recovery_child',
+            toTxnId: 'recovery_parent',
+            linkType: 'refunds',
+            basis: 'synthetic recovery regression',
+            createdAt: timestamp.millisecondsSinceEpoch,
+          ),
+        );
+    await EncryptedBackupService(database: sourceDatabase).exportToDocument(
+      gateway: documents,
+      suggestedName: 'backup.ptrack',
+      mimeType: 'application/octet-stream',
+      passphrase: 'correct backup passphrase',
+    );
+
+    final recovery = DatabaseRecoveryService(
+      directory: directory,
+      passphrases: passphrases,
+      documents: documents,
+      databaseFactory: (file, _) => AppDatabase(NativeDatabase(file)),
+    );
+    final result = await recovery.restoreFromDocument(
+      passphrase: 'correct backup passphrase',
+    );
+
+    expect(result, isNotNull);
+    expect(result!.transactionCount, 2);
+    final file = File(
+      '${directory.path}/${AppDatabaseGeneration(passphrases.activeGeneration!).fileName}',
+    );
+    final restored = AppDatabase(NativeDatabase(file));
+    addTearDown(restored.close);
+    expect(
+      (await restored.select(restored.transactions).get()).map((row) => row.id),
+      containsAll(['recovery_parent', 'recovery_child']),
+    );
+    final link = await restored.select(restored.transactionLinks).getSingle();
+    expect(link.fromTxnId, 'recovery_child');
+    expect(link.toTxnId, 'recovery_parent');
+    expect(
+      await restored.customSelect('PRAGMA foreign_key_check').get(),
+      isEmpty,
+    );
+  });
+
   test('wrong passphrase leaves legacy bytes and key selector unchanged',
       () async {
     final oldFile = File('${directory.path}/$appDatabaseFileName');

@@ -62,6 +62,11 @@ PaisaTrack is local-first:
   use authenticated chunked records and a final manifest; v1 JSON/AES-GCM
   imports remain supported. Android's Storage Access Framework writes/reads
   only the document the user selects and requires no broad storage permission.
+  New archives also contain transaction relationships, counterparty labels,
+  category hierarchy, expected-event state, and durable SMS dispositions; all
+  remain inside the passphrase-encrypted archive. Older v3 files may omit the
+  optional tables and restore safe empty/default state. Restore verification
+  uses synthetic archives and local database fixtures only.
 - User labels and payment-source nicknames are local metadata. Only masked
   source identifiers are stored; excluding a source or owned transfer from
   analytics does not delete its underlying transaction evidence.

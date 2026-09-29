@@ -67,6 +67,10 @@ events, not relax the transaction parser's future-event rejection.
   document gateway and the authenticated v2 chunked envelope; v1 JSON/AES-GCM
   imports remain compatible. Export pages Drift rows, and import restores
   newline-delimited rows inside one transaction with progress and cancellation.
+  New archives include transaction links, counterparties, category hierarchy,
+  and expected-event state; older v3 archives may omit the newer optional
+  tables. Restore deletes dependent rows first, restores self-references after
+  their parent rows, and checks foreign-key integrity before commit.
 - Delete-everything closes the database, removes DB/key/settings/import state,
   and recreates only default categories.
 
