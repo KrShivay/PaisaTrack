@@ -17,8 +17,10 @@ import '../../data/models/normalized_transaction_record.dart'
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/sms_disposition_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../enrichment/source_currency_repair_service.dart';
 import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
+import 'currency_repair_providers.dart';
 import 'transaction_correction_controller.dart';
 import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
@@ -44,6 +46,7 @@ class _TransactionDetailScreenState
   bool _showTechnicalDetails = false;
   bool _savingNote = false;
   bool _savingParseConfirmation = false;
+  bool _savingCurrencyRepair = false;
   String? _noteError;
 
   @override
@@ -118,6 +121,75 @@ class _TransactionDetailScreenState
       }
     } finally {
       if (mounted) setState(() => _savingParseConfirmation = false);
+    }
+  }
+
+  Future<void> _confirmCurrencyRepair(
+    SourceCurrencyRepairPreview preview,
+  ) async {
+    if (_savingCurrencyRepair) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Use INR from the original SMS?'),
+        content: Text(
+          'The retained message shows “${preview.currencyToken}” beside '
+          'this transaction’s ${(preview.amountPaise / 100).toStringAsFixed(2)}. '
+          'This changes only its currency label to INR (₹).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Apply INR'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _savingCurrencyRepair = true);
+    try {
+      final database = await ref.read(appDatabaseProvider.future);
+      final repair = SourceCurrencyRepairService(database);
+      final applied = await repair.apply(preview);
+      if (!applied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('The source changed; currency was not updated.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      ref.read(undoControllerProvider.notifier).pushUndo(
+            UndoToken(
+              id: 'currency_repair_${widget.txnId}',
+              message: 'Currency set to INR',
+              undoAction: () async {
+                await repair.undo(preview);
+                ref.invalidate(
+                  sourceCurrencyRepairPreviewProvider(widget.txnId),
+                );
+                ref.invalidate(transactionDetailProvider(widget.txnId));
+              },
+            ),
+          );
+      ref.invalidate(sourceCurrencyRepairPreviewProvider(widget.txnId));
+      ref.invalidate(transactionDetailProvider(widget.txnId));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Currency could not be updated.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingCurrencyRepair = false);
     }
   }
 
@@ -263,6 +335,10 @@ class _TransactionDetailScreenState
             _seed(detail);
 
             final txn = detail.txn;
+            final currencyRepair =
+                txn.currencyCode == null && txn.currencySymbol == null
+                    ? ref.watch(sourceCurrencyRepairPreviewProvider(txn.id))
+                    : const AsyncValue.data(null);
             final isDebit = txn.direction == 'debit';
             final currentCatId =
                 _categoryId ?? txn.categoryId ?? 'uncategorized';
@@ -348,6 +424,15 @@ class _TransactionDetailScreenState
                     weight: FontWeight.w600,
                   ),
                   const SizedBox(height: 24),
+
+                  if (currencyRepair.valueOrNull case final preview?) ...[
+                    _CurrencyRepairCard(
+                      preview: preview,
+                      saving: _savingCurrencyRepair,
+                      onConfirm: () => _confirmCurrencyRepair(preview),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Metadata Card
                   Container(
@@ -1240,6 +1325,81 @@ class _WhereThisCameFromSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CurrencyRepairCard extends StatelessWidget {
+  const _CurrencyRepairCard({
+    required this.preview,
+    required this.saving,
+    required this.onConfirm,
+  });
+
+  final SourceCurrencyRepairPreview preview;
+  final bool saving;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Currency evidence found',
+            style: AppTheme.bloomDisplay(
+              14,
+              FontWeight.w700,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextPrimary
+                  : AppColorTokens.ink,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'The retained SMS has “${preview.currencyToken}” beside the '
+            'matching amount. Preview the change to INR (₹).',
+            style: AppTheme.bloomDisplay(
+              12,
+              FontWeight.w400,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextSecondary
+                  : AppColorTokens.inkSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: Tooltip(
+              message: 'Preview currency from the retained original SMS',
+              child: Semantics(
+                label: 'Review INR from original SMS',
+                button: true,
+                child: OutlinedButton.icon(
+                  key: const Key('reviewCurrencyRepair'),
+                  onPressed: saving ? null : onConfirm,
+                  icon: saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.currency_rupee_rounded),
+                  label: Text(saving ? 'Applying INR…' : 'Review INR from SMS'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

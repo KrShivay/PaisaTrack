@@ -1,5 +1,23 @@
 # Current Handoff
 
+## 2026-09-30 — T-193 legacy currency repair
+
+- Added an explicit per-transaction detail preview and reversible INR repair.
+  It requires retained/unexpired linked SMS, exact amount evidence matching the
+  body and stored paise, and one adjacent `Rs`/`Rs.`/`INR`/`₹` token. Template,
+  generic, and local-LLM SMS parses are eligible only with verified evidence;
+  USD, bare `$`, manual/imported/unknown, duplicate/deleted, stale, mismatched,
+  or expired cases remain unchanged. Apply revalidates and writes only currency
+  fields; Undo clears them only if unchanged.
+- Focused service/detail tests 22/22; full Flutter suite 914/914; analyzer,
+  formatting, and diff check clean. Synthetic data only; no migration, parser,
+  schema, phone, or APK changes. Pre-edit impact: TransactionRepository
+  CRITICAL (80), TransactionDetailScreen HIGH (42), FieldNormalizer MEDIUM
+  (35), SourceCurrency CRITICAL (274); no shared parser/model/repository was
+  changed. Detect-changes: 8 files, 48 symbols, 1 process, MEDIUM. Independent
+  review pending. T-177a is parked in Ready, still open, until this
+  user-reported issue is reviewed.
+
 ## 2026-09-30 — T-192 publish Android 0.1.3+2007
 
 - Published the signed ARM64 APK from current main `1f4f451` to public branch
@@ -20,27 +38,6 @@
   open.
 - GitNexus detect-changes returned partial/unknown for the binary-only APK diff
   on unstaged and staged reruns. Manual staged diff contains only the APK.
-
-## 2026-09-29 — T-167c responsive large-text layouts
-
-- Fixed the confirmed narrow 2× overflow in the floating navigation pill,
-  Activity header/list controls, and Trends header/chart. Dashboard controls,
-  Manual Entry category selection, and transaction detail layouts adapt to
-  narrow and large-text viewports while preserving full labels and 48dp targets.
-- Added responsive geometry, semantics, and interaction checks for 320×568 and
-  600×900 at 1.5×/2× across the navigation pill, Dashboard, Activity, Trends,
-  Manual Entry, and transaction detail. The full HomeShell fixture hangs during
-  Drift stream teardown, so the nav presentation is tested directly; physical
-  device acceptance remains open.
-- Reviewer follow-up keeps nav labels hidden when large text would wrap in the
-  fixed-size tab cells, preserves Dashboard streak/period text, labels the Ask
-  orb, and lets long foreign-currency Activity amounts wrap to a second line.
-- Validation: responsive route suite 42/42; focused changed-screen/inset suite
-  56/56; reviewer follow-up focused suite 24/24; full Flutter suite 894/894;
-  analyzer, changed-file format check, and diff check clean. Follow-up GitNexus
-  impact: Dashboard/nav/Activity row MEDIUM, Ask LOW; shared `BloomAmount`
-  impact HIGH was avoided. Detect-changes: 8 files, 9 symbols, 0 processes,
-  LOW. Independent review pending.
 
 ## 2026-09-30 — T-177a threshold evidence revision follow-up
 

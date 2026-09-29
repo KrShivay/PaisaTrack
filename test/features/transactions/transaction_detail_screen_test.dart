@@ -2,14 +2,17 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/enrichment/source_currency_repair_service.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
+import 'package:paisatrack/features/transactions/currency_repair_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
 void main() {
@@ -33,6 +36,8 @@ void main() {
               .overrideWith((ref) => Stream.value(detail)),
           suggestedCategoriesProvider(detail.txn.id)
               .overrideWith((ref) => Future.value(['travel', 'utilities'])),
+          sourceCurrencyRepairPreviewProvider(detail.txn.id)
+              .overrideWith((ref) async => null),
         ],
         child: MaterialApp(
           home: BloomUndoToastHost(
@@ -159,7 +164,6 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
-
       final confirmButton = find.text('Confirm parsed details');
       expect(confirmButton, findsOneWidget);
       await tester.ensureVisible(confirmButton);
@@ -184,6 +188,149 @@ void main() {
       expect(transaction.categoryId, 'other');
       expect(find.text('Parsed details confirmed'), findsNWidgets(2));
       expect(tester.takeException(), isNull);
+
+      container.dispose();
+      containerDisposed = true;
+      await tester.pump(const Duration(milliseconds: 1));
+      await database.close();
+    });
+
+    testWidgets('T-193 previews, applies, and undoes retained INR evidence',
+        (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      final timestamp = DateTime.now();
+      const body = 'Paid Rs. 500 to Swiggy';
+      final amountStart = body.indexOf('500');
+      await database.into(database.categories).insert(
+            CategoriesCompanion.insert(
+              id: 'food',
+              name: 'Food',
+              icon: 'restaurant',
+              isSpending: true,
+              sortOrder: 1,
+              isUserCreated: false,
+            ),
+          );
+      await database.into(database.rawSms).insert(
+            RawSmsCompanion.insert(
+              id: 'sms_repair_193',
+              sender: 'XX-BANK',
+              body: body,
+              receivedAt: timestamp.subtract(const Duration(days: 1)),
+              purgeAfter: timestamp.add(const Duration(days: 10)),
+            ),
+          );
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: 'txn_repair_193',
+              ts: timestamp.millisecondsSinceEpoch,
+              amount: 500,
+              direction: 'debit',
+              channel: 'upi',
+              categoryId: const Value('food'),
+              merchantRaw: const Value('Swiggy'),
+              parseSource: 'template',
+              smsId: const Value('sms_repair_193'),
+              confidenceJson: '{}',
+              evidenceJson: Value(
+                '[{"field":"amount","start":$amountStart,"end":${amountStart + 3},"verbatim":"500","extractor":"template"}]',
+              ),
+              status: 'confirmed',
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            ),
+          );
+
+      expect(
+        await SourceCurrencyRepairService(database).preview('txn_repair_193'),
+        isNotNull,
+      );
+
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          suggestedCategoriesProvider('txn_repair_193')
+              .overrideWith((ref) async => const <String>[]),
+        ],
+      );
+      var containerDisposed = false;
+      addTearDown(() {
+        if (!containerDisposed) container.dispose();
+      });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: BloomUndoToastHost(
+              child: TransactionDetailScreen(txnId: 'txn_repair_193'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 150));
+
+      final semantics = tester.ensureSemantics();
+      final reviewButton = find.byKey(const Key('reviewCurrencyRepair'));
+      expect(reviewButton, findsOneWidget);
+      expect(tester.getSize(reviewButton).height, greaterThanOrEqualTo(48));
+      expect(
+        tester.getSemantics(reviewButton).label,
+        'Review INR from SMS',
+      );
+      expect(
+        tester
+            .getSemantics(reviewButton)
+            .getSemanticsData()
+            .hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+      await tester.ensureVisible(reviewButton);
+      await tester.tap(reviewButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Use INR from the original SMS?'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('The retained message shows “Rs.”'),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Apply INR'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      var transaction = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_repair_193')))
+          .getSingle();
+      expect(transaction.currencyCode, 'INR');
+      expect(transaction.currencySymbol, '₹');
+      expect(transaction.amount, 500);
+      expect(transaction.categoryId, 'food');
+      expect(transaction.status, 'confirmed');
+      expect(find.byKey(const Key('reviewCurrencyRepair')), findsNothing);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      transaction = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_repair_193')))
+          .getSingle();
+      expect(transaction.currencyCode, isNull);
+      expect(transaction.currencySymbol, isNull);
+      expect(transaction.amount, 500);
+      expect(transaction.categoryId, 'food');
+      expect(transaction.status, 'confirmed');
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
 
       container.dispose();
       containerDisposed = true;

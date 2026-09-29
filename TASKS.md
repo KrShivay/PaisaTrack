@@ -8,7 +8,33 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
+  - Context: the installed v2006 predates T-187. Current parsing maps `Rs.` to
+    INR, but the v18 migration leaves older null-currency rows unchanged and
+    `ingestBatch` skips already-known SMS IDs.
+  - Acceptance: transaction detail offers a non-mutating preview and explicit
+    reversible apply only when both currency fields are null, linked SMS is
+    still within retention, amount span evidence matches the body and stored
+    paise value, and one adjacent INR token is unambiguous. Revalidate on apply;
+    alter only currency code/symbol. USD, bare `$`, manual/imported/unknown,
+    deleted/duplicate, stale, mismatched, or expired source stays unchanged.
+  - Scope: user-triggered per-row repair, no schema or migration change; works
+    against restored data only when linked source/evidence survived. No auto
+    action during migration, restore, or startup. Synthetic SMS tests only;
+    no physical-device mutation until independent review.
+  - Verification: service/detail tests 22/22; full Flutter suite 914/914;
+    analyzer, changed-file formatting, and diff check clean. Fresh GitNexus
+    impact before code edits: `TransactionRepository` CRITICAL (80 symbols),
+    `TransactionDetailScreen` HIGH (42), `FieldNormalizer` MEDIUM (35), and
+    `SourceCurrency` CRITICAL (274); parser/model/repository were left
+    unchanged. Detect-changes: 8 files, 48 symbols, 1 process, MEDIUM. No
+    schema, migration, phone, or APK changes. Independent review pending.
+
+## Ready
+
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
+  - Parked while the user-prioritized T-193 legacy currency repair is reviewed;
+    T-177a remains open and should resume afterward.
   - Active fix: unreviewed `auto` rows are not accuracy evidence and must never
     lower the persisted category threshold. Lowering requires an explicit
     user-confirmation feedback event with category-prediction provenance;
@@ -153,8 +179,6 @@ later hardening.
       emulator restored a synthetic archive through the real Keystore selector
       into SQLCipher, reopened the active generation, and verified legacy bytes
       remained unchanged. MainActivity relaunched successfully on emulator.
-
-## Ready
 
 <!-- P1 tasks ready for next phase -->
 
@@ -333,19 +357,6 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
     explanation; inspect actual card and payment-source data first.
   - Privacy: synthetic scenarios only; no live statements or SMS.
   - Rollback: planning artifact only; no runtime behavior changes.
-
-- [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
-  - Context: the installed v2006 predates T-187. Current parsing maps `Rs.` to
-    INR, but the v18 migration leaves older null-currency rows unchanged and
-    `ingestBatch` skips already-known SMS IDs.
-  - Acceptance: provide a local preview and reversible apply for rows whose
-    currency is null, retained SMS contains an exact adjacent `Rs.`/`INR`/`₹`
-    marker, and the message amount matches the stored amount. Never overwrite
-    known currency or infer from locale/merchant. Rows without retained or
-    matching evidence stay unknown. Cover preview, apply, undo, duplicate SMS,
-    mismatched amounts, and purge/backup behavior.
-  - Scope: task planning only; no migration or repair implementation until
-    separately started. No automatic rewrites on restore or app startup.
 
 <!-- Groom future work here before promoting it to Ready. -->
 
