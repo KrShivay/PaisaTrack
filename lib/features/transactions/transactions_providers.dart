@@ -114,7 +114,17 @@ class ActivityTransactionPageController
           stackTrace: stackTrace,
         );
         if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace);
+          if (_isReady) {
+            // A later page can fail before its first row arrives. Keep the
+            // loaded snapshot visible and report the error through provider
+            // state; completing this future with an error would escape the
+            // screen's fire-and-forget load-more callback.
+            state = AsyncError<ActivityTransactionPage>(error, stackTrace)
+                .copyWithPrevious(state);
+            completer.complete(_aggregate());
+          } else {
+            completer.completeError(error, stackTrace);
+          }
         } else if (_isReady) {
           state = AsyncError<ActivityTransactionPage>(error, stackTrace)
               .copyWithPrevious(state);

@@ -3,16 +3,17 @@
 ## 2026-09-29 — T-167a primary-screen error and retry states
 
 - Activity now distinguishes first-load errors from true empty state, preserves
-  already loaded rows on later stream errors, and offers Retry. Explicit retry
-  resets its cursor snapshot before subscribing to the first page again. Trends
-  aggregate failures now have a Retry action instead of the nonfunctional
-  “Pull to refresh” instruction.
+  already loaded rows on later stream errors, including page-two failures before
+  their first row, and offers Retry without leaking a future error from the
+  load-more callback. Explicit retry resets its cursor snapshot before
+  subscribing to the first page again. Trends aggregate failures now have a
+  Retry action instead of the nonfunctional “Pull to refresh” instruction.
 - Added actual-screen widget coverage for Activity empty vs initial error and
   retry recovery, loaded-data preservation and retry recovery, and Trends
   aggregate failure/recovery. No database schema or device changes.
-- Validation: focused Activity/Trends tests 11/11; full Flutter suite 869/869;
-  `flutter analyze --no-pub`, formatting, and `git diff --check` clean.
-  GitNexus detect-changes: 7 files, 24 symbols, 0 processes, LOW risk.
+- Validation: focused Activity/Trends/controller tests 13/13; full Flutter
+  suite 870/870; `flutter analyze --no-pub`, formatting, and `git diff --check`
+  clean. GitNexus detect-changes: 4 files, 5 symbols, 0 processes, LOW risk.
   Independent review pending.
 
 ## 2026-09-29 — T-176 global bottom-inset acceptance

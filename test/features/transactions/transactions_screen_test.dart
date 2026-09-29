@@ -170,6 +170,55 @@ void main() {
     expect(find.text('Couldn’t refresh transactions.'), findsNothing);
   });
 
+  testWidgets('shows page-two load error and retries from a fresh snapshot',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final repository = _ControlledTransactionRepository(database);
+    final container = await _pumpWithRepository(tester, database, repository);
+    addTearDown(() async {
+      await repository.close();
+      await database.close();
+    });
+    await tester.pump();
+    const cursor = ActivityTransactionCursor(ts: 1, id: 'first-page');
+    repository.controllers.single.add(
+      ActivityTransactionPage(
+        rows: [_screenItem('page-one')],
+        hasMore: true,
+        nextCursor: cursor,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(find.text('Load more transactions'));
+    await _pumpUntilControllerCount(tester, repository, 2);
+    expect(repository.cursors, [null, cursor]);
+    repository.controllers[1].addError(StateError('page two unavailable'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(container.read(activityTransactionPageProvider).hasError, isTrue);
+    expect(container.read(activityTransactionPageProvider).hasValue, isTrue);
+    expect(find.text('Page-one payment'), findsOneWidget);
+    expect(find.text('Couldn’t refresh transactions.'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await _pumpUntilControllerCount(tester, repository, 3);
+    expect(repository.cursors.last, isNull);
+    repository.controllers.last.add(
+      ActivityTransactionPage(
+        rows: [_screenItem('fresh-snapshot')],
+        hasMore: false,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Fresh-snapshot payment'), findsOneWidget);
+    expect(find.text('Couldn’t refresh transactions.'), findsNothing);
+  });
+
   testWidgets('renders parsed transactions newest-first with display names',
       (tester) async {
     final now = DateTime.utc(2026, 7, 6, 9);
@@ -381,6 +430,7 @@ class _ControlledTransactionRepository extends TransactionRepository {
   _ControlledTransactionRepository(super.database);
 
   final controllers = <StreamController<ActivityTransactionPage>>[];
+  final cursors = <ActivityTransactionCursor?>[];
 
   @override
   Stream<ActivityTransactionPage> watchTransactionPage({
@@ -390,6 +440,7 @@ class _ControlledTransactionRepository extends TransactionRepository {
     ActivityTransactionCursor? cursor,
   }) {
     final controller = StreamController<ActivityTransactionPage>();
+    cursors.add(cursor);
     controllers.add(controller);
     return controller.stream;
   }

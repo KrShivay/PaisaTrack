@@ -14,16 +14,19 @@ later hardening.
   states; replace misleading empty states with actionable errors.
   - Acceptance: Activity initial-load and refresh errors render actionable
     error UI rather than “No transactions found”; retry restores a successful
-    list. If an error occurs after data loaded, keep the data visible with
-    non-blocking error feedback. Trends aggregate errors expose a working retry
-    action that refreshes the same provider used by the screen. Tests distinguish
-    a true empty Activity list from an error and prove both retry paths recover.
+    list. If an error occurs after data loaded—including a page-two load-more
+    failure—keep loaded rows visible with non-blocking error feedback. Retry
+    starts a fresh snapshot and recovers. Trends aggregate errors expose a
+    working retry action that refreshes the same provider used by the screen.
+    Tests distinguish true empty Activity from initial error and cover initial,
+    later-stream, and page-two failure/retry paths.
   - Scope: no provider/repository contract changes unless tests demonstrate
     they are needed; no database or device changes.
-- Verification: Activity/Trends focused widget tests 11/11; full Flutter suite
-  869/869; `flutter analyze --no-pub` and `git diff --check` clean. GitNexus
-  detect-changes: 7 files, 24 symbols, no affected processes, LOW risk. No
-  database or device mutation; independent review pending.
+- Verification: Activity/Trends/provider focused tests 13/13; full Flutter
+  suite 870/870; `flutter analyze --no-pub`, formatting, and `git diff --check`
+  clean. Page-two error/retry keeps page one visible and raises no unhandled
+  future error. GitNexus detect-changes: 4 files, 5 symbols, 0 processes, LOW
+  risk. Independent review pending.
 
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
