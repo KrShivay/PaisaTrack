@@ -13,6 +13,7 @@ import '../../data/db/database_provider.dart';
 import '../../data/repositories/insights_repository.dart';
 import '../dashboard/dashboard_providers.dart';
 import '../dashboard/period_selection_sheet.dart';
+import '../dashboard/source_currency_activity.dart';
 import '../recurring/recurring_screen.dart';
 
 /// Stream of non-dismissed precomputed insights for the current period.
@@ -215,6 +216,31 @@ class InsightsScreen extends ConsumerWidget {
             // and error stay distinct from real data (never the bounded feed).
             ...aggregateAsync.when(
               data: (_) => [
+                Text(
+                  'INR ANALYTICS',
+                  style: AppTheme.bloomDisplay(
+                    11,
+                    FontWeight.w600,
+                    letterSpacing: 0.12,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Trend, month-over-month, category, and merchant totals use INR. Other source currencies are listed separately below.',
+                  style: AppTheme.bloomDisplay(
+                    12,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextTertiary
+                        : AppColorTokens.inkTertiary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const BloomSourceCurrencyActivity(),
+                const SizedBox(height: 20),
                 // 6-Month Spend Bar Chart Card
                 _SixMonthBarChartCard(
                   trend: sixMonthTrend.requireValue,

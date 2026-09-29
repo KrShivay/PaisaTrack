@@ -169,6 +169,65 @@ void main() {
     });
   });
 
+  test('category breakdown does not rank nominal totals across currencies',
+      () async {
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'transport',
+            name: 'Transport',
+            icon: 'car',
+            isSpending: true,
+            sortOrder: 2,
+            isUserCreated: false,
+          ),
+        );
+    await txn(
+      'food-usd',
+      DateTime.utc(2026, 7, 2),
+      300,
+      categoryId: 'food',
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+    );
+    await txn(
+      'food-inr',
+      DateTime.utc(2026, 7, 3),
+      500,
+      categoryId: 'food',
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+    );
+    await txn(
+      'transport-usd',
+      DateTime.utc(2026, 7, 4),
+      1000,
+      categoryId: 'transport',
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+    );
+
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.categoryBreakdown,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.breakdown,
+        range: july,
+      ),
+    ) as BreakdownQueryResult;
+
+    expect(result.items.map((item) => item.label), [
+      'Food',
+      'Food',
+      'Transport',
+    ]);
+    expect(result.items.map((item) => item.currencyCode), [
+      'INR',
+      'USD',
+      'USD',
+    ]);
+    expect(result.items.map((item) => item.total), [500, 300, 1000]);
+  });
+
   test(
     'upcoming recurring and active insights exclude out-of-scope rows',
     () async {

@@ -8,6 +8,7 @@ import '../settings/settings_screen.dart';
 import '../transactions/transaction_detail_screen.dart';
 import 'dashboard_providers.dart';
 import 'dashboard_widgets.dart';
+import 'source_currency_activity.dart';
 import 'period_selection_sheet.dart';
 import 'streak_provider.dart';
 

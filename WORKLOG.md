@@ -7,16 +7,20 @@
   Ask responses, transaction UI, exports, and both backup formats. USD and
   unknown-dollar amounts stay separate; legacy rows without evidence remain
   unknown. INR-only budget math is labelled, and the dashboard exposes separate
-  foreign/unknown subtotals. No FX conversion or phone data access.
+  foreign/unknown subtotals. Trends now labels its INR-only charts and lists
+  other currency buckets separately. Ask category breakdowns use stable
+  label/currency ordering instead of ranking nominal totals across currencies.
+  No FX conversion or phone data access.
 - Regression coverage includes adjacent prefix/suffix parsing, duplicate
   account/amount digits, bare-dollar vs USD event matching, historical v1 and
   chunked-v3 backup defaults, migration compatibility, per-currency analytics,
   source-aware UI/export, and 2× text-scale layout. Unknown reminders reconcile
   only with unknown debits sharing VPA/amount/date constraints.
-- Validation: full Flutter suite 1,028/1,028; `flutter analyze --no-pub`,
+- Validation: full Flutter suite 1,030/1,030; `flutter analyze --no-pub`,
   changed-file Dart format check, and `git diff --check` clean. GitNexus
-  detect-changes: 81 files, 133 symbols, 41 affected flows, CRITICAL risk;
-  impact warnings were surfaced before edits. Independent review pending.
+  compare with main: 89 files, 143 symbols, 47 affected flows, CRITICAL risk;
+  post-review working-tree detect-changes: 9 files, 8 symbols, 0 flows, LOW
+  risk. Impact warnings were surfaced before edits. Independent review pending.
 
 ## 2026-09-29 — T-186 transaction detail keyboard layout
 

@@ -38,7 +38,34 @@ void main() {
 
       expect(find.text('Trends'), findsOneWidget);
       expect(find.text('Recurring'), findsOneWidget);
+      expect(find.text('INR ANALYTICS'), findsOneWidget);
+      expect(
+        find.textContaining('Other source currencies are listed separately'),
+        findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.text('SPEND TREND (LAST 6 MONTHS)'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('SPEND TREND (LAST 6 MONTHS)'), findsOneWidget);
+    });
+
+    testWidgets('lists foreign and unknown source totals separately',
+        (tester) async {
+      await pumpTrends(tester);
+
+      await tester.scrollUntilVisible(
+        find.text('OTHER SOURCE CURRENCIES · THIS PERIOD'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining(r'$25.00 USD'), findsOneWidget);
+      expect(
+        find.textContaining(r'$40.00 (currency unknown)'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('no exchange rate'), findsOneWidget);
     });
 
     testWidgets('renders Month-over-Month comparison card', (tester) async {
@@ -62,4 +89,18 @@ const _emptyDashboardAggregate = DashboardAggregateSnapshot(
   categories: [],
   merchants: [],
   trendByMonth: {},
+  currencyTotals: [
+    DashboardCurrencyAggregate(
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+      debitTotal: 25,
+      creditTotal: 0,
+    ),
+    DashboardCurrencyAggregate(
+      currencyCode: null,
+      currencySymbol: r'$',
+      debitTotal: 40,
+      creditTotal: 0,
+    ),
+  ],
 );

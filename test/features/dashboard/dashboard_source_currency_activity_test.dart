@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
-import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
+import 'package:paisatrack/features/dashboard/source_currency_activity.dart';
 
 void main() {
   testWidgets('dashboard discloses USD and unknown source totals separately',

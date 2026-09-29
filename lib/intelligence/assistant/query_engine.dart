@@ -264,7 +264,20 @@ class AssistantQueryEngine {
         currencySymbol: e.value.symbol,
       );
     }).toList()
-      ..sort((a, b) => b.total.compareTo(a.total));
+      ..sort((a, b) {
+        final labelOrder =
+            a.label.toLowerCase().compareTo(b.label.toLowerCase());
+        if (labelOrder != 0) return labelOrder;
+        final aCurrency = SourceCurrency(
+          code: a.currencyCode,
+          symbol: a.currencySymbol,
+        ).bucketKey;
+        final bCurrency = SourceCurrency(
+          code: b.currencyCode,
+          symbol: b.currencySymbol,
+        ).bucketKey;
+        return aCurrency.compareTo(bCurrency);
+      });
     return BreakdownQueryResult(items);
   }
 
