@@ -833,6 +833,7 @@ class EncryptedBackupService {
     'merchant_aliases',
     'payment_sources',
     'transactions',
+    'sms_dispositions',
     'rules',
     'feedback',
     'baselines',
@@ -914,6 +915,12 @@ class EncryptedBackupService {
     await writeTable(
       'transactions',
       (offset, limit) => (_database.select(_database.transactions)
+            ..limit(limit, offset: offset))
+          .get(),
+    );
+    await writeTable(
+      'sms_dispositions',
+      (offset, limit) => (_database.select(_database.smsDispositions)
             ..limit(limit, offset: offset))
           .get(),
     );
@@ -1042,6 +1049,10 @@ class EncryptedBackupService {
             await _rows(_database.paymentSources, tableName: 'payment_sources'),
         'transactions':
             await _rows(_database.transactions, tableName: 'transactions'),
+        'sms_dispositions': await _rows(
+          _database.smsDispositions,
+          tableName: 'sms_dispositions',
+        ),
         'rules': await _rows(_database.rules, tableName: 'rules'),
         'feedback': await _rows(_database.feedback, tableName: 'feedback'),
         'baselines': await _rows(_database.baselines, tableName: 'baselines'),
@@ -1106,6 +1117,7 @@ class EncryptedBackupService {
       await database.delete(database.rules).go();
       await database.delete(database.merchantAliases).go();
       await database.delete(database.payeeEvidence).go();
+      await database.delete(database.smsDispositions).go();
       await database.delete(database.transactions).go();
       await database.delete(database.paymentSources).go();
       await database.delete(database.rawSms).go();
@@ -1156,8 +1168,14 @@ class EncryptedBackupService {
                 'paymentSourceId': null,
                 'ownedTransferId': null,
                 'isAnalyticsExcluded': false,
+                'isNotTransaction': false,
                 ...transactionRow,
               }),
+            );
+      }
+      for (final row in _optionalTableRows(tables, 'sms_dispositions')) {
+        await database.into(database.smsDispositions).insert(
+              SmsDisposition.fromJson(row),
             );
       }
       for (final row in _tableRows(tables, 'rules')) {
@@ -1597,6 +1615,7 @@ class _ChunkedArchiveRestorer {
     await database.delete(database.rules).go();
     await database.delete(database.merchantAliases).go();
     await database.delete(database.payeeEvidence).go();
+    await database.delete(database.smsDispositions).go();
     await database.delete(database.transactions).go();
     await database.delete(database.paymentSources).go();
     await database.delete(database.rawSms).go();
@@ -1669,7 +1688,14 @@ class _ChunkedArchiveRestorer {
           throw const EncryptedBackupException('Invalid encrypted export');
         }
         for (final tableName in _tableNames) {
-          if (counts[tableName] != (_tableCounts[tableName] ?? 0)) {
+          final archivedCount = counts[tableName];
+          final restoredCount = _tableCounts[tableName] ?? 0;
+          if (archivedCount == null &&
+              tableName == 'sms_dispositions' &&
+              restoredCount == 0) {
+            continue;
+          }
+          if (archivedCount != restoredCount) {
             throw const EncryptedBackupException('Invalid encrypted export');
           }
         }
@@ -1719,8 +1745,13 @@ class _ChunkedArchiveRestorer {
                 'paymentSourceId': null,
                 'ownedTransferId': null,
                 'isAnalyticsExcluded': false,
+                'isNotTransaction': false,
                 ...transactionRow,
               }),
+            );
+      case 'sms_dispositions':
+        await database.into(database.smsDispositions).insert(
+              SmsDisposition.fromJson(row),
             );
       case 'rules':
         await database.into(database.rules).insert(Rule.fromJson(row));
@@ -1752,6 +1783,7 @@ class _ChunkedArchiveRestorer {
     'merchant_aliases',
     'payment_sources',
     'transactions',
+    'sms_dispositions',
     'rules',
     'feedback',
     'baselines',

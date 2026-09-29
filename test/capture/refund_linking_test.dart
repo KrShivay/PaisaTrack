@@ -33,6 +33,7 @@ void main() {
       status: 'auto',
       refId: 'RRN99887766',
       isDeleted: false,
+      isNotTransaction: false,
       isAnalyticsExcluded: false,
       lifecycleState: 'settled',
       createdAt: baseTs,
@@ -50,7 +51,9 @@ void main() {
     expect(result.confidence, 0.99);
   });
 
-  test('auto-links partial refund on single candidate matching counterparty and amount <= expense', () {
+  test(
+      'auto-links partial refund on single candidate matching counterparty and amount <= expense',
+      () {
     final refund = NormalizedTransactionRecord(
       amount: 150.0, // Partial refund of 450
       direction: TransactionDirection.credit,
@@ -76,6 +79,7 @@ void main() {
       confidenceJson: '{}',
       status: 'auto',
       isDeleted: false,
+      isNotTransaction: false,
       isAnalyticsExcluded: false,
       lifecycleState: 'settled',
       createdAt: baseTs,
@@ -119,6 +123,7 @@ void main() {
       confidenceJson: '{}',
       status: 'auto',
       isDeleted: false,
+      isNotTransaction: false,
       isAnalyticsExcluded: false,
       lifecycleState: 'settled',
       createdAt: baseTs,
@@ -136,6 +141,7 @@ void main() {
       confidenceJson: '{}',
       status: 'auto',
       isDeleted: false,
+      isNotTransaction: false,
       isAnalyticsExcluded: false,
       lifecycleState: 'settled',
       createdAt: baseTs,

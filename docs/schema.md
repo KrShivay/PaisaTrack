@@ -83,3 +83,9 @@ Schema v15 adds `payee_evidence` for T-117. It stores one derived row per
 non-empty merchant/VPA evidence field and indexes transaction and normalized
 identity lookups. Existing transactions are backfilled without changing their
 source fields; the index is also rebuilt after an encrypted archive restore.
+
+Schema v17 adds `transactions.is_not_transaction` and the content-free
+`sms_dispositions` table for T-185. The table stores the provider SMS ID,
+normalized transaction ID, disposition, and correction timestamp, with no
+foreign key to retention-bound `raw_sms`. The additive migration defaults
+existing transactions to eligible and preserves all ledger rows.

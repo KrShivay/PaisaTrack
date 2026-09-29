@@ -54,6 +54,7 @@ void main() {
         confidenceJson: '{}',
         status: 'confirmed',
         isDeleted: false,
+        isNotTransaction: false,
         isAnalyticsExcluded: false,
         lifecycleState: 'settled',
         createdAt: now,

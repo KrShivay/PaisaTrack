@@ -186,7 +186,7 @@ base AS (
     ON raw.transaction_id = t.id AND raw.evidence_type = 'merchant_raw'
   LEFT JOIN payee_evidence AS vpa
     ON vpa.transaction_id = t.id AND vpa.evidence_type = 'counterparty_vpa'
-  WHERE t.is_deleted = 0 AND t.duplicate_of_txn_id IS NULL
+  WHERE t.is_deleted = 0 AND t.is_not_transaction = 0 AND t.duplicate_of_txn_id IS NULL
 ),
 identity_rows AS (
   SELECT
@@ -297,7 +297,7 @@ WITH base AS (
     ON raw.transaction_id = t.id AND raw.evidence_type = 'merchant_raw'
   LEFT JOIN payee_evidence AS vpa
     ON vpa.transaction_id = t.id AND vpa.evidence_type = 'counterparty_vpa'
-  WHERE t.is_deleted = 0 AND t.duplicate_of_txn_id IS NULL
+  WHERE t.is_deleted = 0 AND t.is_not_transaction = 0 AND t.duplicate_of_txn_id IS NULL
 ),
 aliases AS (
   SELECT
@@ -469,7 +469,9 @@ ORDER BY identity_key ASC, display_value COLLATE BINARY ASC
     final rows = await (_database.select(_database.transactions)
           ..where(
             (row) =>
-                row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
+                row.isDeleted.equals(false) &
+                row.isNotTransaction.equals(false) &
+                row.duplicateOfTxnId.isNull(),
           ))
         .get();
     return rows.where((row) {

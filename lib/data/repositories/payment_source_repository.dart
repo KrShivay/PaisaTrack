@@ -43,7 +43,8 @@ class PaymentSourceRepository {
       leftOuterJoin(
         _database.transactions,
         _database.transactions.paymentSourceId
-            .equalsExp(_database.paymentSources.id),
+                .equalsExp(_database.paymentSources.id) &
+            _database.transactions.isNotTransaction.equals(false),
       ),
     ]);
     return query.watch().map((rows) {
@@ -114,7 +115,9 @@ class PaymentSourceRepository {
             const TransactionsCompanion(ownedTransferId: Value(null)),
           );
       final ownedSources = await (_database.select(_database.paymentSources)
-            ..where((row) => row.isOwned.equals(true) & row.isActive.equals(true)))
+            ..where(
+              (row) => row.isOwned.equals(true) & row.isActive.equals(true),
+            ))
           .get();
       final ownedSourceIds = ownedSources.map((row) => row.id).toSet();
       if (ownedSourceIds.length < 2) return 0;
@@ -129,8 +132,8 @@ JOIN transactions t2 ON t1.amount = t2.amount
   AND ABS(t1.ts - t2.ts) <= 600000
   AND t1.payment_source_id IN (SELECT id FROM payment_sources WHERE is_owned = 1 AND is_active = 1)
   AND t2.payment_source_id IN (SELECT id FROM payment_sources WHERE is_owned = 1 AND is_active = 1)
-WHERE t1.is_deleted = 0 AND t1.duplicate_of_txn_id IS NULL AND t1.owned_transfer_id IS NULL
-  AND t2.is_deleted = 0 AND t2.duplicate_of_txn_id IS NULL AND t2.owned_transfer_id IS NULL
+WHERE t1.is_deleted = 0 AND t1.is_not_transaction = 0 AND t1.duplicate_of_txn_id IS NULL AND t1.owned_transfer_id IS NULL
+  AND t2.is_deleted = 0 AND t2.is_not_transaction = 0 AND t2.duplicate_of_txn_id IS NULL AND t2.owned_transfer_id IS NULL
 ORDER BY t1.ts ASC
 ''',
         readsFrom: {_database.transactions, _database.paymentSources},

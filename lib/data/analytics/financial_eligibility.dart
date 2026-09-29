@@ -7,6 +7,7 @@ import '../db/database.dart';
 abstract final class FinancialEligibility {
   static const baseSql = '''
 t.is_deleted = 0
+  AND t.is_not_transaction = 0
   AND t.duplicate_of_txn_id IS NULL
   AND t.is_analytics_excluded = 0
   AND t.owned_transfer_id IS NULL
@@ -21,6 +22,7 @@ $baseSql  AND t.direction = 'debit'
     required bool categoryIsSpending,
   }) =>
       !transaction.isDeleted &&
+      !transaction.isNotTransaction &&
       transaction.duplicateOfTxnId == null &&
       !transaction.isAnalyticsExcluded &&
       transaction.ownedTransferId == null &&

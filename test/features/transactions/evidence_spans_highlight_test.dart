@@ -43,7 +43,9 @@ void main() {
     final now = DateTime.utc(2026, 7, 10);
     const smsBody = 'Rs.450.00 debited from A/C XX1234 on 10-Jul-26 at Swiggy';
 
-    testWidgets('Template-parsed transaction highlights evidence spans in technical details section', (tester) async {
+    testWidgets(
+        'Template-parsed transaction highlights evidence spans in technical details section',
+        (tester) async {
       final detail = TransactionDetail(
         txn: Transaction(
           id: 'txn_ev_001',
@@ -56,9 +58,11 @@ void main() {
           merchantRaw: 'Swiggy',
           parseSource: 'template',
           confidenceJson: '{"parser":{"c":0.98}}',
-          evidenceJson: '[{"field":"amount","start":3,"end":9,"verbatim":"450.00","extractor":"template"},{"field":"direction","start":10,"end":17,"verbatim":"debited","extractor":"template"}]',
+          evidenceJson:
+              '[{"field":"amount","start":3,"end":9,"verbatim":"450.00","extractor":"template"},{"field":"direction","start":10,"end":17,"verbatim":"debited","extractor":"template"}]',
           status: 'confirmed',
           isDeleted: false,
+          isNotTransaction: false,
           isAnalyticsExcluded: false,
           lifecycleState: 'settled',
           createdAt: now,
@@ -67,7 +71,8 @@ void main() {
         merchantName: 'Swiggy',
         categoryName: 'Food & Dining',
         parseConfidence: 0.98,
-        confidenceTrail: TransactionConfidenceTrail.fromJson('{"parser":{"c":0.98}}'),
+        confidenceTrail:
+            TransactionConfidenceTrail.fromJson('{"parser":{"c":0.98}}'),
         isLowTrustParse: false,
         rawSmsBody: smsBody,
       );
@@ -82,11 +87,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('FIELD EVIDENCE SPANS'), findsOneWidget);
-      expect(find.textContaining('amount: "450.00" (template, 98%)'), findsOneWidget);
-      expect(find.textContaining('direction: "debited" (template, 98%)'), findsOneWidget);
+      expect(
+        find.textContaining('amount: "450.00" (template, 98%)'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('direction: "debited" (template, 98%)'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('Row with purged raw_sms degrades to retention text without error', (tester) async {
+    testWidgets(
+        'Row with purged raw_sms degrades to retention text without error',
+        (tester) async {
       final detail = TransactionDetail(
         txn: Transaction(
           id: 'txn_purged',
@@ -98,9 +111,11 @@ void main() {
           categoryId: 'shopping',
           parseSource: 'template',
           confidenceJson: '{"parser":{"c":0.90}}',
-          evidenceJson: '[{"field":"amount","start":0,"end":4,"verbatim":"1200","extractor":"template"}]',
+          evidenceJson:
+              '[{"field":"amount","start":0,"end":4,"verbatim":"1200","extractor":"template"}]',
           status: 'confirmed',
           isDeleted: false,
+          isNotTransaction: false,
           isAnalyticsExcluded: false,
           lifecycleState: 'settled',
           createdAt: now,
@@ -109,7 +124,8 @@ void main() {
         merchantName: 'Amazon',
         categoryName: 'Shopping',
         parseConfidence: 0.90,
-        confidenceTrail: TransactionConfidenceTrail.fromJson('{"parser":{"c":0.90}}'),
+        confidenceTrail:
+            TransactionConfidenceTrail.fromJson('{"parser":{"c":0.90}}'),
         isLowTrustParse: false,
         rawSmsBody: null, // Purged
       );
@@ -122,10 +138,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Source message purged per retention policy'), findsOneWidget);
+      expect(
+        find.text('Source message purged per retention policy'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('Pre-T-131 row with null evidence shows body without highlights', (tester) async {
+    testWidgets(
+        'Pre-T-131 row with null evidence shows body without highlights',
+        (tester) async {
       const legacyBody = 'INR 800 paid to Uber via UPI';
       final detail = TransactionDetail(
         txn: Transaction(
@@ -141,6 +162,7 @@ void main() {
           evidenceJson: null,
           status: 'confirmed',
           isDeleted: false,
+          isNotTransaction: false,
           isAnalyticsExcluded: false,
           lifecycleState: 'settled',
           createdAt: now,

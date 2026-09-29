@@ -20,6 +20,11 @@ PaisaTrack is local-first:
   the Android document picker; Drift rows are paged on export and restored
   transactionally on import. No plaintext archive temp file is created, and a
   cancelled or incomplete destination is never reported as a completed backup.
+- A user's “Not a transaction” correction persists the provider SMS ID,
+  transaction ID, disposition, and correction time in the encrypted local
+  database and backup. It stores no message body, sender, or receipt time, and
+  does not extend raw-SMS retention. The correction remains reversible in
+  Settings after the original message expires.
 - The user-facing "Messages we couldn't read" surface reads only allowlisted
   failure reasons and expiry metadata. It reports retained counts without
   loading bodies, senders, or identifiers, and excludes rows past their expiry

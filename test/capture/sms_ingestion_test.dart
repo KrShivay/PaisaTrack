@@ -21,6 +21,7 @@ import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
 import 'package:paisatrack/data/repositories/rule_repository.dart';
+import 'package:paisatrack/data/repositories/sms_disposition_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
 import 'package:paisatrack/enrichment/seed_category_map.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
@@ -204,6 +205,57 @@ void main() {
 
     final transactions = await database.select(database.transactions).get();
     expect(transactions.single.status, 'asked');
+  });
+
+  test('live and batch replay skip a marked SMS before retaining or parsing',
+      () async {
+    final now = DateTime.utc(2026, 7, 5, 12);
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_suppressed_replay',
+            sender: 'synthetic-bank',
+            body: 'Synthetic fixture body',
+            receivedAt: now,
+            purgeAfter: now.add(const Duration(days: 30)),
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_sms_suppressed_replay',
+            ts: now.millisecondsSinceEpoch,
+            amount: 500,
+            direction: 'debit',
+            channel: 'upi',
+            smsId: const Value('sms_suppressed_replay'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    final existing = await database.select(database.transactions).getSingle();
+    await SmsDispositionRepository(database).markNotTransaction(existing);
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals(existing.id)))
+        .write(const TransactionsCompanion(smsId: Value(null)));
+    await database.delete(database.rawSms).go();
+
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(amount: 500),
+      now: () => now,
+    );
+    await ingestor.ingest(
+      _message('sms_suppressed_replay', body: 'Synthetic fixture body'),
+    );
+    await ingestor.ingestBatch([
+      _message('sms_suppressed_replay', body: 'Synthetic fixture body'),
+    ]);
+
+    expect(await database.select(database.transactions).get(), hasLength(1));
+    expect(await database.select(database.rawSms).get(), isEmpty);
+    expect(await database.select(database.smsDispositions).get(), hasLength(1));
   });
 
   test('persists template id and provenance in parser confidence metadata',

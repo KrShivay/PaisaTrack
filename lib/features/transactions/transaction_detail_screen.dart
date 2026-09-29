@@ -10,11 +10,12 @@ import '../../core/undo/undo_controller.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
 import '../../data/confidence_payload.dart';
-import '../../data/db/database.dart' show Category;
+import '../../data/db/database.dart' show Category, Transaction;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart'
     show FieldEvidence;
 import '../../data/repositories/category_correction.dart';
+import '../../data/repositories/sms_disposition_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
@@ -651,6 +652,10 @@ class _TransactionDetailScreenState
                       rawSmsBody: detail.rawSmsBody,
                       parseSource: txn.parseSource,
                       parseConfidence: detail.parseConfidence,
+                      isNotTransaction: txn.isNotTransaction,
+                      onMarkNotTransaction: txn.isNotTransaction
+                          ? null
+                          : () => _markNotTransaction(txn),
                       isDark: isDark,
                     ),
                     const SizedBox(height: 20),
@@ -841,6 +846,24 @@ class _TransactionDetailScreenState
       ),
     );
   }
+
+  Future<void> _markNotTransaction(Transaction transaction) async {
+    final smsId = transaction.smsId;
+    if (smsId == null) return;
+    final database = await ref.read(appDatabaseProvider.future);
+    final dispositions = SmsDispositionRepository(database);
+    await dispositions.markNotTransaction(transaction);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Marked as not a transaction.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => dispositions.restore(smsId),
+        ),
+      ),
+    );
+  }
 }
 
 class _SourceMessageEvidenceView extends StatelessWidget {
@@ -988,12 +1011,16 @@ class _WhereThisCameFromSection extends StatelessWidget {
     required this.rawSmsBody,
     this.parseSource,
     this.parseConfidence,
+    required this.isNotTransaction,
+    this.onMarkNotTransaction,
     required this.isDark,
   });
 
   final String? rawSmsBody;
   final String? parseSource;
   final double? parseConfidence;
+  final bool isNotTransaction;
+  final VoidCallback? onMarkNotTransaction;
   final bool isDark;
 
   @override
@@ -1004,8 +1031,8 @@ class _WhereThisCameFromSection extends StatelessWidget {
         ? AppColorTokens.bloomDarkTextSecondary
         : const Color(0xFF4E7A69);
 
-    final displayBody = rawSmsBody ??
-        'Original message no longer stored — kept for 30 days';
+    final displayBody =
+        rawSmsBody ?? 'Original message no longer stored — kept for 30 days';
 
     final infoLine = parserSourceLabel(parseSource, parseConfidence);
 
@@ -1042,6 +1069,22 @@ class _WhereThisCameFromSection extends StatelessWidget {
                   FontWeight.w400,
                   color: textColor,
                 ).copyWith(height: 1.6),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onMarkNotTransaction,
+                  icon: Icon(
+                    isNotTransaction ? Icons.check_circle_outline : Icons.block,
+                    size: 18,
+                  ),
+                  label: Text(
+                    isNotTransaction
+                        ? 'Marked not a transaction'
+                        : 'Not a transaction',
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Row(

@@ -77,6 +77,7 @@ class InsightsEngine {
                   t.isAnalyticsExcluded.equals(false) &
                   t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
+                  t.isNotTransaction.equals(false) &
                   t.duplicateOfTxnId.isNull() &
                   t.lifecycleState.equals('settled') &
                   t.direction.equals('debit'),

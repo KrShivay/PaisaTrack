@@ -28,7 +28,9 @@ class PayeeEvidenceRepository {
 
   /// Rebuilds all derived rows from authoritative transaction evidence.
   Future<void> rebuild() async {
-    final transactions = await _database.select(_database.transactions).get();
+    final transactions = await (_database.select(_database.transactions)
+          ..where((row) => row.isNotTransaction.equals(false)))
+        .get();
     final rows = <PayeeEvidenceCompanion>[];
     for (final transaction in transactions) {
       rows.addAll(

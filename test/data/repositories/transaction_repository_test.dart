@@ -54,6 +54,7 @@ Future<void> _insertTxn(
   String status = 'asked',
   String categoryId = 'other',
   bool isDeleted = false,
+  bool isNotTransaction = false,
   String? duplicateOfTxnId,
 }) {
   final now = ts ?? DateTime.utc(2026, 7, 8, 9);
@@ -69,6 +70,7 @@ Future<void> _insertTxn(
           counterpartyVpa: Value(counterpartyVpa),
           categoryId: Value(categoryId),
           isDeleted: Value(isDeleted),
+          isNotTransaction: Value(isNotTransaction),
           duplicateOfTxnId: Value(duplicateOfTxnId),
           parseSource: 'template',
           confidenceJson: '{"parser":{"c":0.74,"src":"template"}}',
@@ -102,6 +104,12 @@ void main() {
         status: 'needs_review',
       );
     }
+    await _insertTxn(
+      database,
+      id: 'review_not_transaction',
+      status: 'needs_review',
+      isNotTransaction: true,
+    );
     final repository = TransactionRepository(database);
 
     final queue = await repository.watchReviewQueue(limit: 100).first;
@@ -218,6 +226,11 @@ void main() {
       () async {
     await _insertTxn(database, id: 'activity_visible');
     await _insertTxn(database, id: 'activity_deleted', isDeleted: true);
+    await _insertTxn(
+      database,
+      id: 'activity_not_transaction',
+      isNotTransaction: true,
+    );
     await _insertTxn(
       database,
       id: 'activity_suppressed',

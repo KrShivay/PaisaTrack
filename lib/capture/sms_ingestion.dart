@@ -241,6 +241,10 @@ class SmsIngestor {
   Future<void> ingest(RawSms sms) async {
     if (_isCapturePaused?.call() == true) return;
     if (_isSenderPaused?.call(sms.sender) == true) return;
+    final disposition = await (_database.select(_database.smsDispositions)
+          ..where((row) => row.smsId.equals(sms.id)))
+        .getSingleOrNull();
+    if (disposition != null) return;
     final transactionId = 'txn_${sms.id}';
     if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     final flagsRepo = FeatureFlagRepository(_database);
@@ -486,6 +490,10 @@ class SmsIngestor {
               ..where(smsId.isIn(smsIds)))
             .get();
         existingSmsIds.addAll(rows.map((row) => row.read(smsId)!));
+        final marked = await (_database.select(_database.smsDispositions)
+              ..where((row) => row.smsId.isIn(smsIds)))
+            .get();
+        existingSmsIds.addAll(marked.map((row) => row.smsId));
       }
       final existingRawById = <String, RawSm>{};
       if (smsIds.isNotEmpty) {
@@ -577,6 +585,7 @@ class SmsIngestor {
             (row) =>
                 row.direction.equals(record.direction.wireName) &
                 row.isDeleted.equals(false) &
+                row.isNotTransaction.equals(false) &
                 row.duplicateOfTxnId.isNull() &
                 row.ts.isBiggerOrEqualValue(
                   windowStart.millisecondsSinceEpoch,
@@ -625,6 +634,7 @@ class SmsIngestor {
       ..where(
         _database.transactions.status.equals(DecisionStatus.asked.wireName) &
             _database.transactions.isDeleted.equals(false) &
+            _database.transactions.isNotTransaction.equals(false) &
             _database.transactions.duplicateOfTxnId.isNull() &
             _database.transactions.createdAt.isBiggerOrEqualValue(start),
       );
@@ -646,6 +656,7 @@ class SmsIngestor {
                 .equals(DecisionStatus.asked.wireName)
                 .not() &
             _database.transactions.isDeleted.equals(false) &
+            _database.transactions.isNotTransaction.equals(false) &
             _database.transactions.duplicateOfTxnId.isNull() &
             _database.transactions.createdAt.isBiggerOrEqualValue(start),
       );
@@ -668,6 +679,7 @@ class SmsIngestor {
       ..addColumns([count])
       ..where(
         _database.transactions.isDeleted.equals(false) &
+            _database.transactions.isNotTransaction.equals(false) &
             _database.transactions.duplicateOfTxnId.isNull() &
             _sameKnownCounterparty(
               _database.transactions,
@@ -686,6 +698,7 @@ class SmsIngestor {
           ..where(
             (row) =>
                 row.isDeleted.equals(false) &
+                row.isNotTransaction.equals(false) &
                 row.duplicateOfTxnId.isNull() &
                 row.counterpartyVpa.equals(counterpartyVpa),
           )

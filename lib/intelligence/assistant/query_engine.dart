@@ -99,6 +99,7 @@ class AssistantQueryEngine {
             row.ts.isBiggerOrEqualValue(range.start.millisecondsSinceEpoch) &
                 row.ts.isSmallerThanValue(range.end.millisecondsSinceEpoch) &
                 row.isDeleted.equals(false) &
+                row.isNotTransaction.equals(false) &
                 row.duplicateOfTxnId.isNull() &
                 row.isAnalyticsExcluded.equals(false) &
                 row.ownedTransferId.isNull() &

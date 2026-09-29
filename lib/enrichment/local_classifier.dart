@@ -83,7 +83,7 @@ class LocalClassifier {
     final maxScore = scores.reduce(max);
     final exponentials = scores.map((score) => exp(score - maxScore)).toList();
     final total = exponentials.reduce((a, b) => a + b);
-    
+
     final predictions = <ClassificationPrediction>[];
     for (var i = 0; i < exponentials.length; i++) {
       predictions.add(
@@ -226,6 +226,7 @@ class ClassifierTrainer {
     ])
           ..where(
             _database.feedback.field.equals('category_id') &
+                _database.transactions.isNotTransaction.equals(false) &
                 (lastTrainedAt == null
                     ? const Constant(true)
                     : _database.feedback.createdAt

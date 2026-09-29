@@ -14,14 +14,23 @@ void main() {
   group('EventCorrelator', () {
     test('normalizes UTR / ref IDs correctly', () {
       expect(EventCorrelator.normalizeRefId('616016648401'), '616016648401');
-      expect(EventCorrelator.normalizeRefId('Ref# 616016648401/UPI'), '616016648401');
+      expect(
+        EventCorrelator.normalizeRefId('Ref# 616016648401/UPI'),
+        '616016648401',
+      );
       expect(EventCorrelator.normalizeRefId('123'), null);
       expect(EventCorrelator.normalizeRefId('ABCDEF'), 'ABCDEF');
     });
 
     test('ref disagreement vetoes correlation and matching', () {
-      expect(EventCorrelator.hasRefDisagreement('616016648401', '616016648402'), isTrue);
-      expect(EventCorrelator.hasRefDisagreement('616016648401', '616016648401'), isFalse);
+      expect(
+        EventCorrelator.hasRefDisagreement('616016648401', '616016648402'),
+        isTrue,
+      );
+      expect(
+        EventCorrelator.hasRefDisagreement('616016648401', '616016648401'),
+        isFalse,
+      );
       expect(EventCorrelator.hasRefDisagreement('616016648401', null), isFalse);
 
       const rule = DuplicateMatchRule(
@@ -39,6 +48,7 @@ void main() {
         confidenceJson: '{}',
         status: 'auto',
         isDeleted: false,
+        isNotTransaction: false,
         isAnalyticsExcluded: false,
         lifecycleState: 'settled',
         refId: '616016648401',
@@ -75,6 +85,7 @@ void main() {
         confidenceJson: '{}',
         status: 'auto',
         isDeleted: false,
+        isNotTransaction: false,
         isAnalyticsExcluded: false,
         lifecycleState: 'settled',
         merchantRaw: 'AMAZON',
@@ -111,7 +122,8 @@ void main() {
 
       final candidate = Transaction(
         id: 'txn_auth_1',
-        ts: DateTime.utc(2026, 7, 10, 10, 0).millisecondsSinceEpoch, // 2 days earlier
+        ts: DateTime.utc(2026, 7, 10, 10, 0)
+            .millisecondsSinceEpoch, // 2 days earlier
         amount: 1250.0,
         direction: 'debit',
         channel: 'card',
@@ -121,6 +133,7 @@ void main() {
         confidenceJson: '{}',
         status: 'auto',
         isDeleted: false,
+        isNotTransaction: false,
         isAnalyticsExcluded: false,
         lifecycleState: 'pending',
         createdAt: DateTime.utc(2026, 7, 10),

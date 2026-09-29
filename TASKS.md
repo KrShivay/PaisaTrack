@@ -10,43 +10,18 @@ later hardening.
 
 ## In Review
 
-- [ ] T-184 [P1] Verify SLICE sender admission and sent-from SMS parsing.
-  - Acceptance: The user confirmed `SLICE` is the Android sender header. Record
-    that exact header with a sanitized synthetic body, verify native live and
-    inbox admission, and keep signature text from admitting an unknown sender.
-    Verify the generic parser extracts amount, debit, payee, reference, and a
-    valid body transaction date while ignoring fraud-call footer text as
-    merchant evidence. Add only the exact verified sender alias.
-  - Dependencies: confirmed source header; T-162b sender-onboarding evidence
-    gate remains a separate follow-up.
-  - Privacy: synthetic or sanitized messages only; no personal numbers, refs,
-    merchant names, URLs, or body logging.
-  - Rollback: revert the exact sender alias and focused parser/native tests.
-  - Verification: focused parser 16/16; full Flutter suite 821/821; Flutter
-    analyzer and Dart format check clean; Android `SmsFilterTest` and app Kotlin
-    compilation passed with Gradle 9.1. GitNexus detect-changes: 16 symbols,
-    6 files, 7 affected processes, HIGH risk across parser/cascade ingestion
-    flows. Independent review pending.
-
-- [ ] T-183 [P0] Guard live SMS lifecycle classification before extraction.
-  - Acceptance: Production live, history, and incremental catch-up providers use
-    one deterministic classifier loaded from the existing local cue asset.
-    OTP, promo/rewards, balance-only, statement, and unclassified messages do
-    not reach parsing/LLM fallback; pending, failed, and reversal messages keep
-    their lifecycle even when an adversarial model returns transactional field
-    snippets. Settled debit/credit with trailing balance context remains
-    supported. Non-settled and uncertain records never enter settled spending
-    and require review where a transaction is retained. Synthetic provider
-    tests exercise actual wiring and model-unavailable behavior; weak rewards
-    copy and ambiguous purchase-of promotion text stay blocked. History stays
-    bounded and model-free.
-  - Dependencies: T-182 generic parser abstention; no sender-filter expansion.
-  - Privacy: local inference only; no raw-SMS retention or cloud changes.
-  - Rollback: revert provider/classifier/ingestion guards and regression tests.
-  - Verification: focused capture/lifecycle/history suite 57/57; full Flutter
-    suite 818/818; analyzer, Dart format check, and diff check clean. GitNexus
-    detect-changes: 12 files, 42 symbols, 13 processes, HIGH risk; index refresh
-    records known truncation and cross-language unresolved edges.
+- [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
+  - Verification: focused inset suite 11/11, full Flutter suite 764/764,
+    analyzer clean, and `git diff --check` clean. Widget coverage exercises
+    gesture inset scrolling, three-button nested Activity/Sort geometry, and
+    Manual Entry with the keyboard open. AVD live nav/keyboard acceptance is
+    inconclusive because API 35 SystemUI/IME did not expose navigation insets or
+    render the keyboard; no PaisaTrack crash was found.
+  - Review follow-up: preserve this task as the single bottom-spacing item.
+    Complete the global floating-navbar gap audit for Trends, Settings,
+    Assistant, transaction detail, nested sheets and floating actions; extend
+    behavioral coverage through the T-167e/f/g/i viewport matrix. Do not add a
+    duplicate spacing task.
 
 - [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore
   persisted state.
@@ -70,20 +45,6 @@ later hardening.
       emulator restored a synthetic archive through the real Keystore selector
       into SQLCipher, reopened the active generation, and verified legacy bytes
       remained unchanged. MainActivity relaunched successfully on emulator.
-
-- [ ] T-176 [P1] Apply global bottom-inset contract to all screens.
-      Module: all primary screens (Dashboard, Activity, Review, Insights,
-      Settings, Assistant, Review/Sort card view).
-      Gap: content at the bottom of each screen underlaps the bottom navigation
-      bar; FABs and action button rows are not consistently lifted above it.
-      Verification: focused inset suite 11/11, full Flutter suite 764/764,
-      analyzer clean, `git diff --check` clean. Widget coverage exercises
-      gesture inset scrolling, three-button nested Activity/Sort geometry,
-      and Manual Entry with the keyboard open. AVD live nav/keyboard acceptance
-      is inconclusive because API 35 SystemUI/IME did not expose navigation
-      insets or render the keyboard; logcat has no PaisaTrack crash.
-      Next: review the test-only diff; repeat live navigation/keyboard checks
-      after safe physical-device recovery.
 
 ## Ready
 
@@ -230,18 +191,63 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
-- [ ] T-185 [P1] Add “Not a transaction” action to SMS details.
-  - Acceptance: Show a “Not a transaction” action on the SMS details screen
-    reached from transaction detail/source navigation. Persist suppression by
-    stable SMS identity so live replay, history, and catch-up do not recreate
-    it. Provide durable undo that restores normal review behavior. Preserve
-    raw-message retention and do not delete source/device data; do not substitute
-    analytics exclusion or the existing soft-delete flag.
-  - Dependencies: inspect transaction detail → SMS details navigation and
-    durable disposition schema; design migration, replay, and undo together.
-  - Privacy: local-only state; no added raw-SMS retention or cloud path.
-  - Rollback: additive migration must preserve prior rows and provide a tested
-    downgrade/recovery path.
+- [ ] T-186 [P1] Fix transaction detail Note blank screen with the keyboard open.
+  - Acceptance: Open and edit the Note field at compact, standard, and large
+    text scales with the software keyboard visible; the transaction detail
+    remains rendered, Save Note remains reachable, and saved text survives
+    reopening. Include a widget regression for the reported blank-screen state.
+  - Dependencies: inspect T-158b's note state seeding and existing detail route;
+    reuse its controller extraction if it is the cause.
+  - Privacy: use synthetic transaction/note data only.
+  - Rollback: revert the focused screen/controller fix and regression test.
+
+- [ ] T-187 [P1] Preserve subscription currency instead of formatting every
+      amount as INR.
+  - Acceptance: Trace currency from supported source evidence into recurring
+    series; store and display the currency code faithfully, keep foreign-currency
+    totals separate from INR commitments, and never invent a conversion rate.
+    Existing rows with unknown source currency must be identified rather than
+    silently relabeled. Add migration, detector, and UI tests.
+  - Dependencies: audit source parsers and recurring detector before selecting
+    the additive schema; align with PLAN.md's no-implicit-conversion rule.
+  - Privacy: no network exchange-rate lookup or longer SMS retention.
+  - Rollback: additive migration keeps original numeric amounts and defaults;
+    downgrade preserves rows and marks unsupported currency state unknown.
+
+- [ ] T-188 [P2] Define Trends notification inbox lifecycle.
+  - Acceptance: Specify when a threshold crossing creates an inbox item, how
+    repeated crossings deduplicate, how users move/return an item, and what
+    Clear all means. Reuse existing insight evidence and dismissal state where
+    possible; test period changes, recomputation, repeated thresholds, and
+    clear-all persistence before implementation.
+  - Dependencies: coordinate with T-178a insight claims; do not treat the
+    current `dismissed` bit as a notification inbox without defining states.
+  - Privacy: local-only aggregates and state; no notification body with raw SMS.
+  - Rollback: keep existing Trends insight feed available if inbox is disabled.
+
+- [ ] T-189 [P2] Make Ask follow-up suggestions readable in a full-text vertical
+      list.
+  - Acceptance: Follow-up questions shown after an answer wrap to full text in a
+    vertical list and remain individually tappable; do not ellipsize or truncate
+    meaning. Keep the separate T-150c rotating composer prompt row unchanged.
+    Add narrow-screen, large-text, and long-question widget tests.
+  - Dependencies: T-151b answer bubble geometry; refine T-151e follow-up chips
+    without duplicating composer prompt catalogue work.
+  - Privacy: suggestions remain typed/local and do not include private row text.
+  - Rollback: revert the presentation change without changing supported intents.
+
+- [ ] T-190 [P2] Plan credit-card purchase, bill, payment, refund, and failure
+      accounting. **Do this last among the newly requested tasks.**
+  - Acceptance: Produce a grounded scenario map for card purchases, statement
+    generation, bill payments, full/partial refunds, failed/reversed payments,
+    and statement reconciliation. Define which source rows remain immutable,
+    lifecycle/duplicate links, settled-spend and available-credit boundaries,
+    user review, backup, and undo requirements; identify gaps in T-100/PV-04.
+    Planning only; no schema or implementation until separately approved.
+  - Dependencies: reuse T-100 refund/reimbursement links and PV-04 lifecycle
+    explanation; inspect actual card and payment-source data first.
+  - Privacy: synthetic scenarios only; no live statements or SMS.
+  - Rollback: planning artifact only; no runtime behavior changes.
 
 <!-- Groom future work here before promoting it to Ready. -->
 

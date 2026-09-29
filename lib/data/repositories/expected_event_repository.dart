@@ -125,6 +125,7 @@ class ExpectedEventRepository {
                     row.lifecycleState.equals('settled') &
                     row.status.isIn(['auto', 'confirmed']) &
                     row.isDeleted.equals(false) &
+                    row.isNotTransaction.equals(false) &
                     row.duplicateOfTxnId.isNull() &
                     row.ts.isBiggerOrEqual(
                       Variable<int>(windowStart.millisecondsSinceEpoch),

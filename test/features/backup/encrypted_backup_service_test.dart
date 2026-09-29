@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' hide isNull;
@@ -50,6 +51,29 @@ void main() {
             updatedAt: now,
           ),
         );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_backup_disposition',
+            ts: now.millisecondsSinceEpoch,
+            amount: 21,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            isNotTransaction: const Value(true),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'synthetic_sms_id',
+            transactionId: 'txn_backup_disposition',
+            disposition: 'not_transaction',
+            createdAt: now,
+          ),
+        );
     final file = await service().exportToFile(
       directory: directory,
       passphrase: 'correct horse battery staple',
@@ -71,6 +95,96 @@ void main() {
     final restoredSource =
         await database.select(database.paymentSources).getSingle();
     expect(restoredSource.nickname, 'Daily card');
+    final restoredTransaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_backup_disposition')))
+        .getSingle();
+    expect(restoredTransaction.isNotTransaction, isTrue);
+    final restoredDisposition =
+        await database.select(database.smsDispositions).getSingle();
+    expect(restoredDisposition.smsId, 'synthetic_sms_id');
+  });
+
+  test('legacy v3 archive without dispositions defaults marked state to false',
+      () async {
+    final now = DateTime.utc(2026, 7, 16);
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_old_legacy',
+            ts: now.millisecondsSinceEpoch,
+            amount: 100,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            isNotTransaction: const Value(true),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'synthetic_old_sms_id',
+            transactionId: 'txn_old_legacy',
+            disposition: 'not_transaction',
+            createdAt: now,
+          ),
+        );
+    const passphrase = 'legacy-optional-table-passphrase';
+    final bytes = await service().exportBytes(passphrase: passphrase);
+    final oldArchive = await _legacyArchiveWithoutDispositionTable(
+      bytes,
+      passphrase,
+    );
+
+    await service().importBytes(bytes: oldArchive, passphrase: passphrase);
+
+    final restored = await database.select(database.transactions).getSingle();
+    expect(restored.isNotTransaction, isFalse);
+    expect(await database.select(database.smsDispositions).get(), isEmpty);
+  });
+
+  test('chunked v3 archive accepts missing optional table and footer count',
+      () async {
+    final now = DateTime.utc(2026, 7, 16);
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_old_chunked',
+            ts: now.millisecondsSinceEpoch,
+            amount: 100,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            isNotTransaction: const Value(true),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'synthetic_chunked_sms_id',
+            transactionId: 'txn_old_chunked',
+            disposition: 'not_transaction',
+            createdAt: now,
+          ),
+        );
+    const passphrase = 'chunked-optional-table-passphrase';
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: passphrase,
+    );
+    final oldArchive = await _chunkedArchiveWithoutDispositionTable(
+      await file.readAsBytes(),
+      passphrase,
+    );
+
+    await service().importBytes(bytes: oldArchive, passphrase: passphrase);
+
+    final restored = await database.select(database.transactions).getSingle();
+    expect(restored.isNotTransaction, isFalse);
+    expect(await database.select(database.smsDispositions).get(), isEmpty);
   });
 
   test('chunked file export reports monotonic progress and finalizes',
@@ -766,6 +880,215 @@ int _readUint32(List<int> bytes, int offset) =>
 
 int _recordLength(List<int> bytes, int offset) =>
     1 + 4 + _readUint32(bytes, offset + 1) + 16;
+
+Future<Uint8List> _legacyArchiveWithoutDispositionTable(
+  Uint8List encrypted,
+  String passphrase,
+) async {
+  final envelope = jsonDecode(utf8.decode(encrypted)) as Map<String, dynamic>;
+  final kdf = envelope['kdf'] as Map<String, dynamic>;
+  final cipher = envelope['cipher'] as Map<String, dynamic>;
+  final salt = base64Decode(kdf['salt'] as String);
+  final key = await Argon2id(
+    memory: kdf['memory'] as int,
+    parallelism: kdf['parallelism'] as int,
+    iterations: kdf['iterations'] as int,
+    hashLength: kdf['hash_length'] as int,
+  ).deriveKey(
+    secretKey: SecretKey(utf8.encode(passphrase)),
+    nonce: salt,
+  );
+  final aes = AesGcm.with256bits();
+  final plaintext = await aes.decrypt(
+    SecretBox(
+      base64Decode(cipher['ciphertext'] as String),
+      nonce: base64Decode(cipher['nonce'] as String),
+      mac: Mac(base64Decode(cipher['mac'] as String)),
+    ),
+    secretKey: key,
+  );
+  final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+  final tables = archive['tables'] as Map<String, dynamic>;
+  tables.remove('sms_dispositions');
+  for (final row in (tables['transactions'] as List<dynamic>)) {
+    (row as Map<String, dynamic>).remove('isNotTransaction');
+  }
+
+  final nonce = List<int>.generate(12, (index) => index + 1);
+  final box = await aes.encrypt(
+    utf8.encode(jsonEncode(archive)),
+    secretKey: key,
+    nonce: nonce,
+  );
+  envelope['cipher'] = {
+    'name': 'aes-256-gcm',
+    'nonce': base64Encode(box.nonce),
+    'mac': base64Encode(box.mac.bytes),
+    'ciphertext': base64Encode(box.cipherText),
+  };
+  return Uint8List.fromList(utf8.encode(jsonEncode(envelope)));
+}
+
+Future<Uint8List> _chunkedArchiveWithoutDispositionTable(
+  Uint8List encrypted,
+  String passphrase,
+) async {
+  final headerLength = _readUint32(encrypted, 5);
+  final originalHeaderBytes = encrypted.sublist(9, 9 + headerLength);
+  final header =
+      jsonDecode(utf8.decode(originalHeaderBytes)) as Map<String, dynamic>;
+  final kdf = header['kdf'] as Map<String, dynamic>;
+  final salt = base64Decode(kdf['salt'] as String);
+  final key = await Argon2id(
+    memory: kdf['memory'] as int,
+    parallelism: kdf['parallelism'] as int,
+    iterations: kdf['iterations'] as int,
+    hashLength: kdf['hash_length'] as int,
+  ).deriveKey(secretKey: SecretKey(utf8.encode(passphrase)), nonce: salt);
+  final aes = AesGcm.with256bits();
+  final originalBaseNonce = base64Decode(header['base_nonce'] as String);
+  final plaintext = BytesBuilder(copy: false);
+  var offset = 9 + headerLength;
+  var originalIndex = 0;
+  while (offset < encrypted.length) {
+    final kind = encrypted[offset++];
+    final length = _readUint32(encrypted, offset);
+    offset += 4;
+    final ciphertext = encrypted.sublist(offset, offset + length);
+    offset += length;
+    final mac = encrypted.sublist(offset, offset + 16);
+    offset += 16;
+    if (kind == 2) break;
+    plaintext.add(
+      await aes.decrypt(
+        SecretBox(
+          ciphertext,
+          nonce: _chunkNonceForTest(originalBaseNonce, originalIndex),
+          mac: Mac(mac),
+        ),
+        secretKey: key,
+        aad: _chunkAadForTest(
+          originalHeaderBytes,
+          originalIndex,
+          length,
+          kind,
+        ),
+      ),
+    );
+    originalIndex++;
+  }
+
+  var removed = 0;
+  final records = utf8
+      .decode(plaintext.takeBytes())
+      .split('\n')
+      .where((line) => line.isNotEmpty)
+      .map((line) => jsonDecode(line) as Map<String, dynamic>)
+      .where((record) {
+    if (record['kind'] == 'row' && record['table'] == 'sms_dispositions') {
+      removed++;
+      return false;
+    }
+    if (record['kind'] == 'row' && record['table'] == 'transactions') {
+      (record['row'] as Map<String, dynamic>).remove('isNotTransaction');
+    }
+    if (record['kind'] == 'footer') {
+      (record['tables'] as Map<String, dynamic>).remove('sms_dispositions');
+      record['rows'] = (record['rows'] as int) - removed;
+    }
+    return true;
+  }).toList(growable: false);
+  if (removed == 0) throw StateError('Fixture did not contain a disposition');
+  final archiveBytes = utf8.encode('${records.map(jsonEncode).join('\n')}\n');
+
+  final newBaseNonce = List<int>.generate(12, (index) => 100 + index);
+  header['base_nonce'] = base64Encode(newBaseNonce);
+  final headerBytes = utf8.encode(jsonEncode(header));
+  final chunkSize = header['chunk_size'] as int;
+  final output = BytesBuilder(copy: false)
+    ..add(const [0x50, 0x54, 0x52, 0x4b])
+    ..add([header['version'] as int])
+    ..add(_uint32ForTest(headerBytes.length))
+    ..add(headerBytes);
+  var chunkCount = 0;
+  for (var start = 0; start < archiveBytes.length; start += chunkSize) {
+    final end = min(start + chunkSize, archiveBytes.length);
+    final chunk = archiveBytes.sublist(start, end);
+    final box = await aes.encrypt(
+      chunk,
+      secretKey: key,
+      nonce: _chunkNonceForTest(newBaseNonce, chunkCount),
+      aad: _chunkAadForTest(headerBytes, chunkCount, chunk.length, 1),
+    );
+    output
+      ..add([1])
+      ..add(_uint32ForTest(chunk.length))
+      ..add(box.cipherText)
+      ..add(box.mac.bytes);
+    chunkCount++;
+  }
+  final manifest = utf8.encode(
+    jsonEncode({
+      'version': header['version'],
+      'chunks': chunkCount,
+      'plaintext_bytes': archiveBytes.length,
+      'ciphertext_bytes': archiveBytes.length,
+    }),
+  );
+  final manifestBox = await aes.encrypt(
+    manifest,
+    secretKey: key,
+    nonce: _chunkNonceForTest(newBaseNonce, chunkCount),
+    aad: _chunkAadForTest(headerBytes, chunkCount, manifest.length, 2),
+  );
+  output
+    ..add([2])
+    ..add(_uint32ForTest(manifest.length))
+    ..add(manifestBox.cipherText)
+    ..add(manifestBox.mac.bytes);
+  return output.takeBytes();
+}
+
+List<int> _chunkNonceForTest(List<int> baseNonce, int index) {
+  final nonce = List<int>.from(baseNonce);
+  var value = index;
+  for (var i = nonce.length - 1; i >= nonce.length - 8; i--) {
+    nonce[i] = value & 0xff;
+    value >>= 8;
+  }
+  return nonce;
+}
+
+List<int> _chunkAadForTest(
+  List<int> headerBytes,
+  int index,
+  int length,
+  int kind,
+) =>
+    [
+      ...headerBytes,
+      kind,
+      ..._uint64ForTest(index),
+      ..._uint32ForTest(length),
+    ];
+
+List<int> _uint32ForTest(int value) => [
+      (value >> 24) & 0xff,
+      (value >> 16) & 0xff,
+      (value >> 8) & 0xff,
+      value & 0xff,
+    ];
+
+List<int> _uint64ForTest(int value) => [
+      0,
+      0,
+      0,
+      0,
+      (value >> 24) & 0xff,
+      (value >> 16) & 0xff,
+      (value >> 8) & 0xff,
+      value & 0xff,
+    ];
 
 class _MemoryDocumentGateway extends SystemDocumentGateway {
   _MemoryDocumentGateway() : super();

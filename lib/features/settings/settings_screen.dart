@@ -23,6 +23,7 @@ import 'app_settings.dart';
 import 'category_manager_screen.dart';
 import 'payee_labels_screen.dart';
 import 'payment_sources_screen.dart';
+import 'not_transactions_screen.dart';
 
 const minimumBackupPassphraseLength =
     EncryptedBackupService.minimumPassphraseLength;
@@ -345,6 +346,18 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const UnreadableSmsScreen(),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  _TileRow(
+                    icon: Icons.block_outlined,
+                    title: 'Not transactions',
+                    subtitle: 'Review corrections and restore a message',
+                    isDark: isDark,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const NotTransactionsScreen(),
                       ),
                     ),
                   ),

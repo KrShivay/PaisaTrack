@@ -130,6 +130,7 @@ FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
   AND t.is_deleted = 0
+  AND t.is_not_transaction = 0
   AND t.duplicate_of_txn_id IS NULL
   AND t.lifecycle_state = 'settled'
   AND t.direction = 'debit'

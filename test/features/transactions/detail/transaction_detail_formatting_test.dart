@@ -18,6 +18,7 @@ Transaction _txn({
       confidenceJson: '{}',
       status: 'needs_review',
       isDeleted: false,
+      isNotTransaction: false,
       isAnalyticsExcluded: isAnalyticsExcluded,
       lifecycleState: 'settled',
       createdAt: DateTime(2024),
@@ -76,8 +77,7 @@ void main() {
     });
 
     test('caps at 3 even with many suggestions', () {
-      final chips =
-          chipCategories(food, all, ['shopping', 'travel', 'health']);
+      final chips = chipCategories(food, all, ['shopping', 'travel', 'health']);
       expect(chips.length, 3);
     });
 
@@ -180,8 +180,18 @@ void main() {
 
     test('all 12 month abbreviations appear for matching month', () {
       const abbrevs = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       for (var m = 1; m <= 12; m++) {
         final result = formatDetailDate(DateTime(2024, m, 1, 10, 0));

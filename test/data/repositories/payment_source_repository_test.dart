@@ -71,6 +71,16 @@ void main() {
     final linked = await database.select(database.transactions).get();
     expect(linked.map((row) => row.ownedTransferId).toSet(), hasLength(1));
     expect(linked.first.ownedTransferId, isNotNull);
+
+    final debitSourceId =
+        linked.singleWhere((row) => row.id == 'debit').paymentSourceId!;
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('debit')))
+        .write(const TransactionsCompanion(isNotTransaction: Value(true)));
+    final debitSummary = (await repository.watchSources().first)
+        .singleWhere((source) => source.id == debitSourceId);
+    expect(debitSummary.transactionCount, 0);
+    expect(debitSummary.transferCount, 0);
   });
 
   test('nickname and analytics exclusion propagate without hiding rows',

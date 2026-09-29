@@ -65,6 +65,7 @@ class RecurringDetector {
                 t.isAnalyticsExcluded.equals(false) &
                 t.ownedTransferId.isNull() &
                 t.isDeleted.equals(false) &
+                t.isNotTransaction.equals(false) &
                 t.duplicateOfTxnId.isNull(),
           ))
         .get();

@@ -44,7 +44,9 @@ class CounterpartyBackfillService {
   /// `merchant_raw` source text is NEVER overwritten or modified.
   Future<List<BackfillPreviewItem>> previewBackfill() async {
     const parser = CounterpartyKeyParser();
-    final txns = await _db.select(_db.transactions).get();
+    final txns = await (_db.select(_db.transactions)
+          ..where((row) => row.isNotTransaction.equals(false)))
+        .get();
     final items = <BackfillPreviewItem>[];
 
     for (final txn in txns) {
@@ -70,8 +72,11 @@ class CounterpartyBackfillService {
   }
 
   /// Applies structured counterparty key backfill to database and records undo checkpoint.
-  Future<BackfillResult> applyBackfill(List<BackfillPreviewItem> previewItems) async {
-    final checkpointId = 'cp_checkpoint_${DateTime.now().millisecondsSinceEpoch}';
+  Future<BackfillResult> applyBackfill(
+    List<BackfillPreviewItem> previewItems,
+  ) async {
+    final checkpointId =
+        'cp_checkpoint_${DateTime.now().millisecondsSinceEpoch}';
     final undoList = <Map<String, String?>>[];
 
     for (final item in previewItems) {

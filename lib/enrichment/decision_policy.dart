@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
+
 import '../core/constants.dart';
 import '../data/db/database.dart';
 
@@ -97,7 +99,9 @@ class AdaptiveThresholdPolicy {
 
   Future<Map<String, double>> recompute() async {
     final transactions = await (_database.select(_database.transactions)
-          ..where((t) => t.categoryId.isNotNull()))
+          ..where(
+            (t) => t.categoryId.isNotNull() & t.isNotTransaction.equals(false),
+          ))
         .get();
     final feedback = await (_database.select(_database.feedback)
           ..where((f) => f.field.equals('category_id')))

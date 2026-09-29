@@ -24,6 +24,7 @@ import 'tables/raw_sms_table.dart';
 import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
 import 'tables/shadow_transactions_table.dart';
+import 'tables/sms_dispositions_table.dart';
 import 'tables/transaction_links_table.dart';
 import 'tables/transactions_table.dart';
 
@@ -52,6 +53,7 @@ part 'database.g.dart';
     RecurringSeries,
     Rules,
     ShadowTransactions,
+    SmsDispositions,
     TransactionLinks,
     Transactions,
   ],
@@ -106,7 +108,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -227,11 +229,19 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 15) {
           await migrator.createTable(payeeEvidence);
-          await _backfillPayeeEvidence();
         }
         if (from < 16) {
           await migrator.createTable(shadowTransactions);
         }
+        if (from < 17) {
+          await migrator.addColumn(
+            transactions,
+            transactions.isNotTransaction,
+          );
+          await migrator.createIndex(idxTransactionsNotTransaction);
+          await migrator.createTable(smsDispositions);
+        }
+        if (from < 15) await _backfillPayeeEvidence();
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.
         if (from < 2) await _backfillDuplicateLinks();
@@ -321,7 +331,10 @@ class AppDatabase extends _$AppDatabase {
     for (final echo in suppressed) {
       final candidates = await (select(transactions)
             ..where(
-              (t) => t.id.equals(echo.id).not() & t.isDeleted.equals(false),
+              (t) =>
+                  t.id.equals(echo.id).not() &
+                  t.isDeleted.equals(false) &
+                  t.isNotTransaction.equals(false),
             ))
           .get();
 

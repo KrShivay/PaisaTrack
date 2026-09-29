@@ -57,6 +57,7 @@ void main() {
         confidenceJson: '{}',
         status: 'confirmed',
         isDeleted: false,
+        isNotTransaction: false,
         isAnalyticsExcluded: false,
         lifecycleState: 'settled',
         createdAt: now,
@@ -96,7 +97,8 @@ void main() {
       expect(find.textContaining('CONFIDENCE: 98%'), findsOneWidget);
     });
 
-    testWidgets('T-148a: category row is a >=48dp control with correct semantics',
+    testWidgets(
+        'T-148a: category row is a >=48dp control with correct semantics',
         (tester) async {
       final handle = tester.ensureSemantics();
       await pumpDetail(tester, testDetail);
@@ -112,7 +114,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('T-148b: renders selected category chip in category hue and More chip',
+    testWidgets(
+        'T-148b: renders selected category chip in category hue and More chip',
         (tester) async {
       await pumpDetail(tester, testDetail);
 
@@ -121,7 +124,8 @@ void main() {
       expect(find.text('More'), findsOneWidget);
     });
 
-    testWidgets('T-147a: renders retained source message as a first-class section',
+    testWidgets(
+        'T-147a: renders retained source message as a first-class section',
         (tester) async {
       final retainedDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(smsId: const Value('sms_001')),
@@ -160,7 +164,8 @@ void main() {
       );
     });
 
-    testWidgets('T-147a: omits WHERE THIS CAME FROM section for manual entry rows',
+    testWidgets(
+        'T-147a: omits WHERE THIS CAME FROM section for manual entry rows',
         (tester) async {
       final manualDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(smsId: const Value(null)),
@@ -177,7 +182,8 @@ void main() {
       expect(find.text('WHERE THIS CAME FROM'), findsNothing);
     });
 
-    testWidgets('T-147b: renders Parsed locally badge and parser name for template source',
+    testWidgets(
+        'T-147b: renders Parsed locally badge and parser name for template source',
         (tester) async {
       final templateDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(
@@ -199,7 +205,8 @@ void main() {
       expect(find.text('Template match · 99%'), findsOneWidget);
     });
 
-    testWidgets('T-147b: renders Parsed locally badge and parser name for generic source',
+    testWidgets(
+        'T-147b: renders Parsed locally badge and parser name for generic source',
         (tester) async {
       final genericDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(
@@ -221,7 +228,8 @@ void main() {
       expect(find.text('Pattern match · 85%'), findsOneWidget);
     });
 
-    testWidgets('T-147b: renders Parsed locally badge and parser name for LLM source',
+    testWidgets(
+        'T-147b: renders Parsed locally badge and parser name for LLM source',
         (tester) async {
       final llmDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(

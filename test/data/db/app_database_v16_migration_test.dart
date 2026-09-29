@@ -6,7 +6,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 void main() {
-  test('v15->v16 migration creates the shadow transactions table', () async {
+  test('v15->v17 migration creates shadow and disposition tables', () async {
     final tempDir =
         await Directory.systemTemp.createTemp('paisatrack_v16_migration_');
     final dbPath = '${tempDir.path}/paisatrack.db';
@@ -41,7 +41,7 @@ void main() {
 
     final version =
         await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data['user_version'], 16);
+    expect(version.data['user_version'], 17);
     final columns = await database
         .customSelect('PRAGMA table_info(shadow_transactions)')
         .get();
@@ -59,6 +59,13 @@ void main() {
         'observed_at',
         'updated_at',
       ]),
+    );
+    final dispositionColumns = await database
+        .customSelect('PRAGMA table_info(sms_dispositions)')
+        .get();
+    expect(
+      dispositionColumns.map((row) => row.data['name']),
+      containsAll(['sms_id', 'transaction_id', 'disposition', 'created_at']),
     );
   });
 }

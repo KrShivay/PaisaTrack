@@ -237,6 +237,7 @@ class TransactionRepository {
     ])
       ..where(
         _database.transactions.isDeleted.equals(false) &
+            _database.transactions.isNotTransaction.equals(false) &
             _database.transactions.duplicateOfTxnId.isNull() &
             (start == null
                 ? const Constant(true)
@@ -311,6 +312,7 @@ SELECT
     LEFT JOIN merchants AS m ON m.id = highest.merchant_id
     WHERE highest.status = 'needs_review'
       AND highest.is_deleted = 0
+      AND highest.is_not_transaction = 0
       AND highest.duplicate_of_txn_id IS NULL
     ORDER BY highest.amount DESC
     LIMIT 1
@@ -318,6 +320,7 @@ SELECT
 FROM transactions AS t
 WHERE t.status = 'needs_review'
   AND t.is_deleted = 0
+  AND t.is_not_transaction = 0
   AND t.duplicate_of_txn_id IS NULL
 ''',
           readsFrom: {_database.transactions, _database.merchants},
@@ -783,6 +786,7 @@ WHERE t.status = 'needs_review'
               (row) =>
                   row.id.isIn(ids) &
                   row.isDeleted.equals(false) &
+                  row.isNotTransaction.equals(false) &
                   row.duplicateOfTxnId.isNull(),
             ))
           .get();
@@ -791,7 +795,10 @@ WHERE t.status = 'needs_review'
       final expected = ruleInput.matchValue.trim().toLowerCase();
       final query = _database.select(_database.transactions)
         ..where(
-          (row) => row.isDeleted.equals(false) & row.duplicateOfTxnId.isNull(),
+          (row) =>
+              row.isDeleted.equals(false) &
+              row.isNotTransaction.equals(false) &
+              row.duplicateOfTxnId.isNull(),
         );
 
       if (ruleInput.matchType == 'counterparty') {
@@ -905,6 +912,7 @@ WHERE t.status = 'needs_review'
       ..where(
         _database.transactions.status.equals(status) &
             _database.transactions.isDeleted.equals(false) &
+            _database.transactions.isNotTransaction.equals(false) &
             _database.transactions.duplicateOfTxnId.isNull(),
       )
       ..orderBy([OrderingTerm.desc(_database.transactions.ts)]);

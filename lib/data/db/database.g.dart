@@ -3638,6 +3638,16 @@ class $TransactionsTable extends Transactions
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_deleted" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _isNotTransactionMeta =
+      const VerificationMeta('isNotTransaction');
+  @override
+  late final GeneratedColumn<bool> isNotTransaction = GeneratedColumn<bool>(
+      'is_not_transaction', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_not_transaction" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _counterpartyVpaMeta =
       const VerificationMeta('counterpartyVpa');
   @override
@@ -3727,6 +3737,7 @@ class $TransactionsTable extends Transactions
         confidenceJson,
         status,
         isDeleted,
+        isNotTransaction,
         counterpartyVpa,
         duplicateOfTxnId,
         ownedTransferId,
@@ -3852,6 +3863,12 @@ class $TransactionsTable extends Transactions
       context.handle(_isDeletedMeta,
           isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta));
     }
+    if (data.containsKey('is_not_transaction')) {
+      context.handle(
+          _isNotTransactionMeta,
+          isNotTransaction.isAcceptableOrUnknown(
+              data['is_not_transaction']!, _isNotTransactionMeta));
+    }
     if (data.containsKey('counterparty_vpa')) {
       context.handle(
           _counterpartyVpaMeta,
@@ -3957,6 +3974,8 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       isDeleted: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_deleted'])!,
+      isNotTransaction: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}is_not_transaction'])!,
       counterpartyVpa: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}counterparty_vpa']),
       duplicateOfTxnId: attachedDatabase.typeMapping.read(
@@ -4005,6 +4024,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String confidenceJson;
   final String status;
   final bool isDeleted;
+  final bool isNotTransaction;
   final String? counterpartyVpa;
   final String? duplicateOfTxnId;
   final String? ownedTransferId;
@@ -4034,6 +4054,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.confidenceJson,
       required this.status,
       required this.isDeleted,
+      required this.isNotTransaction,
       this.counterpartyVpa,
       this.duplicateOfTxnId,
       this.ownedTransferId,
@@ -4083,6 +4104,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['confidence_json'] = Variable<String>(confidenceJson);
     map['status'] = Variable<String>(status);
     map['is_deleted'] = Variable<bool>(isDeleted);
+    map['is_not_transaction'] = Variable<bool>(isNotTransaction);
     if (!nullToAbsent || counterpartyVpa != null) {
       map['counterparty_vpa'] = Variable<String>(counterpartyVpa);
     }
@@ -4144,6 +4166,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       confidenceJson: Value(confidenceJson),
       status: Value(status),
       isDeleted: Value(isDeleted),
+      isNotTransaction: Value(isNotTransaction),
       counterpartyVpa: counterpartyVpa == null && nullToAbsent
           ? const Value.absent()
           : Value(counterpartyVpa),
@@ -4191,6 +4214,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       confidenceJson: serializer.fromJson<String>(json['confidenceJson']),
       status: serializer.fromJson<String>(json['status']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      isNotTransaction: serializer.fromJson<bool>(json['isNotTransaction']),
       counterpartyVpa: serializer.fromJson<String?>(json['counterpartyVpa']),
       duplicateOfTxnId: serializer.fromJson<String?>(json['duplicateOfTxnId']),
       ownedTransferId: serializer.fromJson<String?>(json['ownedTransferId']),
@@ -4226,6 +4250,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'confidenceJson': serializer.toJson<String>(confidenceJson),
       'status': serializer.toJson<String>(status),
       'isDeleted': serializer.toJson<bool>(isDeleted),
+      'isNotTransaction': serializer.toJson<bool>(isNotTransaction),
       'counterpartyVpa': serializer.toJson<String?>(counterpartyVpa),
       'duplicateOfTxnId': serializer.toJson<String?>(duplicateOfTxnId),
       'ownedTransferId': serializer.toJson<String?>(ownedTransferId),
@@ -4258,6 +4283,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           String? confidenceJson,
           String? status,
           bool? isDeleted,
+          bool? isNotTransaction,
           Value<String?> counterpartyVpa = const Value.absent(),
           Value<String?> duplicateOfTxnId = const Value.absent(),
           Value<String?> ownedTransferId = const Value.absent(),
@@ -4290,6 +4316,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         confidenceJson: confidenceJson ?? this.confidenceJson,
         status: status ?? this.status,
         isDeleted: isDeleted ?? this.isDeleted,
+        isNotTransaction: isNotTransaction ?? this.isNotTransaction,
         counterpartyVpa: counterpartyVpa.present
             ? counterpartyVpa.value
             : this.counterpartyVpa,
@@ -4331,6 +4358,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('confidenceJson: $confidenceJson, ')
           ..write('status: $status, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('isNotTransaction: $isNotTransaction, ')
           ..write('counterpartyVpa: $counterpartyVpa, ')
           ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
           ..write('ownedTransferId: $ownedTransferId, ')
@@ -4365,6 +4393,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         confidenceJson,
         status,
         isDeleted,
+        isNotTransaction,
         counterpartyVpa,
         duplicateOfTxnId,
         ownedTransferId,
@@ -4398,6 +4427,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.confidenceJson == this.confidenceJson &&
           other.status == this.status &&
           other.isDeleted == this.isDeleted &&
+          other.isNotTransaction == this.isNotTransaction &&
           other.counterpartyVpa == this.counterpartyVpa &&
           other.duplicateOfTxnId == this.duplicateOfTxnId &&
           other.ownedTransferId == this.ownedTransferId &&
@@ -4429,6 +4459,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> confidenceJson;
   final Value<String> status;
   final Value<bool> isDeleted;
+  final Value<bool> isNotTransaction;
   final Value<String?> counterpartyVpa;
   final Value<String?> duplicateOfTxnId;
   final Value<String?> ownedTransferId;
@@ -4459,6 +4490,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.confidenceJson = const Value.absent(),
     this.status = const Value.absent(),
     this.isDeleted = const Value.absent(),
+    this.isNotTransaction = const Value.absent(),
     this.counterpartyVpa = const Value.absent(),
     this.duplicateOfTxnId = const Value.absent(),
     this.ownedTransferId = const Value.absent(),
@@ -4490,6 +4522,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String confidenceJson,
     required String status,
     this.isDeleted = const Value.absent(),
+    this.isNotTransaction = const Value.absent(),
     this.counterpartyVpa = const Value.absent(),
     this.duplicateOfTxnId = const Value.absent(),
     this.ownedTransferId = const Value.absent(),
@@ -4530,6 +4563,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? confidenceJson,
     Expression<String>? status,
     Expression<bool>? isDeleted,
+    Expression<bool>? isNotTransaction,
     Expression<String>? counterpartyVpa,
     Expression<String>? duplicateOfTxnId,
     Expression<String>? ownedTransferId,
@@ -4561,6 +4595,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (confidenceJson != null) 'confidence_json': confidenceJson,
       if (status != null) 'status': status,
       if (isDeleted != null) 'is_deleted': isDeleted,
+      if (isNotTransaction != null) 'is_not_transaction': isNotTransaction,
       if (counterpartyVpa != null) 'counterparty_vpa': counterpartyVpa,
       if (duplicateOfTxnId != null) 'duplicate_of_txn_id': duplicateOfTxnId,
       if (ownedTransferId != null) 'owned_transfer_id': ownedTransferId,
@@ -4595,6 +4630,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String>? confidenceJson,
       Value<String>? status,
       Value<bool>? isDeleted,
+      Value<bool>? isNotTransaction,
       Value<String?>? counterpartyVpa,
       Value<String?>? duplicateOfTxnId,
       Value<String?>? ownedTransferId,
@@ -4625,6 +4661,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       confidenceJson: confidenceJson ?? this.confidenceJson,
       status: status ?? this.status,
       isDeleted: isDeleted ?? this.isDeleted,
+      isNotTransaction: isNotTransaction ?? this.isNotTransaction,
       counterpartyVpa: counterpartyVpa ?? this.counterpartyVpa,
       duplicateOfTxnId: duplicateOfTxnId ?? this.duplicateOfTxnId,
       ownedTransferId: ownedTransferId ?? this.ownedTransferId,
@@ -4696,6 +4733,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (isDeleted.present) {
       map['is_deleted'] = Variable<bool>(isDeleted.value);
     }
+    if (isNotTransaction.present) {
+      map['is_not_transaction'] = Variable<bool>(isNotTransaction.value);
+    }
     if (counterpartyVpa.present) {
       map['counterparty_vpa'] = Variable<String>(counterpartyVpa.value);
     }
@@ -4753,6 +4793,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('confidenceJson: $confidenceJson, ')
           ..write('status: $status, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('isNotTransaction: $isNotTransaction, ')
           ..write('counterpartyVpa: $counterpartyVpa, ')
           ..write('duplicateOfTxnId: $duplicateOfTxnId, ')
           ..write('ownedTransferId: $ownedTransferId, ')
@@ -8288,6 +8329,274 @@ class ShadowTransactionsCompanion extends UpdateCompanion<ShadowTransaction> {
   }
 }
 
+class $SmsDispositionsTable extends SmsDispositions
+    with TableInfo<$SmsDispositionsTable, SmsDisposition> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SmsDispositionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _smsIdMeta = const VerificationMeta('smsId');
+  @override
+  late final GeneratedColumn<String> smsId = GeneratedColumn<String>(
+      'sms_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _transactionIdMeta =
+      const VerificationMeta('transactionId');
+  @override
+  late final GeneratedColumn<String> transactionId = GeneratedColumn<String>(
+      'transaction_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _dispositionMeta =
+      const VerificationMeta('disposition');
+  @override
+  late final GeneratedColumn<String> disposition = GeneratedColumn<String>(
+      'disposition', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [smsId, transactionId, disposition, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sms_dispositions';
+  @override
+  VerificationContext validateIntegrity(Insertable<SmsDisposition> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sms_id')) {
+      context.handle(
+          _smsIdMeta, smsId.isAcceptableOrUnknown(data['sms_id']!, _smsIdMeta));
+    } else if (isInserting) {
+      context.missing(_smsIdMeta);
+    }
+    if (data.containsKey('transaction_id')) {
+      context.handle(
+          _transactionIdMeta,
+          transactionId.isAcceptableOrUnknown(
+              data['transaction_id']!, _transactionIdMeta));
+    } else if (isInserting) {
+      context.missing(_transactionIdMeta);
+    }
+    if (data.containsKey('disposition')) {
+      context.handle(
+          _dispositionMeta,
+          disposition.isAcceptableOrUnknown(
+              data['disposition']!, _dispositionMeta));
+    } else if (isInserting) {
+      context.missing(_dispositionMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {smsId};
+  @override
+  SmsDisposition map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SmsDisposition(
+      smsId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sms_id'])!,
+      transactionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}transaction_id'])!,
+      disposition: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}disposition'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $SmsDispositionsTable createAlias(String alias) {
+    return $SmsDispositionsTable(attachedDatabase, alias);
+  }
+}
+
+class SmsDisposition extends DataClass implements Insertable<SmsDisposition> {
+  final String smsId;
+  final String transactionId;
+  final String disposition;
+  final DateTime createdAt;
+  const SmsDisposition(
+      {required this.smsId,
+      required this.transactionId,
+      required this.disposition,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sms_id'] = Variable<String>(smsId);
+    map['transaction_id'] = Variable<String>(transactionId);
+    map['disposition'] = Variable<String>(disposition);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SmsDispositionsCompanion toCompanion(bool nullToAbsent) {
+    return SmsDispositionsCompanion(
+      smsId: Value(smsId),
+      transactionId: Value(transactionId),
+      disposition: Value(disposition),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SmsDisposition.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SmsDisposition(
+      smsId: serializer.fromJson<String>(json['smsId']),
+      transactionId: serializer.fromJson<String>(json['transactionId']),
+      disposition: serializer.fromJson<String>(json['disposition']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'smsId': serializer.toJson<String>(smsId),
+      'transactionId': serializer.toJson<String>(transactionId),
+      'disposition': serializer.toJson<String>(disposition),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SmsDisposition copyWith(
+          {String? smsId,
+          String? transactionId,
+          String? disposition,
+          DateTime? createdAt}) =>
+      SmsDisposition(
+        smsId: smsId ?? this.smsId,
+        transactionId: transactionId ?? this.transactionId,
+        disposition: disposition ?? this.disposition,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('SmsDisposition(')
+          ..write('smsId: $smsId, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('disposition: $disposition, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(smsId, transactionId, disposition, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SmsDisposition &&
+          other.smsId == this.smsId &&
+          other.transactionId == this.transactionId &&
+          other.disposition == this.disposition &&
+          other.createdAt == this.createdAt);
+}
+
+class SmsDispositionsCompanion extends UpdateCompanion<SmsDisposition> {
+  final Value<String> smsId;
+  final Value<String> transactionId;
+  final Value<String> disposition;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const SmsDispositionsCompanion({
+    this.smsId = const Value.absent(),
+    this.transactionId = const Value.absent(),
+    this.disposition = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SmsDispositionsCompanion.insert({
+    required String smsId,
+    required String transactionId,
+    required String disposition,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : smsId = Value(smsId),
+        transactionId = Value(transactionId),
+        disposition = Value(disposition),
+        createdAt = Value(createdAt);
+  static Insertable<SmsDisposition> custom({
+    Expression<String>? smsId,
+    Expression<String>? transactionId,
+    Expression<String>? disposition,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (smsId != null) 'sms_id': smsId,
+      if (transactionId != null) 'transaction_id': transactionId,
+      if (disposition != null) 'disposition': disposition,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SmsDispositionsCompanion copyWith(
+      {Value<String>? smsId,
+      Value<String>? transactionId,
+      Value<String>? disposition,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return SmsDispositionsCompanion(
+      smsId: smsId ?? this.smsId,
+      transactionId: transactionId ?? this.transactionId,
+      disposition: disposition ?? this.disposition,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (smsId.present) {
+      map['sms_id'] = Variable<String>(smsId.value);
+    }
+    if (transactionId.present) {
+      map['transaction_id'] = Variable<String>(transactionId.value);
+    }
+    if (disposition.present) {
+      map['disposition'] = Variable<String>(disposition.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SmsDispositionsCompanion(')
+          ..write('smsId: $smsId, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('disposition: $disposition, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $TransactionLinksTable extends TransactionLinks
     with TableInfo<$TransactionLinksTable, TransactionLink> {
   @override
@@ -8736,6 +9045,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RulesTable rules = $RulesTable(this);
   late final $ShadowTransactionsTable shadowTransactions =
       $ShadowTransactionsTable(this);
+  late final $SmsDispositionsTable smsDispositions =
+      $SmsDispositionsTable(this);
   late final $TransactionLinksTable transactionLinks =
       $TransactionLinksTable(this);
   late final Index idxInsightsPeriod = Index('idx_insights_period',
@@ -8776,6 +9087,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxTransactionsDuplicateOfTxnId = Index(
       'idx_transactions_duplicate_of_txn_id',
       'CREATE INDEX idx_transactions_duplicate_of_txn_id ON transactions (duplicate_of_txn_id)');
+  late final Index idxTransactionsNotTransaction = Index(
+      'idx_transactions_not_transaction',
+      'CREATE INDEX idx_transactions_not_transaction ON transactions (is_not_transaction)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8799,6 +9113,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         recurringSeries,
         rules,
         shadowTransactions,
+        smsDispositions,
         transactionLinks,
         idxInsightsPeriod,
         idxPaymentSourcesIdentity,
@@ -8813,7 +9128,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         idxTransactionsStatus,
         idxTransactionsPaymentSourceId,
         idxTransactionsOwnedTransferId,
-        idxTransactionsDuplicateOfTxnId
+        idxTransactionsDuplicateOfTxnId,
+        idxTransactionsNotTransaction
       ];
 }
 
@@ -10514,6 +10830,7 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   required String confidenceJson,
   required String status,
   Value<bool> isDeleted,
+  Value<bool> isNotTransaction,
   Value<String?> counterpartyVpa,
   Value<String?> duplicateOfTxnId,
   Value<String?> ownedTransferId,
@@ -10546,6 +10863,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String> confidenceJson,
   Value<String> status,
   Value<bool> isDeleted,
+  Value<bool> isNotTransaction,
   Value<String?> counterpartyVpa,
   Value<String?> duplicateOfTxnId,
   Value<String?> ownedTransferId,
@@ -10597,6 +10915,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> confidenceJson = const Value.absent(),
             Value<String> status = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
+            Value<bool> isNotTransaction = const Value.absent(),
             Value<String?> counterpartyVpa = const Value.absent(),
             Value<String?> duplicateOfTxnId = const Value.absent(),
             Value<String?> ownedTransferId = const Value.absent(),
@@ -10628,6 +10947,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             confidenceJson: confidenceJson,
             status: status,
             isDeleted: isDeleted,
+            isNotTransaction: isNotTransaction,
             counterpartyVpa: counterpartyVpa,
             duplicateOfTxnId: duplicateOfTxnId,
             ownedTransferId: ownedTransferId,
@@ -10659,6 +10979,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             required String confidenceJson,
             required String status,
             Value<bool> isDeleted = const Value.absent(),
+            Value<bool> isNotTransaction = const Value.absent(),
             Value<String?> counterpartyVpa = const Value.absent(),
             Value<String?> duplicateOfTxnId = const Value.absent(),
             Value<String?> ownedTransferId = const Value.absent(),
@@ -10690,6 +11011,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             confidenceJson: confidenceJson,
             status: status,
             isDeleted: isDeleted,
+            isNotTransaction: isNotTransaction,
             counterpartyVpa: counterpartyVpa,
             duplicateOfTxnId: duplicateOfTxnId,
             ownedTransferId: ownedTransferId,
@@ -10787,6 +11109,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isDeleted => $state.composableBuilder(
       column: $state.table.isDeleted,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get isNotTransaction => $state.composableBuilder(
+      column: $state.table.isNotTransaction,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -11033,6 +11360,11 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<bool> get isDeleted => $state.composableBuilder(
       column: $state.table.isDeleted,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get isNotTransaction => $state.composableBuilder(
+      column: $state.table.isNotTransaction,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -12814,6 +13146,134 @@ class $$ShadowTransactionsTableOrderingComposer
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
+typedef $$SmsDispositionsTableInsertCompanionBuilder = SmsDispositionsCompanion
+    Function({
+  required String smsId,
+  required String transactionId,
+  required String disposition,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$SmsDispositionsTableUpdateCompanionBuilder = SmsDispositionsCompanion
+    Function({
+  Value<String> smsId,
+  Value<String> transactionId,
+  Value<String> disposition,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$SmsDispositionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SmsDispositionsTable,
+    SmsDisposition,
+    $$SmsDispositionsTableFilterComposer,
+    $$SmsDispositionsTableOrderingComposer,
+    $$SmsDispositionsTableProcessedTableManager,
+    $$SmsDispositionsTableInsertCompanionBuilder,
+    $$SmsDispositionsTableUpdateCompanionBuilder> {
+  $$SmsDispositionsTableTableManager(
+      _$AppDatabase db, $SmsDispositionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer:
+              $$SmsDispositionsTableFilterComposer(ComposerState(db, table)),
+          orderingComposer:
+              $$SmsDispositionsTableOrderingComposer(ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$SmsDispositionsTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> smsId = const Value.absent(),
+            Value<String> transactionId = const Value.absent(),
+            Value<String> disposition = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SmsDispositionsCompanion(
+            smsId: smsId,
+            transactionId: transactionId,
+            disposition: disposition,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String smsId,
+            required String transactionId,
+            required String disposition,
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SmsDispositionsCompanion.insert(
+            smsId: smsId,
+            transactionId: transactionId,
+            disposition: disposition,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$SmsDispositionsTableProcessedTableManager extends ProcessedTableManager<
+    _$AppDatabase,
+    $SmsDispositionsTable,
+    SmsDisposition,
+    $$SmsDispositionsTableFilterComposer,
+    $$SmsDispositionsTableOrderingComposer,
+    $$SmsDispositionsTableProcessedTableManager,
+    $$SmsDispositionsTableInsertCompanionBuilder,
+    $$SmsDispositionsTableUpdateCompanionBuilder> {
+  $$SmsDispositionsTableProcessedTableManager(super.$state);
+}
+
+class $$SmsDispositionsTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $SmsDispositionsTable> {
+  $$SmsDispositionsTableFilterComposer(super.$state);
+  ColumnFilters<String> get smsId => $state.composableBuilder(
+      column: $state.table.smsId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get transactionId => $state.composableBuilder(
+      column: $state.table.transactionId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get disposition => $state.composableBuilder(
+      column: $state.table.disposition,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$SmsDispositionsTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $SmsDispositionsTable> {
+  $$SmsDispositionsTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get smsId => $state.composableBuilder(
+      column: $state.table.smsId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get transactionId => $state.composableBuilder(
+      column: $state.table.transactionId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get disposition => $state.composableBuilder(
+      column: $state.table.disposition,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$TransactionLinksTableInsertCompanionBuilder
     = TransactionLinksCompanion Function({
   required String id,
@@ -13074,6 +13534,8 @@ class _$AppDatabaseManager {
       $$RulesTableTableManager(_db, _db.rules);
   $$ShadowTransactionsTableTableManager get shadowTransactions =>
       $$ShadowTransactionsTableTableManager(_db, _db.shadowTransactions);
+  $$SmsDispositionsTableTableManager get smsDispositions =>
+      $$SmsDispositionsTableTableManager(_db, _db.smsDispositions);
   $$TransactionLinksTableTableManager get transactionLinks =>
       $$TransactionLinksTableTableManager(_db, _db.transactionLinks);
 }

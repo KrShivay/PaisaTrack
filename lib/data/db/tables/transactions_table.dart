@@ -26,6 +26,10 @@ import 'raw_sms_table.dart';
   name: 'idx_transactions_duplicate_of_txn_id',
   columns: {#duplicateOfTxnId},
 )
+@TableIndex(
+  name: 'idx_transactions_not_transaction',
+  columns: {#isNotTransaction},
+)
 class Transactions extends Table {
   TextColumn get id => text()();
   IntColumn get ts => integer()();
@@ -48,6 +52,10 @@ class Transactions extends Table {
   // v1 meaning was overloaded (user delete + system dedup suppression); v2
   // (ADR 0003) narrows this back to user-initiated soft delete only.
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  // A durable user disposition for false-positive SMS imports. This remains
+  // separate from user deletion and analytics exclusion.
+  BoolColumn get isNotTransaction =>
+      boolean().withDefault(const Constant(false))();
   // Independent counterparty signal for P2P rule matching (ADR 0003); no
   // longer folded into merchantRaw at write time.
   TextColumn get counterpartyVpa => text().nullable()();

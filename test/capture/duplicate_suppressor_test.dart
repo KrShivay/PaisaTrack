@@ -67,6 +67,7 @@ Transaction _existing({
     confidenceJson: '{}',
     status: 'auto',
     isDeleted: isDeleted,
+    isNotTransaction: false,
     duplicateOfTxnId: duplicateOfTxnId,
     isAnalyticsExcluded: false,
     lifecycleState: 'settled',
