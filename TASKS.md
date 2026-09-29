@@ -28,6 +28,9 @@ later hardening.
     production integration limits are reconciled there. Remaining T-177a gates:
     real chronological holdout, physical capture coverage, and a reviewed
     capture-decision-version contract. Synthetic arithmetic is not a baseline.
+    Independent review passed without blocker. The resume fixture calls the
+    catch-up runner directly; app-resume lifecycle and known-SMS-boundary
+    behavior remain unverified alongside physical live/resume capture.
   - Verification: threshold tests 17/17; repository/detail/template-ledger
     tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
     and diff check clean. Same-count correction, v1/v2 state invalidation,
@@ -71,44 +74,12 @@ later hardening.
     TASKS, WORKLOG, and T-193 notes, LOW risk, no affected processes; the test
     file has no indexed symbols. No
     production code, schema, migration, or APK changed. Source-backed repair
-    received independent review with no blocker; this compatibility-test commit
-    awaits independent review. No physical repair UI confirmation has been
-    performed.
+    received independent review with no blocker; the encrypted restore
+    compatibility-test commit also passed independent review. No physical
+    repair UI confirmation has been performed.
   - Release follow-up: signed `0.1.3+2008` is installed in place on the ARM64
     phone (effective code 4008; firstInstallTime unchanged; app process alive
     without crash exit). Physical preview/apply/undo acceptance remains open.
-
-- [ ] T-192 [P0] Publish the signed Android 0.1.3+2007 ARM64 release.
-  - Acceptance: use the existing production signing key without exposing or
-    committing it; verify package `com.paisatrack`, version name/code, and the
-    installed certificate fingerprint `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`;
-    record candidate path, byte size, and SHA-256. Run Flutter checks and
-    Android unit tests, then launch the signed release build on a synthetic
-    emulator and capture startup/flow logs. Investigate any release-only crash
-    using that evidence and APK-size changes.
-  - Scope: no uninstall, clear-data, restore/import, or private-data inspection.
-    The user's existing install was upgraded in place after a fresh encrypted
-    backup was verified off-device. Broader T-167c responsive-layout, T-176
-    screen-inset, and T-179a key-recovery acceptance remain separate open work.
-  - Verification: published APK `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`,
-    56,750,680 bytes; package `com.paisatrack`, name `0.1.3`, effective ARM64
-    version code 4007 (source `0.1.3+2007` plus Flutter split-per-ABI offset
-    2000), certificate SHA-256
-    `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`; APK
-    SHA-256 `0affd549d926814082d6ff1548aefebcda768dcd0d2c1f326e5c11856daa86c3`.
-    Flutter tests 894/894, analyzer, Android unit tests, and diff check passed.
-    Fresh API35 ARM64 AVD cold-start and Home/Activity/Trends/Ask navigation
-    passed; force-stop/relaunch kept MainActivity alive with no filtered crash
-    logs. Manual transaction save and backup restore remain unverified;
-    original AVD's differently signed package was left intact. On the physical
-    phone, the signed APK upgraded in place, firstInstallTime stayed unchanged,
-    the app remained foregrounded without a crash exit, and a fresh encrypted
-    backup had been verified off-device. Published on `apk-downloads` at
-    `02acbef12a5df8159d14bd370a0e47b8a67654de`; README and signing guide record
-    the current artifact. GitNexus detect-changes could not parse the binary-only
-    diff (partial/unknown on unstaged and staged reruns); manual diff confirms
-    only `app-release-arm64.apk` changed. Independent review pending. Broader
-    physical acceptance remains open under T-167c/T-176/T-179a.
 
 - [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
@@ -133,24 +104,6 @@ later hardening.
     open.
   - Independent review pending.
 
-- [ ] T-167a [P0] Audit primary screens for loading, error, empty, and retry
-  states; replace misleading empty states with actionable errors.
-  - Acceptance: Activity initial-load and refresh errors render actionable
-    error UI rather than “No transactions found”; retry restores a successful
-    list. If an error occurs after data loaded—including a page-two load-more
-    failure—keep loaded rows visible with non-blocking error feedback. Retry
-    starts a fresh snapshot and recovers. Trends aggregate errors expose a
-    working retry action that refreshes the same provider used by the screen.
-    Tests distinguish true empty Activity from initial error and cover initial,
-    later-stream, and page-two failure/retry paths.
-  - Scope: no provider/repository contract changes unless tests demonstrate
-    they are needed; no database or device changes.
-- Verification: Activity/Trends/provider focused tests 13/13; full Flutter
-  suite 870/870; `flutter analyze --no-pub`, formatting, and `git diff --check`
-  clean. Page-two error/retry keeps page one visible and raises no unhandled
-  future error. GitNexus detect-changes: 4 files, 5 symbols, 0 processes, LOW
-  risk. Independent review pending.
-
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -164,26 +117,10 @@ later hardening.
     text. No production gap was demonstrated, so the shared inset contract is
     unchanged. Not transactions/nested destination and Ask keyboard route
     checks, compact/landscape plus large-text combinations, and phone QA remain
-    open; the phone is disconnected.
+    open; the phone is connected, and physical QA remains pending.
   - Scope: preserve T-176 as the only bottom-spacing task; do not create a
     duplicate. Exact 320×568/2× text overflows in the HomeShell nav, Activity,
     and Trends headers are tracked under T-167c.
-
-- [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore
-  persisted state.
-  - Acceptance: Keep writes `confirmed` even when no feedback row is needed;
-    the transaction disappears from `watchReviewQueue` after a fresh query.
-    Undo writes `needs_review`, restores one row in the query and one visible
-    card, and the undo controller consumes its action once. Cover the empty-
-    feedback path and a status change alongside a real feedback edit.
-  - Dependencies: none. No schema or migration change.
-  - Privacy: status stays in the existing local database; no new data or
-    retention.
-  - Rollback: revert the focused repository/test change; persisted status
-    values remain compatible with the existing review query.
-  - Verification: repository/widget focused tests 26/26; full Flutter suite
-    786/786; `flutter analyze --no-pub` and `git diff --check` clean. GitNexus
-    change analysis: 5 files, 8 symbols, LOW risk, no affected processes.
 
 - [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
       Verification: 768 Flutter tests passed; analyzer and diff check clean;

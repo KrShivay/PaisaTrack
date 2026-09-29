@@ -20,8 +20,9 @@
   indexed symbols).
   Pre-edit test-scope impact: `SourceCurrencyRepairService` HIGH (31 symbols)
   and `EncryptedBackupService` HIGH (27); neither production class was edited.
-  This compatibility-test commit awaits independent review. Physical UI
-  preview/apply/undo confirmation remains pending. T-177a is parked in Ready.
+  The encrypted restore compatibility-test commit independently reviewed
+  without a blocker. Physical UI preview/apply/undo confirmation remains
+  pending.
 - Published signed ARM64 `0.1.3+2008` to `apk-downloads`, commit
   `7971aeb7df39d210ae68a289fdff5debb20578ca`. APK size 56,750,764 bytes,
   SHA-256 `0f78b18200a899a2cddc9b4d7a02ecce6e18fe8a226e49103b168f910def3930`;
@@ -72,10 +73,14 @@
   ledger ignores unvalidated legacy positives and invalid/deleted/duplicate
   sources; its v2 cache rebuilds restored v1 counters from evidence. Confirmed
   evidence remains usable after raw SMS retention expires.
-- Focused repository, ledger, and detail tests: 38/38. Remaining T-177a audit:
-  live/historical/resumed provider traces, T-140/T-143 reconciliation, and
-  cohort precision/coverage baselines. This milestone does not complete
-  T-177a. No schema, phone, or APK changes were made.
+- Focused repository, ledger, and detail tests: 38/38. The synthetic
+  capture-provenance/replay milestone independently reviewed without a blocker:
+  it exercises the live bootstrap, history importer, and resume catch-up runner
+  with synthetic messages and local dependencies, and reconciles T-140/T-143.
+  The resume fixture does not exercise the lifecycle callback or known-SMS
+  boundary. T-177a remains open for a real labeled holdout, physical live/resume
+  capture, and a reviewed decision-version contract. No schema, phone, or APK
+  changes were made.
 - Full Flutter suite 903/903; `flutter analyze --no-pub`, changed-file
   formatting, and `git diff --check` clean. Fresh pre-edit GitNexus impact was
   HIGH for `AdaptiveThresholdPolicy` (47 symbols / 4 flows), CRITICAL for
