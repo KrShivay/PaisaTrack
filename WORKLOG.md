@@ -1,30 +1,25 @@
 # Current Handoff
 
-## 2026-09-29 — T-192 release candidate preparation
+## 2026-09-30 — T-192 publish Android 0.1.3+2007
 
-- Started on a fresh branch from reviewed main `d8a09a8`. Target package version
-  is `0.1.3+2007`; the existing release key is present in the primary checkout
-  and will be accessed without printing its contents. The only connected
-  physical device is the user's phone, so all run/install/log commands will be
-  explicitly emulator-scoped. No APK publication or phone mutation is planned
-  during candidate preparation; backup export is still pending.
-- Candidate: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`,
-  56,685,036 bytes, SHA-256
-  `1b3ba4a18f43e9c66fe65c752f2d69393df4a90e05701094bc0c7e439129215b`.
-  Package `com.paisatrack`, name `0.1.3`, effective ARM64 code `4007` (Flutter
-  split-per-ABI offset +2000 from source code 2007). Certificate SHA-256
-  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163` matches
-  the installed production signer. Candidate is 131,344 bytes larger than the
-  published APK.
-- Verification: signed release cold-started on fresh synthetic AVD
-  `emulator-5556`; Home, Activity, Trends, and Ask routes opened; force-stop /
-  relaunch returned to resumed `MainActivity` with no filtered AndroidRuntime,
-  Flutter, or WorkManager errors. Flutter suite 894/894, `flutter analyze
-  --no-pub`, Android `:app:testDebugUnitTest`, and `git diff --check` passed.
-  Existing AVD had a differently signed app and was left intact; a fresh AVD
-  was used. Manual Entry opened, but saving a synthetic transaction and backup
-  export/import were not verified. Candidate is not published and was not
-  installed on the phone; physical backup/acceptance remains pending.
+- Published the signed ARM64 APK from current main `1f4f451` to public branch
+  `apk-downloads`, commit `02acbef12a5df8159d14bd370a0e47b8a67654de`. The
+  README direct download URL is unchanged. Artifact:
+  `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`, 56,750,680 bytes,
+  SHA-256 `0affd549d926814082d6ff1548aefebcda768dcd0d2c1f326e5c11856daa86c3`.
+  Package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4007`;
+  production certificate SHA-256
+  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
+- The owner verified a fresh encrypted backup off-device before installing.
+  Physical in-place upgrade preserved firstInstallTime; the app remained
+  foregrounded without a crash exit. Synthetic API35 ARM64 emulator cold-start
+  and Home/Activity/Trends/Ask routes had passed for the release candidate;
+  Flutter tests 894/894, analyzer, Android unit tests, and diff check passed.
+  Manual Entry save and backup restore were not verified. Broader T-167c
+  responsive-layout, T-176 screen-inset, and T-179a recovery acceptance remain
+  open.
+- GitNexus detect-changes returned partial/unknown for the binary-only APK diff
+  on unstaged and staged reruns. Manual staged diff contains only the APK.
 
 ## 2026-09-29 — T-167c responsive large-text layouts
 

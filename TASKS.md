@@ -40,8 +40,7 @@ later hardening.
 
 ## In Review
 
-- [ ] T-192 [P0] Prepare signed Android 0.1.3+2007 release candidate and verify
-  release startup on a synthetic-data ARM64 emulator.
+- [ ] T-192 [P0] Publish the signed Android 0.1.3+2007 ARM64 release.
   - Acceptance: use the existing production signing key without exposing or
     committing it; verify package `com.paisatrack`, version name/code, and the
     installed certificate fingerprint `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`;
@@ -49,21 +48,29 @@ later hardening.
     Android unit tests, then launch the signed release build on a synthetic
     emulator and capture startup/flow logs. Investigate any release-only crash
     using that evidence and APK-size changes.
-  - Scope: no physical phone install, publish/APK branch update, uninstall,
-    clear-data, restore/import, or private-data inspection while backup export
-    is pending. Keep T-167c in review for physical-device acceptance.
-  - Verification: signed candidate `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`,
-    56,685,036 bytes; package `com.paisatrack`, name `0.1.3`, effective ARM64
+  - Scope: no uninstall, clear-data, restore/import, or private-data inspection.
+    The user's existing install was upgraded in place after a fresh encrypted
+    backup was verified off-device. Broader T-167c responsive-layout, T-176
+    screen-inset, and T-179a key-recovery acceptance remain separate open work.
+  - Verification: published APK `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`,
+    56,750,680 bytes; package `com.paisatrack`, name `0.1.3`, effective ARM64
     version code 4007 (source `0.1.3+2007` plus Flutter split-per-ABI offset
-    2000), certificate matches installed production signer; SHA-256
-    `1b3ba4a18f43e9c66fe65c752f2d69393df4a90e05701094bc0c7e439129215b`.
+    2000), certificate SHA-256
+    `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`; APK
+    SHA-256 `0affd549d926814082d6ff1548aefebcda768dcd0d2c1f326e5c11856daa86c3`.
     Flutter tests 894/894, analyzer, Android unit tests, and diff check passed.
     Fresh API35 ARM64 AVD cold-start and Home/Activity/Trends/Ask navigation
     passed; force-stop/relaunch kept MainActivity alive with no filtered crash
-    logs. Manual transaction save and backup export/import remain unverified;
-    original AVD's differently signed package was left intact. Phone backup and
-    physical acceptance remain pending.
-  - Independent review pending.
+    logs. Manual transaction save and backup restore remain unverified;
+    original AVD's differently signed package was left intact. On the physical
+    phone, the signed APK upgraded in place, firstInstallTime stayed unchanged,
+    the app remained foregrounded without a crash exit, and a fresh encrypted
+    backup had been verified off-device. Published on `apk-downloads` at
+    `02acbef12a5df8159d14bd370a0e47b8a67654de`; README and signing guide record
+    the current artifact. GitNexus detect-changes could not parse the binary-only
+    diff (partial/unknown on unstaged and staged reruns); manual diff confirms
+    only `app-release-arm64.apk` changed. Independent review pending. Broader
+    physical acceptance remains open under T-167c/T-176/T-179a.
 
 - [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,

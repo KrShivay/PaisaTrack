@@ -6,7 +6,7 @@ on-device. No cloud inference path exists.
 
 ## Android release
 
-Download the currently published [PaisaTrack 0.1.2+4 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.55 MB; 56,553,692 bytes). Its SHA-256 is `9965dcdae9b1011c5325a5f0c5a83f317d69d6fca38cacb5a007ec9e3c211746`. The production signature was verified; install and launch passed on the connected ARM64 phone. T-176 and T-179a physical-device acceptance remain open because the full screen-inset and key-recovery scenarios were not exercised. For 64-bit ARM Android devices.
+Download the currently published [PaisaTrack 0.1.3+2007 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.75 MB; 56,750,680 bytes). Its SHA-256 is `0affd549d926814082d6ff1548aefebcda768dcd0d2c1f326e5c11856daa86c3`. The production signature was verified. An in-place upgrade passed on the ARM64 phone: the installed package is `com.paisatrack`, version name `0.1.3`, effective ARM64 version code `4007`; the existing install time was preserved and the app remained foregrounded without a crash exit. A fresh encrypted backup was verified off-device before installation. Broader T-167c responsive-layout, T-176 screen-inset, and T-179a key-recovery acceptance remain open. For 64-bit ARM Android devices.
 
 ## Current product
 

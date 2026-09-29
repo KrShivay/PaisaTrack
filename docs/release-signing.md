@@ -29,15 +29,20 @@ PaisaTrack enforces release signing security for production builds.
 
 ## Published APK
 
-The currently published download is `0.1.2+4`, an ARM64 APK for 64-bit ARM
-Android devices. That version was set in `pubspec.yaml` at the source revision
-used for the published build; the current candidate source has advanced to
-`0.1.3+2007`. The published APK's size is 56,553,692 bytes
-(56.55 MB decimal), and its SHA-256 is
-`9965dcdae9b1011c5325a5f0c5a83f317d69d6fca38cacb5a007ec9e3c211746`.
-The production signature was verified; install and launch passed on the
-connected ARM64 phone. T-176 and T-179a physical-device acceptance remain open
-because the full screen-inset and key-recovery scenarios were not exercised.
+The currently published download is `0.1.3+2007`, an ARM64 APK for 64-bit ARM
+Android devices, built from the current `pubspec.yaml` version. Flutter's
+`--split-per-abi` build applies the ARM64 version-code offset of `2000`, so the
+effective APK version code is `4007`. The published APK is 56,750,680 bytes
+(56.75 MB decimal), with SHA-256
+`0affd549d926814082d6ff1548aefebcda768dcd0d2c1f326e5c11856daa86c3`.
+Its package is `com.paisatrack`, version name `0.1.3`, and production
+certificate SHA-256
+`6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
+An in-place upgrade passed on the ARM64 phone; the original first-install time
+was preserved, the app remained foregrounded, and no crash exit occurred. A
+fresh encrypted backup was verified off-device before installation. Broader
+T-167c responsive-layout, T-176 screen-inset, and T-179a key-recovery
+acceptance remain open.
 Resolve dependencies, then build from the repository root with:
 
 ```bash
@@ -51,29 +56,6 @@ copy that file to `app-release-arm64.apk` on the `apk-downloads` GitHub branch.
 The README links directly to that file. GitHub warns above
 50 MB and rejects individual files of 100 MB or more, so use a GitHub Release
 asset if a future APK exceeds that limit.
-
-## Current Release Candidate (not published)
-
-The T-192 candidate uses source version `0.1.3+2007` from `pubspec.yaml`.
-Flutter's `--split-per-abi` build applies the ARM64 version-code offset of
-`2000`, so the effective APK version code is `4007`. This exceeds the installed
-phone build's code `2006` and preserves in-place upgrade ordering. The output
-is `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (56,685,036
-bytes; SHA-256
-`1b3ba4a18f43e9c66fe65c752f2d69393df4a90e05701094bc0c7e439129215b`). Its
-package is `com.paisatrack`, version name is `0.1.3`, and its release
-certificate SHA-256
-`6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163` matches
-the installed production signer. It is about 131 KB larger than the currently
-published APK. The signed APK installed and cold-started on a newly created
-API 35 ARM64 emulator; Home, Activity, Trends, and Ask routes opened, and a
-force-stop/relaunch kept `MainActivity` resumed with no AndroidRuntime,
-Flutter, or WorkManager error logs. Manual Entry opened, but synthetic
-transaction save and backup export/import were not verified. The existing
-`PaisaTrackApi35Arm64` AVD contained the same package signed by a different
-certificate; it was left intact, and the candidate smoke used a fresh AVD.
-Flutter tests (894/894), Flutter analysis, and Android unit tests passed.
-This candidate has not been installed on the physical phone or published.
 
 The current local signing files are `android/paisatrack-release.jks` and
 `android/keystore.properties`. Both are git-ignored. Back up both files in a
