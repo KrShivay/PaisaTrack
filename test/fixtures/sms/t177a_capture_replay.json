@@ -1,0 +1,38 @@
+{
+  "fixture_id": "t177a_capture_replay_v1",
+  "privacy": "synthetic_public",
+  "messages": [
+    {
+      "id": "t177a_001",
+      "sender": "XX-TESTBANK",
+      "body": "INR 125 debited to ALPHA MART via UPI",
+      "received_at": "2026-01-01T09:00:00Z",
+      "label_source": "confirmed",
+      "explicit_category_id": "groceries"
+    },
+    {
+      "id": "t177a_002",
+      "sender": "XX-TESTBANK",
+      "body": "INR 220 debited to BETA CAFE via UPI",
+      "received_at": "2026-01-02T09:00:00Z",
+      "label_source": "corrected",
+      "explicit_category_id": "food_cafe_snacks"
+    },
+    {
+      "id": "t177a_003",
+      "sender": "XX-TESTBANK",
+      "body": "INR 90 debited to GAMMA MARKET via UPI",
+      "received_at": "2026-01-03T09:00:00Z",
+      "label_source": "unreviewed",
+      "explicit_category_id": null
+    },
+    {
+      "id": "t177a_004",
+      "sender": "XX-TESTBANK",
+      "body": "Your account security alert is clear.",
+      "received_at": "2026-01-04T09:00:00Z",
+      "label_source": "absent",
+      "explicit_category_id": null
+    }
+  ]
+}

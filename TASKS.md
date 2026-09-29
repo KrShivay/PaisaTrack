@@ -8,12 +8,11 @@ later hardening.
 
 ## In Progress
 
-
-## Ready
-
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
-  - Parked while the user-prioritized T-193 legacy currency repair is reviewed;
-    T-177a remains open and should resume afterward.
+  - Bounded milestone: add a local chronological replay/report contract and
+    synthetic fixtures that exercise live, history, and resume provider wiring;
+    document per-field provenance and deliberate path differences. Keep T-177a
+    open for real-data holdout, device capture coverage, and rollout gates.
   - Active fix: unreviewed `auto` rows are not accuracy evidence and must never
     lower the persisted category threshold. Lowering requires an explicit
     user-confirmation feedback event with category-prediction provenance;
@@ -23,10 +22,12 @@ later hardening.
     changed outcomes replay those cohorts from the static default. If undo or
     category removal leaves fewer than 50 eligible outcomes, the learned value,
     count, and fingerprint are cleared.
-  - Remaining T-177a scope: trace live, historical, and resumed capture through
-    provider wiring; reconcile T-140/T-143 claims; document per-field evidence,
-    decision provenance, cohort sizes, and accuracy/coverage limits. Do not
-    report the broader audit complete from the threshold fix alone.
+  - Synthetic milestone adds live/history/resume provider fixtures, a
+    chronological explicit-label report contract, and the provenance matrix in
+    `docs/reports/T-177a-capture-provenance.md`. T-140/T-143 status and their
+    production integration limits are reconciled there. Remaining T-177a gates:
+    real chronological holdout, physical capture coverage, and a reviewed
+    capture-decision-version contract. Synthetic arithmetic is not a baseline.
   - Verification: threshold tests 17/17; repository/detail/template-ledger
     tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
     and diff check clean. Same-count correction, v1/v2 state invalidation,
@@ -42,6 +43,8 @@ later hardening.
     changes transaction status/category and intentionally does not count as
     category-threshold evidence. Broad provider/provenance/baseline audit is
     still open.
+
+## Ready
 
 ## In Review
 
