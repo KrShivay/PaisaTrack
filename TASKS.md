@@ -8,32 +8,6 @@ later hardening.
 
 ## In Progress
 
-- [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
-  - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps
-    `Rs.` to INR, but the v18 migration leaves older null-currency rows
-    unchanged and `ingestBatch` skips already-known SMS IDs.
-  - Acceptance: transaction detail offers a non-mutating preview and explicit
-    reversible apply only when both currency fields are null, linked SMS is
-    still within retention, amount span evidence matches the body and stored
-    paise value, and one adjacent INR token is unambiguous. Revalidate on apply;
-    alter only currency code/symbol. USD, bare `$`, manual/imported/unknown,
-    deleted/duplicate, stale, mismatched, or expired source stays unchanged.
-  - Scope: user-triggered per-row repair, no schema or migration change; works
-    against restored data only when linked source/evidence survived. No auto
-    action during migration, restore, or startup. Synthetic SMS tests only;
-    no use of the repair UI on a physical device until independent review.
-  - Verification: service/detail tests 22/22; full Flutter suite 914/914;
-    analyzer, changed-file formatting, and diff check clean. Fresh GitNexus
-    impact before code edits: `TransactionRepository` CRITICAL (80 symbols),
-    `TransactionDetailScreen` HIGH (42), `FieldNormalizer` MEDIUM (35), and
-    `SourceCurrency` CRITICAL (274); parser/model/repository were left
-    unchanged. Detect-changes: 8 files, 48 symbols, 1 process, MEDIUM. No
-    schema or migration change. Repair preview/apply/undo has not been exercised
-    on a physical phone; independent review pending.
-  - Release follow-up: signed `0.1.3+2008` is now installed in place on the
-    ARM64 phone (effective code 4008; firstInstallTime unchanged; app process
-    alive without crash exit). Backup/restore compatibility and physical
-    preview/apply/undo acceptance for the currency-repair UI remain open.
 
 ## Ready
 
@@ -70,6 +44,36 @@ later hardening.
     still open.
 
 ## In Review
+
+- [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
+  - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps
+    `Rs.` to INR, but the v18 migration leaves older null-currency rows
+    unchanged and `ingestBatch` skips already-known SMS IDs.
+  - Acceptance: transaction detail offers a non-mutating preview and explicit
+    reversible apply only when both currency fields are null, linked SMS is
+    still within retention, amount span evidence matches the body and stored
+    paise value, and one adjacent INR token is unambiguous. Revalidate on apply;
+    alter only currency code/symbol. USD, bare `$`, manual/imported/unknown,
+    deleted/duplicate, stale, mismatched, or expired source stays unchanged.
+  - Scope: user-triggered per-row repair, no schema or migration change; works
+    against restored data only when linked source/evidence survived. No auto
+    action during migration, restore, or startup. All backup/restore tests use
+    synthetic data; physical repair UI confirmation remains pending.
+  - Verification: repair service/detail tests 22/22; focused backup and repair
+    service suites 40/40; full Flutter suite 915/915; `flutter analyze --no-pub`,
+    changed-file formatting, and diff check clean. New encrypted chunked-backup
+    test proves retained SMS and amount evidence survive restore for
+    preview/apply/undo, while an expired source is detached and remains
+    ineligible. GitNexus detect-changes: 9 documentation section symbols in
+    TASKS, WORKLOG, and T-193 notes, LOW risk, no affected processes; the test
+    file has no indexed symbols. No
+    production code, schema, migration, or APK changed. Source-backed repair
+    received independent review with no blocker; this compatibility-test commit
+    awaits independent review. No physical repair UI confirmation has been
+    performed.
+  - Release follow-up: signed `0.1.3+2008` is installed in place on the ARM64
+    phone (effective code 4008; firstInstallTime unchanged; app process alive
+    without crash exit). Physical preview/apply/undo acceptance remains open.
 
 - [ ] T-192 [P0] Publish the signed Android 0.1.3+2007 ARM64 release.
   - Acceptance: use the existing production signing key without exposing or

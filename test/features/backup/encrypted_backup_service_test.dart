@@ -8,6 +8,7 @@ import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/enrichment/source_currency_repair_service.dart';
 import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/core/platform/system_document_gateway.dart';
 import 'package:paisatrack/features/backup/encrypted_backup_service.dart';
@@ -916,6 +917,105 @@ void main() {
     expect(restored.id, 'sms_legacy_archive');
     expect(restored.parserVersion, isNull);
     expect(restored.failureReason, isNull);
+  });
+
+  test('encrypted restore preserves source currency repair eligibility',
+      () async {
+    final now = DateTime.utc(2026, 8, 2);
+    const body = 'Paid Rs. 500 to Cafe';
+    const passphrase = 'currency-repair-restore-passphrase';
+
+    Future<void> insertLegacyRow({
+      required String transactionId,
+      required String smsId,
+      required DateTime purgeAfter,
+    }) async {
+      await database.into(database.rawSms).insert(
+            RawSmsCompanion.insert(
+              id: smsId,
+              sender: 'XX-BANK',
+              body: body,
+              receivedAt: now.subtract(const Duration(days: 1)),
+              purgeAfter: purgeAfter,
+            ),
+          );
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: transactionId,
+              ts: now.millisecondsSinceEpoch,
+              amount: 500,
+              direction: 'debit',
+              channel: 'upi',
+              parseSource: 'template',
+              smsId: Value(smsId),
+              confidenceJson: '{}',
+              evidenceJson: Value(
+                jsonEncode([
+                  {
+                    'field': 'amount',
+                    'start': body.indexOf('500'),
+                    'end': body.indexOf('500') + 3,
+                    'verbatim': '500',
+                    'extractor': 'template',
+                  },
+                ]),
+              ),
+              status: 'confirmed',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    }
+
+    await insertLegacyRow(
+      transactionId: 'txn_currency_restore_retained',
+      smsId: 'sms_currency_restore_retained',
+      purgeAfter: now.add(const Duration(days: 1)),
+    );
+    await insertLegacyRow(
+      transactionId: 'txn_currency_restore_expired',
+      smsId: 'sms_currency_restore_expired',
+      purgeAfter: now,
+    );
+
+    final backup = await service().exportToFile(
+      directory: directory,
+      passphrase: passphrase,
+    );
+    await database.delete(database.transactions).go();
+    await database.delete(database.rawSms).go();
+    await service().importFromFile(file: backup, passphrase: passphrase);
+
+    final restoredRetained = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_currency_restore_retained')))
+        .getSingle();
+    final restoredExpired = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_currency_restore_expired')))
+        .getSingle();
+    expect(restoredRetained.smsId, 'sms_currency_restore_retained');
+    expect(restoredExpired.smsId, isNull);
+    expect(
+      (await database.select(database.rawSms).get()).map((row) => row.id),
+      ['sms_currency_restore_retained'],
+    );
+
+    final repair = SourceCurrencyRepairService(database, clock: () => now);
+    final preview = await repair.preview('txn_currency_restore_retained');
+    expect(preview, isNot(null));
+    expect(restoredRetained.evidenceJson, contains('"verbatim":"500"'));
+    expect(await repair.preview('txn_currency_restore_expired'), isNull);
+    expect(await repair.apply(preview!), isTrue);
+    var repaired = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_currency_restore_retained')))
+        .getSingle();
+    expect(repaired.currencyCode, 'INR');
+    expect(repaired.currencySymbol, '₹');
+    expect(await repair.undo(preview), isTrue);
+    repaired = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('txn_currency_restore_retained')))
+        .getSingle();
+    expect(repaired.currencyCode, isNull);
+    expect(repaired.currencySymbol, isNull);
   });
 
   test('export excludes expired raw SMS while retaining active rows', () async {
