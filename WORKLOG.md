@@ -47,22 +47,22 @@
   impact HIGH was avoided. Detect-changes: 8 files, 9 symbols, 0 processes,
   LOW. Independent review pending.
 
-## 2026-09-29 — T-176 global bottom-inset acceptance
+## 2026-09-29 — T-177a threshold-evidence safeguard (in review)
 
-- Added Trends and Settings final-content geometry checks at 24dp gesture and
-  48dp three-button insets. Existing inset/detail tests cover category FAB and
-  Manual Entry keyboard behavior, plus transaction detail in modal and
-  full-screen sheets with keyboard and 1x–2x text. No production gap was
-  demonstrated, so the shared inset contract is unchanged.
-- The 320×568/2× layout repro also produced horizontal overflows in the
-  HomeShell navigation pill (`home_shell.dart:250`), Activity header
-  (`transactions_screen.dart:220`), and Trends header
-  (`insights_screen.dart:73`); these are tracked by T-167c. Not transactions,
-  nested destination/action-sheet routes, Ask keyboard behavior, compact /
-  landscape large-text combinations, and physical-device QA remain open. The
-  phone was disconnected.
-- Validation: focused inset/detail/Ask suites 24/24; full Flutter suite
-  866/866; `flutter analyze --no-pub`, formatting, and `git diff --check` clean.
-  GitNexus detect-changes: 3 files, 17 symbols, one affected flow, MEDIUM risk
-  (the geometry test exercises `ForTabContent`); no production code changed.
-  Independent review pending.
+- Threshold recomputation no longer treats silent `auto` rows as correct.
+  Eligible outcomes require category-prediction provenance and either category
+  correction feedback or explicit user-confirmation feedback from Activity or
+  Weekly Review. Status-only rows and manual entries are excluded. The v2
+  adaptive metadata key resets values produced by the old silence-based rule;
+  missing eligible history returns the static threshold.
+- Focused `decision_policy_test.dart`: 15/15 passed, including 50 silent autos,
+  status-only/manual exclusions, explicit confirmation and correction cohorts,
+  window limits, caps/floors, and v1 metadata invalidation.
+- Remaining T-177a audit: transaction-detail Confirm currently creates no
+  feedback and therefore cannot train this threshold; live/historical/resumed
+  provider traces, T-140/T-143 reconciliation, and cohort precision/coverage
+  baselines are still open. This milestone does not complete T-177a. No schema,
+  phone, or APK changes were made.
+- Full Flutter suite 896/896; `flutter analyze --no-pub`, changed-file
+  formatting, and `git diff --check` clean. GitNexus detect-changes: 13
+  symbols, 5 files, 0 mapped processes, LOW. Independent review pending.

@@ -6,6 +6,26 @@ state; Git history and `docs/archive/` retain completed evidence.
 Priority: P0 release blocker, P1 high-impact, P2 important, P3 planned, P4/P5
 later hardening.
 
+## In Progress
+
+- [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
+  - Active fix: unreviewed `auto` rows are not accuracy evidence and must never
+    lower the persisted category threshold. Lowering requires an explicit
+    user-confirmation feedback event with category-prediction provenance;
+    corrections remain error evidence and may raise the threshold. Historical
+    v1 adaptive values are ignored so prior silent-row lowering cannot persist.
+  - Remaining T-177a scope: trace live, historical, and resumed capture through
+    provider wiring; reconcile T-140/T-143 claims; document per-field evidence,
+    decision provenance, cohort sizes, and accuracy/coverage limits. Do not
+    report the broader audit complete from the threshold fix alone.
+  - Verification: `decision_policy_test.dart` 15/15; full Flutter suite
+    896/896; `flutter analyze --no-pub`, changed-file formatting, and
+    `git diff --check` clean. GitNexus detect-changes: 13 symbols, 5 files,
+    0 mapped processes, LOW. No schema, phone, or APK changes.
+  - Remaining limitation: transaction-detail Confirm writes no feedback, so
+    only Activity and Weekly Review explicit-confirm actions qualify as
+    positive evidence. Broader provider/provenance/baseline audit is open.
+
 ## In Review
 
 - [ ] T-192 [P0] Prepare signed Android 0.1.3+2007 release candidate and verify
@@ -334,7 +354,6 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Smart transaction assistance — `docs/plans/smart-transaction-assistance.md`
 
-- [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
 - [ ] T-177b [P1] Integrate confirmed payee memory with a P2P eligibility guard.
 - [ ] T-177c [P1] Complete correction scopes, rule conflicts, and undo.
 - [ ] T-177d [P1] Add paged grouped review and persistent deferral.

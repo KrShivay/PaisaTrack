@@ -72,13 +72,14 @@ class DecisionPolicy {
   double _min(double a, double b) => a < b ? a : b;
 }
 
-/// Persists per-category silent thresholds and adapts them from the last 50
-/// automatic labels. Missing history intentionally returns the P2 default.
+/// Persists per-category silent thresholds from explicit category outcomes.
+/// Unreviewed automatic labels are not evidence. Missing history intentionally
+/// returns the static P2 default.
 class AdaptiveThresholdPolicy {
   AdaptiveThresholdPolicy(this._database);
   final AppDatabase _database;
-  static const _key = 'category_silent_thresholds_v1';
-  static const _windowCountsKey = 'category_threshold_window_counts_v1';
+  static const _key = 'category_silent_thresholds_v2';
+  static const _windowCountsKey = 'category_threshold_window_counts_v2';
 
   Future<double> thresholdFor(String? categoryId) async {
     if (categoryId == null) return AppConstants.silentConfidenceThreshold;
@@ -104,30 +105,91 @@ class AdaptiveThresholdPolicy {
           ))
         .get();
     final feedback = await (_database.select(_database.feedback)
-          ..where((f) => f.field.equals('category_id')))
+          ..where((f) => f.field.isIn(['category_id', 'status'])))
         .get();
-    final correctionsByTxn = {for (final row in feedback) row.txnId: row};
-    final events = <({String category, DateTime at, bool corrected})>[];
+    final categoryFeedbackByTxn = <String, List<FeedbackData>>{};
+    final statusFeedbackByTxn = <String, List<FeedbackData>>{};
+    for (final row in feedback) {
+      if (row.context.trim().isEmpty) continue;
+      final target = row.field == 'category_id'
+          ? categoryFeedbackByTxn
+          : statusFeedbackByTxn;
+      target.putIfAbsent(row.txnId, () => []).add(row);
+    }
+    int byTimeThenId(FeedbackData a, FeedbackData b) {
+      final byTime = a.createdAt.compareTo(b.createdAt);
+      return byTime != 0 ? byTime : a.id.compareTo(b.id);
+    }
+
+    for (final rows in categoryFeedbackByTxn.values) {
+      rows.sort(byTimeThenId);
+    }
+    for (final rows in statusFeedbackByTxn.values) {
+      rows.sort(byTimeThenId);
+    }
+
+    final events = <({
+      String transactionId,
+      String category,
+      DateTime at,
+      bool corrected
+    })>[];
+    bool hasCategoryPredictionEvidence(String confidenceJson) {
+      try {
+        final payload = jsonDecode(confidenceJson) as Map<String, Object?>;
+        final category = payload['category'] as Map<String, Object?>?;
+        return category?['c'] is num && category?['src'] is String;
+      } on FormatException {
+        return false;
+      } on TypeError {
+        return false;
+      }
+    }
+
+    const explicitConfirmationContexts = {'activity_confirm', 'sort_confirm'};
     for (final transaction in transactions) {
-      final correction = correctionsByTxn[transaction.id];
-      if (correction != null) {
-        final category = correction.oldValue ?? transaction.categoryId;
-        if (category != null) {
+      if (transaction.parseSource == 'manual' ||
+          !hasCategoryPredictionEvidence(transaction.confidenceJson)) {
+        continue;
+      }
+
+      final corrections = categoryFeedbackByTxn[transaction.id];
+      if (corrections != null && corrections.isNotEmpty) {
+        final originalCategory = corrections.first.oldValue;
+        if (originalCategory != null) {
           events.add(
-            (category: category, at: correction.createdAt, corrected: true),
+            (
+              transactionId: transaction.id,
+              category: originalCategory,
+              at: corrections.last.createdAt,
+              corrected: transaction.categoryId != originalCategory,
+            ),
           );
         }
-      } else if (transaction.status == DecisionStatus.auto.wireName) {
+        continue;
+      }
+
+      final statusFeedback = statusFeedbackByTxn[transaction.id];
+      final latestStatus = statusFeedback == null || statusFeedback.isEmpty
+          ? null
+          : statusFeedback.last;
+      if (transaction.status == 'confirmed' &&
+          latestStatus?.newValue == 'confirmed' &&
+          explicitConfirmationContexts.contains(latestStatus?.context)) {
         events.add(
           (
+            transactionId: transaction.id,
             category: transaction.categoryId!,
-            at: transaction.createdAt,
+            at: latestStatus!.createdAt,
             corrected: false
           ),
         );
       }
     }
-    events.sort((a, b) => b.at.compareTo(a.at));
+    events.sort((a, b) {
+      final byTime = b.at.compareTo(a.at);
+      return byTime != 0 ? byTime : a.transactionId.compareTo(b.transactionId);
+    });
     final thresholds = await _readDoubleMap(_key);
     final processedCounts = await _readIntMap(_windowCountsKey);
     final result = <String, double>{};

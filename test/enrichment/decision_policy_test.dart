@@ -10,6 +10,9 @@ Future<void> _seedAutoTransactions(
   required String category,
   required int count,
   int correctedCount = 0,
+  int confirmedCount = 0,
+  bool statusOnlyConfirmed = false,
+  String parseSource = 'template',
 }) async {
   for (var i = 0; i < count; i++) {
     final id = 'txn_${category}_$i';
@@ -22,9 +25,9 @@ Future<void> _seedAutoTransactions(
             direction: 'debit',
             channel: 'upi',
             categoryId: Value(category),
-            parseSource: 'template',
-            confidenceJson: '{}',
-            status: 'auto',
+            parseSource: parseSource,
+            confidenceJson: '{"category":{"c":0.8,"src":"seed"}}',
+            status: statusOnlyConfirmed ? 'confirmed' : 'auto',
             createdAt: created,
             updatedAt: created,
           ),
@@ -32,14 +35,35 @@ Future<void> _seedAutoTransactions(
     if (i < correctedCount) {
       await (database.update(database.transactions)
             ..where((row) => row.id.equals(id)))
-          .write(const TransactionsCompanion(status: Value('confirmed')));
+          .write(
+        const TransactionsCompanion(
+          categoryId: Value('other'),
+          status: Value('confirmed'),
+        ),
+      );
       await database.into(database.feedback).insert(
             FeedbackCompanion.insert(
               id: 'fb_${id}_correction',
               txnId: id,
               field: 'category_id',
+              oldValue: Value(category),
               newValue: const Value('other'),
               context: 'weekly_review',
+              createdAt: created,
+            ),
+          );
+    } else if (i < correctedCount + confirmedCount) {
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals(id)))
+          .write(const TransactionsCompanion(status: Value('confirmed')));
+      await database.into(database.feedback).insert(
+            FeedbackCompanion.insert(
+              id: 'fb_${id}_confirmation',
+              txnId: id,
+              field: 'status',
+              oldValue: const Value('auto'),
+              newValue: const Value('confirmed'),
+              context: 'sort_confirm',
               createdAt: created,
             ),
           );
@@ -187,7 +211,7 @@ void main() {
         () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v1',
+              key: 'category_silent_thresholds_v2',
               value: '{"shopping":0.9}',
             ),
           );
@@ -202,7 +226,7 @@ void main() {
     test('thresholdFor returns the default on malformed stored JSON', () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v1',
+              key: 'category_silent_thresholds_v2',
               value: 'not json',
             ),
           );
@@ -213,9 +237,14 @@ void main() {
       );
     });
 
-    test('recompute skips categories with fewer than 50 recent auto labels',
+    test('recompute skips categories with fewer than 50 explicit outcomes',
         () async {
-      await _seedAutoTransactions(database, category: 'food_dining', count: 10);
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 49,
+        confirmedCount: 49,
+      );
       final result = await AdaptiveThresholdPolicy(database).recompute();
       expect(result, isEmpty);
       expect(await database.select(database.modelMeta).get(), isEmpty);
@@ -229,6 +258,7 @@ void main() {
         category: 'food_dining',
         count: 50,
         correctedCount: 9,
+        confirmedCount: 41,
       );
 
       final result = await AdaptiveThresholdPolicy(database).recompute();
@@ -243,13 +273,14 @@ void main() {
       );
     });
 
-    test('lowers the threshold -0.01 on a clean trailing 50', () async {
+    test('lowers the threshold -0.01 on 50 explicit outcomes', () async {
       // 5/50 = 10% <= 15%.
       await _seedAutoTransactions(
         database,
         category: 'shopping',
         count: 50,
         correctedCount: 5,
+        confirmedCount: 45,
       );
 
       final result = await AdaptiveThresholdPolicy(database).recompute();
@@ -263,7 +294,7 @@ void main() {
     test('raise is capped at 0.98', () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v1',
+              key: 'category_silent_thresholds_v2',
               value: '{"groceries":0.97}',
             ),
           );
@@ -272,6 +303,7 @@ void main() {
         category: 'groceries',
         count: 50,
         correctedCount: 9,
+        confirmedCount: 41,
       );
 
       final result = await AdaptiveThresholdPolicy(database).recompute();
@@ -282,7 +314,7 @@ void main() {
     test('lower is floored at 0.0', () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v1',
+              key: 'category_silent_thresholds_v2',
               value: '{"travel":0.0}',
             ),
           );
@@ -290,7 +322,7 @@ void main() {
         database,
         category: 'travel',
         count: 50,
-        correctedCount: 0,
+        confirmedCount: 50,
       );
 
       final result = await AdaptiveThresholdPolicy(database).recompute();
@@ -303,6 +335,7 @@ void main() {
         database,
         category: 'food_dining',
         count: 50,
+        confirmedCount: 50,
       );
       final policy = AdaptiveThresholdPolicy(database);
 
@@ -317,7 +350,7 @@ void main() {
     test('preserves thresholds for categories without a new window', () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v1',
+              key: 'category_silent_thresholds_v2',
               value: '{"shopping":0.94}',
             ),
           );
@@ -325,6 +358,7 @@ void main() {
         database,
         category: 'food_dining',
         count: 50,
+        confirmedCount: 50,
       );
 
       await AdaptiveThresholdPolicy(database).recompute();
@@ -332,6 +366,69 @@ void main() {
       expect(
         await AdaptiveThresholdPolicy(database).thresholdFor('shopping'),
         0.94,
+      );
+    });
+
+    test('silent automatic rows and old adaptive v1 state are ignored',
+        () async {
+      for (final row in [
+        ModelMetaCompanion.insert(
+          key: 'category_silent_thresholds_v1',
+          value: '{"food_dining":0.1}',
+        ),
+        ModelMetaCompanion.insert(
+          key: 'category_threshold_window_counts_v1',
+          value: '{"food_dining":50}',
+        ),
+      ]) {
+        await database.into(database.modelMeta).insert(row);
+      }
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 50,
+      );
+
+      final result = await AdaptiveThresholdPolicy(database).recompute();
+
+      expect(result, isEmpty);
+      expect(
+        await AdaptiveThresholdPolicy(database).thresholdFor('food_dining'),
+        AppConstants.silentConfidenceThreshold,
+      );
+      expect(
+        (await database.select(database.modelMeta).get())
+            .where((row) => row.key == 'category_silent_thresholds_v2'),
+        isEmpty,
+      );
+    });
+
+    test('status-only and manual confirmations are not category evidence',
+        () async {
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 50,
+        statusOnlyConfirmed: true,
+      );
+      await _seedAutoTransactions(
+        database,
+        category: 'shopping',
+        count: 50,
+        confirmedCount: 50,
+        parseSource: 'manual',
+      );
+
+      final result = await AdaptiveThresholdPolicy(database).recompute();
+
+      expect(result, isEmpty);
+      expect(
+        await AdaptiveThresholdPolicy(database).thresholdFor('food_dining'),
+        AppConstants.silentConfidenceThreshold,
+      );
+      expect(
+        await AdaptiveThresholdPolicy(database).thresholdFor('shopping'),
+        AppConstants.silentConfidenceThreshold,
       );
     });
   });
