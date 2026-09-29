@@ -47,22 +47,24 @@
   impact HIGH was avoided. Detect-changes: 8 files, 9 symbols, 0 processes,
   LOW. Independent review pending.
 
-## 2026-09-29 — T-177a threshold-evidence safeguard (in review)
+## 2026-09-30 — T-177a threshold evidence revision follow-up
 
 - Threshold recomputation no longer treats silent `auto` rows as correct.
   Eligible outcomes require category-prediction provenance and either category
   correction feedback or explicit user-confirmation feedback from Activity or
-  Weekly Review. Status-only rows and manual entries are excluded. The v2
-  adaptive metadata key resets values produced by the old silence-based rule;
-  missing eligible history returns the static threshold.
-- Focused `decision_policy_test.dart`: 15/15 passed, including 50 silent autos,
-  status-only/manual exclusions, explicit confirmation and correction cohorts,
-  window limits, caps/floors, and v1 metadata invalidation.
+  Weekly Review. Status-only rows and manual entries are excluded. v1/v2
+  count-only state is ignored; v3 uses streaming evidence fingerprints and
+  deterministic replay of completed chronological cohorts.
+- Same-count correction after processing, multi-cohort replay, and both undo
+  below 50 outcomes and full category removal reset the learned threshold and
+  metadata to the static default. Streaming SHA-256 fingerprints keep stored
+  metadata bounded. Focused `decision_policy_test.dart`: 17/17.
 - Remaining T-177a audit: transaction-detail Confirm currently creates no
   feedback and therefore cannot train this threshold; live/historical/resumed
   provider traces, T-140/T-143 reconciliation, and cohort precision/coverage
   baselines are still open. This milestone does not complete T-177a. No schema,
   phone, or APK changes were made.
-- Full Flutter suite 896/896; `flutter analyze --no-pub`, changed-file
-  formatting, and `git diff --check` clean. GitNexus detect-changes: 13
-  symbols, 5 files, 0 mapped processes, LOW. Independent review pending.
+- Full Flutter suite 898/898; `flutter analyze --no-pub`, changed-file
+  formatting, and `git diff --check` clean. Fresh pre-edit GitNexus impact was
+  HIGH (47 symbols / 4 flows); detect-changes reports 9 symbols, 5 files,
+  0 mapped processes, LOW. Independent review pending.

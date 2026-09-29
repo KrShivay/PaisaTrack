@@ -13,15 +13,22 @@ later hardening.
     lower the persisted category threshold. Lowering requires an explicit
     user-confirmation feedback event with category-prediction provenance;
     corrections remain error evidence and may raise the threshold. Historical
-    v1 adaptive values are ignored so prior silent-row lowering cannot persist.
+    v1/v2 adaptive values are ignored so prior silent-row lowering cannot
+    persist. Completed chronological 50-outcome cohorts are fingerprinted;
+    changed outcomes replay those cohorts from the static default. If undo or
+    category removal leaves fewer than 50 eligible outcomes, the learned value,
+    count, and fingerprint are cleared.
   - Remaining T-177a scope: trace live, historical, and resumed capture through
     provider wiring; reconcile T-140/T-143 claims; document per-field evidence,
     decision provenance, cohort sizes, and accuracy/coverage limits. Do not
     report the broader audit complete from the threshold fix alone.
-  - Verification: `decision_policy_test.dart` 15/15; full Flutter suite
-    896/896; `flutter analyze --no-pub`, changed-file formatting, and
-    `git diff --check` clean. GitNexus detect-changes: 13 symbols, 5 files,
-    0 mapped processes, LOW. No schema, phone, or APK changes.
+  - Verification: `decision_policy_test.dart` 17/17; full Flutter suite
+    898/898; analyzer, changed-file formatting, and diff check clean. Same-count
+    correction, v1/v2 state invalidation, multiple cohorts, undo to 49 outcomes,
+    and full category removal are covered. GitNexus impact on
+    `AdaptiveThresholdPolicy` is HIGH (47 symbols / 4 flows); detect-changes
+    reports 9 symbols, 5 files, 0 mapped processes, LOW. No schema, phone, or
+    APK changes.
   - Remaining limitation: transaction-detail Confirm writes no feedback, so
     only Activity and Weekly Review explicit-confirm actions qualify as
     positive evidence. Broader provider/provenance/baseline audit is open.

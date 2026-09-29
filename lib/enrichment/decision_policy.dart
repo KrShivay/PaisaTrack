@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart';
 
 import '../core/constants.dart';
@@ -78,8 +79,9 @@ class DecisionPolicy {
 class AdaptiveThresholdPolicy {
   AdaptiveThresholdPolicy(this._database);
   final AppDatabase _database;
-  static const _key = 'category_silent_thresholds_v2';
-  static const _windowCountsKey = 'category_threshold_window_counts_v2';
+  static const _key = 'category_silent_thresholds_v3';
+  static const _windowCountsKey = 'category_threshold_window_counts_v3';
+  static const _fingerprintsKey = 'category_threshold_evidence_fingerprints_v3';
 
   Future<double> thresholdFor(String? categoryId) async {
     if (categoryId == null) return AppConstants.silentConfidenceThreshold;
@@ -154,6 +156,10 @@ class AdaptiveThresholdPolicy {
       }
 
       final corrections = categoryFeedbackByTxn[transaction.id];
+      final statusFeedback = statusFeedbackByTxn[transaction.id];
+      final latestStatus = statusFeedback == null || statusFeedback.isEmpty
+          ? null
+          : statusFeedback.last;
       if (corrections != null && corrections.isNotEmpty) {
         final originalCategory = corrections.first.oldValue;
         if (originalCategory != null) {
@@ -161,7 +167,11 @@ class AdaptiveThresholdPolicy {
             (
               transactionId: transaction.id,
               category: originalCategory,
-              at: corrections.last.createdAt,
+              at: latestStatus?.newValue == 'confirmed' &&
+                      explicitConfirmationContexts
+                          .contains(latestStatus?.context)
+                  ? latestStatus!.createdAt
+                  : corrections.first.createdAt,
               corrected: transaction.categoryId != originalCategory,
             ),
           );
@@ -169,10 +179,6 @@ class AdaptiveThresholdPolicy {
         continue;
       }
 
-      final statusFeedback = statusFeedbackByTxn[transaction.id];
-      final latestStatus = statusFeedback == null || statusFeedback.isEmpty
-          ? null
-          : statusFeedback.last;
       if (transaction.status == 'confirmed' &&
           latestStatus?.newValue == 'confirmed' &&
           explicitConfirmationContexts.contains(latestStatus?.context)) {
@@ -187,28 +193,79 @@ class AdaptiveThresholdPolicy {
       }
     }
     events.sort((a, b) {
-      final byTime = b.at.compareTo(a.at);
+      final byTime = a.at.compareTo(b.at);
       return byTime != 0 ? byTime : a.transactionId.compareTo(b.transactionId);
     });
     final thresholds = await _readDoubleMap(_key);
     final processedCounts = await _readIntMap(_windowCountsKey);
+    final processedFingerprints = await _readStringMap(_fingerprintsKey);
     final result = <String, double>{};
-    for (final category in events.map((event) => event.category).toSet()) {
+    final categories = events.map((event) => event.category).toSet()
+      ..addAll(thresholds.keys)
+      ..addAll(processedCounts.keys)
+      ..addAll(processedFingerprints.keys);
+    final clearedCategories = <String>{};
+    var stateChanged = false;
+    for (final category in categories) {
       final categoryEvents =
           events.where((event) => event.category == category).toList();
-      final previousCount = processedCounts[category] ?? 0;
-      if (categoryEvents.length - previousCount < 50) continue;
-      final recent = categoryEvents.take(50).toList();
-      final errors = recent.where((event) => event.corrected).length;
-      final current =
-          thresholds[category] ?? AppConstants.silentConfidenceThreshold;
-      result[category] = errors / recent.length > .15
-          ? (current + .03).clamp(0.0, .98)
-          : (current - .01).clamp(0.0, .98);
-      processedCounts[category] = categoryEvents.length;
+      final completeCount = categoryEvents.length ~/ 50 * 50;
+      if (completeCount == 0) {
+        if (thresholds.containsKey(category) ||
+            processedCounts.containsKey(category) ||
+            processedFingerprints.containsKey(category)) {
+          clearedCategories.add(category);
+          result[category] = AppConstants.silentConfidenceThreshold;
+          stateChanged = true;
+        }
+        continue;
+      }
+      final completedEvents = categoryEvents.take(completeCount).toList();
+      final fingerprintSink = Sha256().newHashSink();
+      for (final event in completedEvents) {
+        fingerprintSink.add(
+          utf8.encode(
+            '${jsonEncode([
+                  event.transactionId,
+                  event.category,
+                  event.at.millisecondsSinceEpoch,
+                  event.corrected,
+                ])}\n',
+          ),
+        );
+      }
+      fingerprintSink.close();
+      final fingerprint =
+          base64Url.encode((await fingerprintSink.hash()).bytes);
+      if (processedCounts[category] == completeCount &&
+          processedFingerprints[category] == fingerprint) {
+        continue;
+      }
+
+      var recomputed = AppConstants.silentConfidenceThreshold;
+      for (var start = 0; start < completeCount; start += 50) {
+        final window = completedEvents.skip(start).take(50);
+        final errors = window.where((event) => event.corrected).length;
+        recomputed = errors / 50 > .15
+            ? (recomputed + .03).clamp(0.0, .98)
+            : (recomputed - .01).clamp(0.0, .98);
+      }
+      result[category] = recomputed;
+      processedCounts[category] = completeCount;
+      processedFingerprints[category] = fingerprint;
+      stateChanged = true;
     }
-    if (result.isNotEmpty) {
-      thresholds.addAll(result);
+    if (stateChanged) {
+      for (final category in clearedCategories) {
+        thresholds.remove(category);
+        processedCounts.remove(category);
+        processedFingerprints.remove(category);
+      }
+      for (final entry in result.entries) {
+        if (!clearedCategories.contains(entry.key)) {
+          thresholds[entry.key] = entry.value;
+        }
+      }
       await _database.into(_database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(key: _key, value: jsonEncode(thresholds)),
           );
@@ -216,6 +273,12 @@ class AdaptiveThresholdPolicy {
             ModelMetaCompanion.insert(
               key: _windowCountsKey,
               value: jsonEncode(processedCounts),
+            ),
+          );
+      await _database.into(_database.modelMeta).insertOnConflictUpdate(
+            ModelMetaCompanion.insert(
+              key: _fingerprintsKey,
+              value: jsonEncode(processedFingerprints),
             ),
           );
     }
@@ -241,5 +304,20 @@ class AdaptiveThresholdPolicy {
   Future<Map<String, int>> _readIntMap(String key) async {
     final values = await _readDoubleMap(key);
     return values.map((key, value) => MapEntry(key, value.toInt()));
+  }
+
+  Future<Map<String, String>> _readStringMap(String key) async {
+    final row = await (_database.select(_database.modelMeta)
+          ..where((m) => m.key.equals(key)))
+        .getSingleOrNull();
+    if (row == null) return {};
+    try {
+      final decoded = jsonDecode(row.value) as Map<String, Object?>;
+      return decoded.map((key, value) => MapEntry(key, value as String));
+    } on FormatException {
+      return {};
+    } on TypeError {
+      return {};
+    }
   }
 }

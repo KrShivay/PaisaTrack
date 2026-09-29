@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -211,7 +213,7 @@ void main() {
         () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v2',
+              key: 'category_silent_thresholds_v3',
               value: '{"shopping":0.9}',
             ),
           );
@@ -226,7 +228,7 @@ void main() {
     test('thresholdFor returns the default on malformed stored JSON', () async {
       await database.into(database.modelMeta).insertOnConflictUpdate(
             ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v2',
+              key: 'category_silent_thresholds_v3',
               value: 'not json',
             ),
           );
@@ -292,18 +294,11 @@ void main() {
     });
 
     test('raise is capped at 0.98', () async {
-      await database.into(database.modelMeta).insertOnConflictUpdate(
-            ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v2',
-              value: '{"groceries":0.97}',
-            ),
-          );
       await _seedAutoTransactions(
         database,
         category: 'groceries',
-        count: 50,
-        correctedCount: 9,
-        confirmedCount: 41,
+        count: 400,
+        correctedCount: 400,
       );
 
       final result = await AdaptiveThresholdPolicy(database).recompute();
@@ -311,26 +306,7 @@ void main() {
       expect(result['groceries'], 0.98);
     });
 
-    test('lower is floored at 0.0', () async {
-      await database.into(database.modelMeta).insertOnConflictUpdate(
-            ModelMetaCompanion.insert(
-              key: 'category_silent_thresholds_v2',
-              value: '{"travel":0.0}',
-            ),
-          );
-      await _seedAutoTransactions(
-        database,
-        category: 'travel',
-        count: 50,
-        confirmedCount: 50,
-      );
-
-      final result = await AdaptiveThresholdPolicy(database).recompute();
-
-      expect(result['travel'], 0.0);
-    });
-
-    test('does not reapply the same trailing window twice', () async {
+    test('does not reapply an unchanged completed evidence snapshot', () async {
       await _seedAutoTransactions(
         database,
         category: 'food_dining',
@@ -347,10 +323,152 @@ void main() {
       );
     });
 
-    test('preserves thresholds for categories without a new window', () async {
-      await database.into(database.modelMeta).insertOnConflictUpdate(
+    test('revises a processed window when later feedback changes its outcome',
+        () async {
+      await database.into(database.modelMeta).insert(
             ModelMetaCompanion.insert(
               key: 'category_silent_thresholds_v2',
+              value: '{"food_dining":0.89}',
+            ),
+          );
+      await database.into(database.modelMeta).insert(
+            ModelMetaCompanion.insert(
+              key: 'category_threshold_window_counts_v2',
+              value: '{"food_dining":50}',
+            ),
+          );
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 50,
+        correctedCount: 7,
+        confirmedCount: 43,
+      );
+      final policy = AdaptiveThresholdPolicy(database);
+
+      final first = await policy.recompute();
+      expect(
+        first['food_dining'],
+        closeTo(AppConstants.silentConfidenceThreshold - 0.01, 1e-9),
+      );
+
+      const transactionId = 'txn_food_dining_7';
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals(transactionId)))
+          .write(const TransactionsCompanion(categoryId: Value('other')));
+      await database.into(database.feedback).insert(
+            FeedbackCompanion.insert(
+              id: 'fb_${transactionId}_later_correction',
+              txnId: transactionId,
+              field: 'category_id',
+              oldValue: const Value('food_dining'),
+              newValue: const Value('other'),
+              context: 'weekly_review',
+              createdAt: DateTime.utc(2026, 7, 10),
+            ),
+          );
+
+      final revised = await policy.recompute();
+
+      expect(revised.keys, unorderedEquals(['food_dining']));
+      expect(
+        revised['food_dining'],
+        closeTo(AppConstants.silentConfidenceThreshold + 0.03, 1e-9),
+      );
+      expect(
+        await policy.thresholdFor('food_dining'),
+        closeTo(AppConstants.silentConfidenceThreshold + 0.03, 1e-9),
+      );
+    });
+
+    test('replays multiple completed 50-outcome cohorts deterministically',
+        () async {
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 100,
+        correctedCount: 7,
+        confirmedCount: 93,
+      );
+      final policy = AdaptiveThresholdPolicy(database);
+
+      final result = await policy.recompute();
+
+      expect(
+        result['food_dining'],
+        closeTo(AppConstants.silentConfidenceThreshold - 0.02, 1e-9),
+      );
+      expect(await policy.recompute(), isEmpty);
+    });
+
+    test('clears learned state after undo or category disappearance', () async {
+      await _seedAutoTransactions(
+        database,
+        category: 'food_dining',
+        count: 50,
+        confirmedCount: 50,
+      );
+      await _seedAutoTransactions(
+        database,
+        category: 'shopping',
+        count: 50,
+        confirmedCount: 50,
+      );
+      final policy = AdaptiveThresholdPolicy(database);
+      await policy.recompute();
+
+      const undoneTxnId = 'txn_food_dining_49';
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals(undoneTxnId)))
+          .write(const TransactionsCompanion(status: Value('auto')));
+      await (database.update(database.feedback)
+            ..where((row) => row.id.equals('fb_${undoneTxnId}_confirmation')))
+          .write(
+        const FeedbackCompanion(
+          newValue: Value('auto'),
+          context: Value('undo_sort'),
+        ),
+      );
+      for (var i = 0; i < 50; i++) {
+        await (database.update(database.transactions)
+              ..where((row) => row.id.equals('txn_shopping_$i')))
+            .write(const TransactionsCompanion(isNotTransaction: Value(true)));
+      }
+
+      final revised = await policy.recompute();
+
+      expect(revised.keys, unorderedEquals(['food_dining', 'shopping']));
+      expect(
+        revised['food_dining'],
+        AppConstants.silentConfidenceThreshold,
+      );
+      expect(revised['shopping'], AppConstants.silentConfidenceThreshold);
+      expect(
+        await policy.thresholdFor('food_dining'),
+        AppConstants.silentConfidenceThreshold,
+      );
+      expect(
+        await policy.thresholdFor('shopping'),
+        AppConstants.silentConfidenceThreshold,
+      );
+
+      for (final key in [
+        'category_silent_thresholds_v3',
+        'category_threshold_window_counts_v3',
+        'category_threshold_evidence_fingerprints_v3',
+      ]) {
+        final row = await (database.select(database.modelMeta)
+              ..where((meta) => meta.key.equals(key)))
+            .getSingle();
+        expect(jsonDecode(row.value), isEmpty, reason: key);
+      }
+    });
+
+    test('resets stale threshold for category without an eligible window',
+        () async {
+      await database.into(database.modelMeta).insertOnConflictUpdate(
+            ModelMetaCompanion.insert(
+              key: 'category_silent_thresholds_v3',
               value: '{"shopping":0.94}',
             ),
           );
@@ -365,12 +483,11 @@ void main() {
 
       expect(
         await AdaptiveThresholdPolicy(database).thresholdFor('shopping'),
-        0.94,
+        AppConstants.silentConfidenceThreshold,
       );
     });
 
-    test('silent automatic rows and old adaptive v1 state are ignored',
-        () async {
+    test('silent rows and v1/v2 adaptive state are ignored', () async {
       for (final row in [
         ModelMetaCompanion.insert(
           key: 'category_silent_thresholds_v1',
@@ -378,6 +495,14 @@ void main() {
         ),
         ModelMetaCompanion.insert(
           key: 'category_threshold_window_counts_v1',
+          value: '{"food_dining":50}',
+        ),
+        ModelMetaCompanion.insert(
+          key: 'category_silent_thresholds_v2',
+          value: '{"food_dining":0.2}',
+        ),
+        ModelMetaCompanion.insert(
+          key: 'category_threshold_window_counts_v2',
           value: '{"food_dining":50}',
         ),
       ]) {
@@ -398,7 +523,7 @@ void main() {
       );
       expect(
         (await database.select(database.modelMeta).get())
-            .where((row) => row.key == 'category_silent_thresholds_v2'),
+            .where((row) => row.key == 'category_silent_thresholds_v3'),
         isEmpty,
       );
     });
