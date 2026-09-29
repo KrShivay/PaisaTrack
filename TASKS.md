@@ -6,22 +6,25 @@ state; Git history and `docs/archive/` retain completed evidence.
 Priority: P0 release blocker, P1 high-impact, P2 important, P3 planned, P4/P5
 later hardening.
 
-## In Progress
-
 ## In Review
 
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
-  - Verification: focused inset suite 11/11, full Flutter suite 764/764,
-    analyzer clean, and `git diff --check` clean. Widget coverage exercises
-    gesture inset scrolling, three-button nested Activity/Sort geometry, and
-    Manual Entry with the keyboard open. AVD live nav/keyboard acceptance is
-    inconclusive because API 35 SystemUI/IME did not expose navigation insets or
-    render the keyboard; no PaisaTrack crash was found.
-  - Review follow-up: preserve this task as the single bottom-spacing item.
-    Complete the global floating-navbar gap audit for Trends, Settings,
-    Assistant, transaction detail, nested sheets and floating actions; extend
-    behavioral coverage through the T-167e/f/g/i viewport matrix. Do not add a
-    duplicate spacing task.
+  - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
+    transaction detail, nested sheets, and floating actions through their real
+    routes. Verify final rows and actions clear the floating navigation in
+    gesture and three-button modes, and remain visible/tappable with the
+    keyboard, compact/landscape viewports, and large text.
+  - Verification: added Trends and Settings final-content geometry checks at
+    24dp gesture and 48dp three-button insets. Existing focused coverage checks
+    FAB placement, category actions, Manual Entry with keyboard, Ask rendering,
+    and transaction detail in modal/full-screen sheets with keyboard and 1x–2x
+    text. No production gap was demonstrated, so the shared inset contract is
+    unchanged. Not transactions/nested destination and Ask keyboard route
+    checks, compact/landscape plus large-text combinations, and phone QA remain
+    open; the phone is disconnected.
+  - Scope: preserve T-176 as the only bottom-spacing task; do not create a
+    duplicate. Exact 320×568/2× text overflows in the HomeShell nav, Activity,
+    and Trends headers are tracked under T-167c.
 
 - [ ] T-180 [P1] Persist Weekly Review confirmations and make undo restore
   persisted state.
@@ -298,7 +301,7 @@ metrics are in `docs/tasks/T-172.md`.
 
 - [ ] T-167a [P0] Audit every primary screen for loading, error, empty, and retry states; replace misleading empty states with actionable errors.
 - [ ] T-167b [P0] Add semantic labels, selected state, and 48dp minimum targets to custom Activity, Dashboard, Settings, and Review controls.
-- [ ] T-167c [P1] Add 1.5x/2x text and narrow/wide viewport widget tests for all primary transaction flows.
+- [ ] T-167c [P1] Add 1.5x/2x text and narrow/wide viewport widget tests for all primary transaction flows, including the 320×568/2× text overflow repro in HomeShell nav (home_shell.dart:250), Activity header (transactions_screen.dart:220), and Trends header (insights_screen.dart:73).
 - [ ] T-167d [P1] Replace bespoke gesture-only controls with semantic Material controls or equivalent explicit semantics.
 - [ ] T-167e [P0] Audit every root-tab screen, nested sheet, and detail route for FAB/action-button overlap with the bottom navigator, gesture area, keyboard, or system navigation inset; record viewport screenshots and exact affected widgets.
 - [ ] T-167f [P0] Introduce one shared safe-area/FAB placement contract that reserves bottom-navigation height, system gesture insets, keyboard insets, and minimum touch clearance; migrate Dashboard, Activity, Review, Insights, Settings, and all nested action sheets without per-screen magic offsets.

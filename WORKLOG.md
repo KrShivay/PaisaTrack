@@ -1,5 +1,25 @@
 # Current Handoff
 
+## 2026-09-29 — T-176 global bottom-inset acceptance
+
+- Added Trends and Settings final-content geometry checks at 24dp gesture and
+  48dp three-button insets. Existing inset/detail tests cover category FAB and
+  Manual Entry keyboard behavior, plus transaction detail in modal and
+  full-screen sheets with keyboard and 1x–2x text. No production gap was
+  demonstrated, so the shared inset contract is unchanged.
+- The 320×568/2× layout repro also produced horizontal overflows in the
+  HomeShell navigation pill (`home_shell.dart:250`), Activity header
+  (`transactions_screen.dart:220`), and Trends header
+  (`insights_screen.dart:73`); these are tracked by T-167c. Not transactions,
+  nested destination/action-sheet routes, Ask keyboard behavior, compact /
+  landscape large-text combinations, and physical-device QA remain open. The
+  phone was disconnected.
+- Validation: focused inset/detail/Ask suites 24/24; full Flutter suite
+  866/866; `flutter analyze --no-pub`, formatting, and `git diff --check` clean.
+  GitNexus detect-changes: 3 files, 17 symbols, one affected flow, MEDIUM risk
+  (the geometry test exercises `ForTabContent`); no production code changed.
+  Independent review pending.
+
 ## 2026-09-29 — T-187 source-currency fidelity (review passed)
 
 - Carries explicit source currency and symbol through parsers, schema v18,
@@ -38,18 +58,3 @@
   4 files, MEDIUM risk, with three affected test flows and no production flow.
   Independent review passed. Physical-device keyboard QA was not run; synthetic
   geometry coverage is the acceptance evidence for this UI-only change.
-
-## 2026-09-29 — T-191 linked encrypted backup restore
-
-- Fixed restore ordering for transaction links, duplicate transaction links,
-  and category parent links in legacy JSON and chunked v3 archives. Restores
-  preserve counterparties, expected events, and T-185 dispositions; malformed
-  nullable link values fail closed instead of silently dropping relationships.
-  Failed legacy and chunked restores leave the existing database unchanged.
-- Added synthetic round-trip, `PRAGMA foreign_key_check`, malformed archive,
-  rollback, and old-v3 compatibility coverage. No phone data or live archives
-  were accessed.
-- Validation: focused backup/recovery suites 36/36; full Flutter suite 831/831;
-  `flutter analyze --no-pub`, formatting, and diff checks clean. Independent
-  review passed. GitNexus detect-changes reports 8 files, 31 symbols, 10 flows,
-  HIGH risk; full output. Changes are ready for commit and fast-forward push.
