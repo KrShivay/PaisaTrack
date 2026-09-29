@@ -21,14 +21,19 @@ later hardening.
   - Scope: user-triggered per-row repair, no schema or migration change; works
     against restored data only when linked source/evidence survived. No auto
     action during migration, restore, or startup. Synthetic SMS tests only;
-    no physical-device mutation until independent review.
+    no use of the repair UI on a physical device until independent review.
   - Verification: service/detail tests 22/22; full Flutter suite 914/914;
     analyzer, changed-file formatting, and diff check clean. Fresh GitNexus
     impact before code edits: `TransactionRepository` CRITICAL (80 symbols),
     `TransactionDetailScreen` HIGH (42), `FieldNormalizer` MEDIUM (35), and
     `SourceCurrency` CRITICAL (274); parser/model/repository were left
     unchanged. Detect-changes: 8 files, 48 symbols, 1 process, MEDIUM. No
-    schema, migration, phone, or APK changes. Independent review pending.
+    schema or migration change. Repair preview/apply/undo has not been exercised
+    on a physical phone; independent review pending.
+  - Release follow-up: signed `0.1.3+2008` is now installed in place on the
+    ARM64 phone (effective code 4008; firstInstallTime unchanged; app process
+    alive without crash exit). Backup/restore compatibility and physical
+    preview/apply/undo acceptance for the currency-repair UI remain open.
 
 ## Ready
 

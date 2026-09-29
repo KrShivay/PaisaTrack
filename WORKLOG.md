@@ -11,12 +11,21 @@
   fields; Undo clears them only if unchanged.
 - Focused service/detail tests 22/22; full Flutter suite 914/914; analyzer,
   formatting, and diff check clean. Synthetic data only; no migration, parser,
-  schema, phone, or APK changes. Pre-edit impact: TransactionRepository
-  CRITICAL (80), TransactionDetailScreen HIGH (42), FieldNormalizer MEDIUM
-  (35), SourceCurrency CRITICAL (274); no shared parser/model/repository was
+  schema, or production-row changes during implementation. Pre-edit impact:
+  TransactionRepository CRITICAL (80), TransactionDetailScreen HIGH (42),
+  FieldNormalizer MEDIUM (35), SourceCurrency CRITICAL (274); no shared parser/model/repository was
   changed. Detect-changes: 8 files, 48 symbols, 1 process, MEDIUM. Independent
   review pending. T-177a is parked in Ready, still open, until this
   user-reported issue is reviewed.
+- Published signed ARM64 `0.1.3+2008` to `apk-downloads`, commit
+  `7971aeb7df39d210ae68a289fdff5debb20578ca`. APK size 56,750,764 bytes,
+  SHA-256 `0f78b18200a899a2cddc9b4d7a02ecce6e18fe8a226e49103b168f910def3930`;
+  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4008`,
+  production certificate SHA-256
+  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
+  Owner reports the in-place phone upgrade preserved firstInstallTime and left
+  the app process alive without a crash exit. Backup/restore compatibility and
+  physical repair-preview/apply/undo acceptance remain open.
 
 ## 2026-09-30 — T-192 publish Android 0.1.3+2007
 
