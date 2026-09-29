@@ -1,11 +1,8 @@
 # Product Status
 
-Status date: 2026-09-27
-Code baseline: main at `be9e9cb`, including T-126 calendar/eligibility
-semantics, T-156a dialog consolidation, the reviewed T-157b shared
-correction/undo controller, PV-02 period/eligibility/coverage disclosure with
-SQL/corpus parity, and generation-based key-loss recovery. Physical-device
-acceptance for T-176 and T-179a remains open.
+Status date: 2026-09-29
+Code baseline: main at `a5e2e61`, including T-187 source-currency fidelity.
+Physical-device acceptance for T-176 and T-179a remains open.
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -63,8 +60,8 @@ large-text acceptance, or participant pass.
 | --- | --- | --- |
 | Android platform | SMS permission, live receiver, inbox paging, notifications, document picker, model bridges, Keystore plugin | `android/app/src/main/kotlin/`, `packages/paisatrack_keystore/` |
 | Capture | Live/history/resume ingestion, template → generic → optional local-LLM parsing, deduplication, typed misses | `lib/capture/` |
-| Domain/data | Drift schema v7 on SQLCipher, repositories, corrections/rules, identities, payment-source semantics | `lib/data/`, `lib/enrichment/` |
-| Intelligence | Recurring, anomalies, forecasts, insights, local classifier, grounded assistant with taxonomy-aware category scopes and dashboard-aligned settled spending totals | `lib/intelligence/` |
+| Domain/data | Drift schema v18 on SQLCipher; transactions, recurring series, and expected events retain source currency code/symbol evidence | `lib/data/`, `lib/enrichment/` |
+| Intelligence | Currency-bucketed recurring, anomaly, forecast, insight, and grounded assistant paths; INR-only budgets disclose scope; no implicit FX conversion | `lib/intelligence/` |
 | Presentation | Riverpod state with four-tab Bloom shell and task sheets/pages | `lib/features/`, `lib/core/widgets/` |
 
 See `docs/architecture.md`, `docs/schema.md`, and `docs/privacy.md` for the
@@ -77,12 +74,12 @@ normative boundaries.
 | Onboarding and SMS permission | Implemented; users may continue without SMS and can open app settings after permanent denial | Device acceptance for permission/recovery remains |
 | Live/history/resume SMS capture | Implemented, local, paged, idempotent, and manual scans report scanned/rejected/unknown/accepted/parsed/unparsed/created/already-known counts; retained failures store only an allowlisted reason and parser version, suppress same-version retries, and retry after parser upgrades; Settings and Activity now expose shared permission status cards that refresh on app resume, alongside content-free retained-failure counts, reason buckets, retention disclosure, and inbox-scan retry | Device acceptance remains; targeted retry and live expiry refresh remain future hardening |
 | Bank parsing | HDFC, ICICI, SBI, Axis, Central Bank, Kotak, IndusInd, Paytm, Punjab National Bank and generic coverage exist; sanitized salary-credit templates and sender-agnostic fallback are proven end to end; PNB has a public-source fixture matrix with an exact-parse gate; developer diagnostics expose content-free native live/batch filter and unknown-sender counters | Public PNB templates remain capped at 0.85 until device confirmation; counters reset with the app process; further bank breadth still requires sanitized evidence and exact parser assertions |
-| Transactions | Manual entry, detail, correction, scope, provenance, CSV export, search/filter UI, explicit Activity page exhaustion, strict Activity keyset paging, continuation while filtered | Activity search still covers only the loaded page; SQL-backed cross-page search remains future work, and query failures still need actionable error states |
+| Transactions | Manual entry, detail, correction, source-currency-aware display and CSV export, search/filter UI, explicit Activity page exhaustion, strict Activity keyset paging, continuation while filtered | Activity search still covers only the loaded page; SQL-backed cross-page search remains future work, and query failures still need actionable error states |
 | Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates and shared correction/undo sequencing | Queue remains capped at 100; cursor/persistence work is T-153 |
-| Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful loading/error states, period and eligibility disclosure, known exclusions, local-data coverage caveat, global monthly budget prototype, recurring totals | Bank-wide capture completeness cannot be known from local records |
-| Trends/recurring | Deterministic aggregates, stored insights, recurring series/statuses | Eligibility diagnostics are absent |
+| Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful loading/error states, period and eligibility disclosure, known exclusions, local-data coverage caveat, separate foreign/unknown source-currency subtotals, global monthly budget prototype, recurring totals | Bank-wide capture completeness cannot be known from local records; INR-only budget math excludes other currencies |
+| Trends/recurring | Deterministic currency-bucketed aggregates, stored insights, recurring series/statuses; Trends labels INR-only charts and lists other source-currency activity separately | Eligibility diagnostics are absent; legacy rows without retained currency evidence remain unknown |
 | Categories and identities | Category manager, SQL-backed paged payee labels/search, payment-source naming/ownership/exclusion | Duplicate suggestions remain review-only; several secondary screens retain legacy surfaces |
-| Assistant | Deterministic intents and queries with guarded local-model fallback | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
+| Assistant | Deterministic intents and queries with guarded local-model fallback; amount and category breakdowns preserve source-currency buckets | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
 | Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, durable key persistence, typed recovery | Physical-device backup/SAF acceptance remains release evidence |
 | Backup/import | v3 archive compatibility plus authenticated v2 chunked document envelope; paged row serialization, transactional restore, progress/cancellation, bounded 32 MiB encrypted file, 16 MiB payload, 50,000-row/table and 200,000-row/archive limits; only non-expired raw SMS is exported/restored; transaction links, counterparties, category hierarchy, expected events, and durable SMS dispositions round-trip | Physical SAF/provider acceptance and release evidence remain T-170b/T-171 |
 | Delete everything | Deletes database/native state, DB key, Dart settings, and import markers | Physical-device erasure acceptance remains |
@@ -128,10 +125,18 @@ Exact owners, dependencies, acceptance criteria, and next actions are in
 The Bloom migration is partially complete. Capability-preserving corrections,
 SMS lookup, period selection, backup completeness, HDFC/ICICI templates,
 correction matching, Review list scaffolding, and several responsive tests have
-landed in the worktree. Remaining Bloom and release gaps are normalized into
-`TASKS.md`; the original audit/addendum are archived as design inputs.
+shipped. Remaining Bloom and release gaps are normalized into `TASKS.md`; the
+original audit/addendum are archived as design inputs.
 
 ## Verification snapshot
+
+T-187 source-currency fidelity, reviewed and shipped on 2026-09-29:
+
+- Full Flutter suite: **1,030/1,030 passed**; `flutter analyze --no-pub`,
+  changed-file Dart formatting, and `git diff --check` clean.
+- Independent review passed on `a5e2e61`; no physical-device or APK work was
+  part of this change. Legacy rows without source evidence remain unknown, and
+  bare `$` remains a separate unknown-code bucket.
 
 Historical full-suite evidence, recorded on 2026-07-26:
 

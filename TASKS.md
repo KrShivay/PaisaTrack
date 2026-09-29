@@ -10,21 +10,6 @@ later hardening.
 
 ## In Review
 
-- [ ] T-187 [P1] Preserve source currency through parsing, storage, recurring
-      series, analytics, Ask answers, exports, and transaction UI. Foreign and
-      unknown-source amounts remain visible in separate buckets; no implicit FX
-      conversion is performed. Schema v18 leaves legacy rows unknown and keeps
-      older backup formats compatible. Trends discloses its INR-only charts and
-      lists other source-currency totals separately; Ask breakdowns avoid
-      ranking nominal totals across currencies.
-  - Verification: full Flutter suite 1,030/1,030; `flutter analyze --no-pub`,
-    changed-file Dart format check, and `git diff --check` clean. Synthetic
-    coverage includes USD, bare `$`, unknown legacy rows, currency-safe
-    reconciliation, archive compatibility, analytics, and 2× text-scale UI.
-  - GitNexus final compare with main: 89 files, 143 symbols, 47 affected flows,
-    CRITICAL risk. HIGH/CRITICAL impact warnings were surfaced before edits;
-    independent final review pending.
-
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Verification: focused inset suite 11/11, full Flutter suite 764/764,
     analyzer clean, and `git diff --check` clean. Widget coverage exercises
