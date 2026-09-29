@@ -821,49 +821,50 @@ class _DismissibleTransactionRow extends StatelessWidget {
         }
         return false; // Re-render row so state updates smoothly via Riverpod stream
       },
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 340 ||
-                  MediaQuery.textScalerOf(context).scale(1) >= 1.5;
-              final category = BloomCategoryTile(
-                categoryId: item.categoryId,
-                iconName: item.categoryIcon,
-                size: 36,
-                borderRadius: 13,
-              );
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 340 ||
+                    MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                final category = BloomCategoryTile(
+                  categoryId: item.categoryId,
+                  iconName: item.categoryIcon,
+                  size: 36,
+                  borderRadius: 13,
+                );
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          category,
+                          const SizedBox(width: 12),
+                          Expanded(child: details),
+                        ],
+                      ),
+                      Align(alignment: Alignment.centerRight, child: amount),
+                    ],
+                  );
+                }
+                return Row(
                   children: [
-                    Row(
-                      children: [
-                        category,
-                        const SizedBox(width: 12),
-                        Expanded(child: details),
-                      ],
-                    ),
-                    Align(alignment: Alignment.centerRight, child: amount),
+                    category,
+                    const SizedBox(width: 12),
+                    Expanded(child: details),
+                    const SizedBox(width: 8),
+                    amount,
                   ],
                 );
-              }
-              return Row(
-                children: [
-                  category,
-                  const SizedBox(width: 12),
-                  Expanded(child: details),
-                  const SizedBox(width: 8),
-                  amount,
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ),
