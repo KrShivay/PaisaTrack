@@ -179,6 +179,8 @@ class TransactionDetail {
     required this.confidenceTrail,
     required this.isLowTrustParse,
     this.rawSmsBody,
+    this.canConfirmParse = false,
+    this.isParseConfirmed = false,
   });
 
   final Transaction txn;
@@ -189,6 +191,8 @@ class TransactionDetail {
   final TransactionConfidenceTrail confidenceTrail;
   final bool isLowTrustParse;
   final String? rawSmsBody;
+  final bool canConfirmParse;
+  final bool isParseConfirmed;
 }
 
 /// Reads non-deleted, non-suppressed transactions for list and dashboard
@@ -353,6 +357,9 @@ WHERE t.status = 'needs_review'
   /// Watches one transaction with resolved merchant/category names, or null
   /// when the id does not exist.
   Stream<TransactionDetail?> watchDetail(String txnId) {
+    final parseConfirmation = _database.feedback.createAlias(
+      'parse_confirmation',
+    );
     final query = _database.select(_database.transactions).join([
       leftOuterJoin(
         _database.merchants,
@@ -366,6 +373,16 @@ WHERE t.status = 'needs_review'
         _database.rawSms,
         _database.rawSms.id.equalsExp(_database.transactions.smsId),
       ),
+      leftOuterJoin(
+        parseConfirmation,
+        parseConfirmation.txnId.equalsExp(_database.transactions.id) &
+            parseConfirmation.field.equals('parse_verdict') &
+            parseConfirmation.context.equals('parse_confirm') &
+            parseConfirmation.newValue.equals('ok') &
+            parseConfirmation.oldValue.equals(
+              templateTrustExplicitConfirmationMarker,
+            ),
+      ),
     ])
       ..where(_database.transactions.id.equals(txnId));
 
@@ -373,6 +390,7 @@ WHERE t.status = 'needs_review'
       if (rows.isEmpty) return null;
       final row = rows.first;
       final txn = row.readTable(_database.transactions);
+      final rawSmsBody = row.readTableOrNull(_database.rawSms)?.body;
       final confidenceTrail =
           TransactionConfidenceTrail.fromJson(txn.confidenceJson);
       return TransactionDetail(
@@ -386,7 +404,9 @@ WHERE t.status = 'needs_review'
         parseConfidence: confidenceTrail.parser?.confidence,
         confidenceTrail: confidenceTrail,
         isLowTrustParse: _isLowTrustParse(txn),
-        rawSmsBody: row.readTableOrNull(_database.rawSms)?.body,
+        rawSmsBody: rawSmsBody,
+        canConfirmParse: _canConfirmParse(txn, rawSmsBody),
+        isParseConfirmed: row.readTableOrNull(parseConfirmation) != null,
       );
     });
   }
@@ -562,25 +582,46 @@ WHERE t.status = 'needs_review'
   }
 
   /// Records an explicit parse confirmation without changing transaction data.
-  ///
-  /// This has its own transaction boundary so a low-trust parse verdict is
-  /// durable exactly once and can later feed the template trust ledger.
-  Future<void> confirmParse({
+  /// Only retained, evidence-backed SMS parses can contribute a verdict.
+  /// Returns false for ineligible rows or an existing confirmation.
+  Future<bool> confirmParse({
     required String txnId,
     DateTime Function() clock = DateTime.now,
-    String Function()? feedbackIdFactory,
   }) {
     return _database.transaction(() async {
       final row = await (_database.select(_database.transactions)
             ..where((t) => t.id.equals(txnId)))
-          .getSingle();
+          .getSingleOrNull();
+      if (row == null) return false;
+      final rawSmsBody = row.smsId == null
+          ? null
+          : (await (_database.select(_database.rawSms)
+                    ..where((sms) => sms.id.equals(row.smsId!)))
+                  .getSingleOrNull())
+              ?.body;
+      if (!_canConfirmParse(row, rawSmsBody)) return false;
+
+      final existingConfirmation = await (_database.select(_database.feedback)
+            ..where(
+              (feedback) =>
+                  feedback.txnId.equals(txnId) &
+                  feedback.field.equals('parse_verdict') &
+                  feedback.context.equals('parse_confirm') &
+                  feedback.newValue.equals('ok') &
+                  feedback.oldValue.equals(
+                    templateTrustExplicitConfirmationMarker,
+                  ),
+            ))
+          .getSingleOrNull();
+      if (existingConfirmation != null) return false;
+
       final now = clock().toUtc();
       await _database.into(_database.feedback).insert(
             FeedbackCompanion.insert(
-              id: feedbackIdFactory?.call() ??
-                  'fb_${txnId}_parse_verdict_${now.microsecondsSinceEpoch}',
+              id: 'fb_${txnId}_parse_confirm_v1',
               txnId: txnId,
               field: 'parse_verdict',
+              oldValue: const Value(templateTrustExplicitConfirmationMarker),
               newValue: const Value('ok'),
               context: 'parse_confirm',
               modelConfidenceAtTime: Value(_parseConfidenceOf(row)),
@@ -588,6 +629,29 @@ WHERE t.status = 'needs_review'
             ),
           );
       await TemplateTrustLedger(_database).refresh();
+      return true;
+    });
+  }
+
+  /// Reverses the confirmation action and rebuilds the public-template ledger.
+  Future<bool> undoParseConfirmation({required String txnId}) {
+    return _database.transaction(() async {
+      final deleted = await (_database.delete(_database.feedback)
+            ..where(
+              (feedback) =>
+                  feedback.id.equals('fb_${txnId}_parse_confirm_v1') &
+                  feedback.txnId.equals(txnId) &
+                  feedback.field.equals('parse_verdict') &
+                  feedback.context.equals('parse_confirm') &
+                  feedback.newValue.equals('ok') &
+                  feedback.oldValue.equals(
+                    templateTrustExplicitConfirmationMarker,
+                  ),
+            ))
+          .go();
+      if (deleted == 0) return false;
+      await TemplateTrustLedger(_database).refresh();
+      return true;
     });
   }
 
@@ -866,6 +930,20 @@ WHERE t.status = 'needs_review'
     } on TypeError {
       return false;
     }
+  }
+
+  bool _canConfirmParse(Transaction txn, String? rawSmsBody) {
+    final supportedSmsParser =
+        txn.parseSource == 'template' || txn.parseSource == 'generic';
+    return supportedSmsParser &&
+        _isLowTrustParse(txn) &&
+        !txn.isDeleted &&
+        !txn.isNotTransaction &&
+        txn.duplicateOfTxnId == null &&
+        txn.smsId != null &&
+        rawSmsBody != null &&
+        rawSmsBody.trim().isNotEmpty &&
+        (parseEvidenceFromJson(txn.evidenceJson)?.isNotEmpty ?? false);
   }
 
   /// Persists a manual entry and returns its id.

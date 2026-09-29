@@ -3,10 +3,15 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../core/constants.dart';
+import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart';
 
+/// Marks positive parse feedback recorded after source-evidence validation.
+const templateTrustExplicitConfirmationMarker = 'user_confirmed_v1';
+
 /// Stored `model_meta` key for the ADR 0005 public-template trust ledger.
-const templateTrustLedgerMetaKey = 'template_trust_ledger_v1';
+const templateTrustLedgerMetaKey = 'template_trust_ledger_v2';
+const _legacyTemplateTrustLedgerMetaKey = 'template_trust_ledger_v1';
 
 /// Trust state derived from parse-confirmation feedback for one template.
 ///
@@ -128,15 +133,23 @@ class TemplateTrustLedger {
     final counts = <String, _TemplateTrustCounts>{};
 
     for (final row in await query.get()) {
-      final templateId = _publicTemplateId(
-        row.readTable(_database.transactions).confidenceJson,
-      );
+      final transaction = row.readTable(_database.transactions);
+      if (transaction.parseSource != 'template' ||
+          transaction.isDeleted ||
+          transaction.isNotTransaction ||
+          transaction.duplicateOfTxnId != null ||
+          parseEvidenceFromJson(transaction.evidenceJson)?.isNotEmpty != true) {
+        continue;
+      }
+      final templateId = _publicTemplateId(transaction.confidenceJson);
       if (templateId == null) continue;
       final feedback = row.readTable(_database.feedback);
       final count = counts.putIfAbsent(templateId, _TemplateTrustCounts.new);
       switch (feedback.newValue) {
         case 'ok':
-          count.confirmedParses++;
+          if (feedback.oldValue == templateTrustExplicitConfirmationMarker) {
+            count.confirmedParses++;
+          }
         case 'amount_corrected':
           count.amountCorrections++;
         case 'direction_corrected':
@@ -167,9 +180,16 @@ class TemplateTrustLedger {
     final row = await (_database.select(_database.modelMeta)
           ..where((meta) => meta.key.equals(templateTrustLedgerMetaKey)))
         .getSingleOrNull();
-    return row == null
+    if (row != null) return TemplateTrustLedgerSnapshot.fromJson(row.value);
+
+    final legacyRow = await (_database.select(_database.modelMeta)
+          ..where(
+            (meta) => meta.key.equals(_legacyTemplateTrustLedgerMetaKey),
+          ))
+        .getSingleOrNull();
+    return legacyRow == null
         ? const TemplateTrustLedgerSnapshot({})
-        : TemplateTrustLedgerSnapshot.fromJson(row.value);
+        : refresh();
   }
 
   /// Watches the persisted cache so developer diagnostics update after a

@@ -22,16 +22,21 @@ later hardening.
     provider wiring; reconcile T-140/T-143 claims; document per-field evidence,
     decision provenance, cohort sizes, and accuracy/coverage limits. Do not
     report the broader audit complete from the threshold fix alone.
-  - Verification: `decision_policy_test.dart` 17/17; full Flutter suite
-    898/898; analyzer, changed-file formatting, and diff check clean. Same-count
-    correction, v1/v2 state invalidation, multiple cohorts, undo to 49 outcomes,
-    and full category removal are covered. GitNexus impact on
-    `AdaptiveThresholdPolicy` is HIGH (47 symbols / 4 flows); detect-changes
-    reports 9 symbols, 5 files, 0 mapped processes, LOW. No schema, phone, or
-    APK changes.
-  - Remaining limitation: transaction-detail Confirm writes no feedback, so
-    only Activity and Weekly Review explicit-confirm actions qualify as
-    positive evidence. Broader provider/provenance/baseline audit is open.
+  - Verification: threshold tests 17/17; repository/detail/template-ledger
+    tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
+    and diff check clean. Same-count correction, v1/v2 state invalidation,
+    multiple cohorts, undo to 49 outcomes, and full category removal are
+    covered. GitNexus impact: `AdaptiveThresholdPolicy` HIGH (47 symbols / 4
+    flows), `TransactionRepository` CRITICAL (80 / 43 direct), `TransactionDetail`
+    CRITICAL (77 / 40 direct), `TransactionDetailScreen` HIGH (42 / 18 direct),
+    `TemplateTrustLedger` HIGH (90 / 12 direct); exact ledger `refresh` is
+    UNKNOWN with 2 dropped callers, text search corroborates call sites.
+    Detect-changes reports 25 symbols, 9 files, 4 processes, MEDIUM. No schema,
+    phone, or APK changes.
+  - Detail now has a separate evidence-backed parse-confirm action; it never
+    changes transaction status/category and intentionally does not count as
+    category-threshold evidence. Broad provider/provenance/baseline audit is
+    still open.
 
 ## In Review
 
@@ -321,6 +326,19 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
     explanation; inspect actual card and payment-source data first.
   - Privacy: synthetic scenarios only; no live statements or SMS.
   - Rollback: planning artifact only; no runtime behavior changes.
+
+- [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
+  - Context: the installed v2006 predates T-187. Current parsing maps `Rs.` to
+    INR, but the v18 migration leaves older null-currency rows unchanged and
+    `ingestBatch` skips already-known SMS IDs.
+  - Acceptance: provide a local preview and reversible apply for rows whose
+    currency is null, retained SMS contains an exact adjacent `Rs.`/`INR`/`₹`
+    marker, and the message amount matches the stored amount. Never overwrite
+    known currency or infer from locale/merchant. Rows without retained or
+    matching evidence stay unknown. Cover preview, apply, undo, duplicate SMS,
+    mismatched amounts, and purge/backup behavior.
+  - Scope: task planning only; no migration or repair implementation until
+    separately started. No automatic rewrites on restore or app startup.
 
 <!-- Groom future work here before promoting it to Ready. -->
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/category_correction.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 
 Future<void> _seedCategories(AppDatabase database) async {
   await database.into(database.categories).insert(
@@ -77,6 +78,55 @@ Future<void> _insertTxn(
           parseSource: 'template',
           confidenceJson: '{"parser":{"c":0.74,"src":"template"}}',
           status: status,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+}
+
+Future<void> _insertParseConfirmationCandidate(
+  AppDatabase database, {
+  required String id,
+  String parseSource = 'template',
+  String? smsId,
+  String? rawSmsBody = 'Paid Rs 250 to Cafe',
+  String? evidenceJson =
+      '[{"field":"amount","start":9,"end":12,"verbatim":"250","extractor":"regex"}]',
+  String confidenceJson =
+      '{"parser":{"c":0.74,"src":"template","template_id":"public_v1","provenance":"public"}}',
+  bool isDeleted = false,
+  bool isNotTransaction = false,
+  String? duplicateOfTxnId,
+}) async {
+  final now = DateTime.utc(2026, 7, 8, 9);
+  final candidateSmsId = smsId ?? 'sms_$id';
+  if (rawSmsBody != null) {
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: candidateSmsId,
+            sender: 'XX-BANK',
+            body: rawSmsBody,
+            receivedAt: now,
+            purgeAfter: now.add(const Duration(days: 30)),
+          ),
+        );
+  }
+  await database.into(database.transactions).insert(
+        TransactionsCompanion.insert(
+          id: id,
+          ts: now.millisecondsSinceEpoch,
+          amount: 250,
+          direction: 'debit',
+          channel: 'upi',
+          categoryId: const Value('other'),
+          parseSource: parseSource,
+          smsId: Value(rawSmsBody == null ? null : candidateSmsId),
+          confidenceJson: confidenceJson,
+          status: 'needs_review',
+          isDeleted: Value(isDeleted),
+          isNotTransaction: Value(isNotTransaction),
+          duplicateOfTxnId: Value(duplicateOfTxnId),
+          evidenceJson: Value(evidenceJson),
           createdAt: now,
           updatedAt: now,
         ),
@@ -163,6 +213,146 @@ void main() {
       'review_status_only',
     ]);
     expect(await database.select(database.feedback).get(), isEmpty);
+  });
+
+  test('parse confirmation is explicit, idempotent and reversible', () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'parse_confirmation',
+    );
+    await database.into(database.feedback).insert(
+          FeedbackCompanion.insert(
+            id: 'legacy_parse_confirmation',
+            txnId: 'parse_confirmation',
+            field: 'parse_verdict',
+            newValue: const Value('ok'),
+            context: 'parse_confirm',
+            createdAt: DateTime.utc(2026, 7, 8),
+          ),
+        );
+    final repository = TransactionRepository(database);
+    final beforeConfirmation =
+        await repository.watchDetail('parse_confirmation').first;
+    expect(beforeConfirmation?.canConfirmParse, isTrue);
+    expect(beforeConfirmation?.isParseConfirmed, isFalse);
+
+    expect(
+      await repository.confirmParse(
+        txnId: 'parse_confirmation',
+        clock: () => DateTime.utc(2026, 7, 9),
+      ),
+      isTrue,
+    );
+    expect(await repository.confirmParse(txnId: 'parse_confirmation'), isFalse);
+
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('parse_confirmation')))
+        .getSingle();
+    expect(transaction.status, 'needs_review');
+    expect(transaction.categoryId, 'other');
+    final feedback = await database.select(database.feedback).get();
+    expect(feedback, hasLength(2));
+    final explicit = feedback.singleWhere(
+      (row) => row.id == 'fb_parse_confirmation_parse_confirm_v1',
+    );
+    expect(explicit.field, 'parse_verdict');
+    expect(explicit.newValue, 'ok');
+    expect(explicit.context, 'parse_confirm');
+    expect(explicit.oldValue, 'user_confirmed_v1');
+    final afterConfirmation =
+        await repository.watchDetail('parse_confirmation').first;
+    expect(afterConfirmation?.isParseConfirmed, isTrue);
+    expect(
+      (await TemplateTrustLedger(database).load())
+          .entries['public_v1']
+          ?.confirmedParses,
+      1,
+    );
+
+    expect(
+      await repository.undoParseConfirmation(txnId: 'parse_confirmation'),
+      isTrue,
+    );
+    expect(
+      await repository.undoParseConfirmation(txnId: 'parse_confirmation'),
+      isFalse,
+    );
+    final remaining = await database.select(database.feedback).get();
+    expect(remaining, hasLength(1));
+    expect(remaining.single.id, 'legacy_parse_confirmation');
+    final ledger = await TemplateTrustLedger(database).load();
+    expect(ledger.entries['public_v1']?.confirmedParses ?? 0, 0);
+    final unchanged = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('parse_confirmation')))
+        .getSingle();
+    expect(unchanged.status, 'needs_review');
+    expect(unchanged.categoryId, 'other');
+  });
+
+  test(
+      'parse confirmation rejects manual, imported, unknown and unsupported rows',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'manual_parse',
+      parseSource: 'manual',
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'imported_parse',
+      parseSource: 'unknown',
+      rawSmsBody: null,
+      confidenceJson: '{"parser":{"c":1,"src":"import"}}',
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'missing_evidence_parse',
+      evidenceJson: null,
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'purged_sms_parse',
+      rawSmsBody: null,
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'not_transaction_parse',
+      isNotTransaction: true,
+    );
+    await _insertTxn(database, id: 'duplicate_parent');
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'deleted_parse',
+      isDeleted: true,
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'duplicate_parse',
+      duplicateOfTxnId: 'duplicate_parent',
+    );
+    final repository = TransactionRepository(database);
+
+    for (final id in [
+      'manual_parse',
+      'imported_parse',
+      'missing_evidence_parse',
+      'purged_sms_parse',
+      'not_transaction_parse',
+      'deleted_parse',
+      'duplicate_parse',
+    ]) {
+      expect(await repository.confirmParse(txnId: id), isFalse, reason: id);
+      expect(
+        (await repository.watchDetail(id).first)?.canConfirmParse,
+        isFalse,
+        reason: id,
+      );
+    }
+    expect(await database.select(database.feedback).get(), isEmpty);
+    expect(
+      (await TemplateTrustLedger(database).load()).entries,
+      isEmpty,
+    );
   });
 
   test('status and a feedback edit persist together', () async {

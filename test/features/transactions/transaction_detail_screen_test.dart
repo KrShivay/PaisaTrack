@@ -1,11 +1,14 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
@@ -79,6 +82,113 @@ void main() {
       expect(find.text('Food & Dining'), findsOneWidget);
       expect(find.byType(BloomCategoryTile), findsOneWidget);
       expect(find.byType(BloomAmount), findsOneWidget);
+    });
+
+    testWidgets(
+        'T-177a confirms parsed SMS from detail and updates template trust only',
+        (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      await database.into(database.categories).insert(
+            CategoriesCompanion.insert(
+              id: 'other',
+              name: 'Other',
+              icon: 'category',
+              isSpending: true,
+              sortOrder: 1,
+              isUserCreated: false,
+            ),
+          );
+      final timestamp = DateTime.utc(2026, 7, 6, 9);
+      await database.into(database.rawSms).insert(
+            RawSmsCompanion.insert(
+              id: 'sms_confirm_177a',
+              sender: 'XX-BANK',
+              body: 'Paid Rs 449 to Swiggy',
+              receivedAt: timestamp,
+              purgeAfter: timestamp.add(const Duration(days: 30)),
+            ),
+          );
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: 'txn_confirm_177a',
+              ts: timestamp.millisecondsSinceEpoch,
+              amount: 449,
+              direction: 'debit',
+              channel: 'upi',
+              categoryId: const Value('other'),
+              merchantRaw: const Value('Swiggy'),
+              parseSource: 'template',
+              smsId: const Value('sms_confirm_177a'),
+              confidenceJson:
+                  '{"parser":{"c":0.74,"src":"template","template_id":"public_v1","provenance":"public"}}',
+              evidenceJson: const Value(
+                '[{"field":"amount","start":9,"end":12,"verbatim":"449","extractor":"regex"}]',
+              ),
+              status: 'needs_review',
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            ),
+          );
+
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          suggestedCategoriesProvider('txn_confirm_177a')
+              .overrideWith((ref) async => const <String>[]),
+        ],
+      );
+      var containerDisposed = false;
+      addTearDown(() {
+        if (!containerDisposed) container.dispose();
+      });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: BloomUndoToastHost(
+              child: TransactionDetailScreen(txnId: 'txn_confirm_177a'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final confirmButton = find.text('Confirm parsed details');
+      expect(confirmButton, findsOneWidget);
+      await tester.ensureVisible(confirmButton);
+      await tester.tap(confirmButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final feedback = await database.select(database.feedback).get();
+      expect(feedback, hasLength(1));
+      expect(feedback.single.field, 'parse_verdict');
+      expect(feedback.single.newValue, 'ok');
+      expect(
+        (await TemplateTrustLedger(database).load())
+            .entries['public_v1']
+            ?.confirmedParses,
+        1,
+      );
+      final transaction = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_confirm_177a')))
+          .getSingle();
+      expect(transaction.status, 'needs_review');
+      expect(transaction.categoryId, 'other');
+      expect(find.text('Parsed details confirmed'), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+
+      container.dispose();
+      containerDisposed = true;
+      await tester.pump(const Duration(milliseconds: 1));
+      await database.close();
     });
 
     testWidgets('discloses technical details & raw SMS provenance when tapped',

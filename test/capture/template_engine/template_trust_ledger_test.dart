@@ -138,6 +138,113 @@ void main() {
     expect((await ledger.refresh()).entries, isEmpty);
   });
 
+  test(
+      'ignores legacy and non-template confirmations while retaining purged evidence',
+      () async {
+    await _insertPublicTemplateTransaction(database, 'txn-purged', 'valid_v1');
+    await _insertVerdict(
+      database,
+      'legacy_ok',
+      'txn-purged',
+      'ok',
+      versioned: false,
+    );
+
+    for (final entry in [
+      ('manual', 'manual', true),
+      ('imported', 'unknown', true),
+      ('no_evidence', 'template', false),
+    ]) {
+      final now = DateTime.utc(2026, 7, 10);
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: entry.$1,
+              ts: now.millisecondsSinceEpoch,
+              amount: 10,
+              direction: 'debit',
+              channel: 'upi',
+              parseSource: entry.$2,
+              confidenceJson: jsonEncode({
+                'parser': {
+                  'c': 0.85,
+                  'src': 'template',
+                  'template_id': 'invalid_v1',
+                  'provenance': 'public',
+                },
+              }),
+              evidenceJson: entry.$3
+                  ? const Value(
+                      '[{"field":"amount","start":0,"end":2,"verbatim":"10","extractor":"regex"}]',
+                    )
+                  : const Value.absent(),
+              status: 'needs_review',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await _insertVerdict(database, 'ok_${entry.$1}', entry.$1, 'ok');
+    }
+    await _insertPublicTemplateTransaction(
+      database,
+      'deleted_public',
+      'invalid_v1',
+      isDeleted: true,
+    );
+    await _insertVerdict(database, 'ok_deleted_public', 'deleted_public', 'ok');
+    await _insertPublicTemplateTransaction(
+      database,
+      'duplicate_parent',
+      'invalid_v1',
+    );
+    await _insertPublicTemplateTransaction(
+      database,
+      'duplicate_public',
+      'invalid_v1',
+      duplicateOfTxnId: 'duplicate_parent',
+    );
+    await _insertVerdict(
+      database,
+      'ok_duplicate_public',
+      'duplicate_public',
+      'ok',
+    );
+
+    final snapshot = await ledger.refresh();
+    expect(snapshot.entries['valid_v1']?.confirmedParses ?? 0, 0);
+    expect(snapshot.entries['invalid_v1'], null);
+  });
+
+  test('rebuilds v2 trust cache rather than trusting restored v1 counters',
+      () async {
+    await database.into(database.modelMeta).insert(
+          ModelMetaCompanion.insert(
+            key: 'template_trust_ledger_v1',
+            value: jsonEncode({
+              'version': 1,
+              'templates': {
+                'stale_v1': {
+                  'confirmed_parses': 20,
+                  'amount_corrections': 0,
+                  'direction_corrections': 0,
+                },
+              },
+            }),
+          ),
+        );
+    await _insertPublicTemplateTransaction(database, 'txn-cache', 'valid_v1');
+    await _insertVerdict(database, 'valid_cache_ok', 'txn-cache', 'ok');
+
+    final rebuilt = await ledger.load();
+
+    expect(rebuilt.entries['stale_v1'], null);
+    expect(rebuilt.entries['valid_v1']?.confirmedParses, 1);
+    expect(rebuilt.entries['valid_v1']?.isPromoted, isFalse);
+    final persisted = await (database.select(database.modelMeta)
+          ..where((row) => row.key.equals(templateTrustLedgerMetaKey)))
+        .getSingleOrNull();
+    expect(persisted != null, isTrue);
+  });
+
   test('watch emits a developer alert after a demotion refresh', () async {
     final snapshots = ledger.watch().take(2).toList();
     await _insertPublicTemplateTransaction(database, 'txn-watch', 'watch_v1');
@@ -159,8 +266,10 @@ void main() {
 Future<void> _insertPublicTemplateTransaction(
   AppDatabase database,
   String id,
-  String templateId,
-) async {
+  String templateId, {
+  bool isDeleted = false,
+  String? duplicateOfTxnId,
+}) async {
   final now = DateTime.utc(2026, 7, 10);
   await database.into(database.transactions).insert(
         TransactionsCompanion.insert(
@@ -170,6 +279,8 @@ Future<void> _insertPublicTemplateTransaction(
           direction: 'debit',
           channel: 'upi',
           parseSource: 'template',
+          isDeleted: Value(isDeleted),
+          duplicateOfTxnId: Value(duplicateOfTxnId),
           confidenceJson: jsonEncode({
             'parser': {
               'c': 0.85,
@@ -178,6 +289,9 @@ Future<void> _insertPublicTemplateTransaction(
               'provenance': 'public',
             },
           }),
+          evidenceJson: const Value(
+            '[{"field":"amount","start":0,"end":2,"verbatim":"10","extractor":"regex"}]',
+          ),
           status: 'needs_review',
           createdAt: now,
           updatedAt: now,
@@ -189,13 +303,17 @@ Future<void> _insertVerdict(
   AppDatabase database,
   String id,
   String txnId,
-  String verdict,
-) {
+  String verdict, {
+  bool versioned = true,
+}) {
   return database.into(database.feedback).insert(
         FeedbackCompanion.insert(
           id: id,
           txnId: txnId,
           field: 'parse_verdict',
+          oldValue: versioned && verdict == 'ok'
+              ? const Value(templateTrustExplicitConfirmationMarker)
+              : const Value.absent(),
           newValue: Value(verdict),
           context: 'parse_confirm',
           createdAt: DateTime.utc(2026, 7, 10),

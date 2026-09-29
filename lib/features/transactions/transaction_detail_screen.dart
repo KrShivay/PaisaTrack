@@ -43,6 +43,7 @@ class _TransactionDetailScreenState
   String? _categoryName;
   bool _showTechnicalDetails = false;
   bool _savingNote = false;
+  bool _savingParseConfirmation = false;
   String? _noteError;
 
   @override
@@ -86,6 +87,37 @@ class _TransactionDetailScreenState
           _noteError = 'Failed to save note: ${e.toString()}';
         });
       }
+    }
+  }
+
+  Future<void> _confirmParsedDetails() async {
+    if (_savingParseConfirmation) return;
+    setState(() => _savingParseConfirmation = true);
+    try {
+      final database = await ref.read(appDatabaseProvider.future);
+      final repository = ref.read(transactionRepositoryProvider(database));
+      final recorded = await repository.confirmParse(txnId: widget.txnId);
+      if (recorded) {
+        ref.read(undoControllerProvider.notifier).pushUndo(
+              UndoToken(
+                id: 'parse_confirm_${widget.txnId}',
+                message: 'Parsed details confirmed',
+                undoAction: () async {
+                  await repository.undoParseConfirmation(
+                    txnId: widget.txnId,
+                  );
+                },
+              ),
+            );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not confirm parsed details.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingParseConfirmation = false);
     }
   }
 
@@ -664,6 +696,70 @@ class _TransactionDetailScreenState
                           ? null
                           : () => _markNotTransaction(txn),
                       isDark: isDark,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  if (detail.canConfirmParse) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColorTokens.bloomDarkCard
+                            : const Color(0xFFF6F4FE),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColorTokens.bloomDarkOutline
+                              : AppColorTokens.bloomChip,
+                        ),
+                      ),
+                      child: detail.isParseConfirmed
+                          ? const Text('Parsed details confirmed')
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Does the parsed amount, direction and payee '
+                                  'match this message?',
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    onPressed: _savingParseConfirmation
+                                        ? null
+                                        : _confirmParsedDetails,
+                                    icon: _savingParseConfirmation
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.verified_rounded),
+                                    label: const Text(
+                                      'Confirm parsed details',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'This records parse feedback only. It does '
+                                  'not confirm the transaction or change its '
+                                  'category.',
+                                  style: AppTheme.bloomDisplay(
+                                    12,
+                                    FontWeight.w400,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextSecondary
+                                        : AppColorTokens.inkSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
                     const SizedBox(height: 20),
                   ],

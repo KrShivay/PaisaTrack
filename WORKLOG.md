@@ -59,12 +59,22 @@
   below 50 outcomes and full category removal reset the learned threshold and
   metadata to the static default. Streaming SHA-256 fingerprints keep stored
   metadata bounded. Focused `decision_policy_test.dart`: 17/17.
-- Remaining T-177a audit: transaction-detail Confirm currently creates no
-  feedback and therefore cannot train this threshold; live/historical/resumed
-  provider traces, T-140/T-143 reconciliation, and cohort precision/coverage
-  baselines are still open. This milestone does not complete T-177a. No schema,
-  phone, or APK changes were made.
-- Full Flutter suite 898/898; `flutter analyze --no-pub`, changed-file
+- Added an explicit low-trust parse-confirm action to transaction detail. It
+  requires retained SMS and field evidence, leaves status/category unchanged,
+  deduplicates its versioned feedback, and can be undone. The public-template
+  ledger ignores unvalidated legacy positives and invalid/deleted/duplicate
+  sources; its v2 cache rebuilds restored v1 counters from evidence. Confirmed
+  evidence remains usable after raw SMS retention expires.
+- Focused repository, ledger, and detail tests: 38/38. Remaining T-177a audit:
+  live/historical/resumed provider traces, T-140/T-143 reconciliation, and
+  cohort precision/coverage baselines. This milestone does not complete
+  T-177a. No schema, phone, or APK changes were made.
+- Full Flutter suite 903/903; `flutter analyze --no-pub`, changed-file
   formatting, and `git diff --check` clean. Fresh pre-edit GitNexus impact was
-  HIGH (47 symbols / 4 flows); detect-changes reports 9 symbols, 5 files,
-  0 mapped processes, LOW. Independent review pending.
+  HIGH for `AdaptiveThresholdPolicy` (47 symbols / 4 flows), CRITICAL for
+  `TransactionRepository` (80 / 43 direct) and `TransactionDetail` (77 / 40
+  direct), HIGH for `TransactionDetailScreen` (42 / 18 direct) and
+  `TemplateTrustLedger` (90 / 12 direct). Exact ledger `refresh` was UNKNOWN
+  with two unresolved callers; text search confirmed call sites. GitNexus
+  detect-changes reports 25 symbols, 9 files, 4 processes, MEDIUM. Independent
+  review pending.
