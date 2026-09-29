@@ -191,16 +191,6 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
-- [ ] T-186 [P1] Fix transaction detail Note blank screen with the keyboard open.
-  - Acceptance: Open and edit the Note field at compact, standard, and large
-    text scales with the software keyboard visible; the transaction detail
-    remains rendered, Save Note remains reachable, and saved text survives
-    reopening. Include a widget regression for the reported blank-screen state.
-  - Dependencies: inspect T-158b's note state seeding and existing detail route;
-    reuse its controller extraction if it is the cause.
-  - Privacy: use synthetic transaction/note data only.
-  - Rollback: revert the focused screen/controller fix and regression test.
-
 - [ ] T-187 [P1] Preserve subscription currency instead of formatting every
       amount as INR.
   - Acceptance: Trace currency from supported source evidence into recurring

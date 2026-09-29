@@ -1,5 +1,21 @@
 # Current Handoff
 
+## 2026-09-29 — T-186 transaction detail keyboard layout
+
+- The transaction detail Scaffold now lets its containing sheet own keyboard
+  insets, avoiding a second body resize when Note receives focus. The Note/Save
+  header wraps at large text sizes. No schema or shared modal-helper change.
+- Added synthetic geometry coverage for both modal and full-screen presentations
+  at 1.0×, 1.5×, and 2.0× text, plus a keyboard-open Save Note tap and
+  save/reopen coverage. No phone or personal data was accessed.
+- Validation: focused keyboard/detail tests 17/17; full Flutter suite 838/838;
+  `flutter analyze --no-pub`, formatting, and `git diff --check` clean. GitNexus
+  pre-edit impact: TransactionDetailScreen HIGH (40 impacted symbols, 3 flows);
+  showBloomModalSheet MEDIUM (10 symbols). Final detect-changes: 13 symbols in
+  4 files, MEDIUM risk, with three affected test flows and no production flow.
+  Independent review passed. Physical-device keyboard QA was not run; synthetic
+  geometry coverage is the acceptance evidence for this UI-only change.
+
 ## 2026-09-29 — T-191 linked encrypted backup restore
 
 - Fixed restore ordering for transaction links, duplicate transaction links,
@@ -43,25 +59,3 @@
   output with no truncation. The independent final review accepted the patch.
   HIGH/CRITICAL impact warnings were surfaced before edits. Branch is ready for
   commit and fast-forward integration; no device or archive access.
-
-## 2026-09-29 — T-184 verified SLICE SMS capture
-
-- Added exact `SLICE` native sender admission. Synthetic native tests cover
-  live and inbox filtering, plus rejection when `SLICE` appears only in an
-  unknown sender's body signature.
-- The generic parser now extracts the sample payee before the parenthesized UPI
-  reference and uses a valid `on d-MMM-yy` date only when it occurs within the
-  same short transaction clause after the payment verb. Unrelated footer dates
-  and invalid calendar days retain the SMS receive time. Footer-only text is
-  not parsed as a transaction. No schema, cloud, raw-SMS logging, or retention
-  changes; T-162b remains separate. Synthetic data only; no device access.
-- Validation: focused parser suite 16/16; full Flutter suite 821/821;
-  `flutter analyze --no-pub`, Dart formatting, and `git diff --check` clean.
-  Android `SmsFilterTest` and app Kotlin compilation passed with temporary
-  Gradle 9.1 distribution after verifying its SHA-256. GitNexus impact before
-  edits: SmsFilter.isAllowed LOW (2 direct callers; 1 flow), parser MEDIUM
-  (8 direct callers; 2 test processes); SmsFilter class was UNKNOWN but text
-  search confirmed its native paths. Change analysis: 16 symbols across 6 files,
-  7 affected processes, HIGH risk; flows include parser/cascade ingestion,
-  shadow pipeline, and test entrypoints. Independent review pending; no
-  commit/push.

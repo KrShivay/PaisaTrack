@@ -202,6 +202,9 @@ class _TransactionDetailScreenState
     final detailAsync = ref.watch(transactionDetailProvider(widget.txnId));
 
     return Scaffold(
+      // This screen is only presented in Bloom modal/full-screen sheets; their
+      // routes own keyboard insets, so the body must not resize a second time.
+      resizeToAvoidBottomInset: false,
       backgroundColor:
           isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
       appBar: AppBar(
@@ -565,8 +568,10 @@ class _TransactionDetailScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          runSpacing: 4,
                           children: [
                             Text(
                               'NOTE',
