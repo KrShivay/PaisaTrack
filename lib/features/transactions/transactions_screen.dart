@@ -85,26 +85,25 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
       if (_query.isNotEmpty) {
         final q = _query.toLowerCase();
-        final name = item.displayName.toLowerCase();
-        final note = (item.note ?? '').toLowerCase();
-        final amt = item.amount.toString();
-        final channel = item.channel.toLowerCase();
-        final ref = (item.reference ?? '').toLowerCase();
-        final status = item.status.toLowerCase();
-        final account = (item.accountHint ?? '').toLowerCase();
-        final category = (item.categoryName ?? '').toLowerCase();
-        final source = (item.paymentSourceName ?? '').toLowerCase();
-        final merchant = (item.merchantRaw ?? '').toLowerCase();
-        if (!name.contains(q) &&
-            !note.contains(q) &&
-            !amt.contains(q) &&
-            !channel.contains(q) &&
-            !ref.contains(q) &&
-            !status.contains(q) &&
-            !account.contains(q) &&
-            !category.contains(q) &&
-            !source.contains(q) &&
-            !merchant.contains(q)) {
+        // Bolt: Optimized to use short-circuit evaluation. This prevents unnecessary
+        // string allocations and `.toLowerCase()` calls if a match is found early.
+        final matchFound = item.displayName.toLowerCase().contains(q) ||
+            (item.note != null && item.note!.toLowerCase().contains(q)) ||
+            item.amount.toString().contains(q) ||
+            item.channel.toLowerCase().contains(q) ||
+            (item.reference != null &&
+                item.reference!.toLowerCase().contains(q)) ||
+            item.status.toLowerCase().contains(q) ||
+            (item.accountHint != null &&
+                item.accountHint!.toLowerCase().contains(q)) ||
+            (item.categoryName != null &&
+                item.categoryName!.toLowerCase().contains(q)) ||
+            (item.paymentSourceName != null &&
+                item.paymentSourceName!.toLowerCase().contains(q)) ||
+            (item.merchantRaw != null &&
+                item.merchantRaw!.toLowerCase().contains(q));
+
+        if (!matchFound) {
           return false;
         }
       }
