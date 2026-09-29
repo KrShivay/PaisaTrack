@@ -1,5 +1,20 @@
 # Current Handoff
 
+## 2026-09-29 — T-167a primary-screen error and retry states
+
+- Activity now distinguishes first-load errors from true empty state, preserves
+  already loaded rows on later stream errors, and offers Retry. Explicit retry
+  resets its cursor snapshot before subscribing to the first page again. Trends
+  aggregate failures now have a Retry action instead of the nonfunctional
+  “Pull to refresh” instruction.
+- Added actual-screen widget coverage for Activity empty vs initial error and
+  retry recovery, loaded-data preservation and retry recovery, and Trends
+  aggregate failure/recovery. No database schema or device changes.
+- Validation: focused Activity/Trends tests 11/11; full Flutter suite 869/869;
+  `flutter analyze --no-pub`, formatting, and `git diff --check` clean.
+  GitNexus detect-changes: 7 files, 24 symbols, 0 processes, LOW risk.
+  Independent review pending.
+
 ## 2026-09-29 — T-176 global bottom-inset acceptance
 
 - Added Trends and Settings final-content geometry checks at 24dp gesture and
@@ -42,19 +57,3 @@
   post-review working-tree detect-changes: 9 files, 8 symbols, 0 flows, LOW
   risk. Impact warnings were surfaced before edits. Independent review passed
   on `a5e2e61`; main was fast-forwarded and pushed to the same revision.
-
-## 2026-09-29 — T-186 transaction detail keyboard layout
-
-- The transaction detail Scaffold now lets its containing sheet own keyboard
-  insets, avoiding a second body resize when Note receives focus. The Note/Save
-  header wraps at large text sizes. No schema or shared modal-helper change.
-- Added synthetic geometry coverage for both modal and full-screen presentations
-  at 1.0×, 1.5×, and 2.0× text, plus a keyboard-open Save Note tap and
-  save/reopen coverage. No phone or personal data was accessed.
-- Validation: focused keyboard/detail tests 17/17; full Flutter suite 838/838;
-  `flutter analyze --no-pub`, formatting, and `git diff --check` clean. GitNexus
-  pre-edit impact: TransactionDetailScreen HIGH (40 impacted symbols, 3 flows);
-  showBloomModalSheet MEDIUM (10 symbols). Final detect-changes: 13 symbols in
-  4 files, MEDIUM risk, with three affected test flows and no production flow.
-  Independent review passed. Physical-device keyboard QA was not run; synthetic
-  geometry coverage is the acceptance evidence for this UI-only change.

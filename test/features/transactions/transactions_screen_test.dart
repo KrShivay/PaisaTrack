@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
+import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
@@ -91,6 +96,78 @@ void main() {
     await pumpScreen(tester, const []);
 
     expect(find.text('No transactions found'), findsOneWidget);
+  });
+
+  testWidgets('shows initial load error and retries into loaded transactions',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final repository = _ControlledTransactionRepository(database);
+    addTearDown(() async {
+      await repository.close();
+      await database.close();
+    });
+    await _pumpWithRepository(tester, database, repository);
+    await tester.pump();
+    repository.controllers.single.addError(StateError('offline'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('No transactions found'), findsNothing);
+    expect(find.text('Couldn’t load transactions. Try again.'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await _pumpUntilControllerCount(tester, repository, 2);
+    final recovered = _screenItem('recovered');
+    repository.controllers.last.add(
+      ActivityTransactionPage(rows: [recovered], hasMore: false),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Recovered payment'), findsOneWidget);
+    expect(find.text('No transactions found'), findsNothing);
+  });
+
+  testWidgets('keeps loaded transactions visible after a later query error',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final repository = _ControlledTransactionRepository(database);
+    addTearDown(() async {
+      await repository.close();
+      await database.close();
+    });
+    final container = await _pumpWithRepository(tester, database, repository);
+    await tester.pump();
+    repository.controllers.single.add(
+      ActivityTransactionPage(
+        rows: [_screenItem('original')],
+        hasMore: false,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    repository.controllers.single.addError(StateError('offline'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(container.read(activityTransactionPageProvider).hasError, isTrue);
+    expect(container.read(activityTransactionPageProvider).hasValue, isTrue);
+    expect(find.text('Original payment'), findsOneWidget);
+    expect(find.text('Couldn’t refresh transactions.'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await _pumpUntilControllerCount(tester, repository, 2);
+    repository.controllers.last.add(
+      ActivityTransactionPage(
+        rows: [_screenItem('after-retry')],
+        hasMore: false,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('After-retry payment'), findsOneWidget);
+    expect(find.text('Couldn’t refresh transactions.'), findsNothing);
   });
 
   testWidgets('renders parsed transactions newest-first with display names',
@@ -239,4 +316,87 @@ void main() {
       'Salary',
     );
   });
+}
+
+Future<ProviderContainer> _pumpWithRepository(
+  WidgetTester tester,
+  AppDatabase database,
+  _ControlledTransactionRepository repository,
+) async {
+  tester.view.physicalSize = const Size(402, 874);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+  final container = ProviderContainer(
+    overrides: [
+      appDatabaseProvider.overrideWith((ref) async => database),
+      transactionRepositoryProvider.overrideWith((ref, db) => repository),
+      smsPermissionGateProvider.overrideWithValue(
+        FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: TransactionsScreen()),
+    ),
+  );
+  return container;
+}
+
+Future<void> _pumpUntilControllerCount(
+  WidgetTester tester,
+  _ControlledTransactionRepository repository,
+  int count,
+) async {
+  for (var attempt = 0;
+      attempt < 6 && repository.controllers.length < count;
+      attempt++) {
+    await tester.pump();
+  }
+  expect(repository.controllers, hasLength(count));
+}
+
+TransactionListItem _screenItem(String id) => TransactionListItem(
+      id: id,
+      ts: DateTime.utc(2026, 7, 6, 9),
+      amount: 100,
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+      direction: TransactionDirection.debit,
+      displayName: '${id[0].toUpperCase()}${id.substring(1)} payment',
+      categoryName: null,
+      categoryId: null,
+      categoryIcon: 'food',
+      channel: 'unknown',
+      status: 'confirmed',
+      parseSource: 'unknown',
+    );
+
+class _ControlledTransactionRepository extends TransactionRepository {
+  _ControlledTransactionRepository(super.database);
+
+  final controllers = <StreamController<ActivityTransactionPage>>[];
+
+  @override
+  Stream<ActivityTransactionPage> watchTransactionPage({
+    int limit = 100,
+    DateTime? start,
+    DateTime? end,
+    ActivityTransactionCursor? cursor,
+  }) {
+    final controller = StreamController<ActivityTransactionPage>();
+    controllers.add(controller);
+    return controller.stream;
+  }
+
+  Future<void> close() async {
+    for (final controller in controllers) {
+      await controller.close();
+    }
+  }
 }

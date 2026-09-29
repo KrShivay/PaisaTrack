@@ -270,7 +270,13 @@ class InsightsScreen extends ConsumerWidget {
                 ),
               ],
               loading: () => [_analyticsPlaceholder(isDark, isError: false)],
-              error: (_, __) => [_analyticsPlaceholder(isDark, isError: true)],
+              error: (_, __) => [
+                _analyticsPlaceholder(
+                  isDark,
+                  isError: true,
+                  onRetry: () => ref.invalidate(dashboardAggregateProvider),
+                ),
+              ],
             ),
           ],
         ),
@@ -281,7 +287,11 @@ class InsightsScreen extends ConsumerWidget {
 
 /// Loading/error placeholder for the analytics sections. Keeps loading and
 /// failure visually distinct and never renders a fabricated number.
-Widget _analyticsPlaceholder(bool isDark, {required bool isError}) {
+Widget _analyticsPlaceholder(
+  bool isDark, {
+  required bool isError,
+  VoidCallback? onRetry,
+}) {
   final border =
       isDark ? AppColorTokens.bloomDarkOutline : AppColorTokens.bloomHairline;
   final textColor = isDark
@@ -295,19 +305,29 @@ Widget _analyticsPlaceholder(bool isDark, {required bool isError}) {
       border: Border.all(color: border),
     ),
     child: isError
-        ? Row(
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.info_outline_rounded, size: 18, color: textColor),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Couldn't load spending analytics. Pull to refresh.",
-                  style: AppTheme.bloomDisplay(
-                    13,
-                    FontWeight.w500,
-                    color: textColor,
+              Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 18, color: textColor),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Couldn't load spending analytics.",
+                      style: AppTheme.bloomDisplay(
+                        13,
+                        FontWeight.w500,
+                        color: textColor,
+                      ),
+                    ),
                   ),
-                ),
+                ],
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child:
+                    TextButton(onPressed: onRetry, child: const Text('Retry')),
               ),
             ],
           )

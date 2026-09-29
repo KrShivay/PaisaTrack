@@ -6,7 +6,24 @@ state; Git history and `docs/archive/` retain completed evidence.
 Priority: P0 release blocker, P1 high-impact, P2 important, P3 planned, P4/P5
 later hardening.
 
+## In Progress
+
 ## In Review
+
+- [ ] T-167a [P0] Audit primary screens for loading, error, empty, and retry
+  states; replace misleading empty states with actionable errors.
+  - Acceptance: Activity initial-load and refresh errors render actionable
+    error UI rather than “No transactions found”; retry restores a successful
+    list. If an error occurs after data loaded, keep the data visible with
+    non-blocking error feedback. Trends aggregate errors expose a working retry
+    action that refreshes the same provider used by the screen. Tests distinguish
+    a true empty Activity list from an error and prove both retry paths recover.
+  - Scope: no provider/repository contract changes unless tests demonstrate
+    they are needed; no database or device changes.
+- Verification: Activity/Trends focused widget tests 11/11; full Flutter suite
+  869/869; `flutter analyze --no-pub` and `git diff --check` clean. GitNexus
+  detect-changes: 7 files, 24 symbols, no affected processes, LOW risk. No
+  database or device mutation; independent review pending.
 
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
@@ -299,9 +316,8 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### UI quality, accessibility, and refactoring
 
-- [ ] T-167a [P0] Audit every primary screen for loading, error, empty, and retry states; replace misleading empty states with actionable errors.
 - [ ] T-167b [P0] Add semantic labels, selected state, and 48dp minimum targets to custom Activity, Dashboard, Settings, and Review controls.
-- [ ] T-167c [P1] Add 1.5x/2x text and narrow/wide viewport widget tests for all primary transaction flows, including the 320×568/2× text overflow repro in HomeShell nav (home_shell.dart:250), Activity header (transactions_screen.dart:220), and Trends header (insights_screen.dart:73).
+- [ ] T-167c [P1] Add 1.5×/2× text and narrow/wide viewport widget tests for primary transaction flows. Follow up on confirmed 320×568/2× horizontal overflows in HomeShell nav (`home_shell.dart:250`), Activity header (`transactions_screen.dart:220`), and Trends header (`insights_screen.dart:73`); preserve 48dp targets and accessibility labels.
 - [ ] T-167d [P1] Replace bespoke gesture-only controls with semantic Material controls or equivalent explicit semantics.
 - [ ] T-167e [P0] Audit every root-tab screen, nested sheet, and detail route for FAB/action-button overlap with the bottom navigator, gesture area, keyboard, or system navigation inset; record viewport screenshots and exact affected widgets.
 - [ ] T-167f [P0] Introduce one shared safe-area/FAB placement contract that reserves bottom-navigation height, system gesture insets, keyboard insets, and minimum touch clearance; migrate Dashboard, Activity, Review, Insights, Settings, and all nested action sheets without per-screen magic offsets.

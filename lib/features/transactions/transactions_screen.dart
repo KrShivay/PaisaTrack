@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/app_state_views.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
 import '../../core/undo/undo_controller.dart';
@@ -369,63 +370,83 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             Expanded(
               child: pageAsync.isLoading && filtered.isEmpty
                   ? const Center(child: BloomSkeleton(width: 280, height: 160))
-                  : filtered.isEmpty
-                      ? Column(
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: BloomBottomInset.contentPadding(
-                                    context,
-                                  ),
-                                ),
-                                child: _EmptyState(
-                                  isDark: isDark,
-                                  query: _query,
-                                  onClearFilters: () {
-                                    setState(() {
-                                      _query = '';
-                                      _searchController.clear();
-                                      _activeFilter = ActivityFilterChoice.all;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                            if (hasMore)
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: BloomBottomInset.contentPadding(
-                                    context,
-                                  ),
-                                ),
-                                child: _loadMoreButton(),
-                              ),
-                          ],
+                  : pageAsync.hasError && !pageAsync.hasValue
+                      ? ErrorStateView(
+                          message: 'Couldn’t load transactions. Try again.',
+                          onRetry: () =>
+                              ref.invalidate(activityTransactionPageProvider),
                         )
-                      : ListView.builder(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            0,
-                            20,
-                            BloomBottomInset.contentPadding(context),
-                          ),
-                          itemCount: grouped.length + (hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == grouped.length) {
-                              return _loadMoreButton();
-                            }
-                            final group = grouped[index];
-                            return _DayGroupSection(
-                              header: group.header,
-                              dayTotals: group.totals,
-                              items: group.items,
-                              isDark: isDark,
-                              onTap: _openDetail,
-                              onSwipeRight: _confirmItem,
-                              onSwipeLeft: _recategorizeItem,
-                            );
-                          },
+                      : Column(
+                          children: [
+                            if (pageAsync.hasError)
+                              _ActivityLoadError(
+                                onRetry: () => ref.invalidate(
+                                  activityTransactionPageProvider,
+                                ),
+                              ),
+                            Expanded(
+                              child: filtered.isEmpty
+                                  ? Column(
+                                      children: [
+                                        Expanded(
+                                          child: Padding(
+                                            padding: EdgeInsets.only(
+                                              bottom: BloomBottomInset
+                                                  .contentPadding(context),
+                                            ),
+                                            child: _EmptyState(
+                                              isDark: isDark,
+                                              query: _query,
+                                              onClearFilters: () {
+                                                setState(() {
+                                                  _query = '';
+                                                  _searchController.clear();
+                                                  _activeFilter =
+                                                      ActivityFilterChoice.all;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                        if (hasMore)
+                                          Padding(
+                                            padding: EdgeInsets.only(
+                                              bottom: BloomBottomInset
+                                                  .contentPadding(context),
+                                            ),
+                                            child: _loadMoreButton(),
+                                          ),
+                                      ],
+                                    )
+                                  : ListView.builder(
+                                      padding: EdgeInsets.fromLTRB(
+                                        20,
+                                        0,
+                                        20,
+                                        BloomBottomInset.contentPadding(
+                                          context,
+                                        ),
+                                      ),
+                                      itemCount:
+                                          grouped.length + (hasMore ? 1 : 0),
+                                      itemBuilder: (context, index) {
+                                        if (index == grouped.length) {
+                                          return _loadMoreButton();
+                                        }
+                                        final group = grouped[index];
+                                        return _DayGroupSection(
+                                          header: group.header,
+                                          dayTotals: group.totals,
+                                          items: group.items,
+                                          isDark: isDark,
+                                          onTap: _openDetail,
+                                          onSwipeRight: _confirmItem,
+                                          onSwipeLeft: _recategorizeItem,
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
                         ),
             ),
           ],
@@ -516,6 +537,51 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         'Nov',
         'Dec',
       ][month - 1];
+}
+
+class _ActivityLoadError extends StatelessWidget {
+  const _ActivityLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: colors.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: colors.onErrorContainer,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Couldn’t refresh transactions.',
+                    style: TextStyle(color: colors.onErrorContainer),
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(onPressed: onRetry, child: const Text('Retry')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _DayGroup {

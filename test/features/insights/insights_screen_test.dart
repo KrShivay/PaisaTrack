@@ -40,6 +40,42 @@ void main() {
     );
     expect(find.text('MONTH OVER MONTH'), findsOneWidget);
   });
+
+  testWidgets('offers retry when analytics fail and recovers on retry',
+      (tester) async {
+    var attempts = 0;
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardAggregateProvider.overrideWith((ref) async {
+            attempts++;
+            if (attempts == 1) throw StateError('offline');
+            return _emptyDashboardAggregate;
+          }),
+          activeInsightsProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text("Couldn't load spending analytics."), findsOneWidget);
+    expect(find.textContaining('Pull to refresh'), findsNothing);
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(attempts, 2);
+    expect(find.text("Couldn't load spending analytics."), findsNothing);
+    expect(find.text('SPEND TREND (LAST 6 MONTHS)'), findsOneWidget);
+  });
 }
 
 const _emptyDashboardAggregate = DashboardAggregateSnapshot(

@@ -41,6 +41,11 @@ class ActivityTransactionPageController
 
   @override
   Future<ActivityTransactionPage> build() async {
+    // Invalidation is the Activity retry path. Drop cursor snapshots so the
+    // rebuilt first page is accepted as a fresh query result.
+    _pages.clear();
+    _isReady = false;
+    _isLoadingMore = false;
     final database = await ref.watch(appDatabaseProvider.future);
     _repository = ref.read(transactionRepositoryProvider(database));
     ref.onDispose(() {
@@ -111,7 +116,8 @@ class ActivityTransactionPageController
         if (!completer.isCompleted) {
           completer.completeError(error, stackTrace);
         } else if (_isReady) {
-          state = AsyncError(error, stackTrace);
+          state = AsyncError<ActivityTransactionPage>(error, stackTrace)
+              .copyWithPrevious(state);
         }
       },
     );
@@ -294,7 +300,9 @@ final suggestedCategoriesProvider =
   final Float32List? vector = blob == null
       ? null
       : Float32List.view(
-          blob.buffer, blob.offsetInBytes, blob.lengthInBytes ~/ 4,
+          blob.buffer,
+          blob.offsetInBytes,
+          blob.lengthInBytes ~/ 4,
         );
 
   final predictions =
