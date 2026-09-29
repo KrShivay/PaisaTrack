@@ -9,9 +9,9 @@ later hardening.
 ## In Progress
 
 - [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
-  - Context: the installed v2006 predates T-187. Current parsing maps `Rs.` to
-    INR, but the v18 migration leaves older null-currency rows unchanged and
-    `ingestBatch` skips already-known SMS IDs.
+  - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps
+    `Rs.` to INR, but the v18 migration leaves older null-currency rows
+    unchanged and `ingestBatch` skips already-known SMS IDs.
   - Acceptance: transaction detail offers a non-mutating preview and explicit
     reversible apply only when both currency fields are null, linked SMS is
     still within retention, amount span evidence matches the body and stored
