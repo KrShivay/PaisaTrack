@@ -30,6 +30,7 @@ Follow `COLLABORATION.md` for lifecycle, verification, and completion rules.
 | T-172 | Product-value review and release cadence | 7 | [T-172.md](T-172.md) |
 | T-177 | Smart transaction assistance | 7 | [T-177.md](T-177.md) |
 | T-178 | Grounded AI | 4 | [T-178.md](T-178.md) |
+| T-189 | Ask prompt list | 1 | [T-189.md](T-189.md) |
 
 Completed brief pointers: [T-145](T-145.md), [T-146](T-146.md),
 [T-147](T-147.md), [T-148](T-148.md), and [T-152](T-152.md).

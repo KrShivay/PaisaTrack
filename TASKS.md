@@ -8,6 +8,8 @@ later hardening.
 
 ## In Progress
 
+## Ready
+
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
   - Bounded milestone: add a local chronological replay/report contract and
     synthetic fixtures that exercise live, history, and resume provider wiring;
@@ -47,9 +49,15 @@ later hardening.
     category-threshold evidence. Broad provider/provenance/baseline audit is
     still open.
 
-## Ready
-
 ## In Review
+
+- [ ] T-189 [P2] Replace Ask's clipped rotating composer chips with a full-text vertical prompt list.
+  - Scope: after conversation starts, show the same three rotating catalogue prompts as wrapped, individually tappable rows above the composer; preserve selection, manual rotation, and rotation after sending. The initial searchable catalogue remains unchanged.
+  - Acceptance and verification: see [T-189 brief](docs/tasks/T-189.md).
+  - Dependencies: none; this is a presentation change to the existing composer prompts, not answer-specific follow-up generation.
+  - Privacy: use only the existing local prompt catalogue; do not include transaction-row or SMS text.
+  - Verification: assistant prompt tests 7/7; full Flutter suite 924/924; `flutter analyze --no-pub`, formatter check, and `git diff --check` clean. GitNexus detect-changes reports 6 files / 24 symbols, LOW risk, no affected processes. Fresh pre-edit impact for `_ComposerPromptChips` and `_AssistantScreenState` was MEDIUM (13 affected symbols, 5 direct each).
+  - Rollback: revert the screen, widget tests, and task brief without changing assistant intents or prompt data.
 
 - [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
   - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps
@@ -282,17 +290,6 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
     current `dismissed` bit as a notification inbox without defining states.
   - Privacy: local-only aggregates and state; no notification body with raw SMS.
   - Rollback: keep existing Trends insight feed available if inbox is disabled.
-
-- [ ] T-189 [P2] Make Ask follow-up suggestions readable in a full-text vertical
-      list.
-  - Acceptance: Follow-up questions shown after an answer wrap to full text in a
-    vertical list and remain individually tappable; do not ellipsize or truncate
-    meaning. Keep the separate T-150c rotating composer prompt row unchanged.
-    Add narrow-screen, large-text, and long-question widget tests.
-  - Dependencies: T-151b answer bubble geometry; refine T-151e follow-up chips
-    without duplicating composer prompt catalogue work.
-  - Privacy: suggestions remain typed/local and do not include private row text.
-  - Rollback: revert the presentation change without changing supported intents.
 
 - [ ] T-190 [P2] Plan credit-card purchase, bill, payment, refund, and failure
       accounting. **Do this last among the newly requested tasks.**

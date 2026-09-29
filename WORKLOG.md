@@ -1,5 +1,20 @@
 # Current Handoff
 
+## 2026-09-30 — T-189 readable Ask prompt list
+
+- Replaced the three clipped horizontal composer chips shown after a chat
+  starts with a scrollable vertical list of the same rotating catalogue
+  prompts. Full text wraps, every row remains a labeled 48dp+ button, and
+  sending or manually rotating advances the same three-question window. The
+  initial searchable catalogue and local assistant contract are unchanged.
+- Widget tests cover exact prompt text/send/rotation, semantics and target
+  size, 320dp at 2× text, and final-row reachability plus composer placement in
+  a keyboard-resized sheet. Assistant tests 7/7; full Flutter suite 924/924;
+  `flutter analyze --no-pub`, formatter check, and diff check clean.
+- GitNexus pre-edit impact: `_ComposerPromptChips` and `_AssistantScreenState`
+  MEDIUM (13 affected symbols, 5 direct each). Detect-changes: 6 files / 24
+  symbols, LOW risk, no affected processes. No data or schema changes.
+
 ## 2026-09-30 — T-193 legacy currency repair
 
 - The source-backed per-transaction detail preview/apply/undo repair was
@@ -33,27 +48,6 @@
   the app process alive without a crash exit. Synthetic encrypted
   backup/restore compatibility is now covered; physical repair-preview/apply/
   undo acceptance remains open.
-
-## 2026-09-30 — T-192 publish Android 0.1.3+2007
-
-- Published the signed ARM64 APK from current main `1f4f451` to public branch
-  `apk-downloads`, commit `02acbef12a5df8159d14bd370a0e47b8a67654de`. The
-  README direct download URL is unchanged. Artifact:
-  `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`, 56,750,680 bytes,
-  SHA-256 `0affd549d926814082d6ff1548aefebcda768dcd0d2c1f326e5c11856daa86c3`.
-  Package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4007`;
-  production certificate SHA-256
-  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
-- The owner verified a fresh encrypted backup off-device before installing.
-  Physical in-place upgrade preserved firstInstallTime; the app remained
-  foregrounded without a crash exit. Synthetic API35 ARM64 emulator cold-start
-  and Home/Activity/Trends/Ask routes had passed for the release candidate;
-  Flutter tests 894/894, analyzer, Android unit tests, and diff check passed.
-  Manual Entry save and backup restore were not verified. Broader T-167c
-  responsive-layout, T-176 screen-inset, and T-179a recovery acceptance remain
-  open.
-- GitNexus detect-changes returned partial/unknown for the binary-only APK diff
-  on unstaged and staged reruns. Manual staged diff contains only the APK.
 
 ## 2026-09-30 — T-177a threshold evidence revision follow-up
 

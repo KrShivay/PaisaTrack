@@ -9,8 +9,9 @@ import '../../intelligence/assistant/assistant_controller.dart';
 import '../../intelligence/assistant/prompt_catalogue.dart';
 import '../../intelligence/llm/llm_runtime.dart';
 
-final assistantControllerProvider =
-    FutureProvider<AssistantController>((ref) async {
+final assistantControllerProvider = FutureProvider<AssistantController>((
+  ref,
+) async {
   final database = await ref.watch(appDatabaseProvider.future);
   return AssistantController(
     runtime: ref.watch(llmRuntimeProvider),
@@ -75,9 +76,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             ? 'The on-device AI model is not available. You can still search your transactions by keyword.'
             : 'I could not calculate that from your data. Try asking about recent spend, budget, or categories.';
         setState(() {
-          _messages.add(
-            AssistantMessage(userMessage, fromUser: false),
-          );
+          _messages.add(AssistantMessage(userMessage, fromUser: false));
         });
       }
     } finally {
@@ -98,120 +97,154 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
       key: const ValueKey('assistant_sheet_surface'),
       color: AppColorTokens.bloomDarkBase,
       child: SafeArea(
-        child: Column(
-          children: [
-            if (widget.showSheetHeader) const _AssistantSheetHeader(),
+        child: LayoutBuilder(
+          builder: (context, _) {
+            return Column(
+              children: [
+                if (widget.showSheetHeader) const _AssistantSheetHeader(),
 
-            // Message Thread / Presets
-            Expanded(
-              child: _messages.isEmpty
-                  ? _PromptCatalogueEmptyState(
-                      isDark: isDark,
-                      onSelect: _askSuggestion,
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = _messages[index];
-                        return _MessageBubble(msg: msg, isDark: isDark);
-                      },
-                    ),
-            ),
-
-            if (_sending)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: BloomSkeleton(width: 160, height: 24),
-              ),
-
-            if (_messages.isNotEmpty)
-              _ComposerPromptChips(
-                questions: [
-                  for (var index = 0; index < 3; index++)
-                    assistantPromptQuestions[(_chipOffset + index) %
-                        assistantPromptQuestions.length],
-                ],
-                onSelect: _askSuggestion,
-                onRotate: () => setState(() {
-                  _chipOffset =
-                      (_chipOffset + 3) % assistantPromptQuestions.length;
-                }),
-              ),
-
-            // Bottom Input Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              child: Container(
-                key: const ValueKey('assistant_composer'),
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColorTokens.bloomDarkCard,
-                  border: Border.all(color: AppColorTokens.bloomDarkOutline),
-                  borderRadius: BorderRadius.circular(26),
+                // Message Thread / Presets
+                Expanded(
+                  child: _messages.isEmpty
+                      ? _PromptCatalogueEmptyState(
+                          isDark: isDark,
+                          onSelect: _askSuggestion,
+                        )
+                      : LayoutBuilder(
+                          builder: (context, bodyConstraints) {
+                            // The sheet gives this body less height when the
+                            // keyboard opens. Reserve a bounded, scrollable
+                            // prompt panel while leaving the conversation able
+                            // to shrink without overflowing.
+                            final promptListHeight =
+                                bodyConstraints.maxHeight < 96
+                                    ? 0.0
+                                    : bodyConstraints.maxHeight < 240
+                                        ? bodyConstraints.maxHeight
+                                        : (bodyConstraints.maxHeight * 0.55)
+                                            .clamp(96.0, 236.0);
+                            return Column(
+                              children: [
+                                Expanded(
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.all(20),
+                                    itemCount: _messages.length,
+                                    itemBuilder: (context, index) {
+                                      final msg = _messages[index];
+                                      return _MessageBubble(
+                                        msg: msg,
+                                        isDark: isDark,
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if (promptListHeight > 0)
+                                  SizedBox(
+                                    height: promptListHeight.toDouble(),
+                                    child: _ComposerPromptList(
+                                      questions: [
+                                        for (var index = 0; index < 3; index++)
+                                          assistantPromptQuestions[
+                                              (_chipOffset + index) %
+                                                  assistantPromptQuestions
+                                                      .length],
+                                      ],
+                                      onSelect: _askSuggestion,
+                                      onRotate: () => setState(() {
+                                        _chipOffset = (_chipOffset + 3) %
+                                            assistantPromptQuestions.length;
+                                      }),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                 ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: _inputController,
-                        onSubmitted: (_) => _send(),
-                        style: AppTheme.bloomDisplay(
-                          14,
-                          FontWeight.w400,
-                          color: AppColorTokens.bloomDarkTextPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Ask anything about your money…',
-                          hintStyle: AppTheme.bloomDisplay(
-                            14,
-                            FontWeight.w400,
-                            color: const Color(0xFF6F6A92),
-                          ),
-                          border: InputBorder.none,
-                        ),
+
+                if (_sending)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: BloomSkeleton(width: 160, height: 24),
+                  ),
+
+                // Bottom Input Bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Container(
+                    key: const ValueKey('assistant_composer'),
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColorTokens.bloomDarkCard,
+                      border: Border.all(
+                        color: AppColorTokens.bloomDarkOutline,
                       ),
+                      borderRadius: BorderRadius.circular(26),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      key: const ValueKey('assistant_send_button'),
-                      onTap: _send,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColorTokens.bloomEmerald,
-                              AppColorTokens.bloomEmeraldDeep,
-                            ],
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: _inputController,
+                            onSubmitted: (_) => _send(),
+                            style: AppTheme.bloomDisplay(
+                              14,
+                              FontWeight.w400,
+                              color: AppColorTokens.bloomDarkTextPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Ask anything about your money…',
+                              hintStyle: AppTheme.bloomDisplay(
+                                14,
+                                FontWeight.w400,
+                                color: const Color(0xFF6F6A92),
+                              ),
+                              border: InputBorder.none,
+                            ),
                           ),
-                          shape: BoxShape.circle,
                         ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.arrow_upward_rounded,
-                            size: 20,
-                            color: AppColorTokens.bloomDarkBase,
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          key: const ValueKey('assistant_send_button'),
+                          onTap: _send,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColorTokens.bloomEmerald,
+                                  AppColorTokens.bloomEmeraldDeep,
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.arrow_upward_rounded,
+                                size: 20,
+                                color: AppColorTokens.bloomDarkBase,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _ComposerPromptChips extends StatelessWidget {
-  const _ComposerPromptChips({
+class _ComposerPromptList extends StatelessWidget {
+  const _ComposerPromptList({
     required this.questions,
     required this.onSelect,
     required this.onRotate,
@@ -223,56 +256,81 @@ class _ComposerPromptChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      key: const ValueKey('assistant_prompt_chips'),
-      height: 38,
-      child: Row(
-        children: [
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.only(left: 20),
-              scrollDirection: Axis.horizontal,
-              itemCount: questions.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                final question = questions[index];
-                return SizedBox(
-                  width: 96,
-                  height: 30,
-                  child: ActionChip(
-                    key: ValueKey('assistant_prompt_chip_$question'),
-                    label: Text(
-                      question,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onPressed: () => onSelect(question),
+    return Column(
+      key: const ValueKey('assistant_prompt_list'),
+      children: [
+        SizedBox(
+          height: 48,
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Try asking',
+                  style: TextStyle(
+                    color: AppColorTokens.bloomDarkTextSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('assistant_prompt_chip_rotate'),
+                tooltip: 'Rotate suggestions',
+                icon: const Icon(Icons.refresh_rounded),
+                color: AppColorTokens.bloomDarkTextSecondary,
+                iconSize: 18,
+                onPressed: onRotate,
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            key: const ValueKey('assistant_prompt_list_scroll'),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            itemCount: questions.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
+            itemBuilder: (context, index) {
+              final question = questions[index];
+              return SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  key: ValueKey('assistant_prompt_list_item_$question'),
+                  onPressed: () => onSelect(question),
+                  style: TextButton.styleFrom(
+                    alignment: Alignment.centerLeft,
                     backgroundColor: AppColorTokens.bloomDarkCard,
-                    side: const BorderSide(
-                      color: AppColorTokens.bloomDarkOutline,
+                    foregroundColor: AppColorTokens.bloomDarkTextSecondary,
+                    minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
                     ),
-                    labelStyle: const TextStyle(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                        color: AppColorTokens.bloomDarkOutline,
+                      ),
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                    visualDensity: VisualDensity.standard,
+                  ),
+                  child: Text(
+                    question,
+                    softWrap: true,
+                    textAlign: TextAlign.start,
+                    style: const TextStyle(
                       color: AppColorTokens.bloomDarkTextSecondary,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.compact,
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
-          IconButton(
-            key: const ValueKey('assistant_prompt_chip_rotate'),
-            tooltip: 'Rotate suggestions',
-            icon: const Icon(Icons.refresh_rounded),
-            color: AppColorTokens.bloomDarkTextSecondary,
-            iconSize: 18,
-            onPressed: onRotate,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -381,13 +439,7 @@ class _PromptCatalogueEmptyStateState
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       children: [
-        const Center(
-          child: BloomMascot(
-            size: 54,
-            bob: true,
-            pulseRing: true,
-          ),
-        ),
+        const Center(child: BloomMascot(size: 54, bob: true, pulseRing: true)),
         const SizedBox(height: 16),
         Text(
           'What would you like to know?',
@@ -479,10 +531,7 @@ class _PromptCatalogueEmptyStateState
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({
-    required this.msg,
-    required this.isDark,
-  });
+  const _MessageBubble({required this.msg, required this.isDark});
 
   final AssistantMessage msg;
   final bool isDark;
@@ -534,11 +583,7 @@ class _MessageBubble extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const BloomMascot(
-              size: 24,
-              bob: false,
-              pulseRing: false,
-            ),
+            const BloomMascot(size: 24, bob: false, pulseRing: false),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
