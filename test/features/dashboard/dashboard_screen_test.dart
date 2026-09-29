@@ -37,9 +37,11 @@ TransactionListItem item({
 void main() {
   Future<void> pumpDashboard(
     WidgetTester tester,
-    List<TransactionListItem> list,
-  ) async {
-    tester.view.physicalSize = const Size(402, 874);
+    List<TransactionListItem> list, {
+    Size size = const Size(402, 874),
+    double textScale = 1,
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -59,7 +61,15 @@ void main() {
             const FakeCapturedSmsSource(),
           ),
         ],
-        child: const MaterialApp(home: DashboardScreen()),
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+            ),
+            child: child!,
+          ),
+          home: const DashboardScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -81,5 +91,22 @@ void main() {
     expect(find.text('Net flow'), findsOneWidget);
     expect(find.text('Burn'), findsOneWidget);
     expect(find.text('Runway'), findsOneWidget);
+  });
+
+  testWidgets('dashboard header fits a 320px viewport at 2× text',
+      (tester) async {
+    await pumpDashboard(
+      tester,
+      const [],
+      size: const Size(320, 568),
+      textScale: 2,
+    );
+
+    expect(find.byTooltip('Settings & Streak'), findsOneWidget);
+    expect(
+      tester.getSize(find.byTooltip('Settings & Streak')).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(tester.takeException(), isNull);
   });
 }

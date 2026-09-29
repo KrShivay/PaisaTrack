@@ -76,9 +76,10 @@ Future<ProviderContainer> _pumpLauncher(
   AppDatabase? database, {
   required bool fullScreen,
   required double textScale,
+  Size size = const Size(402, 874),
   TransactionDetail? detail,
 }) async {
-  tester.view.physicalSize = const Size(402, 874);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   tester.view.viewInsets = const FakeViewPadding();
   addTearDown(() {
@@ -251,4 +252,32 @@ void main() {
     await tester.pump();
     reopenedContainer.dispose();
   });
+
+  for (final size in [const Size(320, 568), const Size(600, 900)]) {
+    for (final scale in [1.5, 2.0]) {
+      testWidgets(
+          'full-screen detail fits ${size.width.toInt()}px at $scale× text',
+          (tester) async {
+        final container = await _pumpLauncher(
+          tester,
+          null,
+          fullScreen: true,
+          textScale: scale,
+          size: size,
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          container.dispose();
+        });
+
+        await tester.tap(find.byKey(const Key('open-detail')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Swiggy'), findsWidgets);
+        expect(find.text('Save Note'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 }

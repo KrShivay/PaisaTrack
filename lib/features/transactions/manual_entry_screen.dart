@@ -130,6 +130,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
             const SizedBox(height: AppSpacing.lg),
             DropdownButtonFormField<String?>(
               initialValue: _categoryId,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Category'),
               items: [
                 const DropdownMenuItem<String?>(

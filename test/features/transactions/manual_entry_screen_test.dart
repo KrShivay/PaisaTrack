@@ -73,13 +73,31 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> pumpEntryScreen(WidgetTester tester) async {
+  Future<void> pumpEntryScreen(
+    WidgetTester tester, {
+    Size size = const Size(402, 874),
+    double textScale = 1,
+  }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
         ],
-        child: const MaterialApp(home: ManualEntryScreen()),
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+            ),
+            child: child!,
+          ),
+          home: const ManualEntryScreen(),
+        ),
       ),
     );
     // The category dropdown's `items` snapshot must include the seeded
@@ -237,4 +255,30 @@ void main() {
 
     await unmount(tester);
   });
+
+  for (final size in [const Size(320, 568), const Size(600, 900)]) {
+    for (final scale in [1.5, 2.0]) {
+      testWidgets('manual entry fits ${size.width.toInt()}px at $scale× text',
+          (tester) async {
+        await pumpEntryScreen(tester, size: size, textScale: scale);
+
+        await tester.tap(find.text('Uncategorized'));
+        await tester.pumpAndSettle();
+        expect(find.text('Food & Dining'), findsOneWidget);
+        await tester.tap(find.text('Food & Dining'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextFormField), findsWidgets);
+        expect(find.text('Food & Dining'), findsOneWidget);
+        await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+        await tester.pump();
+        final save = find.text('Save');
+        await tester.ensureVisible(save);
+        await tester.pump();
+        expect(tester.getRect(save).bottom, lessThanOrEqualTo(size.height));
+        expect(tester.takeException(), isNull);
+        await unmount(tester);
+      });
+    }
+  }
 }

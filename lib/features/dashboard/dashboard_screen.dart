@@ -103,27 +103,37 @@ class DashboardScreen extends ConsumerWidget {
                               : const Color(0xFFFFF0D6),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.local_fire_department_rounded,
-                              size: 14,
-                              color: AppColorTokens.bloomGold,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$streak day streak',
-                              style: AppTheme.bloomDisplay(
-                                12,
-                                FontWeight.w600,
-                                color: isDark
-                                    ? AppColorTokens.bloomGold
-                                    : const Color(0xFF8A5A00),
+                        child: MediaQuery.sizeOf(context).width < 400
+                            ? const SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Icon(
+                                  Icons.local_fire_department_rounded,
+                                  size: 20,
+                                  color: AppColorTokens.bloomGold,
+                                ),
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.local_fire_department_rounded,
+                                    size: 14,
+                                    color: AppColorTokens.bloomGold,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$streak day streak',
+                                    style: AppTheme.bloomDisplay(
+                                      12,
+                                      FontWeight.w600,
+                                      color: isDark
+                                          ? AppColorTokens.bloomGold
+                                          : const Color(0xFF8A5A00),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
@@ -136,59 +146,70 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    showBloomModalSheet(
-                      context: context,
-                      builder: (context) => const BloomDatePeriodSheet(),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTrack
-                          : AppColorTokens.bloomChip,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColorTokens.bloomDarkOutline
-                            : AppColorTokens.bloomHairline,
+                Semantics(
+                  button: true,
+                  label: 'Select period: ${period.label}',
+                  child: GestureDetector(
+                    onTap: () {
+                      showBloomModalSheet(
+                        context: context,
+                        builder: (context) => const BloomDatePeriodSheet(),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 13,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTrack
+                            : AppColorTokens.bloomChip,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
                           color: isDark
-                              ? AppColorTokens.bloomDarkTextSecondary
-                              : AppColorTokens.inkSecondary,
+                              ? AppColorTokens.bloomDarkOutline
+                              : AppColorTokens.bloomHairline,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          period.label,
-                          style: AppTheme.bloomDisplay(
-                            12,
-                            FontWeight.w600,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 16,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextTertiary
-                              : AppColorTokens.inkTertiary,
-                        ),
-                      ],
+                      ),
+                      child: MediaQuery.sizeOf(context).width < 360 ||
+                              MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                          ? const SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Icon(Icons.calendar_today_rounded),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 13,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  period.label,
+                                  style: AppTheme.bloomDisplay(
+                                    12,
+                                    FontWeight.w600,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextPrimary
+                                        : AppColorTokens.ink,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 16,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextTertiary
+                                      : AppColorTokens.inkTertiary,
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                 ),

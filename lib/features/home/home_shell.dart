@@ -181,9 +181,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 right: 20,
                 bottom:
                     MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
-                child: _FloatingNavPill(
+                child: HomeFloatingNavPill(
                   currentIndex: _currentIndex,
-                  tabs: _tabs,
+                  destinations: _tabs,
                   onTabSelected: _onTabTapped,
                   onAskTapped: _openAskPaisaTrack,
                   isDark: isDark,
@@ -197,31 +197,44 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 }
 
-class _TabItem {
+class _TabItem extends HomeNavigationDestination {
   const _TabItem({
+    required super.label,
+    required super.icon,
+    required super.selectedIcon,
+    required this.screen,
+  });
+
+  final Widget screen;
+}
+
+/// A single destination rendered by the floating home navigation.
+class HomeNavigationDestination {
+  const HomeNavigationDestination({
     required this.label,
     required this.icon,
     required this.selectedIcon,
-    required this.screen,
   });
 
   final String label;
   final IconData icon;
   final IconData selectedIcon;
-  final Widget screen;
 }
 
-class _FloatingNavPill extends StatelessWidget {
-  const _FloatingNavPill({
+/// Floating navigation presentation, kept independent of the tab routes so it
+/// can be tested without constructing the database-backed app shell.
+class HomeFloatingNavPill extends StatelessWidget {
+  const HomeFloatingNavPill({
+    super.key,
     required this.currentIndex,
-    required this.tabs,
+    required this.destinations,
     required this.onTabSelected,
     required this.onAskTapped,
     required this.isDark,
   });
 
   final int currentIndex;
-  final List<_TabItem> tabs;
+  final List<HomeNavigationDestination> destinations;
   final ValueChanged<int> onTabSelected;
   final VoidCallback onAskTapped;
   final bool isDark;
@@ -243,26 +256,33 @@ class _FloatingNavPill extends StatelessWidget {
         border: border,
         boxShadow: AppColorTokens.bloomNavPillShadow,
       ),
-      child: Row(
-        children: [
-          // Four tabs left-aligned with equal spacing
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                for (var i = 0; i < tabs.length; i++)
-                  _NavTabItemButton(
-                    item: tabs[i],
-                    isSelected: currentIndex == i,
-                    onTap: () => onTabSelected(i),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Ask Orb on the right
-          _AskOrbButton(onTap: onAskTapped),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tabWidth = (constraints.maxWidth - 56) / destinations.length;
+          final showLabels = tabWidth >= 68;
+          return Row(
+            children: [
+              // Four tabs left-aligned with equal spacing
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    for (var i = 0; i < destinations.length; i++)
+                      _NavTabItemButton(
+                        item: destinations[i],
+                        isSelected: currentIndex == i,
+                        showLabel: showLabels,
+                        onTap: () => onTabSelected(i),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Ask Orb on the right
+              _AskOrbButton(onTap: onAskTapped),
+            ],
+          );
+        },
       ),
     );
   }
@@ -272,11 +292,13 @@ class _NavTabItemButton extends StatelessWidget {
   const _NavTabItemButton({
     required this.item,
     required this.isSelected,
+    required this.showLabel,
     required this.onTap,
   });
 
-  final _TabItem item;
+  final HomeNavigationDestination item;
   final bool isSelected;
+  final bool showLabel;
   final VoidCallback onTap;
 
   @override
@@ -284,30 +306,38 @@ class _NavTabItemButton extends StatelessWidget {
     const activeColor = Colors.white;
     const inactiveColor = AppColorTokens.inkQuaternary;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? item.selectedIcon : item.icon,
-              size: 19,
-              color: isSelected ? activeColor : inactiveColor,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              item.label,
-              style: AppTheme.bloomDisplay(
-                9,
-                isSelected ? FontWeight.w600 : FontWeight.w400,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: item.label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          width: AppSizes.minTouchTarget,
+          height: AppSizes.minTouchTarget,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isSelected ? item.selectedIcon : item.icon,
+                size: 19,
                 color: isSelected ? activeColor : inactiveColor,
               ),
-            ),
-          ],
+              if (showLabel) ...[
+                const SizedBox(height: 2),
+                Text(
+                  item.label,
+                  style: AppTheme.bloomDisplay(
+                    9,
+                    isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

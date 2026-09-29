@@ -6,8 +6,12 @@ import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
 
 void main() {
-  Future<void> pumpScreen(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(402, 874);
+  Future<void> pumpScreen(
+    WidgetTester tester, {
+    Size size = const Size(402, 874),
+    double textScale = 1,
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -20,7 +24,15 @@ void main() {
           dashboardAggregateProvider
               .overrideWith((ref) async => _emptyDashboardAggregate),
         ],
-        child: const MaterialApp(home: InsightsScreen()),
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+            ),
+            child: child!,
+          ),
+          home: const InsightsScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -76,6 +88,27 @@ void main() {
     expect(find.text("Couldn't load spending analytics."), findsNothing);
     expect(find.text('SPEND TREND (LAST 6 MONTHS)'), findsOneWidget);
   });
+
+  for (final size in [const Size(320, 568), const Size(600, 900)]) {
+    for (final scale in [1.5, 2.0]) {
+      testWidgets(
+        'Trends has no overflow at ${size.width.toInt()}px and $scale× text',
+        (tester) async {
+          await pumpScreen(tester, size: size, textScale: scale);
+
+          expect(find.text('Trends'), findsOneWidget);
+          if (scale >= 1.5) {
+            final recurring = find.byTooltip('Recurring transactions');
+            expect(recurring, findsOneWidget);
+            expect(tester.getSize(recurring), const Size(48, 48));
+          } else {
+            expect(find.text('Recurring'), findsOneWidget);
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 }
 
 const _emptyDashboardAggregate = DashboardAggregateSnapshot(

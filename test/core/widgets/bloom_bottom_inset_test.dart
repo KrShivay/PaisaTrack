@@ -285,8 +285,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final finalTransaction = find.text('Final Activity inset fixture');
-    final list = find.byType(ListView);
-    expect(list, findsOneWidget);
+    final list = find.byType(ListView).last;
     await tester.drag(list, const Offset(0, -6000));
     await tester.pumpAndSettle();
 

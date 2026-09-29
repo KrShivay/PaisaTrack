@@ -207,249 +207,266 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final hasMore = page?.hasMore ?? false;
     final filtered = _filterItems(items);
     final grouped = _groupByDay(filtered);
+    final headerActions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Scan SMS inbox',
+          onPressed: () => showBloomModalSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (_) => const SmsLookupSheet(),
+          ),
+          icon: const Icon(Icons.sms_outlined),
+        ),
+        FilledButton.icon(
+          onPressed: _openManualEntry,
+          icon: const Icon(Icons.add),
+          label: const Text('Add'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(48, 48),
+            backgroundColor:
+                isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor:
           isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            // Top Header: title, SMS import, and manual entry actions.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Activity',
-                    style: AppTheme.bloomDisplay(
-                      22,
-                      FontWeight.w700,
-                      letterSpacing: -0.03,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Scan SMS inbox',
-                        onPressed: () => showBloomModalSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (_) => const SmsLookupSheet(),
-                        ),
-                        icon: const Icon(Icons.sms_outlined),
-                      ),
-                      GestureDetector(
-                        onTap: _openManualEntry,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
+        child: LayoutBuilder(
+          builder: (context, constraints) => Column(
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight * 0.62,
+                ),
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  children: [
+                    // Top Header: title, SMS import, and manual entry actions.
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 360 ||
+                            MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                        final title = Text(
+                          'Activity',
+                          style: AppTheme.bloomDisplay(
+                            22,
+                            FontWeight.w700,
+                            letterSpacing: -0.03,
                             color: isDark
-                                ? AppColorTokens.violetPrimary
+                                ? AppColorTokens.bloomDarkTextPrimary
                                 : AppColorTokens.ink,
-                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.add,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Add',
-                                style: AppTheme.bloomDisplay(
-                                  13,
-                                  FontWeight.w600,
-                                  color: Colors.white,
+                        );
+                        return Padding(
+                          padding:
+                              EdgeInsets.fromLTRB(20, compact ? 8 : 16, 20, 12),
+                          child: compact
+                              ? Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    title,
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: headerActions,
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [title, headerActions],
                                 ),
+                        );
+                      },
+                    ),
+
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: SmsPermissionStatusCard(),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Search Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColorTokens.bloomDarkCard
+                              : const Color(0xFFF1EFFB),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (val) => setState(() => _query = val),
+                          style: AppTheme.bloomDisplay(
+                            14,
+                            FontWeight.w400,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextPrimary
+                                : AppColorTokens.ink,
+                          ),
+                          decoration: InputDecoration(
+                            hintText:
+                                MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                                    ? 'Search transactions'
+                                    : 'Search merchant, note, amount...',
+                            hintStyle: AppTheme.bloomDisplay(
+                              14,
+                              FontWeight.w400,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              size: 20,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                            suffixIcon: _query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.close, size: 18),
+                                    tooltip: 'Clear search',
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _query = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Filter Chips Row
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          for (final choice in ActivityFilterChoice.values) ...[
+                            _FilterChip(
+                              label: _filterLabel(choice),
+                              isSelected: _activeFilter == choice,
+                              onTap: () =>
+                                  setState(() => _activeFilter = choice),
+                              isDark: isDark,
+                            ),
+                            if (choice != ActivityFilterChoice.values.last)
+                              const SizedBox(width: 8),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+
+              // Transaction List grouped by day
+              Expanded(
+                child: pageAsync.isLoading && filtered.isEmpty
+                    ? const Center(
+                        child: BloomSkeleton(width: 280, height: 160),
+                      )
+                    : pageAsync.hasError && !pageAsync.hasValue
+                        ? ErrorStateView(
+                            message: 'Couldn’t load transactions. Try again.',
+                            onRetry: () =>
+                                ref.invalidate(activityTransactionPageProvider),
+                          )
+                        : Column(
+                            children: [
+                              if (pageAsync.hasError)
+                                _ActivityLoadError(
+                                  onRetry: () => ref.invalidate(
+                                    activityTransactionPageProvider,
+                                  ),
+                                ),
+                              Expanded(
+                                child: filtered.isEmpty
+                                    ? Column(
+                                        children: [
+                                          Expanded(
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                bottom: BloomBottomInset
+                                                    .contentPadding(context),
+                                              ),
+                                              child: _EmptyState(
+                                                isDark: isDark,
+                                                query: _query,
+                                                onClearFilters: () {
+                                                  setState(() {
+                                                    _query = '';
+                                                    _searchController.clear();
+                                                    _activeFilter =
+                                                        ActivityFilterChoice
+                                                            .all;
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          if (hasMore)
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                bottom: BloomBottomInset
+                                                    .contentPadding(context),
+                                              ),
+                                              child: _loadMoreButton(),
+                                            ),
+                                        ],
+                                      )
+                                    : ListView.builder(
+                                        padding: EdgeInsets.fromLTRB(
+                                          20,
+                                          0,
+                                          20,
+                                          BloomBottomInset.contentPadding(
+                                            context,
+                                          ),
+                                        ),
+                                        itemCount:
+                                            grouped.length + (hasMore ? 1 : 0),
+                                        itemBuilder: (context, index) {
+                                          if (index == grouped.length) {
+                                            return _loadMoreButton();
+                                          }
+                                          final group = grouped[index];
+                                          return _DayGroupSection(
+                                            header: group.header,
+                                            dayTotals: group.totals,
+                                            items: group.items,
+                                            isDark: isDark,
+                                            onTap: _openDetail,
+                                            onSwipeRight: _confirmItem,
+                                            onSwipeLeft: _recategorizeItem,
+                                          );
+                                        },
+                                      ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
-            ),
-
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: SmsPermissionStatusCard(),
-            ),
-            const SizedBox(height: 12),
-
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomDarkCard
-                      : const Color(0xFFF1EFFB),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _query = val),
-                  style: AppTheme.bloomDisplay(
-                    14,
-                    FontWeight.w400,
-                    color: isDark
-                        ? AppColorTokens.bloomDarkTextPrimary
-                        : AppColorTokens.ink,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Search merchant, note, amount...',
-                    hintStyle: AppTheme.bloomDisplay(
-                      14,
-                      FontWeight.w400,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextTertiary
-                          : AppColorTokens.inkTertiary,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextTertiary
-                          : AppColorTokens.inkTertiary,
-                    ),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.close, size: 18),
-                            tooltip: 'Clear search',
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _query = '');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Filter Chips Row
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  for (final choice in ActivityFilterChoice.values) ...[
-                    _FilterChip(
-                      label: _filterLabel(choice),
-                      isSelected: _activeFilter == choice,
-                      onTap: () => setState(() => _activeFilter = choice),
-                      isDark: isDark,
-                    ),
-                    if (choice != ActivityFilterChoice.values.last)
-                      const SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Transaction List grouped by day
-            Expanded(
-              child: pageAsync.isLoading && filtered.isEmpty
-                  ? const Center(child: BloomSkeleton(width: 280, height: 160))
-                  : pageAsync.hasError && !pageAsync.hasValue
-                      ? ErrorStateView(
-                          message: 'Couldn’t load transactions. Try again.',
-                          onRetry: () =>
-                              ref.invalidate(activityTransactionPageProvider),
-                        )
-                      : Column(
-                          children: [
-                            if (pageAsync.hasError)
-                              _ActivityLoadError(
-                                onRetry: () => ref.invalidate(
-                                  activityTransactionPageProvider,
-                                ),
-                              ),
-                            Expanded(
-                              child: filtered.isEmpty
-                                  ? Column(
-                                      children: [
-                                        Expanded(
-                                          child: Padding(
-                                            padding: EdgeInsets.only(
-                                              bottom: BloomBottomInset
-                                                  .contentPadding(context),
-                                            ),
-                                            child: _EmptyState(
-                                              isDark: isDark,
-                                              query: _query,
-                                              onClearFilters: () {
-                                                setState(() {
-                                                  _query = '';
-                                                  _searchController.clear();
-                                                  _activeFilter =
-                                                      ActivityFilterChoice.all;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                        if (hasMore)
-                                          Padding(
-                                            padding: EdgeInsets.only(
-                                              bottom: BloomBottomInset
-                                                  .contentPadding(context),
-                                            ),
-                                            child: _loadMoreButton(),
-                                          ),
-                                      ],
-                                    )
-                                  : ListView.builder(
-                                      padding: EdgeInsets.fromLTRB(
-                                        20,
-                                        0,
-                                        20,
-                                        BloomBottomInset.contentPadding(
-                                          context,
-                                        ),
-                                      ),
-                                      itemCount:
-                                          grouped.length + (hasMore ? 1 : 0),
-                                      itemBuilder: (context, index) {
-                                        if (index == grouped.length) {
-                                          return _loadMoreButton();
-                                        }
-                                        final group = grouped[index];
-                                        return _DayGroupSection(
-                                          header: group.header,
-                                          dayTotals: group.totals,
-                                          items: group.items,
-                                          isDark: isDark,
-                                          onTap: _openDetail,
-                                          onSwipeRight: _confirmItem,
-                                          onSwipeLeft: _recategorizeItem,
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ],
-                        ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -734,6 +751,45 @@ class _DismissibleTransactionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          item.displayName,
+          style: AppTheme.bloomDisplay(
+            14,
+            FontWeight.w500,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextPrimary
+                : AppColorTokens.ink,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          _formatMeta(item),
+          style: AppTheme.bloomDisplay(
+            11,
+            FontWeight.w400,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextTertiary
+                : AppColorTokens.inkTertiary,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+    final amount = BloomAmount(
+      amount: item.direction == TransactionDirection.debit
+          ? -item.amount
+          : item.amount,
+      currencyCode: item.currencyCode,
+      currencySymbol: item.currencySymbol,
+      size: 15,
+      weight: FontWeight.w500,
+    );
 
     return Dismissible(
       key: ValueKey(item.id),
@@ -771,58 +827,41 @@ class _DismissibleTransactionRow extends StatelessWidget {
             color: bg,
             borderRadius: BorderRadius.circular(AppRadius.bloomRow),
           ),
-          child: Row(
-            children: [
-              BloomCategoryTile(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 340 ||
+                  MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+              final category = BloomCategoryTile(
                 categoryId: item.categoryId,
                 iconName: item.categoryIcon,
                 size: 36,
                 borderRadius: 13,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              );
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      item.displayName,
-                      style: AppTheme.bloomDisplay(
-                        14,
-                        FontWeight.w500,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextPrimary
-                            : AppColorTokens.ink,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        category,
+                        const SizedBox(width: 12),
+                        Expanded(child: details),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatMeta(item),
-                      style: AppTheme.bloomDisplay(
-                        11,
-                        FontWeight.w400,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextTertiary
-                            : AppColorTokens.inkTertiary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Align(alignment: Alignment.centerRight, child: amount),
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              BloomAmount(
-                amount: item.direction == TransactionDirection.debit
-                    ? -item.amount
-                    : item.amount,
-                currencyCode: item.currencyCode,
-                currencySymbol: item.currencySymbol,
-                size: 15,
-                weight: FontWeight.w500,
-              ),
-            ],
+                );
+              }
+              return Row(
+                children: [
+                  category,
+                  const SizedBox(width: 12),
+                  Expanded(child: details),
+                  const SizedBox(width: 8),
+                  amount,
+                ],
+              );
+            },
           ),
         ),
       ),

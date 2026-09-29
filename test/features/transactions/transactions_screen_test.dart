@@ -64,8 +64,10 @@ void main() {
     List<TransactionListItem> transactions, {
     bool hasMore = false,
     ActivityTransactionPage? nextPage,
+    Size size = const Size(402, 874),
+    double textScale = 1,
   }) async {
-    tester.view.physicalSize = const Size(402, 874);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -85,7 +87,15 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: TransactionsScreen()),
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+            ),
+            child: child!,
+          ),
+          home: const TransactionsScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -96,6 +106,20 @@ void main() {
     await pumpScreen(tester, const []);
 
     expect(find.text('No transactions found'), findsOneWidget);
+  });
+
+  testWidgets('Activity header has no overflow at 320×568 and 2× text',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      [_screenItem('responsive')],
+      size: const Size(320, 568),
+      textScale: 2,
+    );
+
+    expect(find.text('Activity'), findsOneWidget);
+    expect(find.text('Add'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('shows initial load error and retries into loaded transactions',

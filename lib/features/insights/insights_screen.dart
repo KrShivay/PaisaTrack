@@ -55,6 +55,8 @@ class InsightsScreen extends ConsumerWidget {
     final merchants = ref.watch(topMerchantsProvider);
     final activeInsightsAsync = ref.watch(activeInsightsProvider);
     final insights = activeInsightsAsync.valueOrNull ?? const [];
+    final compactHeader = MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) >= 1.5;
 
     return Scaffold(
       backgroundColor:
@@ -121,29 +123,38 @@ class InsightsScreen extends ConsumerWidget {
                           : AppColorTokens.bloomChip,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_month_rounded,
-                          size: 14,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextSecondary
-                              : AppColorTokens.inkSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          period.label,
-                          style: AppTheme.bloomDisplay(
-                            11,
-                            FontWeight.w600,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextSecondary
-                                : AppColorTokens.inkSecondary,
+                    child: compactHeader
+                        ? Tooltip(
+                            message: 'Period: ${period.label}',
+                            child: const SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Icon(Icons.calendar_month_rounded),
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                size: 14,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextSecondary
+                                    : AppColorTokens.inkSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                period.label,
+                                style: AppTheme.bloomDisplay(
+                                  11,
+                                  FontWeight.w600,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -166,29 +177,38 @@ class InsightsScreen extends ConsumerWidget {
                           : AppColorTokens.bloomChip,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.autorenew_rounded,
-                          size: 14,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextSecondary
-                              : AppColorTokens.inkSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Recurring',
-                          style: AppTheme.bloomDisplay(
-                            11,
-                            FontWeight.w600,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextSecondary
-                                : AppColorTokens.inkSecondary,
+                    child: compactHeader
+                        ? const Tooltip(
+                            message: 'Recurring transactions',
+                            child: SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Icon(Icons.autorenew_rounded),
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.autorenew_rounded,
+                                size: 14,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextSecondary
+                                    : AppColorTokens.inkSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Recurring',
+                                style: AppTheme.bloomDisplay(
+                                  11,
+                                  FontWeight.w600,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ],
@@ -547,19 +567,34 @@ class _SixMonthBarChartCard extends StatelessWidget {
           const SizedBox(height: 20),
           SizedBox(
             height: 140,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (int i = 0; i < trend.length; i++) ...[
-                  _BarColumn(
-                    bucket: trend[i],
-                    isCurrent: i == trend.length - 1,
-                    maxSpend: maxSpend,
-                    isDark: isDark,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final largeText =
+                    MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                final chartWidth = largeText && constraints.maxWidth < 540
+                    ? 540.0
+                    : constraints.maxWidth;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: chartWidth,
+                    height: 140,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (int i = 0; i < trend.length; i++)
+                          _BarColumn(
+                            bucket: trend[i],
+                            isCurrent: i == trend.length - 1,
+                            maxSpend: maxSpend,
+                            isDark: isDark,
+                          ),
+                      ],
+                    ),
                   ),
-                ],
-              ],
+                );
+              },
             ),
           ),
         ],

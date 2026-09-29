@@ -10,6 +10,22 @@ later hardening.
 
 ## In Review
 
+- [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
+  - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
+    Activity header, and Trends header. Add narrow/wide viewport checks at
+    1.5×/2× text for navigation, Activity/list and transaction entry/detail
+    flows, and Trends. Preserve visible navigation, accessible labels, and
+    minimum 48dp tap targets.
+  - Scope: flexible/wrapping/adaptive layout fixes only; no device mutation.
+  - Verification: responsive route suite 42/42; focused changed-screen/inset
+    suite 56/56; full Flutter suite 885/885; `flutter analyze`, changed-file
+    formatting, and `git diff --check` clean. GitNexus detect-changes: 14 files,
+    51 symbols, 3 affected flows, MEDIUM risk. HomeShell route fixture cleanup
+    hangs on Drift streams, so navigation pill geometry, semantics, and tap
+    behavior are covered directly; Dashboard is covered with a direct screen
+    fixture. Physical-device acceptance remains open.
+  - Independent review pending.
+
 - [ ] T-167a [P0] Audit primary screens for loading, error, empty, and retry
   states; replace misleading empty states with actionable errors.
   - Acceptance: Activity initial-load and refresh errors render actionable
@@ -320,7 +336,6 @@ metrics are in `docs/tasks/T-172.md`.
 #### UI quality, accessibility, and refactoring
 
 - [ ] T-167b [P0] Add semantic labels, selected state, and 48dp minimum targets to custom Activity, Dashboard, Settings, and Review controls.
-- [ ] T-167c [P1] Add 1.5×/2× text and narrow/wide viewport widget tests for primary transaction flows. Follow up on confirmed 320×568/2× horizontal overflows in HomeShell nav (`home_shell.dart:250`), Activity header (`transactions_screen.dart:220`), and Trends header (`insights_screen.dart:73`); preserve 48dp targets and accessibility labels.
 - [ ] T-167d [P1] Replace bespoke gesture-only controls with semantic Material controls or equivalent explicit semantics.
 - [ ] T-167e [P0] Audit every root-tab screen, nested sheet, and detail route for FAB/action-button overlap with the bottom navigator, gesture area, keyboard, or system navigation inset; record viewport screenshots and exact affected widgets.
 - [ ] T-167f [P0] Introduce one shared safe-area/FAB placement contract that reserves bottom-navigation height, system gesture insets, keyboard insets, and minimum touch clearance; migrate Dashboard, Activity, Review, Insights, Settings, and all nested action sheets without per-screen magic offsets.

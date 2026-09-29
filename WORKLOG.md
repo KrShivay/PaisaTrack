@@ -1,20 +1,20 @@
 # Current Handoff
 
-## 2026-09-29 — T-167a primary-screen error and retry states
+## 2026-09-29 — T-167c responsive large-text layouts
 
-- Activity now distinguishes first-load errors from true empty state, preserves
-  already loaded rows on later stream errors, including page-two failures before
-  their first row, and offers Retry without leaking a future error from the
-  load-more callback. Explicit retry resets its cursor snapshot before
-  subscribing to the first page again. Trends aggregate failures now have a
-  Retry action instead of the nonfunctional “Pull to refresh” instruction.
-- Added actual-screen widget coverage for Activity empty vs initial error and
-  retry recovery, loaded-data preservation and retry recovery, and Trends
-  aggregate failure/recovery. No database schema or device changes.
-- Validation: focused Activity/Trends/controller tests 13/13; full Flutter
-  suite 870/870; `flutter analyze --no-pub`, formatting, and `git diff --check`
-  clean. GitNexus detect-changes: 4 files, 5 symbols, 0 processes, LOW risk.
-  Independent review pending.
+- Fixed the confirmed narrow 2× overflow in the floating navigation pill,
+  Activity header/list controls, and Trends header/chart. Dashboard controls,
+  Manual Entry category selection, and transaction detail layouts adapt to
+  narrow and large-text viewports while preserving full labels and 48dp targets.
+- Added responsive geometry, semantics, and interaction checks for 320×568 and
+  600×900 at 1.5×/2× across the navigation pill, Dashboard, Activity, Trends,
+  Manual Entry, and transaction detail. The full HomeShell fixture hangs during
+  Drift stream teardown, so the nav presentation is tested directly; physical
+  device acceptance remains open.
+- Validation: responsive route suite 42/42; focused changed-screen/inset suite
+  56/56; full Flutter suite 885/885; `flutter analyze`, changed-file format
+  check, and `git diff --check` clean. GitNexus detect-changes: 14 files, 51
+  symbols, 3 affected flows, MEDIUM risk. Independent review pending.
 
 ## 2026-09-29 — T-176 global bottom-inset acceptance
 
