@@ -326,6 +326,139 @@ void main() {
     expect(find.byType(BloomAmount), findsWidgets);
   });
 
+  testWidgets('keeps matching month and day separate across years',
+      (tester) async {
+    final now = DateTime.now();
+    final nowDate = DateTime.utc(now.year, now.month, now.day);
+    final currentDate = [
+      DateTime(now.year, 1, 15, 12),
+      DateTime(now.year, 7, 15, 12),
+    ].firstWhere((candidate) {
+      final candidateDate =
+          DateTime.utc(candidate.year, candidate.month, candidate.day);
+      return nowDate.difference(candidateDate).inDays.abs() > 2;
+    });
+    final priorYearDate = DateTime(
+      currentDate.year - 1,
+      currentDate.month,
+      currentDate.day,
+      12,
+    );
+    final transactions = [
+      item(
+        id: 'current-inr',
+        ts: currentDate,
+        amount: 100,
+        direction: TransactionDirection.debit,
+        displayName: 'Current year INR',
+      ),
+      item(
+        id: 'current-usd',
+        ts: currentDate,
+        amount: 10,
+        direction: TransactionDirection.debit,
+        displayName: 'Current year USD',
+        currencyCode: 'USD',
+        currencySymbol: r'$',
+      ),
+      item(
+        id: 'prior-inr',
+        ts: priorYearDate,
+        amount: 200,
+        direction: TransactionDirection.debit,
+        displayName: 'Prior year INR',
+      ),
+      item(
+        id: 'prior-usd',
+        ts: priorYearDate,
+        amount: 20,
+        direction: TransactionDirection.debit,
+        displayName: 'Prior year USD',
+        currencyCode: 'USD',
+        currencySymbol: r'$',
+      ),
+    ];
+    final epochs = transactions.map((transaction) => transaction.ts).toList();
+
+    await pumpScreen(tester, transactions);
+
+    final month = const [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ][currentDate.month - 1];
+    expect(find.text('$month ${currentDate.day}'), findsOneWidget);
+    expect(
+      find.text('$month ${priorYearDate.day} ${priorYearDate.year}'),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('$month ${currentDate.day}')).dy,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.text('$month ${priorYearDate.day} ${priorYearDate.year}'),
+            )
+            .dy,
+      ),
+    );
+    expect(
+      tester.getTopLeft(find.text('Current year INR')).dy,
+      lessThan(tester.getTopLeft(find.text('Prior year INR')).dy),
+    );
+    expect(find.text(r'-₹100.00 · -$10.00 USD'), findsOneWidget);
+    expect(find.text(r'-₹200.00 · -$20.00 USD'), findsOneWidget);
+    expect(
+      transactions.map((transaction) => transaction.ts).toList(),
+      epochs,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('groups transaction instants by local date at midnight',
+      (tester) async {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day);
+    final beforeMidnight = midnight.subtract(const Duration(milliseconds: 1));
+    final afterMidnight = midnight.add(const Duration(milliseconds: 1));
+    final epochs = [
+      beforeMidnight.millisecondsSinceEpoch,
+      afterMidnight.millisecondsSinceEpoch,
+    ];
+
+    await pumpScreen(tester, [
+      item(
+        id: 'after-midnight',
+        ts: afterMidnight.toUtc(),
+        amount: 1,
+        direction: TransactionDirection.debit,
+        displayName: 'After midnight',
+      ),
+      item(
+        id: 'before-midnight',
+        ts: beforeMidnight.toUtc(),
+        amount: 2,
+        direction: TransactionDirection.debit,
+        displayName: 'Before midnight',
+      ),
+    ]);
+
+    expect(find.text('TODAY'), findsOneWidget);
+    expect(find.text('YESTERDAY'), findsOneWidget);
+    expect(afterMidnight.millisecondsSinceEpoch, epochs[1]);
+    expect(beforeMidnight.millisecondsSinceEpoch, epochs[0]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('keeps SMS import available after transactions exist',
       (tester) async {
     await pumpScreen(tester, [

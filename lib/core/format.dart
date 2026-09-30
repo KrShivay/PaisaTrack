@@ -114,9 +114,7 @@ String formatTxnTime(DateTime ts, {DateTime? now}) {
 String formatDateGroup(DateTime ts, {DateTime? now}) {
   final local = ts.toLocal();
   final ref = (now ?? DateTime.now()).toLocal();
-  final thatDay = DateTime(local.year, local.month, local.day);
-  final today = DateTime(ref.year, ref.month, ref.day);
-  final diff = today.difference(thatDay).inDays;
+  final diff = _localCalendarDayDifference(local, ref);
   if (diff == 0) return 'Today';
   if (diff == 1) return 'Yesterday';
 
@@ -136,4 +134,25 @@ String formatDateGroup(DateTime ts, {DateTime? now}) {
   ];
   final base = '${local.day} ${months[local.month - 1]}';
   return local.year == ref.year ? base : '$base ${local.year}';
+}
+
+/// Formats a local calendar day in the compact style used by Activity.
+///
+/// Calendar comparisons use UTC date components, not elapsed local-midnight
+/// durations, so yesterday remains yesterday across daylight-saving changes.
+String formatActivityDateGroup(DateTime ts, {DateTime? now}) {
+  final local = ts.toLocal();
+  final ref = (now ?? DateTime.now()).toLocal();
+  final diff = _localCalendarDayDifference(local, ref);
+  if (diff == 0) return 'TODAY';
+  if (diff == 1) return 'YESTERDAY';
+
+  final base = '${_monthAbbrev[local.month - 1].toUpperCase()} ${local.day}';
+  return local.year == ref.year ? base : '$base ${local.year}';
+}
+
+int _localCalendarDayDifference(DateTime localFrom, DateTime localTo) {
+  final fromDate = DateTime.utc(localFrom.year, localFrom.month, localFrom.day);
+  final toDate = DateTime.utc(localTo.year, localTo.month, localTo.day);
+  return toDate.difference(fromDate).inDays;
 }

@@ -491,33 +491,26 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   List<_DayGroup> _groupByDay(List<TransactionListItem> items) {
-    final Map<String, List<TransactionListItem>> map = {};
-    final Map<String, ({double amount, String? code, String? symbol})> totals =
-        {};
-
+    final groups = <String, _MutableDayGroup>{};
     final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month}-${now.day}';
-    final yesterday = now.subtract(const Duration(days: 1));
-    final yesterdayStr =
-        '${yesterday.year}-${yesterday.month}-${yesterday.day}';
 
     for (final item in items) {
       final date = item.ts.toLocal();
-      final dateKey = '${date.year}-${date.month}-${date.day}';
-      String header;
-      if (dateKey == todayStr) {
-        header = 'TODAY';
-      } else if (dateKey == yesterdayStr) {
-        header = 'YESTERDAY';
-      } else {
-        header = '${_shortMonth(date.month).toUpperCase()} ${date.day}';
-      }
-
-      map.putIfAbsent(header, () => []).add(item);
+      // This padded key identifies a local civil date only; the transaction's
+      // timestamp remains the original instant used for ordering and storage.
+      final dateKey = '${date.year.toString().padLeft(4, '0')}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+      final group = groups.putIfAbsent(
+        dateKey,
+        () => _MutableDayGroup(
+          header: formatActivityDateGroup(date, now: now),
+        ),
+      );
+      group.items.add(item);
       final bucket = '${item.currencyCode ?? ""}|${item.currencySymbol ?? ""}';
-      final totalKey = '$header|$bucket';
-      final prior = totals[totalKey];
-      totals[totalKey] = (
+      final prior = group.totals[bucket];
+      group.totals[bucket] = (
         amount: (prior?.amount ?? 0) +
             (item.direction == TransactionDirection.debit
                 ? -item.amount
@@ -528,32 +521,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
 
     return [
-      for (final entry in map.entries)
+      for (final group in groups.values)
         _DayGroup(
-          header: entry.key,
-          totals: [
-            for (final total in totals.entries)
-              if (total.key.startsWith('${entry.key}|')) total.value,
-          ],
-          items: entry.value,
+          header: group.header,
+          totals: group.totals.values.toList(growable: false),
+          items: group.items,
         ),
     ];
   }
-
-  String _shortMonth(int month) => const [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ][month - 1];
 }
 
 class _ActivityLoadError extends StatelessWidget {
@@ -599,6 +574,14 @@ class _ActivityLoadError extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MutableDayGroup {
+  _MutableDayGroup({required this.header});
+
+  final String header;
+  final items = <TransactionListItem>[];
+  final totals = <String, ({double amount, String? code, String? symbol})>{};
 }
 
 class _DayGroup {

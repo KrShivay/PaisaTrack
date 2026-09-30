@@ -10,6 +10,18 @@ later hardening.
 
 ## Ready
 
+- [ ] T-164e [P0] Complete transaction timestamp-display parity across Activity
+      grouping, detail, export, search/date filters, imports, and SMS capture.
+  - Completed bounded Activity slice: group keys and currency totals use the
+    full local calendar date, prior-year headings include the year, and
+    Today/Yesterday labels use DST-safe calendar-day arithmetic. Row order and
+    stored instants are preserved; independent review approved this slice.
+  - Full acceptance remains open across Activity grouping, detail, export,
+    search/date filters, imports, and SMS capture. Verify date semantics
+    without changing stored instants or treating date-only SMS values as UTC
+    instants. The Activity/Dashboard row-clock slice is also complete; see
+    WORKLOG.md for verification evidence.
+
 - [ ] T-194 [P1] Measure installed storage and cold-start for the compressed
       ARM64 APK-size trial.
   - The signed v2011 candidate is on branch `codex/apk-size-trial` at commit
@@ -182,6 +194,9 @@ later hardening.
     modal-route acceptance on a physical device and remaining compact/
     landscape combinations. No emulator, private SMS/DB data, phone mutation,
     or APK change.
+  - Physical 0.1.3+2011 QA surfaced a possible default-portrait Ask composer/IME
+    clearance issue. UIAutomator bounds corroboration and repeat physical
+    acceptance remain pending; synthetic resize tests do not close this gate.
   - Focused verification: global bottom-inset route tests 11/11, including
     Activity/detail/correction at three viewports; Ask route plus
     AssistantScreen tests 9/9; production HomeShell→Ask route 3/3 and existing
@@ -461,7 +476,6 @@ metrics are in `docs/tasks/T-172.md`.
 - [ ] T-164b [P1] Move Activity filtering/search to SQL with indexed fields and paged results; preserve every current filter semantic.
 - [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.
 - [ ] T-164d [P2] Add “show excluded” Activity filter and detail explanation without letting excluded rows alter spending/budget totals.
-- [ ] T-164e [P0] Complete transaction timestamp-display parity across Activity grouping, detail, export, search/date filters, imports, and SMS capture. The Activity/Dashboard row-clock milestone now uses one localizing presentation formatter; its tests cover an India midnight instant, a changed offset, row agreement, and stored-epoch preservation. Remaining acceptance: verify the wider display/date semantics across these surfaces without changing the stored instant or treating date-only SMS values as UTC instants.
 - [ ] T-165a [P1] Profile 10k/50k transaction Activity rendering and query latency on release hardware; record thresholds and baseline evidence.
 - [ ] T-165b [P1] Replace O(n²) owned-transfer reconciliation with an indexed SQL candidate query and adversarial same-amount/date tests.
 - [ ] T-165c [P2] Plan and ADR an integer-paise migration, including lossless conversion, compatibility, rollback, and migration tests.

@@ -94,5 +94,60 @@ void main() {
         '30 December 2025',
       );
     });
+
+    test('uses calendar dates for yesterday across DST and year boundaries',
+        () {
+      final springNow = DateTime(2026, 3, 9, 0, 30);
+      final springYesterday = DateTime(2026, 3, 8, 0, 30);
+      if (springNow.timeZoneOffset != springYesterday.timeZoneOffset) {
+        expect(
+          springNow.difference(springYesterday),
+          const Duration(hours: 23),
+        );
+      }
+      expect(formatDateGroup(springYesterday, now: springNow), 'Yesterday');
+      expect(
+        formatActivityDateGroup(springYesterday, now: springNow),
+        'YESTERDAY',
+      );
+
+      final fallNow = DateTime(2026, 11, 2, 0, 30);
+      final fallYesterday = DateTime(2026, 11, 1, 0, 30);
+      if (fallNow.timeZoneOffset != fallYesterday.timeZoneOffset) {
+        expect(
+          fallNow.difference(fallYesterday),
+          const Duration(hours: 25),
+        );
+      }
+      expect(formatDateGroup(fallYesterday, now: fallNow), 'Yesterday');
+      expect(
+        formatActivityDateGroup(fallYesterday, now: fallNow),
+        'YESTERDAY',
+      );
+
+      final newYear = DateTime(2026, 1, 1, 0, 30);
+      final yearBoundaryYesterday = DateTime(2025, 12, 31, 0, 30);
+      expect(
+        formatDateGroup(yearBoundaryYesterday, now: newYear),
+        'Yesterday',
+      );
+      expect(
+        formatActivityDateGroup(yearBoundaryYesterday, now: newYear),
+        'YESTERDAY',
+      );
+    });
+
+    test('preserves Activity headers and adds a year for prior-year dates', () {
+      final reference = DateTime(2026, 7, 11, 15, 30);
+
+      expect(
+        formatActivityDateGroup(DateTime(2026, 7, 4, 8), now: reference),
+        'JUL 4',
+      );
+      expect(
+        formatActivityDateGroup(DateTime(2025, 7, 4, 8), now: reference),
+        'JUL 4 2025',
+      );
+    });
   });
 }

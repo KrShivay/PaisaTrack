@@ -1,5 +1,20 @@
 # Current Handoff
 
+## 2026-09-30 — T-164e Activity calendar grouping
+
+- Activity grouping and currency totals now use full local calendar-date
+  identity; prior-year headings include the year, DST-safe Today/Yesterday
+  labels use civil-day arithmetic, and item order/stored instants are preserved.
+  Independent code review approved the bounded slice; broader T-164e acceptance
+  remains open in Ready.
+- Verification: full Flutter suite 951/951; focused formatter/Activity suites
+  28/28 in both `TZ=Asia/Kolkata` and `TZ=America/New_York`; analyzer,
+  formatting, and `git diff --check` clean. GitNexus all-scope: 5 files, 7
+  symbols, 0 processes, LOW risk.
+- T-176 remains open for physical bottom-inset/keyboard QA. The 0.1.3+2011
+  default-portrait Ask composer may fall below the physical IME; UIAutomator
+  bounds corroboration and repeat acceptance are pending.
+
 ## 2026-09-30 — T-164e Activity/Dashboard row clocks
 
 - Added `formatTxnClockTime` in `lib/core/format.dart`; Activity and Dashboard
