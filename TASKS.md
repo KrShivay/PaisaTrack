@@ -8,6 +8,8 @@ later hardening.
 
 ## In Progress
 
+## Ready
+
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
   - Bounded milestone: add a local chronological replay/report contract and
     synthetic fixtures that exercise live, history, and resume provider wiring;
@@ -32,7 +34,8 @@ later hardening.
     compatibility. Independent review passed without blocker. The resume
     fixture calls the catch-up runner directly; app-resume lifecycle and
     known-SMS-boundary behavior remain unverified alongside physical
-    live/resume capture.
+    live/resume capture. The real-data holdout and physical capture evidence
+    remain pending because the supported release device is currently offline.
   - Verification: threshold tests 17/17; repository/detail/template-ledger
     tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
     and diff check clean. Same-count correction, v1/v2 state invalidation,
@@ -53,8 +56,6 @@ later hardening.
     changes transaction status/category and intentionally does not count as
     category-threshold evidence. Broad provider/provenance/baseline audit is
     still open.
-
-## Ready
 
 - [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
@@ -435,7 +436,6 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Transaction integrity, data model, and performance
 
-- [ ] T-164a [P0] Add repository tests for keyset ordering under identical timestamps, deleted rows, duplicate-suppressed rows, and newly inserted rows between pages.
 - [ ] T-164b [P1] Move Activity filtering/search to SQL with indexed fields and paged results; preserve every current filter semantic.
 - [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.
 - [ ] T-164d [P2] Add “show excluded” Activity filter and detail explanation without letting excluded rows alter spending/budget totals.

@@ -438,63 +438,88 @@ void main() {
   });
 
   test(
-      'Activity cursor pages cover mixed timestamps once despite intervening inserts',
+      'Activity keyset pages preserve equal-timestamp order around excluded rows and inserts',
       () async {
-    final base = DateTime.utc(2026, 1, 1);
-    final visibleIds = <String>{};
-    for (var index = 0; index < 1000; index++) {
-      final id = 'keyset_${index.toString().padLeft(4, '0')}';
-      visibleIds.add(id);
-      await _insertTxn(
-        database,
-        id: id,
-        ts: base.add(
-          Duration(days: index % 31, minutes: index % 7),
-        ),
-      );
+    final timestamp = DateTime.utc(2026, 1, 1, 12, 30);
+    const visibleCount = 47;
+    const pageSize = 7;
+    final visibleIds = List.generate(
+      visibleCount,
+      (index) => 'keyset_${index.toString().padLeft(3, '0')}',
+    );
+    final expectedIds = [...visibleIds]
+      ..sort((left, right) => right.compareTo(left));
+
+    for (final id in visibleIds) {
+      await _insertTxn(database, id: id, ts: timestamp);
     }
-    for (var index = 0; index < 25; index++) {
+    for (final id in visibleIds) {
       await _insertTxn(
         database,
-        id: 'keyset_deleted_$index',
-        ts: base.add(const Duration(days: 60)),
+        id: '${id}_deleted',
+        ts: timestamp,
         isDeleted: true,
       );
       await _insertTxn(
         database,
-        id: 'keyset_suppressed_$index',
-        ts: base.add(const Duration(days: 61)),
-        duplicateOfTxnId: 'keyset_${index.toString().padLeft(4, '0')}',
+        id: '${id}_suppressed',
+        ts: timestamp,
+        duplicateOfTxnId: id,
       );
     }
 
     final repository = TransactionRepository(database);
-    var page = await repository.watchTransactionPage(limit: 100).first;
-    final seenIds = <String>{...page.rows.map((row) => row.id)};
+    var page = await repository.watchTransactionPage(limit: pageSize).first;
+    final actualIds = <String>[];
+    var pageIndex = 0;
 
-    // A new newest row must not appear in pages continuing from the old
-    // boundary; keyset predicates make the result independent of this insert.
-    await _insertTxn(
-      database,
-      id: 'keyset_inserted_between_pages',
-      ts: base.add(const Duration(days: 90)),
-    );
-
-    while (page.hasMore) {
-      final cursor = page.nextCursor;
-      expect(cursor != null, isTrue);
-      page = await repository
-          .watchTransactionPage(limit: 100, cursor: cursor)
-          .first;
+    while (true) {
+      final expectedPage =
+          expectedIds.skip(pageIndex * pageSize).take(pageSize);
       final ids = page.rows.map((row) => row.id).toList();
-      expect(ids.where(seenIds.contains), isEmpty);
-      expect(ids, isNot(contains('keyset_inserted_between_pages')));
-      seenIds.addAll(ids);
+      expect(ids, equals(expectedPage));
+      expect(page.rows.every((row) => row.ts == timestamp), isTrue);
+      actualIds.addAll(ids);
+
+      final hasExpectedNextPage =
+          (pageIndex + 1) * pageSize < expectedIds.length;
+      expect(page.hasMore, hasExpectedNextPage);
+      if (!hasExpectedNextPage) {
+        expect(page.nextCursor == null, isTrue);
+        break;
+      }
+
+      final lastId = expectedIds[(pageIndex + 1) * pageSize - 1];
+      expect(
+        page.nextCursor,
+        ActivityTransactionCursor(
+          ts: timestamp.millisecondsSinceEpoch,
+          id: lastId,
+        ),
+      );
+
+      // This row sorts ahead of the established boundary. Continuing by the
+      // last (timestamp, id) pair must not shift or repeat any later page.
+      if (pageIndex == 0) {
+        await _insertTxn(
+          database,
+          id: 'keyset_999_inserted_between_pages',
+          ts: timestamp,
+        );
+      }
+
+      page = await repository
+          .watchTransactionPage(limit: pageSize, cursor: page.nextCursor)
+          .first;
+      expect(
+        page.rows.map((row) => row.id),
+        isNot(contains('keyset_999_inserted_between_pages')),
+      );
+      pageIndex++;
     }
 
-    expect(seenIds, equals(visibleIds));
-    expect(seenIds, hasLength(1000));
-    expect(page.nextCursor == null, isTrue);
+    expect(actualIds, equals(expectedIds));
+    expect(actualIds.toSet(), hasLength(visibleCount));
   });
 
   group('correctWithRule', () {
