@@ -112,14 +112,45 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   }) {
     final item = activeItems[index];
     final remainingCount = activeItems.length;
+    final compactLandscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    final card = GestureDetector(
+      onHorizontalDragUpdate: (details) {
+        setState(() => _dragDx += details.delta.dx);
+      },
+      onHorizontalDragEnd: (details) {
+        if (_dragDx > 100) {
+          _goBack();
+        } else if (_dragDx < -100) {
+          _recategorizeItem(item);
+        }
+        setState(() => _dragDx = 0.0);
+      },
+      child: Transform.translate(
+        offset: Offset(_dragDx, 0),
+        child: Transform.rotate(
+          angle: (_dragDx / 300) * (math.pi / 12),
+          child: _SortCard(
+            item: item,
+            dragDx: _dragDx,
+            isDark: isDark,
+            compactLandscape: compactLandscape,
+            onTap: () => _openDetailSheet(context, item),
+          ),
+        ),
+      ),
+    );
 
     return Scaffold(
       backgroundColor:
           isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
       body: SafeArea(
-        bottom: false,
+        bottom: compactLandscape,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: compactLandscape ? 4 : 16,
+          ),
           child: Column(
             children: [
               // Header Row: Title + counter + view mode toggle
@@ -141,17 +172,19 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                                 : AppColorTokens.ink,
                           ),
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          '$remainingCount left to sort today',
-                          style: AppTheme.bloomDisplay(
-                            12,
-                            FontWeight.w400,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextTertiary
-                                : AppColorTokens.inkTertiary,
+                        if (!compactLandscape) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            '$remainingCount left to sort today',
+                            style: AppTheme.bloomDisplay(
+                              12,
+                              FontWeight.w400,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -187,46 +220,24 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _SortProgressBar(
-                total: totalInitialCount,
-                resolved: resolvedCount,
-                skipped: skippedCount,
-                isDark: isDark,
-              ),
-              const SizedBox(height: 12),
+              SizedBox(height: compactLandscape ? 4 : 12),
+              if (!compactLandscape) ...[
+                _SortProgressBar(
+                  total: totalInitialCount,
+                  resolved: resolvedCount,
+                  skipped: skippedCount,
+                  isDark: isDark,
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Swipeable Card Container
               Expanded(
-                child: Center(
-                  child: GestureDetector(
-                    onPanUpdate: (details) {
-                      setState(() => _dragDx += details.delta.dx);
-                    },
-                    onPanEnd: (details) {
-                      if (_dragDx > 100) {
-                        _goBack();
-                      } else if (_dragDx < -100) {
-                        _recategorizeItem(item);
-                      }
-                      setState(() => _dragDx = 0.0);
-                    },
-                    child: Transform.translate(
-                      offset: Offset(_dragDx, 0),
-                      child: Transform.rotate(
-                        angle: (_dragDx / 300) * (math.pi / 12),
-                        child: _SortCard(
-                          item: item,
-                          dragDx: _dragDx,
-                          isDark: isDark,
-                          onTap: () => _openDetailSheet(context, item),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                child: compactLandscape
+                    ? SingleChildScrollView(child: card)
+                    : Center(child: card),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: compactLandscape ? 4 : 24),
 
               // Action Buttons Row (Back / Change category / Skip / Keep)
               Row(
@@ -243,7 +254,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                         : AppColorTokens.bloomChip,
                     onTap: _goBack,
                     isDark: isDark,
-                    size: 46,
+                    size: 48,
                   ),
                   // Change category button (Gold)
                   _ActionButton(
@@ -254,6 +265,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                         : const Color(0xFFFFF0D6),
                     onTap: () => _recategorizeItem(item),
                     isDark: isDark,
+                    size: compactLandscape ? 48 : 58,
                   ),
                   // Skip button (Neutral)
                   _ActionButton(
@@ -266,7 +278,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                         : AppColorTokens.bloomChip,
                     onTap: () => _skipItem(item),
                     isDark: isDark,
-                    size: 50,
+                    size: compactLandscape ? 48 : 50,
                   ),
                   // Keep button (Emerald)
                   _ActionButton(
@@ -277,12 +289,14 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                         : const Color(0xFFD3F2E4),
                     onTap: () => _confirmItem(item),
                     isDark: isDark,
+                    size: compactLandscape ? 48 : 58,
                   ),
                 ],
               ),
-              SizedBox(
-                height: BloomBottomInset.contentPadding(context),
-              ),
+              if (!compactLandscape)
+                SizedBox(
+                  height: BloomBottomInset.contentPadding(context),
+                ),
             ],
           ),
         ),
@@ -672,12 +686,14 @@ class _SortCard extends StatelessWidget {
     required this.item,
     required this.dragDx,
     required this.isDark,
+    required this.compactLandscape,
     this.onTap,
   });
 
   final TransactionReviewItem item;
   final double dragDx;
   final bool isDark;
+  final bool compactLandscape;
   final VoidCallback? onTap;
 
   @override
@@ -694,7 +710,7 @@ class _SortCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(compactLandscape ? 12 : 24),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(26),
@@ -757,17 +773,17 @@ class _SortCard extends StatelessWidget {
                 ),
               )
             else
-              const SizedBox(height: 28),
+              SizedBox(height: compactLandscape ? 0 : 28),
 
-            const SizedBox(height: 12),
+            SizedBox(height: compactLandscape ? 4 : 12),
             // Category Tile 52px
             BloomCategoryTile(
               categoryId: item.categoryId,
               iconName: item.categoryIcon,
-              size: 52,
-              borderRadius: 18,
+              size: compactLandscape ? 44 : 52,
+              borderRadius: compactLandscape ? 14 : 18,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: compactLandscape ? 4 : 16),
 
             // Title
             Text(

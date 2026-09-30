@@ -82,6 +82,21 @@ final _detailRouteDetail = TransactionDetail(
   isLowTrustParse: false,
 );
 
+final _sortRouteItems = <TransactionReviewItem>[
+  for (var index = 0; index < 2; index++)
+    TransactionReviewItem(
+      id: index == 0 ? _detailRouteItem.id : 'synthetic_sort_second',
+      ts: _detailRouteItem.ts,
+      amount: _detailRouteItem.amount,
+      direction: _detailRouteItem.direction,
+      displayName: 'Synthetic Sort item ${index + 1}',
+      categoryName: _detailRouteItem.categoryName,
+      categoryId: _detailRouteItem.categoryId,
+      categoryIcon: _detailRouteItem.categoryIcon,
+      status: 'needs_review',
+    ),
+];
+
 const _destinations = <HomeNavigationDestination>[
   HomeNavigationDestination(
     label: 'Home',
@@ -291,6 +306,140 @@ Future<void> _scrollToEnd(WidgetTester tester, Type screenType) async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  const sortRouteCases = <({
+    String name,
+    Size size,
+    double inset,
+    double textScale,
+  })>[
+    (
+      name: 'standard portrait at default text',
+      size: Size(402, 874),
+      inset: 24,
+      textScale: 1,
+    ),
+    (
+      name: 'compact landscape at 1.5x text with gesture navigation',
+      size: Size(568, 320),
+      inset: 24,
+      textScale: 1.5,
+    ),
+    (
+      name: 'compact landscape at 2x text with three-button navigation',
+      size: Size(568, 320),
+      inset: 48,
+      textScale: 2,
+    ),
+  ];
+  for (final routeCase in sortRouteCases) {
+    testWidgets(
+      'Sort card, action, and detail stay tappable in ${routeCase.name}',
+      (tester) async {
+        await _pumpRoutes(
+          tester,
+          initialScreen: const Scaffold(
+            body: Center(child: Text('Synthetic Home route')),
+          ),
+          size: routeCase.size,
+          systemBottomInset: routeCase.inset,
+          textScale: routeCase.textScale,
+          providerOverrides: [
+            reviewQueueProvider.overrideWith(
+              (ref) => Stream.value(_sortRouteItems),
+            ),
+            transactionDetailProvider(_detailRouteItem.id).overrideWith(
+              (ref) => Stream.value(_detailRouteDetail),
+            ),
+            categoryListProvider.overrideWith(
+              (ref) => Stream.value(const <Category>[]),
+            ),
+            suggestedCategoriesProvider(_detailRouteItem.id)
+                .overrideWith((ref) async => const <String>[]),
+          ],
+        );
+
+        final sortTab = find.descendant(
+          of: find.byType(HomeFloatingNavPill),
+          matching: find.byIcon(Icons.fact_check_outlined),
+        );
+        expect(sortTab, findsOneWidget);
+        await tester.tap(sortTab);
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pump();
+
+        final firstItem = find.text('Synthetic Sort item 1');
+        expect(firstItem, findsOneWidget);
+        final nav = find.byType(HomeFloatingNavPill);
+        final navRect = tester.getRect(nav);
+        final cardScroll = find.descendant(
+          of: find.byType(WeeklyReviewScreen),
+          matching: find.byType(Scrollable),
+        );
+        if (cardScroll.evaluate().isNotEmpty) {
+          final scrollPosition =
+              tester.state<ScrollableState>(cardScroll).position;
+          await tester.drag(cardScroll, const Offset(0, -24));
+          await tester.pump();
+          expect(scrollPosition.pixels, greaterThan(0));
+          await tester.ensureVisible(firstItem);
+          await tester.pump();
+
+          final cardViewport = tester.getRect(cardScroll);
+          var titleRect = tester.getRect(firstItem);
+          expect(titleRect.top, greaterThanOrEqualTo(cardViewport.top));
+          for (var attempt = 0;
+              titleRect.bottom > cardViewport.bottom && attempt < 10;
+              attempt++) {
+            final previousOffset = scrollPosition.pixels;
+            await tester.drag(
+              cardScroll,
+              const Offset(0, -48),
+            );
+            await tester.pump();
+            titleRect = tester.getRect(firstItem);
+            expect(scrollPosition.pixels, greaterThan(previousOffset));
+          }
+          expect(titleRect.bottom, lessThanOrEqualTo(cardViewport.bottom));
+          expect(titleRect.top, lessThanOrEqualTo(cardViewport.top));
+        }
+        final cardTitleRect = tester.getRect(firstItem);
+        expect(cardTitleRect.top, greaterThanOrEqualTo(0));
+        if (cardScroll.evaluate().isNotEmpty) {
+          final cardViewport = tester.getRect(cardScroll);
+          expect(cardViewport.bottom, lessThanOrEqualTo(navRect.top));
+          expect(cardTitleRect.intersect(cardViewport).isEmpty, isFalse);
+        } else {
+          expect(cardTitleRect.bottom, lessThanOrEqualTo(navRect.top));
+        }
+        final cardTapArea = cardScroll.evaluate().isEmpty
+            ? cardTitleRect
+            : cardTitleRect.intersect(tester.getRect(cardScroll));
+        await tester.tapAt(cardTapArea.center);
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pump();
+
+        expect(find.byType(TransactionDetailScreen), findsOneWidget);
+        expect(find.text(_detailRouteItem.displayName), findsOneWidget);
+        Navigator.of(tester.element(find.byType(TransactionDetailScreen)))
+            .pop();
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pump();
+
+        final skipAction = find.byIcon(Icons.skip_next_rounded);
+        expect(skipAction, findsOneWidget);
+        expect(
+          tester.getRect(skipAction).bottom,
+          lessThanOrEqualTo(navRect.top),
+        );
+        await tester.tap(skipAction);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Synthetic Sort item 2'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   const settingsRouteCases = <({
     String name,

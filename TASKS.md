@@ -8,6 +8,46 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
+  - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
+    Activity header, and Trends header. Add narrow/wide viewport checks at
+    1.5×/2× text for navigation, Activity/list and transaction entry/detail
+    flows, and Trends. Preserve visible streak count and period context in
+    compact Dashboard layouts, label Ask accessibly, and keep long foreign-
+    currency amounts readable. Preserve visible navigation, accessible labels,
+    and minimum 48dp tap targets.
+  - Scope: flexible/wrapping/adaptive layout fixes only; no device mutation.
+  - T-176 route-audit follow-up: fixed `WeeklyReviewScreen`'s confirmed
+    30dp/86dp compact-landscape overflows. The production Sort card scrolls
+    vertically at 568×320 with 1.5×/24dp and 2×/48dp settings while preserving
+    the configured text scale; the action row clears the production pill. A real
+    synthetic Sort→detail route test verifies vertical finger scrolling reaches
+    the title's top and bottom, taps the visible card intersection to open the
+    production detail sheet, and taps Skip to advance to the next synthetic
+    item. Standard portrait coverage stays in the same route suite.
+  - Verification: responsive route suite 42/42; focused changed-screen/inset
+    suite 56/56; reviewer follow-up focused suite 24/24; full Flutter suite
+    894/894; `flutter analyze`, changed-file formatting, and `git diff --check`
+    clean. GitNexus follow-up impact: Dashboard MEDIUM, nav MEDIUM, Ask LOW,
+    Activity row MEDIUM; shared `BloomAmount` impact was HIGH and its code was
+    left unchanged. Follow-up detect-changes: 8 files, 9 symbols, 0 processes,
+    LOW. HomeShell route fixture cleanup
+    hangs on Drift streams, so navigation pill geometry, semantics, and tap
+    behavior are covered directly. Dashboard coverage asserts visible streak /
+    period values at 320 / 402 px and 1.5× / 2×; Ask semantics and two-line
+    foreign-currency amounts are covered. Physical-device acceptance remains
+    open.
+  - Independent review approved the Weekly Review slice; broader T-167c
+    acceptance remains open. GitNexus pre-edit `_buildCardView` impact
+    was LOW/exact; final graph detection is recorded in WORKLOG.
+  - Responsive Slice verification: production route suite 14/14 and all
+    Review tests 26/26; no provider/data behavior changes. The route test
+    covers 402×874/default portrait, 568×320/1.5×/24dp, and
+    568×320/2×/48dp with the real floating pill. Independent review
+    approved the updated diff. Physical-device QA remains pending.
+
+## Ready
+
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -73,9 +113,10 @@ later hardening.
     this caller cannot reach detail. Existing Weekly Review widget tests use
     the default portrait viewport and do not cover compact landscape. Keep the
     layout fix in T-167c; no production review-screen change is part of T-176.
-  - Still open: Ask modal-route acceptance on a physical device, remaining
-    compact/landscape combinations, Sort detail after the T-167c layout fix,
-    and physical phone QA. No emulator, private SMS/DB data, phone mutation,
+  - The synthetic Sort→detail route now passes after the T-167c responsive
+    fix; physical-device QA remains pending with the device offline. Still open:
+    Ask modal-route acceptance on a physical device and remaining compact/
+    landscape combinations. No emulator, private SMS/DB data, phone mutation,
     or APK change.
   - Focused verification: global bottom-inset route tests 11/11, including
     Activity/detail/correction at three viewports; Ask route plus
@@ -84,8 +125,6 @@ later hardening.
     full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
     diff check, and GitNexus detect-changes clean. No emulator, private
     SMS/DB data, phone mutation, or APK change.
-
-## Ready
 
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
   - Bounded milestone: add a local chronological replay/report contract and
@@ -159,35 +198,6 @@ later hardening.
     `2026-09-26 22:20:54`; the app launched with live PID 16774 and the newest
     exit-info entry was `PACKAGE UPDATED`). Physical preview/apply/undo
     acceptance remains open.
-
-- [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
-  - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
-    Activity header, and Trends header. Add narrow/wide viewport checks at
-    1.5×/2× text for navigation, Activity/list and transaction entry/detail
-    flows, and Trends. Preserve visible streak count and period context in
-    compact Dashboard layouts, label Ask accessibly, and keep long foreign-
-    currency amounts readable. Preserve visible navigation, accessible labels,
-    and minimum 48dp tap targets.
-  - Scope: flexible/wrapping/adaptive layout fixes only; no device mutation.
-  - T-176 route-audit follow-up: `WeeklyReviewScreen`'s fixed card/action
-    `Column` overflows by 30dp at 568×320/1.5× text/24dp gesture inset and
-    86dp at 568×320/2× text/48dp three-button inset; the card is untappable at
-    the latter size. Existing Weekly Review tests use portrait fixtures and
-    lack compact-landscape coverage. The Sort-to-detail shell route remains
-    unverified until this layout gap is addressed.
-  - Verification: responsive route suite 42/42; focused changed-screen/inset
-    suite 56/56; reviewer follow-up focused suite 24/24; full Flutter suite
-    894/894; `flutter analyze`, changed-file formatting, and `git diff --check`
-    clean. GitNexus follow-up impact: Dashboard MEDIUM, nav MEDIUM, Ask LOW,
-    Activity row MEDIUM; shared `BloomAmount` impact was HIGH and its code was
-    left unchanged. Follow-up detect-changes: 8 files, 9 symbols, 0 processes,
-    LOW. HomeShell route fixture cleanup
-    hangs on Drift streams, so navigation pill geometry, semantics, and tap
-    behavior are covered directly. Dashboard coverage asserts visible streak /
-    period values at 320 / 402 px and 1.5× / 2×; Ask semantics and two-line
-    foreign-currency amounts are covered. Physical-device acceptance remains
-    open.
-  - Independent review pending.
 
 - [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
       Verification: 768 Flutter tests passed; analyzer and diff check clean;

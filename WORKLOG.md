@@ -1,5 +1,34 @@
 # Current Handoff
 
+## 2026-09-30 — T-167c Weekly Review compact-landscape slice
+
+- Reproduced the fixed Weekly Review card/action `Column` overflow through the
+  production Sort navigation route: 30dp at 568×320/1.5×/24dp gesture inset
+  and 86dp at 568×320/2×/48dp three-button inset; at 2× the card could not be
+  tapped. GitNexus pre-edit impact for `_buildCardView` was LOW and exact (one
+  direct caller, `build`, and one affected screen process/module).
+- In compact landscape, the header/card/action spacing now adapts, secondary
+  progress content gives room to the card, and the card scrolls vertically.
+  Horizontal swipe recognition remains horizontal so user vertical drags reach
+  the scrollable card. The 20dp title style still respects the user's text
+  scaler. `SafeArea` handles the compact bottom inset; portrait keeps the prior
+  layout and bottom-inset spacer.
+- Added real shell-route tests with the production floating pill and synthetic
+  provider data at 402×874/default text, 568×320/1.5×/24dp, and
+  568×320/2×/48dp. They assert no layout exception, title top and bottom are
+  reachable with vertical finger drags, the action clears the pill, a visible
+  card intersection opens production transaction detail, and Skip advances to
+  the next item. No data/provider behavior changed.
+- Global bottom-inset route suite passed 14/14; all Review tests passed 26/26
+  (including existing swipe/detail/persistence coverage). Full Flutter suite
+  passed 939/939; `flutter analyze --no-pub`, changed-file formatting, and
+  `git diff --check` are clean. GitNexus pre-commit graph detection found 4
+  changed files, 11 changed symbols, 0 affected processes, LOW risk, with no
+  partial/truncated result. Independent review approved the updated diff. No
+  phone/emulator, private transaction data, mutation, or APK was used. T-176
+  returns to Ready with physical-device QA pending while T-167c remains In
+  Progress.
+
 ## 2026-09-30 — T-176 bottom-inset route acceptance
 
 - Added five Settings→Not transactions route cases using synthetic in-memory
