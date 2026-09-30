@@ -29,19 +29,19 @@ PaisaTrack enforces release signing security for production builds.
 
 ## Published APK
 
-The currently published download is `0.1.3+2010`, an ARM64 APK for 64-bit ARM
+The currently published download is `0.1.3+2011`, an ARM64 APK for 64-bit ARM
 Android devices, built from the current `pubspec.yaml` version. Flutter's
 `--split-per-abi` build applies the ARM64 version-code offset of `2000`, so the
-effective APK version code is `4010`. The published APK is 56,750,764 bytes
+effective APK version code is `4011`. The published APK is 56,750,764 bytes
 (56.75 MB decimal), with SHA-256
-`55d0548ed6c82746d26861377106da1efaff0ace1ec146f43ebf337ebb133944`.
+`218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`.
 Its package is `com.paisatrack`, version name `0.1.3`, and production
 certificate SHA-256
 `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
-An in-place upgrade to code `4010` passed on the ARM64 phone. Its
-`firstInstallTime` remained `2026-09-26 22:20:54`; the app process remained live
-after launch (PID 16774 at verification), and its newest exit-info entry was
-`PACKAGE UPDATED`. T-193
+The artifact was built from main commit `3b2fb6b` with release version
+`0.1.3+2011`. Physical v2011 launch is unverified because the device is
+offline; the phone remains on `0.1.3+2010` (effective code `4010`;
+`firstInstallTime` `2026-09-26 22:20:54`). T-193
 synthetic backup/restore coverage is in place; physical acceptance of the
 currency-repair detail UI remains open. Broader T-167c responsive-layout,
 T-176 screen-inset, and T-179a key-recovery acceptance also remain open.

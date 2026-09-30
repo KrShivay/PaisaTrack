@@ -1,5 +1,18 @@
 # Current Handoff
 
+## 2026-09-30 — ARM64 0.1.3+2011 release
+
+- Built the signed ARM64 APK from main `3b2fb6b` after changing only the
+  release version to `0.1.3+2011`. Published it to `apk-downloads` in commit
+  `6ac898f564bfd307455a1b7201ab229a3fe09c80`. The 56,750,764-byte APK has
+  SHA-256 `218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`,
+  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4011`,
+  and production certificate SHA-256
+  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
+- Physical v2011 launch is unverified because the device is offline; the phone
+  remains on `0.1.3+2010` (effective code `4010`; `firstInstallTime` remained
+  `2026-09-26 22:20:54`). No v2011 phone install was attempted.
+
 ## 2026-09-30 — T-177a capture-decision version contract
 
 - Read-only audit confirmed the prior synthetic replay already covered live,
@@ -58,58 +71,3 @@
   phone/emulator, private transaction data, mutation, or APK was used. T-176
   remains Ready with physical-device QA pending; T-167c moved to Ready with
   physical QA still open.
-
-## 2026-09-30 — T-176 bottom-inset route acceptance
-
-- Added five Settings→Not transactions route cases using synthetic in-memory
-  rows. The Settings action and last history row clear the production pill at
-  24dp/48dp insets on 402×874, 320×568 at 2× text, and 568×320 at 1.5×/2×;
-  each case taps the action and restores the last row. Flutter's default
-  `ListView` padding consumes the adapter's `MediaQuery.padding.bottom`, so no
-  inset production change was needed.
-- Restore tapping exposed a `setState` callback that returned the `_load()`
-  Future; it now assigns `_rows` inside a synchronous callback. The compact
-  2× route exposed a `ListTile` trailing-width assertion; date and amount now
-  wrap on separate subtitle lines. Drift teardown was traced to closing the DB
-  only in `addTearDown`, after Flutter removes stream subscribers; the fixture
-  now unmounts and closes the in-memory DB in `finally` before test teardown.
-- The original Trends checks remain: final content clears the pill at both
-  navigation insets on 402×874 and at 568×320/1.5×. The route harness uses a
-  nested Navigator with the production pill/adapter. Added a separate
-  `HomeShell` route test that opens Ask from the real pill at 402×874 with
-  simulated 24dp/48dp safe padding, then checks the 320×568/2× route after a
-  synthetic adjustResize to 320×348 with zero residual inset. The composer and
-  48dp close target stay inside the resized route. The shell fixture keeps the
-  database unopened and unmounts explicitly, so it does not create Drift stream
-  cleanup timers. The isolated HomeShell Activity nested-Navigator test also
-  passes. Physical keyboard behavior remains unverified; Ask modal-route device
-  acceptance, remaining compact/landscape combinations, and physical phone QA
-  remain open. No emulator, private data, phone mutation, or APK change.
-- Added Activity→detail→correction coverage through the real
-  `TransactionsScreen` route with the production pill/adapter. The Activity row
-  clears the pill and opens detail at 402×874/24dp/1×, 568×320/24dp/1.5×, and
-  568×320/48dp/2×; the detail edit action opens the nested correction sheet,
-  where changing the direction ChoiceChip succeeds. No inset/tap defect was
-  demonstrated in this route, so production code is unchanged.
-- Attempting the separate Sort→detail caller at 568×320 reproduced
-  `WeeklyReviewScreen`'s fixed card/action Column overflowing by 30dp at
-  1.5×/24dp gesture inset and 86dp at 2×/48dp three-button inset; the card is
-  outside the viewport at 2× and cannot be tapped. Existing Weekly Review tests
-  use portrait fixtures and miss compact landscape; the layout follow-up is
-  tracked under T-167c and is outside this T-176 slice.
-- Focused route suite 11/11; production HomeShell→Ask suite 3/3; existing
-  HomeShell Activity nested-Navigator test 1/1; full Flutter suite 936/936;
-  `flutter analyze --no-pub`, changed-file formatting, and `git diff --check`
-  clean. The previous Activity/detail/correction slice's GitNexus
-  detect-changes saw 3 files, 18 symbols, 0 affected processes, LOW risk. This
-  HomeShell/Ask slice's pre-commit GitNexus detect-changes saw 3 files, 5
-  indexed documentation symbols, 0 affected processes, LOW risk. Pre-edit
-  `TransactionDetailScreen` impact was HIGH (43 symbols, 18
-  direct callers, one process); no production detail code changed. Earlier
-  `NotTransactionsScreen` impact was LOW (6 symbols, one direct caller, no
-  affected processes). No emulator, private data, phone mutation, or APK
-  change.
-- T189 was removed from the active board after independent Luna review of
-  implementation `48df299` and documentation fix `b73f7cb` found no functional
-  blocker. Its brief now records completion and the reviewed prompt, target,
-  keyboard, semantics, tap, and rotation evidence.
