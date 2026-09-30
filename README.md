@@ -6,7 +6,7 @@ on-device. No cloud inference path exists.
 
 ## Android release
 
-Download the currently published [PaisaTrack 0.1.3+2009 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.75 MB; 56,750,764 bytes). Its SHA-256 is `b383c199bf38dc7fedbd571dc11cb8073850553b1e96ed633407dd25d4c79bc9`. The production signature was verified. The ARM64 phone accepted the in-place upgrade to `com.paisatrack` version `0.1.3`, effective version code `4009`; `firstInstallTime` remained `2026-09-26 22:20:54`, the app process remained live after launch, and the newest exit-info entry was `PACKAGE UPDATED`. T-193 synthetic backup/restore coverage is in place; physical acceptance of the currency-repair UI remains open, as do T-167c responsive-layout, T-176 screen-inset, and T-179a key-recovery acceptance. For 64-bit ARM Android devices.
+Download the currently published [PaisaTrack 0.1.3+2010 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.75 MB; 56,750,764 bytes). Its SHA-256 is `55d0548ed6c82746d26861377106da1efaff0ace1ec146f43ebf337ebb133944`. The production signature was verified. The ARM64 phone accepted the in-place upgrade to `com.paisatrack` version `0.1.3`, effective version code `4010`; `firstInstallTime` remained `2026-09-26 22:20:54`, the app process remained live after launch (PID 16774 at verification), and the newest exit-info entry was `PACKAGE UPDATED`. T-193 synthetic backup/restore coverage is in place; physical acceptance of the currency-repair UI remains open, as do T-167c responsive-layout, T-176 screen-inset, and T-179a key-recovery acceptance. For 64-bit ARM Android devices.
 
 ## Current product
 

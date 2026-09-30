@@ -82,14 +82,14 @@
   The encrypted restore compatibility-test commit independently reviewed
   without a blocker. Physical UI preview/apply/undo confirmation remains
   pending.
-- Published signed ARM64 `0.1.3+2009` to `apk-downloads`, commit
-  `091e6256979c335de9c779c5fc729477fca832cb`. APK size 56,750,764 bytes,
-  SHA-256 `b383c199bf38dc7fedbd571dc11cb8073850553b1e96ed633407dd25d4c79bc9`;
-  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4009`,
+- Published signed ARM64 `0.1.3+2010` to `apk-downloads`, commit
+  `00952c8cb86f8e45a4e731e8b7d8bf8a0dc21011`. APK size 56,750,764 bytes,
+  SHA-256 `55d0548ed6c82746d26861377106da1efaff0ace1ec146f43ebf337ebb133944`;
+  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4010`,
   production certificate SHA-256
   `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
   The in-place phone upgrade preserved `firstInstallTime` (`2026-09-26
-  22:20:54`); the app launched with a live process and the newest exit-info
+  22:20:54`); the app launched with live PID 16774 and the newest exit-info
   entry was `PACKAGE UPDATED`. Synthetic encrypted backup/restore
   compatibility is covered; physical repair-preview/apply/undo acceptance
   remains open.

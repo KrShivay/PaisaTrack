@@ -128,9 +128,9 @@ later hardening.
     received independent review with no blocker; the encrypted restore
     compatibility-test commit also passed independent review. No physical
     repair UI confirmation has been performed.
-  - Release follow-up: signed `0.1.3+2009` is installed in place on the ARM64
-    phone (effective code 4009; `firstInstallTime` remained
-    `2026-09-26 22:20:54`; the app launched with a live process and the newest
+  - Release follow-up: signed `0.1.3+2010` is installed in place on the ARM64
+    phone (effective code 4010; `firstInstallTime` remained
+    `2026-09-26 22:20:54`; the app launched with live PID 16774 and the newest
     exit-info entry was `PACKAGE UPDATED`). Physical preview/apply/undo
     acceptance remains open.
 
