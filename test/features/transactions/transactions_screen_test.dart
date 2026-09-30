@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
+import 'package:paisatrack/core/format.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -106,6 +107,31 @@ void main() {
     await pumpScreen(tester, const []);
 
     expect(find.text('No transactions found'), findsOneWidget);
+  });
+
+  testWidgets('Activity row uses the shared localized transaction clock',
+      (tester) async {
+    final instant = DateTime.utc(2026, 7, 10, 18, 30);
+    final storedEpoch = instant.millisecondsSinceEpoch;
+    await pumpScreen(
+      tester,
+      [
+        item(
+          id: 'utc-activity-row',
+          ts: instant,
+          amount: 42,
+          direction: TransactionDirection.debit,
+          displayName: 'UTC activity row',
+        ),
+      ],
+    );
+
+    expect(find.textContaining(formatTxnClockTime(instant)), findsOneWidget);
+    if (DateTime.now().timeZoneOffset ==
+        const Duration(hours: 5, minutes: 30)) {
+      expect(find.textContaining('12:00 am'), findsOneWidget);
+    }
+    expect(instant.millisecondsSinceEpoch, storedEpoch);
   });
 
   testWidgets('keeps long foreign-currency amounts readable at 2× text',

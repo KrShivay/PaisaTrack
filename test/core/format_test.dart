@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/format.dart';
+import 'package:paisatrack/features/transactions/detail/transaction_detail_formatting.dart';
 
 void main() {
   group('formatInr', () {
@@ -36,6 +37,45 @@ void main() {
 
     test('includes two-digit year for prior years', () {
       expect(formatTxnTime(DateTime(2024, 12, 31, 9), now: now), '31 Dec 24');
+    });
+  });
+
+  group('formatTxnClockTime', () {
+    test('localizes an IST midnight instant without changing its epoch', () {
+      final instant = DateTime.utc(2026, 7, 10, 18, 30);
+      final storedEpoch = instant.millisecondsSinceEpoch;
+
+      final result = formatTxnClockTime(
+        instant,
+        localize: (value) => value.add(const Duration(hours: 5, minutes: 30)),
+      );
+
+      expect(result, '12:00 am');
+      expect(instant.millisecondsSinceEpoch, storedEpoch);
+    });
+
+    test('uses the currently injected offset after a timezone change', () {
+      final instant = DateTime.utc(2026, 7, 10, 18, 30);
+
+      expect(
+        formatTxnClockTime(
+          instant,
+          localize: (value) => value.add(const Duration(hours: -4)),
+        ),
+        '2:30 pm',
+      );
+    });
+
+    test('agrees with detail and grouping for a local midnight', () {
+      final localMidnight = DateTime(2026, 7, 11);
+      final now = DateTime(2026, 7, 11, 12);
+
+      expect(
+        formatTxnClockTime(localMidnight, localize: (value) => value),
+        '12:00 am',
+      );
+      expect(formatDetailDate(localMidnight), 'Jul 11, 2026 · 12:00 am');
+      expect(formatDateGroup(localMidnight, now: now), 'Today');
     });
   });
 

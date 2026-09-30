@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/format.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
@@ -40,6 +42,7 @@ void main() {
     List<TransactionListItem> list, {
     Size size = const Size(402, 874),
     double textScale = 1,
+    DateTime? periodAnchor,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -51,6 +54,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          dashboardPeriodProvider.overrideWith(
+            (ref) => DashboardPeriod.month(periodAnchor ?? DateTime.now()),
+          ),
           transactionListProvider.overrideWith((ref) => Stream.value(list)),
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(
@@ -81,6 +87,33 @@ void main() {
 
     expect(find.byType(BloomHeroRing), findsOneWidget);
     expect(find.textContaining('Good '), findsOneWidget);
+  });
+
+  testWidgets('dashboard transaction row uses the shared localized clock',
+      (tester) async {
+    final instant = DateTime.utc(2026, 9, 10, 18, 30);
+    final storedEpoch = instant.millisecondsSinceEpoch;
+
+    await pumpDashboard(
+      tester,
+      [
+        item(
+          id: 'utc-dashboard-row',
+          ts: instant,
+          amount: 42,
+          direction: TransactionDirection.debit,
+        ),
+      ],
+      size: const Size(700, 874),
+      periodAnchor: DateTime(2026, 9),
+    );
+
+    expect(find.textContaining(formatTxnClockTime(instant)), findsOneWidget);
+    if (DateTime.now().timeZoneOffset ==
+        const Duration(hours: 5, minutes: 30)) {
+      expect(find.textContaining('12:00 am'), findsOneWidget);
+    }
+    expect(instant.millisecondsSinceEpoch, storedEpoch);
   });
 
   testWidgets('renders metric switcher pills', (tester) async {

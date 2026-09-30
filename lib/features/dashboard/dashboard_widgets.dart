@@ -1342,10 +1342,6 @@ class _TransactionRow extends StatelessWidget {
   }
 
   String _formatTime(DateTime date) {
-    final h =
-        date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-    final m = date.minute.toString().padLeft(2, '0');
-    final ampm = date.hour >= 12 ? 'pm' : 'am';
-    return '$h:$m $ampm';
+    return formatTxnClockTime(date);
   }
 }

@@ -77,6 +77,20 @@ String _clock12h(DateTime t) {
   return '$hour:$minute $period';
 }
 
+/// Formats a transaction instant as a local 12-hour clock, such as "12:00 am".
+/// [localize] is injectable so timezone-boundary behavior can be tested without
+/// depending on the machine running the test. Production callers use local time.
+String formatTxnClockTime(
+  DateTime ts, {
+  DateTime Function(DateTime instant)? localize,
+}) {
+  final local = (localize ?? _toLocal)(ts);
+  final clock = _clock12h(local);
+  return clock.toLowerCase();
+}
+
+DateTime _toLocal(DateTime instant) => instant.toLocal();
+
 /// Compact time-of-day / date shown in a transaction tile subtitle.
 ///
 /// Today -> "3:45 PM"; earlier this year -> "7 Jul"; otherwise "7 Jul 24".
