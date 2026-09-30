@@ -1,5 +1,27 @@
 # Current Handoff
 
+## 2026-09-30 — T-176 bottom-inset route acceptance
+
+- Added real-route geometry checks using the production floating navigation
+  pill and bottom-inset adapter around the actual Trends destination. Final
+  content clears the pill with 24dp gesture and 48dp three-button insets at
+  402×874, and at 568×320 landscape with 1.5× text. The harness uses a nested
+  Navigator because mounting HomeShell leaves Drift stream cleanup timers
+  pending; shell lifecycle acceptance remains open.
+- Ask route diagnostic found a concrete unresolved issue: at 320×568, 2× text,
+  and a simulated 220dp keyboard (348dp remaining height), the routed screen
+  overflowed vertically by 42px and its send target was outside the 320dp
+  viewport. This is recorded for investigation; no production change was made.
+  Settings/Not transactions fixture cleanup also stalled. Detail/nested-sheet
+  integration, Ask modal keyboard, 2× compact/landscape, tap behavior, and
+  physical phone QA remain open. No emulator, private data, phone mutation, or
+  APK change.
+- Focused route tests 3/3; full Flutter suite 923/923; `flutter analyze
+  --no-pub`, formatting, and diff check clean. GitNexus impact before symbol
+  edits: `HomeShell` LOW and `BloomBottomInset` MEDIUM; no production symbols
+  changed. Detect-changes: 2 files / 18 symbols, LOW risk, 0 affected
+  processes.
+
 ## 2026-09-30 — T-189 readable Ask prompt list
 
 - Replaced the three clipped horizontal composer chips shown after a chat
@@ -48,39 +70,3 @@
   the app process alive without a crash exit. Synthetic encrypted
   backup/restore compatibility is now covered; physical repair-preview/apply/
   undo acceptance remains open.
-
-## 2026-09-30 — T-177a threshold evidence revision follow-up
-
-- Threshold recomputation no longer treats silent `auto` rows as correct.
-  Eligible outcomes require category-prediction provenance and either category
-  correction feedback or explicit user-confirmation feedback from Activity or
-  Weekly Review. Status-only rows and manual entries are excluded. v1/v2
-  count-only state is ignored; v3 uses streaming evidence fingerprints and
-  deterministic replay of completed chronological cohorts.
-- Same-count correction after processing, multi-cohort replay, and both undo
-  below 50 outcomes and full category removal reset the learned threshold and
-  metadata to the static default. Streaming SHA-256 fingerprints keep stored
-  metadata bounded. Focused `decision_policy_test.dart`: 17/17.
-- Added an explicit low-trust parse-confirm action to transaction detail. It
-  requires retained SMS and field evidence, leaves status/category unchanged,
-  deduplicates its versioned feedback, and can be undone. The public-template
-  ledger ignores unvalidated legacy positives and invalid/deleted/duplicate
-  sources; its v2 cache rebuilds restored v1 counters from evidence. Confirmed
-  evidence remains usable after raw SMS retention expires.
-- Focused repository, ledger, and detail tests: 38/38. The synthetic
-  capture-provenance/replay milestone independently reviewed without a blocker:
-  it exercises the live bootstrap, history importer, and resume catch-up runner
-  with synthetic messages and local dependencies, and reconciles T-140/T-143.
-  The resume fixture does not exercise the lifecycle callback or known-SMS
-  boundary. T-177a remains open for a real labeled holdout, physical live/resume
-  capture, and a reviewed decision-version contract. No schema, phone, or APK
-  changes were made.
-- Full Flutter suite 903/903; `flutter analyze --no-pub`, changed-file
-  formatting, and `git diff --check` clean. Fresh pre-edit GitNexus impact was
-  HIGH for `AdaptiveThresholdPolicy` (47 symbols / 4 flows), CRITICAL for
-  `TransactionRepository` (80 / 43 direct) and `TransactionDetail` (77 / 40
-  direct), HIGH for `TransactionDetailScreen` (42 / 18 direct) and
-  `TemplateTrustLedger` (90 / 12 direct). Exact ledger `refresh` was UNKNOWN
-  with two unresolved callers; text search confirmed call sites. GitNexus
-  detect-changes reports 25 symbols, 9 files, 4 processes, MEDIUM. Independent
-  review pending.

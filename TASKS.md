@@ -8,6 +8,36 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
+  - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
+    transaction detail, nested sheets, and floating actions through their real
+    routes. Verify final rows and actions clear the floating navigation in
+    gesture and three-button modes, and remain visible/tappable with the
+    keyboard, compact/landscape viewports, and large text.
+  - Verified acceptance slice: a route harness mounts the production
+    `HomeFloatingNavPill`, `BloomBottomInset` adapter, and actual Trends route.
+    The Trends final section clears the actual pill at 24dp gesture and 48dp
+    three-button insets on 402×874, and at 568×320 landscape with 1.5× text.
+    The harness uses a nested Navigator and the production nav widget because
+    mounting `HomeShell` in this fixture leaves Drift stream cleanup timers
+    pending; shell lifecycle integration remains open. No production inset gap
+    was demonstrated, so production code is unchanged.
+  - Unresolved route finding: a routed `AssistantScreen` at 320×568, 2× text,
+    with a simulated 220dp keyboard left only 348dp of content height and
+    overflowed vertically by 42px. The composer send target also fell outside
+    the 320dp viewport during the route fixture. The direct screen test does
+    not rule out a route-level layout issue; investigate the modal route and
+    keyboard resize contract before changing production code.
+  - Still open: Settings/Not transactions destination geometry (its fixture
+    stalls during Drift-backed route teardown), transaction detail and nested
+    sheet integration with the shell pill, Ask modal-route keyboard acceptance,
+    2× landscape/compact combinations, tap action verification, and physical
+    phone QA. No emulator, private SMS/DB data, phone mutation, or APK change.
+  - Focused verification: global bottom-inset route tests 3/3; full Flutter
+    suite 923/923; `flutter analyze --no-pub`, formatting, and diff check clean.
+    GitNexus detect-changes: 2 files / 18 symbols, LOW risk, no affected
+    processes. No production code changed.
+
 ## Ready
 
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
@@ -50,14 +80,6 @@ later hardening.
     still open.
 
 ## In Review
-
-- [ ] T-189 [P2] Replace Ask's clipped rotating composer chips with a full-text vertical prompt list.
-  - Scope: after conversation starts, show the same three rotating catalogue prompts as wrapped, individually tappable rows above the composer; preserve selection, manual rotation, and rotation after sending. The initial searchable catalogue remains unchanged.
-  - Acceptance and verification: see [T-189 brief](docs/tasks/T-189.md).
-  - Dependencies: none; this is a presentation change to the existing composer prompts, not answer-specific follow-up generation.
-  - Privacy: use only the existing local prompt catalogue; do not include transaction-row or SMS text.
-  - Verification: assistant prompt tests 7/7; full Flutter suite 924/924; `flutter analyze --no-pub`, formatter check, and `git diff --check` clean. GitNexus detect-changes reports 6 files / 24 symbols, LOW risk, no affected processes. Fresh pre-edit impact for `_ComposerPromptChips` and `_AssistantScreenState` was MEDIUM (13 affected symbols, 5 direct each).
-  - Rollback: revert the screen, widget tests, and task brief without changing assistant intents or prompt data.
 
 - [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
   - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps
@@ -111,24 +133,6 @@ later hardening.
     foreign-currency amounts are covered. Physical-device acceptance remains
     open.
   - Independent review pending.
-
-- [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
-  - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
-    transaction detail, nested sheets, and floating actions through their real
-    routes. Verify final rows and actions clear the floating navigation in
-    gesture and three-button modes, and remain visible/tappable with the
-    keyboard, compact/landscape viewports, and large text.
-  - Verification: added Trends and Settings final-content geometry checks at
-    24dp gesture and 48dp three-button insets. Existing focused coverage checks
-    FAB placement, category actions, Manual Entry with keyboard, Ask rendering,
-    and transaction detail in modal/full-screen sheets with keyboard and 1x–2x
-    text. No production gap was demonstrated, so the shared inset contract is
-    unchanged. Not transactions/nested destination and Ask keyboard route
-    checks, compact/landscape plus large-text combinations, and phone QA remain
-    open; the phone is connected, and physical QA remains pending.
-  - Scope: preserve T-176 as the only bottom-spacing task; do not create a
-    duplicate. Exact 320×568/2× text overflows in the HomeShell nav, Activity,
-    and Trends headers are tracked under T-167c.
 
 - [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
       Verification: 768 Flutter tests passed; analyzer and diff check clean;
