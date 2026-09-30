@@ -18,10 +18,9 @@ later hardening.
     `HomeFloatingNavPill`, `BloomBottomInset` adapter, and actual Trends route.
     The Trends final section clears the actual pill at 24dp gesture and 48dp
     three-button insets on 402×874, and at 568×320 landscape with 1.5× text.
-    The harness uses a nested Navigator and the production nav widget because
-    mounting `HomeShell` in this fixture leaves Drift stream cleanup timers
-    pending; shell lifecycle integration remains open. No production inset gap
-    was demonstrated, so production code is unchanged.
+    A separate bounded `HomeShell` route test now covers its actual pill and
+    Ask modal. No production inset gap was demonstrated, so production code
+    is unchanged.
   - Settings/Not transactions slice: five real-route checks open Settings,
     tap its Not transactions action, and assert the final synthetic history row
     clears the production navigation pill at 24dp/48dp insets on 402×874,
@@ -57,6 +56,16 @@ later hardening.
     code is unchanged. The test fixture keeps the route under a nested
     Navigator with the production pill/adapter because mounting `HomeShell`
     leaves Drift stream cleanup timers pending.
+  - HomeShell/Ask integration slice: three tests open Ask through the
+    production `HomeFloatingNavPill` and root modal route. At 402×874, the pill
+    respects simulated 24dp gesture and 48dp three-button safe padding and the
+    composer mounts. At 320×568/2× text, the compact route is tapped into and
+    resized to 320×348 with zero residual inset; its 48dp close target and
+    composer remain inside the resized viewport. The focused fixture leaves
+    the database unopened, explicitly unmounts the shell, and completes without
+    a Drift teardown timer. The existing HomeShell Activity nested-Navigator
+    test also passes in isolation. The resize is synthetic; physical keyboard
+    behavior remains a device-only gate.
   - T-176 route-audit follow-up for T-167c: a trial through the real Sort
     detail caller exposed `WeeklyReviewScreen`'s card/action `Column` overflowing
     at 568×320 by 30dp with 1.5× text/24dp gesture inset and by 86dp with 2×
@@ -64,13 +73,14 @@ later hardening.
     this caller cannot reach detail. Existing Weekly Review widget tests use
     the default portrait viewport and do not cover compact landscape. Keep the
     layout fix in T-167c; no production review-screen change is part of T-176.
-  - Still open: complete `HomeShell` lifecycle integration, Ask modal-route
-    acceptance on device, remaining compact/landscape combinations, Sort
-    detail after the T-167c layout fix, and physical phone QA. No emulator,
-    private SMS/DB data, phone mutation, or APK change.
+  - Still open: Ask modal-route acceptance on a physical device, remaining
+    compact/landscape combinations, Sort detail after the T-167c layout fix,
+    and physical phone QA. No emulator, private SMS/DB data, phone mutation,
+    or APK change.
   - Focused verification: global bottom-inset route tests 11/11, including
     Activity/detail/correction at three viewports; Ask route plus
-    AssistantScreen tests 9/9; full Flutter suite 933/933; detail/Note and
+    AssistantScreen tests 9/9; production HomeShell→Ask route 3/3 and existing
+    HomeShell Activity route 1/1; full Flutter suite 936/936; detail/Note and
     full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
     diff check, and GitNexus detect-changes clean. No emulator, private
     SMS/DB data, phone mutation, or APK change.

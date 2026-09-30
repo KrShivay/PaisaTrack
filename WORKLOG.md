@@ -16,11 +16,16 @@
   now unmounts and closes the in-memory DB in `finally` before test teardown.
 - The original Trends checks remain: final content clears the pill at both
   navigation insets on 402×874 and at 568×320/1.5×. The route harness uses a
-  nested Navigator with production pill/adapter because mounting `HomeShell`
-  leaves Drift stream cleanup timers pending; full shell lifecycle integration,
-  Ask modal-route device acceptance, remaining compact/landscape combinations,
-  and physical phone QA remain open. No emulator, private data, phone mutation,
-  or APK change.
+  nested Navigator with the production pill/adapter. Added a separate
+  `HomeShell` route test that opens Ask from the real pill at 402×874 with
+  simulated 24dp/48dp safe padding, then checks the 320×568/2× route after a
+  synthetic adjustResize to 320×348 with zero residual inset. The composer and
+  48dp close target stay inside the resized route. The shell fixture keeps the
+  database unopened and unmounts explicitly, so it does not create Drift stream
+  cleanup timers. The isolated HomeShell Activity nested-Navigator test also
+  passes. Physical keyboard behavior remains unverified; Ask modal-route device
+  acceptance, remaining compact/landscape combinations, and physical phone QA
+  remain open. No emulator, private data, phone mutation, or APK change.
 - Added Activity→detail→correction coverage through the real
   `TransactionsScreen` route with the production pill/adapter. The Activity row
   clears the pill and opens detail at 402×874/24dp/1×, 568×320/24dp/1.5×, and
@@ -33,8 +38,10 @@
   outside the viewport at 2× and cannot be tapped. Existing Weekly Review tests
   use portrait fixtures and miss compact landscape; the layout follow-up is
   tracked under T-167c and is outside this T-176 slice.
-- Focused route suite 11/11; full Flutter suite 933/933; `flutter analyze
-  --no-pub`, changed-file formatting, and `git diff --check` clean. Final
+- Focused route suite 11/11; production HomeShell→Ask suite 3/3; existing
+  HomeShell Activity nested-Navigator test 1/1; full Flutter suite 936/936;
+  `flutter analyze --no-pub`, changed-file formatting, and `git diff --check`
+  clean. Final
   GitNexus detect-changes sees 3 files, 18 symbols, 0 affected processes, LOW
   risk. Pre-edit `TransactionDetailScreen` impact was HIGH (43 symbols, 18
   direct callers, one process); no production detail code changed. Earlier
