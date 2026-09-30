@@ -192,11 +192,13 @@ later hardening.
     fix; physical-device QA remains pending. The phone was online for the
     unrelated 2026-09-30 v2011 release install/launch. Still open: Ask
     modal-route acceptance on a physical device and remaining compact/
-    landscape combinations. No emulator, private SMS/DB data, phone mutation,
-    or APK change.
-  - Physical 0.1.3+2011 QA surfaced a possible default-portrait Ask composer/IME
-    clearance issue. UIAutomator bounds corroboration and repeat physical
-    acceptance remain pending; synthetic resize tests do not close this gate.
+    landscape combinations. The synthetic route tests used no emulator,
+    inspected no private SMS/DB data, and changed no phone or APK state.
+  - Physical QA on the exact published v0.1.3+2011 artifact from source
+    `3b2fb6b` confirmed Ask composer occlusion by the IME in default portrait at
+    1× and 1.5×, with repeated settled-IME metrics and local screenshots.
+    Settings were restored; no messages or app data changed. Physical
+    acceptance failed and remains open; synthetic resize tests do not close it.
   - Focused verification: global bottom-inset route tests 11/11, including
     Activity/detail/correction at three viewports; Ask route plus
     AssistantScreen tests 9/9; production HomeShell→Ask route 3/3 and existing

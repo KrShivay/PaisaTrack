@@ -1,41 +1,31 @@
 # Current Handoff
 
-## 2026-09-30 — T-164e Activity calendar grouping
+## 2026-09-30 — T-164e Activity/Dashboard timestamp display
 
-- Activity grouping and currency totals now use full local calendar-date
-  identity; prior-year headings include the year, DST-safe Today/Yesterday
-  labels use civil-day arithmetic, and item order/stored instants are preserved.
-  Independent code review approved the bounded slice; broader T-164e acceptance
-  remains open in Ready.
-- Verification: full Flutter suite 951/951; focused formatter/Activity suites
-  28/28 in both `TZ=Asia/Kolkata` and `TZ=America/New_York`; analyzer,
-  formatting, and `git diff --check` clean. GitNexus all-scope: 5 files, 7
-  symbols, 0 processes, LOW risk.
-- T-176 remains open for physical bottom-inset/keyboard QA. The 0.1.3+2011
-  default-portrait Ask composer may fall below the physical IME; UIAutomator
-  bounds corroboration and repeat acceptance are pending.
-
-## 2026-09-30 — T-164e Activity/Dashboard row clocks
-
-- Added `formatTxnClockTime` in `lib/core/format.dart`; Activity and Dashboard
-  transaction rows now convert an instant to local time once before rendering
-  the 12-hour clock. The timestamp epoch, stored representation, parsing,
-  grouping, export, calendar, filter, SMS, and capture behavior are unchanged.
-- Deterministic tests cover `2026-07-10T18:30:00Z` at +05:30 (`12:00 am`), a
-  changed -04:00 offset (`2:30 pm`), unchanged epoch, detail/grouping parity,
-  and both production row widgets. Dashboard test data uses a fixed September
-  2026 period anchor. No emulator, phone, or private user data was used.
-- Pre-edit GitNexus impact was LOW/exact: Activity row formatter 2 symbols / 1
-  direct caller / 1 process; Dashboard row formatter 1 / 1 / 0; core `_clock12h`
-  2 / 1 / 0. Independent review approved the bounded slice and fixed period
-  fixture. The broader T-164e display/date/filter/import contract remains open.
-- Focused suite: 32/32; Activity/Dashboard widget suites with
-  `TZ=Asia/Kolkata`: 21/21; full Flutter suite: 947/947;
-  `flutter analyze --no-pub`, Dart formatting, and `git diff --check` clean.
-  GitNexus final graph detection: 8 files, 10 symbols, 0 processes, LOW risk.
-  Implementation commit `3bd1b4e821d813ae744c93ca18927ad231bc4253` is pushed
-  to `origin/codex/t164e-display-clock`. The commit used a command-scoped empty
-  hooks path after manual checks, so the post-commit agent handoff did not run.
+- Added `formatTxnClockTime` so Activity/Dashboard rows localize an instant
+  once for the 12-hour clock; epochs, stored values, parsing, export, calendar,
+  filters, SMS, and capture are unchanged. Activity now groups by full local
+  calendar date, separates same month/day across years, and uses DST-safe
+  Today/Yesterday labels while preserving row order and stored instants. The
+  row-clock slice and independently reviewed grouping slice are complete; the
+  broader detail/export/search/filter/import/SMS contract remains open in Ready.
+- Deterministic row tests cover `2026-07-10T18:30:00Z` at +05:30 (`12:00 am`),
+  a changed -04:00 offset (`2:30 pm`), unchanged epoch, detail/grouping parity,
+  production row widgets, and a fixed September 2026 Dashboard anchor. Grouping
+  tests cover same-day cross-year totals/order, UTC-backed local midnight, and
+  spring/fall DST. Row-clock pre-edit GitNexus impacts were LOW/exact; grouping
+  pre-edit impacts were LOW. Code commits `3bd1b4e821d813ae744c93ca18927ad231bc4253`
+  and `6b9bc84033fc193ee6497638caf15b1e0786c973` are pushed to their respective
+  `codex/t164e-*` branches.
+- Verification: row-clock focused 32/32, timezone widget checks 21/21, then-full
+  suite 947/947; grouping focused 28/28 in `TZ=Asia/Kolkata` and
+  `TZ=America/New_York`, full suite 951/951, analyzer/format/diff clean, and
+  GitNexus row-clock final 8 files/10 symbols/0 processes/LOW and grouping
+  all-scope 5 files/7 symbols/0 processes/LOW. T-176 physical
+  QA on published v0.1.3+2011 source `3b2fb6b` confirmed the Ask composer is
+  occluded by the IME in default portrait at 1× and 1.5×, with repeated settled
+  IME metrics and local screenshots. Settings were restored; no messages/data
+  changed, and physical acceptance did not pass.
 
 ## 2026-09-30 — T-194 APK-size trial tracking
 
