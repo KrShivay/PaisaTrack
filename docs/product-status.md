@@ -1,7 +1,7 @@
 # Product Status
 
-Status date: 2026-09-29
-Code baseline: main at `a5e2e61`, including T-187 source-currency fidelity.
+Status date: 2026-09-30
+Code baseline: main at `5c98365`, including T-187 source-currency fidelity.
 Physical-device acceptance for T-176 and T-179a remains open.
 
 This is the source of truth for current product state. Normative technical
@@ -85,7 +85,7 @@ normative boundaries.
 | Delete everything | Deletes database/native state, DB key, Dart settings, and import markers | Physical-device erasure acceptance remains |
 | Accessibility | Reduced motion and some semantics/responsive tests exist | Touch targets, TalkBack labels/order, contrast, large text, and device acceptance are incomplete |
 | Offline behavior | Core finance and inference work offline after optional model downloads | Background/device-only behavior is not fully accepted on physical hardware |
-| Release/distribution | Release signing guard and rotation/rollback documentation exist | CI/device test lanes and distribution evidence remain |
+| Release/distribution | Production-signed ARM64 `0.1.3+2011` download was verified by hash/certificate and installed/launched on the target phone; signing guard and rotation/rollback documentation exist | CI/device test lanes, store distribution, data-integrity checks, and broader physical acceptance remain |
 
 The stored global monthly budget and merchant-cap prototype are not T-098.
 T-098 is a future per-category, per-month budget feature and depends on a shared
@@ -116,7 +116,7 @@ Exact owners, dependencies, acceptance criteria, and next actions are in
 | Recoverable, user-controlled local data | Some errors point to reset; delete-everything is incomplete |
 | Automatic SMS capture with clear recovery | Permanent denial recovery actions do not open system settings |
 | Complete, scalable financial history | Activity and Review operate on bounded client-side windows |
-| Private, production-ready Android app | Notification/native state remains outside the erase boundary; release is debug-signed |
+| Private, production-ready Android app | Notification/native state remains outside the erase boundary; the published release has install/launch verification only, while data-integrity, recovery, accessibility, and store-release acceptance remain incomplete |
 | Accessible Bloom experience | Visual redesign is ahead of semantics, touch targets, contrast, and device acceptance |
 | Category budgeting | Only an overall-budget/cap prototype exists; category budgets remain planned |
 
@@ -129,6 +129,25 @@ shipped. Remaining Bloom and release gaps are normalized into `TASKS.md`; the
 original audit/addendum are archived as design inputs.
 
 ## Verification snapshot
+
+ARM64 release artifact and physical launch, 2026-09-30:
+
+- The public `0.1.3+2011` ARM64 APK from commit
+  `6ac898f564bfd307455a1b7201ab229a3fe09c80` was verified at 56,750,764 bytes
+  with SHA-256
+  `218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`, package
+  `com.paisatrack`, effective code `4011`, ARM64-only ABI, and the production
+  certificate recorded in `docs/release-signing.md`.
+- On the motorola edge 50 pro (Android API 36), `adb install -r` succeeded. The
+  installed base APK matched the published artifact hash, and
+  `firstInstallTime` remained `2026-09-26 22:20:54`. This confirms an in-place
+  package replacement; no private records were inspected, so it does not claim
+  stored-data integrity.
+- `MainActivity` launched and remained resumed. A recent filtered
+  AndroidRuntime/linker log sample had no app fatal or native-load failure
+  markers. This launch did not exercise optional inference paths. T-193 physical
+  preview/apply/undo, T-194 storage/cold-start measurement, and the separate
+  responsive, capture, and recovery acceptance gates remain open.
 
 T-187 source-currency fidelity, reviewed and shipped on 2026-09-29:
 

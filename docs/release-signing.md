@@ -39,12 +39,18 @@ Its package is `com.paisatrack`, version name `0.1.3`, and production
 certificate SHA-256
 `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
 The artifact was built from main commit `3b2fb6b` with release version
-`0.1.3+2011`. Physical v2011 launch is unverified because the device is
-offline; the phone remains on `0.1.3+2010` (effective code `4010`;
-`firstInstallTime` `2026-09-26 22:20:54`). T-193
-synthetic backup/restore coverage is in place; physical acceptance of the
-currency-repair detail UI remains open. Broader T-167c responsive-layout,
-T-176 screen-inset, and T-179a key-recovery acceptance also remain open.
+`0.1.3+2011`. On 2026-09-30, this exact published artifact was installed with
+`adb install -r` on the motorola edge 50 pro (Android API 36). The pulled
+installed base APK matched the published size and SHA-256; package, version,
+effective code `4011`, ARM64 ABI, and production signer matched. `firstInstallTime`
+remained `2026-09-26 22:20:54`, confirming in-place replacement only; stored-data
+integrity was not assessed. `MainActivity` launched and remained resumed. A
+recent filtered AndroidRuntime/linker sample had no app fatal or native-load
+failure markers. No private records were inspected, and optional inference
+paths were not exercised. T-193 physical acceptance of the currency-repair
+detail UI remains open. Broader T-167c responsive-layout, T-176 screen-inset,
+T-179a key-recovery, T-177a capture/holdout, and T-194 size-trial acceptance
+also remain open.
 
 ## Unpublished APK-size trial (T-194)
 
@@ -62,9 +68,10 @@ native libraries.
 
 This candidate has not been installed or published. Extraction is projected
 to add about 23,069,324 bytes to installed storage relative to the current APK;
-physical storage and cold-start impact remain unmeasured because the supported
-phone is offline. Keep the published artifact above unchanged, and leave T-194
-open until physical acceptance is recorded.
+physical storage and cold-start impact remain unmeasured. The supported phone
+was online for the separate published-release install/launch on 2026-09-30, but
+the T-194 candidate was not installed or measured. Keep the published artifact
+above unchanged, and leave T-194 open until its physical acceptance is recorded.
 
 Resolve dependencies, then build from the repository root with:
 

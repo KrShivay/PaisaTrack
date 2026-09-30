@@ -17,11 +17,11 @@ later hardening.
     `cb9a3deb34207ea4b9aef251f7ce411166e7ac59cc4d5cff3690844691672e29`.
     The release-only packaging config remains isolated on that branch and is
     not adopted on main.
-  - Remaining acceptance: when the supported ARM64 phone is online, install
-    the candidate, verify launch/native library loading, and record installed
-    storage and cold-start results against the current release. Keep the task
-    in Ready until this device acceptance is possible; no APK publication is
-    part of this task.
+  - Remaining acceptance: the supported ARM64 phone was online for the
+    2026-09-30 published-release launch, but the compressed candidate has not
+    been installed. T-194 still needs its separate physical candidate launch,
+    installed-storage measurement, and cold-start comparison before adoption.
+    No candidate APK publication is part of this task.
   - Details: [T-194](docs/tasks/T-194.md).
 
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
@@ -49,7 +49,9 @@ later hardening.
     fixture calls the catch-up runner directly; app-resume lifecycle and
     known-SMS-boundary behavior remain unverified alongside physical
     live/resume capture. The real-data holdout and physical capture evidence
-    remain pending because the supported release device is currently offline.
+    remain pending. The supported phone was online for the unrelated 2026-09-30
+    v2011 release install/launch; no T-177a holdout or physical capture/resume
+    acceptance was performed.
   - Verification: threshold tests 17/17; repository/detail/template-ledger
     tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
     and diff check clean. Same-count correction, v1/v2 state invalidation,
@@ -175,8 +177,9 @@ later hardening.
     the default portrait viewport and do not cover compact landscape. Keep the
     layout fix in T-167c; no production review-screen change is part of T-176.
   - The synthetic Sort→detail route now passes after the T-167c responsive
-    fix; physical-device QA remains pending with the device offline. Still open:
-    Ask modal-route acceptance on a physical device and remaining compact/
+    fix; physical-device QA remains pending. The phone was online for the
+    unrelated 2026-09-30 v2011 release install/launch. Still open: Ask
+    modal-route acceptance on a physical device and remaining compact/
     landscape combinations. No emulator, private SMS/DB data, phone mutation,
     or APK change.
   - Focused verification: global bottom-inset route tests 11/11, including
@@ -216,10 +219,15 @@ later hardening.
     compatibility-test commit also passed independent review. No physical
     repair UI confirmation has been performed.
   - Release follow-up: signed `0.1.3+2011` from main `3b2fb6b` is published.
-    Physical v2011 launch is unverified because the device is offline; the
-    phone remains on `0.1.3+2010` (effective code 4010;
-    `firstInstallTime` remained `2026-09-26 22:20:54`). Physical
-    preview/apply/undo acceptance remains open.
+    On 2026-09-30, the exact ARM64 artifact from commit
+    `6ac898f564bfd307455a1b7201ab229a3fe09c80` (56,750,764 bytes; SHA-256
+    `218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`) was
+    installed with `adb install -r` on the motorola edge 50 pro. The pulled
+    installed base APK matched its hash; package/version/code and production
+    signer matched; `firstInstallTime` remained `2026-09-26 22:20:54`. Launch
+    reached resumed `MainActivity` with no matching recent app fatal/native-load
+    markers. This proves in-place package replacement, not stored-data integrity.
+    Physical preview/apply/undo acceptance remains open.
 
 - [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
       Verification: 768 Flutter tests passed; analyzer and diff check clean;

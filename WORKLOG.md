@@ -29,12 +29,12 @@
   `cb9a3deb34207ea4b9aef251f7ce411166e7ac59cc4d5cff3690844691672e29`.
   Same-source control confirms all six native libraries are unchanged by the
   release-only packaging setting; package/version/signer, ZIP, and alignment
-  checks passed. No install or publication occurred.
-- T-194 is Ready for physical acceptance. When the supported ARM64 phone is
-  online, measure installed storage and cold-start behavior before adoption.
-  This tracking change is docs-only; the Gradle experiment remains isolated on
-  the candidate branch. GitNexus docs-only detection found 9 touched section
-  symbols, 0 processes, LOW risk.
+  checks passed. The candidate remains unpublished and was not installed.
+- T-194 is Ready for physical acceptance. The supported ARM64 phone was online
+  for the separate 2026-09-30 published-release launch, but candidate installed
+  storage and cold-start were not measured. The Gradle experiment remains
+  isolated on the candidate branch. GitNexus docs-only detection found 9
+  touched section symbols, 0 processes, LOW risk.
 
 ## 2026-09-30 — ARM64 0.1.3+2011 release
 
@@ -45,6 +45,19 @@
   package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4011`,
   and production certificate SHA-256
   `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
-- Physical v2011 launch is unverified because the device is offline; the phone
-  remains on `0.1.3+2010` (effective code `4010`; `firstInstallTime` remained
-  `2026-09-26 22:20:54`). No v2011 phone install was attempted.
+- On 2026-09-30, fetched `app-release-arm64.apk` from that exact public commit,
+  reverified its size, SHA-256, package/version/code, ARM64-only native ABI, and
+  production signer, then installed it on the motorola edge 50 pro with
+  `adb install -r` (success). The installed base APK matched the published
+  artifact byte-for-byte at 56,750,764 bytes and the same SHA-256. The phone
+  reported code `4011` before and after; `firstInstallTime` stayed
+  `2026-09-26 22:20:54`, confirming in-place replacement only, not data
+  integrity. Before this install, the phone held a same-version 130,104,007-byte
+  local build with a different hash.
+- `MainActivity` launched and remained resumed with a live app process. A
+  recent, narrowly filtered AndroidRuntime/linker log sample contained no app
+  fatal or native-load failure markers. The APK includes the Flutter, SQLCipher,
+  LiteRT-LM, and MediaPipe ARM64 libraries; optional native inference paths were
+  not exercised. No private screens or financial data were inspected. T-193
+  preview/apply/undo, T-194 storage/cold-start measurement, and the separate
+  responsive, capture, and recovery device gates remain open.
