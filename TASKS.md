@@ -10,6 +10,20 @@ later hardening.
 
 ## Ready
 
+- [ ] T-194 [P1] Measure installed storage and cold-start for the compressed
+      ARM64 APK-size trial.
+  - The signed v2011 candidate is on branch `codex/apk-size-trial` at commit
+    `4a9fdfa`; it is 26,180,416 bytes with SHA-256
+    `cb9a3deb34207ea4b9aef251f7ce411166e7ac59cc4d5cff3690844691672e29`.
+    The release-only packaging config remains isolated on that branch and is
+    not adopted on main.
+  - Remaining acceptance: when the supported ARM64 phone is online, install
+    the candidate, verify launch/native library loading, and record installed
+    storage and cold-start results against the current release. Keep the task
+    in Ready until this device acceptance is possible; no APK publication is
+    part of this task.
+  - Details: [T-194](docs/tasks/T-194.md).
+
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
   - Bounded milestone: add a local chronological replay/report contract and
     synthetic fixtures that exercise live, history, and resume provider wiring;

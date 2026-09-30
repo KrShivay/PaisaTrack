@@ -1,24 +1,18 @@
 # Current Handoff
 
-## 2026-09-30 — T-164a keyset repository pagination coverage
+## 2026-09-30 — T-194 APK-size trial tracking
 
-- Expanded the real in-memory repository traversal test to 47 eligible rows
-  with one identical timestamp and descending-ID tie order. A deleted row and a
-  duplicate-suppressed row sit between each eligible ID in sort order. The
-  test inserts a same-timestamp row whose ID sorts ahead of the page-one
-  cursor and checks every page against its exact expected 7-row slice and
-  cursor, including terminal state and full no-gap/no-repeat coverage. No
-  production query change was needed because the adversarial test passed.
-- Focused transaction repository tests passed 21/21; full Flutter suite
-  passed 942/942; `flutter analyze --no-pub`, changed-file formatting, and
-  `git diff --check` are clean. GitNexus was refreshed at `09dc8ad` in the
-  exact T-164a worktree; `detect_changes(scope: all)` found 9 changed section
-  symbols across TASKS and WORKLOG, 0 affected processes, LOW risk, with no
-  partial/truncated result. The analyzer did not map the changed test hunk to
-  a symbol, so the test diff was reviewed directly. Independent review approved
-  with no blocker;
-  T-164a was removed from the unfinished board after approval. No device,
-  emulator, private data, or production code changes.
+- Signed ARM64 v2011 candidate: `codex/apk-size-trial` commit `4a9fdfa`,
+  26,180,416 bytes, SHA-256
+  `cb9a3deb34207ea4b9aef251f7ce411166e7ac59cc4d5cff3690844691672e29`.
+  Same-source control confirms all six native libraries are unchanged by the
+  release-only packaging setting; package/version/signer, ZIP, and alignment
+  checks passed. No install or publication occurred.
+- T-194 is Ready for physical acceptance. When the supported ARM64 phone is
+  online, measure installed storage and cold-start behavior before adoption.
+  This tracking change is docs-only; the Gradle experiment remains isolated on
+  the candidate branch. GitNexus docs-only detection found 9 touched section
+  symbols, 0 processes, LOW risk.
 
 ## 2026-09-30 — ARM64 0.1.3+2011 release
 

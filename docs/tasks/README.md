@@ -31,6 +31,7 @@ Follow `COLLABORATION.md` for lifecycle, verification, and completion rules.
 | T-177 | Smart transaction assistance | 7 | [T-177.md](T-177.md) |
 | T-178 | Grounded AI | 4 | [T-178.md](T-178.md) |
 | T-189 | Ask prompt list | 1 | [T-189.md](T-189.md) |
+| T-194 | ARM64 APK size trial | 1 | [T-194.md](T-194.md) |
 
 Completed brief pointers: [T-145](T-145.md), [T-146](T-146.md),
 [T-147](T-147.md), [T-148](T-148.md), and [T-152](T-152.md).
