@@ -123,6 +123,8 @@ later hardening.
     568×320/2×/48dp with the real floating pill. Independent review
     approved the updated diff. Physical-device QA remains pending.
 
+## In Review
+
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -149,12 +151,16 @@ later hardening.
     `Timer.run` until Flutter's post-test teardown.
   - Ask compact-keyboard slice: the production full-screen Ask route now has
     a focused test at 320×568 and 2× text, then dynamically resizes to 320×348
-    with zero residual inset (the keyboard area is counted once, matching
-    `adjustResize`). The compact Ask-only header keeps the composer visible,
+    with zero residual inset to model a window-resize platform contract. The
+    API 36 phone later reported a full-height app window plus a nonzero IME
+    inset despite `adjustResize`; the synthetic resize case covers only that
+    alternate contract and does not substitute for physical behavior. The
+    compact Ask-only header keeps the composer visible,
     retains a 48dp close target, and leaves the transcript scrollable; normal
     height keeps the full header. The earlier 42px overflow figure came from
-    a fixture that applied both the 348dp resize and a 220dp inset. A corrected
-    route-size-only fixture still reproduced a real compact-height issue: the
+    a fixture that applied both the 348dp resize and a 220dp inset, double-
+    counting the keyboard only in that test setup. A corrected route-size-only
+    fixture still reproduced a compact-height issue: the
     full header title and subtitle wrapped to 138dp and 155dp, leaving only
     23dp for the AssistantScreen. A submitted user message now verifies the
     actual transcript ListView has positive scroll extent at 320×348/2× text;
@@ -174,13 +180,14 @@ later hardening.
   - HomeShell/Ask integration slice: three tests open Ask through the
     production `HomeFloatingNavPill` and root modal route. At 402×874, the pill
     respects simulated 24dp gesture and 48dp three-button safe padding and the
-    composer mounts. At 320×568/2× text, the compact route is tapped into and
-    resized to 320×348 with zero residual inset; its 48dp close target and
-    composer remain inside the resized viewport. The focused fixture leaves
-    the database unopened, explicitly unmounts the shell, and completes without
-    a Drift teardown timer. The existing HomeShell Activity nested-Navigator
-    test also passes in isolation. The resize is synthetic; physical keyboard
-    behavior remains a device-only gate.
+    composer mounts. At 320×568/2× text, a full-window route with 220dp of
+    `viewInsets` keeps the 48dp close target and composer within the 348dp
+    visible area and preserves the inset for nested routes. The direct Ask
+    route test separately covers a synthetic resize to 320×348 with zero
+    residual inset. The focused fixture leaves the database unopened,
+    explicitly unmounts the shell, and completes without a Drift teardown
+    timer. The existing HomeShell Activity nested-Navigator test also passes
+    in isolation. Physical keyboard behavior remains a device-only gate.
   - T-176 route-audit follow-up for T-167c: a trial through the real Sort
     detail caller exposed `WeeklyReviewScreen`'s card/action `Column` overflowing
     at 568×320 by 30dp with 1.5× text/24dp gesture inset and by 86dp with 2×
@@ -197,8 +204,26 @@ later hardening.
   - Physical QA on the exact published v0.1.3+2011 artifact from source
     `3b2fb6b` confirmed Ask composer occlusion by the IME in default portrait at
     1× and 1.5×, with repeated settled-IME metrics and local screenshots.
-    Settings were restored; no messages or app data changed. Physical
-    acceptance failed and remains open; synthetic resize tests do not close it.
+    No messages were entered or submitted; no suggestion was selected, and no
+    transaction edits, SMS scan, permission, key, backup, reset, or restore
+    operation was performed. Settings were restored. Physical acceptance
+    failed and remains open; synthetic resize tests do not close it. Evidence:
+    [T-176 physical Ask keyboard QA](docs/reports/T-176-physical-ask-ime-2026-09-30.md).
+  - Fix slice in review: the full-screen sheet helper now has opt-in keyboard
+    avoidance, enabled only for HomeShell → Ask, preserving existing inset
+    ownership for other callers. The Ask header selects compact layout from
+    available route height after subtracting `viewInsets`; descendants retain
+    the original `MediaQuery.viewInsets` for nested routes. Regression-first
+    full-window/220dp-inset test failed before the fix with the composer bottom
+    at 548dp (visible bottom 348dp). Direct Ask tests cover full-window plus
+    inset and resized-window plus zero inset; a nested modal test verifies
+    inset preservation. The production HomeShell route now covers both
+    320×568/2× with a 220dp inset and a phone-like 434×964/1× viewport with a
+    370dp inset; both cases clear the IME, close Ask, and return Home. Focused
+    helper/Ask/HomeShell/category/detail suites passed 29/29; full Flutter
+    suite 954/954; analyzer and formatter clean. This is synthetic
+    verification only: the owner phone still runs source `3b2fb6b`; re-test on
+    a reviewed build before closing the physical gate.
   - Focused verification: global bottom-inset route tests 11/11, including
     Activity/detail/correction at three viewports; Ask route plus
     AssistantScreen tests 9/9; production HomeShell→Ask route 3/3 and existing
@@ -206,8 +231,6 @@ later hardening.
     full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
     diff check, and GitNexus detect-changes clean. No emulator, private
     SMS/DB data, phone mutation, or APK change.
-
-## In Review
 
 - [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
   - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps

@@ -14,6 +14,10 @@ Future<T?> showBloomFullScreenSheet<T>({
   VoidCallback? onClose,
   WidgetBuilder? headerBuilder,
   Color? backgroundColor,
+
+  /// Moves full-screen sheet content above the keyboard when its child does
+  /// not already handle keyboard insets itself.
+  bool avoidKeyboard = false,
 }) {
   assert(
     showBack || showClose || headerBuilder != null,
@@ -40,7 +44,7 @@ Future<T?> showBloomFullScreenSheet<T>({
     builder: (BuildContext context) {
       // By wrapping in a FractionallySizedBox with heightFactor: 1.0, we force full height.
       // The BloomSheetScaffold already provides the 44x5 handle and 30px corner radius.
-      return FractionallySizedBox(
+      final sheet = FractionallySizedBox(
         heightFactor: 1.0, // Full height
         child: BloomSheetScaffold(
           title: title,
@@ -52,6 +56,14 @@ Future<T?> showBloomFullScreenSheet<T>({
           backgroundColor: backgroundColor,
           child: builder(context),
         ),
+      );
+      if (!avoidKeyboard) return sheet;
+
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: sheet,
       );
     },
   );

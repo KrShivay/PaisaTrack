@@ -32,9 +32,12 @@ class AssistantScreen extends ConsumerStatefulWidget {
 
   final bool showSheetHeader;
 
-  static Widget sheetHeader(BuildContext context) => _AssistantSheetHeader(
-        compact: MediaQuery.sizeOf(context).height < 400,
-      );
+  static Widget sheetHeader(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final availableHeight =
+        mediaQuery.size.height - mediaQuery.viewInsets.bottom;
+    return _AssistantSheetHeader(compact: availableHeight < 400);
+  }
 
   @override
   ConsumerState<AssistantScreen> createState() => _AssistantScreenState();

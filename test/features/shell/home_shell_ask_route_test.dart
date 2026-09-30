@@ -96,43 +96,81 @@ void main() {
     );
   }
 
-  testWidgets(
-    'production Ask modal keeps its close target and composer above compact keyboard',
-    (tester) async {
-      _setViewport(
-        tester,
-        size: const Size(320, 568),
-        bottomInset: 24,
-      );
-      await _pumpHomeShell(tester, textScale: 2);
+  for (final scenario in [
+    (
+      name: 'compact 2x viewport',
+      size: const Size(320, 568),
+      textScale: 2.0,
+      imeInset: 220.0,
+    ),
+    (
+      name: 'phone-like portrait viewport',
+      size: const Size(434, 964),
+      textScale: 1.0,
+      imeInset: 370.0,
+    ),
+  ]) {
+    testWidgets(
+      'production Ask modal clears the IME and closes at ${scenario.name}',
+      (tester) async {
+        _setViewport(
+          tester,
+          size: scenario.size,
+          bottomInset: 24,
+        );
+        await _pumpHomeShell(tester, textScale: scenario.textScale);
 
-      await tester.tap(find.bySemanticsLabel('Ask PaisaTrack'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(find.bySemanticsLabel('Ask PaisaTrack'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
 
-      final composer = find.byKey(const ValueKey('assistant_composer'));
-      final field = find.descendant(
-        of: composer,
-        matching: find.byType(TextField),
-      );
-      expect(field, findsOneWidget);
-      await tester.tap(field);
+        final composer = find.byKey(const ValueKey('assistant_composer'));
+        final field = find.descendant(
+          of: composer,
+          matching: find.byType(TextField),
+        );
+        expect(field, findsOneWidget);
+        await tester.tap(field);
 
-      // Android adjustResize reduces the viewport once; viewInsets stays zero.
-      tester.view.physicalSize = const Size(320, 348);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 250));
+        // Edge-to-edge Flutter keeps the full viewport and reports the IME inset.
+        tester.view.viewInsets = FakeViewPadding(bottom: scenario.imeInset);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
 
-      final close = find.byTooltip('Close');
-      expect(close, findsOneWidget);
-      expect(tester.getRect(close).height, greaterThanOrEqualTo(48));
-      expect(tester.getRect(close).bottom, lessThanOrEqualTo(348));
-      expect(tester.getRect(composer).bottom, lessThanOrEqualTo(348));
-      expect(MediaQuery.viewInsetsOf(tester.element(composer)).bottom, 0);
-      expect(tester.takeException(), isNull);
+        final visibleBottom = scenario.size.height - scenario.imeInset;
+        final close = find.byTooltip('Close');
+        expect(close, findsOneWidget);
+        expect(tester.getRect(close).bottom, lessThanOrEqualTo(visibleBottom));
+        expect(
+          tester.getRect(composer).bottom,
+          lessThanOrEqualTo(visibleBottom),
+        );
+        expect(
+          MediaQuery.sizeOf(tester.element(composer)).height,
+          scenario.size.height,
+        );
+        expect(
+          MediaQuery.viewInsetsOf(tester.element(composer)).bottom,
+          scenario.imeInset,
+        );
+        expect(tester.takeException(), isNull);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    },
-  );
+        tester.view.viewInsets = const FakeViewPadding();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(close);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('assistant_sheet_surface')),
+          findsNothing,
+        );
+        expect(find.byType(HomeFloatingNavPill), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+  }
 }

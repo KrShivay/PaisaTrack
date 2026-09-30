@@ -1,31 +1,24 @@
 # Current Handoff
 
-## 2026-09-30 — T-164e Activity/Dashboard timestamp display
+## 2026-09-30 — T-176 Ask IME route fix
 
-- Added `formatTxnClockTime` so Activity/Dashboard rows localize an instant
-  once for the 12-hour clock; epochs, stored values, parsing, export, calendar,
-  filters, SMS, and capture are unchanged. Activity now groups by full local
-  calendar date, separates same month/day across years, and uses DST-safe
-  Today/Yesterday labels while preserving row order and stored instants. The
-  row-clock slice and independently reviewed grouping slice are complete; the
-  broader detail/export/search/filter/import/SMS contract remains open in Ready.
-- Deterministic row tests cover `2026-07-10T18:30:00Z` at +05:30 (`12:00 am`),
-  a changed -04:00 offset (`2:30 pm`), unchanged epoch, detail/grouping parity,
-  production row widgets, and a fixed September 2026 Dashboard anchor. Grouping
-  tests cover same-day cross-year totals/order, UTC-backed local midnight, and
-  spring/fall DST. Row-clock pre-edit GitNexus impacts were LOW/exact; grouping
-  pre-edit impacts were LOW. Code commits `3bd1b4e821d813ae744c93ca18927ad231bc4253`
-  and `6b9bc84033fc193ee6497638caf15b1e0786c973` are pushed to their respective
-  `codex/t164e-*` branches.
-- Verification: row-clock focused 32/32, timezone widget checks 21/21, then-full
-  suite 947/947; grouping focused 28/28 in `TZ=Asia/Kolkata` and
-  `TZ=America/New_York`, full suite 951/951, analyzer/format/diff clean, and
-  GitNexus row-clock final 8 files/10 symbols/0 processes/LOW and grouping
-  all-scope 5 files/7 symbols/0 processes/LOW. T-176 physical
-  QA on published v0.1.3+2011 source `3b2fb6b` confirmed the Ask composer is
-  occluded by the IME in default portrait at 1× and 1.5×, with repeated settled
-  IME metrics and local screenshots. Settings were restored; no messages/data
-  changed, and physical acceptance did not pass.
+- Physical QA on the published v0.1.3+2011 build from source `3b2fb6b` found
+  the Ask composer fully covered by the settled IME at 1× and 1.5×. The phone
+  was restored to portrait, font scale 1.0, and Home with IME hidden. No text was
+  entered or submitted, no suggestion was selected, and no transaction edits,
+  SMS scan, permission, key, backup, reset, or restore operation was performed.
+  Geometry and scope: [T-176 physical Ask QA report](docs/reports/T-176-physical-ask-ime-2026-09-30.md).
+- The fix adds opt-in keyboard avoidance to the full-screen sheet helper and
+  enables it only for HomeShell → Ask; Ask's compact header uses the remaining
+  route height after the IME inset. A regression-first test failed before the
+  fix (composer bottom 548dp vs 348dp visible); full-window/inset, resized
+  window/zero-inset, and nested-modal cases pass. Production HomeShell tests
+  exercise 320×568/2× with a 220dp inset and phone-like 434×964/1× with a
+  370dp inset, then hide the IME, close Ask, and verify return to Home. Focused
+  helper/Ask/HomeShell/category/detail keyboard tests: 29/29; full Flutter
+  suite: 954/954; analyzer clean. The installed phone still runs the original
+  build; T-176 and T-167c physical acceptance remains open pending review and
+  re-test.
 
 ## 2026-09-30 — T-194 APK-size trial tracking
 

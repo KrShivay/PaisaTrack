@@ -114,6 +114,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       showClose: false,
       backgroundColor: AppColorTokens.bloomDarkBase,
       headerBuilder: AssistantScreen.sheetHeader,
+      avoidKeyboard: true,
       builder: (_) => const AssistantScreen(showSheetHeader: false),
     );
   }

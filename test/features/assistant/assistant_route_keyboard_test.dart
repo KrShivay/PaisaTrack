@@ -25,6 +25,7 @@ Future<void> _pumpAskRoute(
   WidgetTester tester, {
   required AppDatabase database,
   required AssistantController controller,
+  double textScale = 2,
 }) async {
   const viewport = Size(320, 568);
   tester.view.physicalSize = viewport;
@@ -49,7 +50,7 @@ Future<void> _pumpAskRoute(
           final mediaQuery = MediaQuery.of(context);
           return MediaQuery(
             data: mediaQuery.copyWith(
-              textScaler: const TextScaler.linear(2),
+              textScaler: TextScaler.linear(textScale),
             ),
             child: SizedBox(
               width: viewport.width,
@@ -69,6 +70,7 @@ Future<void> _pumpAskRoute(
                     showClose: false,
                     backgroundColor: const Color(0xFF0E0C1A),
                     headerBuilder: AssistantScreen.sheetHeader,
+                    avoidKeyboard: true,
                     builder: (_) =>
                         const AssistantScreen(showSheetHeader: false),
                   );
@@ -117,6 +119,55 @@ void main() {
       expect(composer, findsOneWidget);
       expect(tester.getRect(composer).bottom, lessThanOrEqualTo(568));
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Ask route keeps its header, suggestions, and composer above a full-window IME',
+    (tester) async {
+      await _pumpAskRoute(
+        tester,
+        database: database,
+        controller: controller,
+        textScale: 1.5,
+      );
+
+      final composer = find.byKey(const ValueKey('assistant_composer'));
+      await tester.tap(
+        find.descendant(
+          of: composer,
+          matching: find.byType(TextField),
+        ),
+      );
+      await tester.pump();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 220);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      const visibleBottom = 348.0;
+      final close = find.byTooltip('Close');
+      final firstSuggestion =
+          find.text('How much did I spend on food this month?');
+
+      expect(tester.getRect(composer).bottom, lessThanOrEqualTo(visibleBottom));
+      expect(close, findsOneWidget);
+      expect(tester.getRect(close).height, greaterThanOrEqualTo(48));
+      expect(tester.getRect(close).bottom, lessThanOrEqualTo(visibleBottom));
+      expect(find.text('On-device · no internet used'), findsNothing);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+      await tester.pump();
+      expect(firstSuggestion, findsOneWidget);
+      await tester.ensureVisible(firstSuggestion);
+      expect(
+        tester.getRect(firstSuggestion).bottom,
+        lessThanOrEqualTo(visibleBottom),
+      );
+      expect(MediaQuery.viewInsetsOf(tester.element(composer)).bottom, 220);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     },
   );
 
