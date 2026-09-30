@@ -21,6 +21,10 @@
   edits: `HomeShell` LOW and `BloomBottomInset` MEDIUM; no production symbols
   changed. Detect-changes: 2 files / 18 symbols, LOW risk, 0 affected
   processes.
+- T189 was removed from the active board after independent Luna review of
+  implementation `48df299` and documentation fix `b73f7cb` found no functional
+  blocker. Its brief now records completion and the reviewed prompt, target,
+  keyboard, semantics, tap, and rotation evidence.
 
 ## 2026-09-30 — T-189 readable Ask prompt list
 
