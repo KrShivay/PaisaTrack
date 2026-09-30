@@ -47,17 +47,33 @@ later hardening.
     its prompt panel is capped to leave transcript space in 96–240dp content
     heights. The Ask-specific compact header addresses the route constraint
     without changing the shared sheet scaffold.
-  - Still open: transaction detail and nested sheet integration with the shell
-    pill, Ask modal-route acceptance on device, remaining compact/landscape
-    combinations, and physical phone QA. No emulator, private SMS/DB data,
-    phone mutation, or APK change.
-  - Focused verification: global bottom-inset route tests 8/8, including five
-    Settings/Not transactions cases; Ask route plus AssistantScreen tests 9/9;
-    full Flutter suite 930/930; detail/Note and
+  - Activity/detail/correction slice: three cases use the production
+    `TransactionsScreen`, `HomeFloatingNavPill`, bottom-inset adapter, detail
+    route, and nested correction sheet with synthetic provider data. At
+    402×874/24dp/1× and 568×320/24dp/1.5× plus 568×320/48dp/2×, the Activity
+    transaction row scrolls clear of the pill and remains tappable; the detail
+    edit action opens the correction sheet and its direction choice remains
+    tappable. No detail or sheet inset defect was demonstrated, so production
+    code is unchanged. The test fixture keeps the route under a nested
+    Navigator with the production pill/adapter because mounting `HomeShell`
+    leaves Drift stream cleanup timers pending.
+  - T-176 route-audit follow-up for T-167c: a trial through the real Sort
+    detail caller exposed `WeeklyReviewScreen`'s card/action `Column` overflowing
+    at 568×320 by 30dp with 1.5× text/24dp gesture inset and by 86dp with 2×
+    text/48dp three-button inset. At 2× the card is outside the viewport, so
+    this caller cannot reach detail. Existing Weekly Review widget tests use
+    the default portrait viewport and do not cover compact landscape. Keep the
+    layout fix in T-167c; no production review-screen change is part of T-176.
+  - Still open: complete `HomeShell` lifecycle integration, Ask modal-route
+    acceptance on device, remaining compact/landscape combinations, Sort
+    detail after the T-167c layout fix, and physical phone QA. No emulator,
+    private SMS/DB data, phone mutation, or APK change.
+  - Focused verification: global bottom-inset route tests 11/11, including
+    Activity/detail/correction at three viewports; Ask route plus
+    AssistantScreen tests 9/9; full Flutter suite 933/933; detail/Note and
     full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
-    diff check, and GitNexus detect-changes clean. The Ask-only change is LOW
-    risk with no affected processes. No emulator, private SMS/DB data, phone
-    mutation, or APK change.
+    diff check, and GitNexus detect-changes clean. No emulator, private
+    SMS/DB data, phone mutation, or APK change.
 
 ## Ready
 
@@ -143,6 +159,12 @@ later hardening.
     currency amounts readable. Preserve visible navigation, accessible labels,
     and minimum 48dp tap targets.
   - Scope: flexible/wrapping/adaptive layout fixes only; no device mutation.
+  - T-176 route-audit follow-up: `WeeklyReviewScreen`'s fixed card/action
+    `Column` overflows by 30dp at 568×320/1.5× text/24dp gesture inset and
+    86dp at 568×320/2× text/48dp three-button inset; the card is untappable at
+    the latter size. Existing Weekly Review tests use portrait fixtures and
+    lack compact-landscape coverage. The Sort-to-detail shell route remains
+    unverified until this layout gap is addressed.
   - Verification: responsive route suite 42/42; focused changed-screen/inset
     suite 56/56; reviewer follow-up focused suite 24/24; full Flutter suite
     894/894; `flutter analyze`, changed-file formatting, and `git diff --check`

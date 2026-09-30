@@ -8,8 +8,11 @@ import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/data/models/normalized_transaction_record.dart';
+import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/data/repositories/budget_repository.dart';
+import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/home/home_shell.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
@@ -17,8 +20,11 @@ import 'package:paisatrack/features/review/weekly_review_screen.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/settings/not_transactions_screen.dart';
 import 'package:paisatrack/features/settings/settings_screen.dart';
+import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
+import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
 
+import '../../support/fake_activity_transaction_page_controller.dart';
 import '../../support/fake_sms_permission_gate.dart';
 
 const _navigationKey = ValueKey('floating_navigation_pill');
@@ -29,6 +35,51 @@ const _emptyDashboardAggregate = DashboardAggregateSnapshot(
   categories: [],
   merchants: [],
   trendByMonth: {},
+);
+
+final _detailRouteItem = TransactionListItem(
+  id: 'synthetic_detail_route',
+  ts: DateTime.utc(2026, 9, 30),
+  amount: 449,
+  currencyCode: 'INR',
+  currencySymbol: '₹',
+  direction: TransactionDirection.debit,
+  displayName: 'Synthetic route payee',
+  categoryName: 'Food & Dining',
+  categoryId: 'food_dining',
+  categoryIcon: 'restaurant',
+  status: 'confirmed',
+  parseSource: 'template',
+  merchantRaw: 'Synthetic route payee',
+);
+
+final _detailRouteDetail = TransactionDetail(
+  txn: Transaction(
+    id: 'synthetic_detail_route',
+    ts: DateTime.utc(2026, 9, 30).millisecondsSinceEpoch,
+    amount: 449,
+    currencyCode: 'INR',
+    currencySymbol: '₹',
+    direction: 'debit',
+    channel: 'upi',
+    categoryId: 'food_dining',
+    merchantRaw: 'Synthetic route payee',
+    parseSource: 'template',
+    confidenceJson: '{}',
+    status: 'confirmed',
+    isDeleted: false,
+    isNotTransaction: false,
+    isAnalyticsExcluded: false,
+    lifecycleState: 'settled',
+    createdAt: DateTime.utc(2026, 9, 30),
+    updatedAt: DateTime.utc(2026, 9, 30),
+  ),
+  merchantName: 'Synthetic route payee',
+  categoryName: 'Food & Dining',
+  categoryIcon: 'restaurant',
+  parseConfidence: 0.98,
+  confidenceTrail: TransactionConfidenceTrail.fromJson('{}'),
+  isLowTrustParse: false,
 );
 
 const _destinations = <HomeNavigationDestination>[
@@ -394,6 +445,124 @@ void main() {
         expect(finalSection, findsOneWidget);
         _expectAboveNavigation(tester, finalSection);
         expect(tester.getSize(find.byType(HomeFloatingNavPill)).height, 64);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  const detailRouteCases = <({
+    String name,
+    Size size,
+    double inset,
+    double textScale,
+  })>[
+    (
+      name: 'standard portrait',
+      size: Size(402, 874),
+      inset: 24,
+      textScale: 1,
+    ),
+    (
+      name: 'compact landscape at 1.5x text with gesture navigation',
+      size: Size(568, 320),
+      inset: 24,
+      textScale: 1.5,
+    ),
+    (
+      name: 'compact landscape at 2x text with three-button navigation',
+      size: Size(568, 320),
+      inset: 48,
+      textScale: 2,
+    ),
+  ];
+  for (final routeCase in detailRouteCases) {
+    testWidgets(
+      'Activity detail and correction sheet remain tappable in ${routeCase.name}',
+      (tester) async {
+        await _pumpRoutes(
+          tester,
+          initialScreen: const TransactionsScreen(),
+          initialTab: 1,
+          size: routeCase.size,
+          systemBottomInset: routeCase.inset,
+          textScale: routeCase.textScale,
+          providerOverrides: [
+            activityTransactionPageProvider.overrideWith(
+              () => FakeActivityTransactionPageController(
+                ActivityTransactionPage(
+                  rows: [_detailRouteItem],
+                  hasMore: false,
+                ),
+              ),
+            ),
+            transactionDetailProvider(_detailRouteItem.id).overrideWith(
+              (ref) => Stream.value(_detailRouteDetail),
+            ),
+            categoryListProvider.overrideWith(
+              (ref) => Stream.value(const <Category>[]),
+            ),
+            suggestedCategoriesProvider(_detailRouteItem.id)
+                .overrideWith((ref) async => const <String>[]),
+          ],
+        );
+
+        final transactionName = find.text(_detailRouteItem.displayName);
+        final activityList = find
+            .ancestor(of: transactionName, matching: find.byType(Scrollable))
+            .first;
+        final activityPosition =
+            tester.state<ScrollableState>(activityList).position;
+        final transactionRect = tester.getRect(transactionName);
+        final navigationTop =
+            tester.getRect(find.byType(HomeFloatingNavPill)).top;
+        if (transactionRect.bottom > navigationTop) {
+          activityPosition.jumpTo(
+            (activityPosition.pixels +
+                    transactionRect.bottom -
+                    navigationTop +
+                    8)
+                .clamp(0.0, activityPosition.maxScrollExtent)
+                .toDouble(),
+          );
+          await tester.pump();
+        }
+        _expectAboveNavigation(tester, transactionName);
+        await tester.tap(transactionName);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(TransactionDetailScreen), findsOneWidget);
+        expect(find.text('Transaction Detail'), findsOneWidget);
+
+        final detail = find.byType(TransactionDetailScreen);
+        final detailScroll = find
+            .descendant(of: detail, matching: find.byType(Scrollable))
+            .first;
+        final editParse = find.widgetWithText(
+          OutlinedButton,
+          'Edit Parse Details (Amount/Direction/Payee)',
+        );
+        await tester.scrollUntilVisible(
+          editParse,
+          80,
+          scrollable: detailScroll,
+        );
+        await tester.ensureVisible(editParse);
+        await tester.pump();
+
+        expect(tester.getSize(editParse).height, greaterThanOrEqualTo(48));
+        await tester.tap(editParse);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.text('Correct Transaction Parse'), findsOneWidget);
+        final creditChoice = find.widgetWithText(
+          ChoiceChip,
+          'Income (Credit)',
+        );
+        await tester.ensureVisible(creditChoice);
+        await tester.tap(creditChoice);
+        await tester.pump();
+        expect(tester.widget<ChoiceChip>(creditChoice).selected, isTrue);
         expect(tester.takeException(), isNull);
       },
     );

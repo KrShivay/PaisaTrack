@@ -17,16 +17,30 @@
 - The original Trends checks remain: final content clears the pill at both
   navigation insets on 402×874 and at 568×320/1.5×. The route harness uses a
   nested Navigator with production pill/adapter because mounting `HomeShell`
-  leaves Drift stream cleanup timers pending; shell lifecycle integration,
-  detail/nested-sheet integration, Ask modal-route device acceptance, remaining
-  compact/landscape combinations, and physical phone QA remain open. No
-  emulator, private data, phone mutation, or APK change.
-- Focused route suite 8/8; full Flutter suite 930/930; `flutter analyze
-  --no-pub`, changed-file formatting, and `git diff --check` clean. GitNexus
-  detect-changes saw 10 symbols in 4 files, LOW risk, and zero affected
-  processes. Pre-edit `NotTransactionsScreen` impact was LOW (6 symbols, one
-  direct caller, no affected processes); the index was one commit behind the
-  release-doc HEAD. No HIGH/CRITICAL impact was reported.
+  leaves Drift stream cleanup timers pending; full shell lifecycle integration,
+  Ask modal-route device acceptance, remaining compact/landscape combinations,
+  and physical phone QA remain open. No emulator, private data, phone mutation,
+  or APK change.
+- Added Activity→detail→correction coverage through the real
+  `TransactionsScreen` route with the production pill/adapter. The Activity row
+  clears the pill and opens detail at 402×874/24dp/1×, 568×320/24dp/1.5×, and
+  568×320/48dp/2×; the detail edit action opens the nested correction sheet,
+  where changing the direction ChoiceChip succeeds. No inset/tap defect was
+  demonstrated in this route, so production code is unchanged.
+- Attempting the separate Sort→detail caller at 568×320 reproduced
+  `WeeklyReviewScreen`'s fixed card/action Column overflowing by 30dp at
+  1.5×/24dp gesture inset and 86dp at 2×/48dp three-button inset; the card is
+  outside the viewport at 2× and cannot be tapped. Existing Weekly Review tests
+  use portrait fixtures and miss compact landscape; the layout follow-up is
+  tracked under T-167c and is outside this T-176 slice.
+- Focused route suite 11/11; full Flutter suite 933/933; `flutter analyze
+  --no-pub`, changed-file formatting, and `git diff --check` clean. Final
+  GitNexus detect-changes sees 3 files, 18 symbols, 0 affected processes, LOW
+  risk. Pre-edit `TransactionDetailScreen` impact was HIGH (43 symbols, 18
+  direct callers, one process); no production detail code changed. Earlier
+  `NotTransactionsScreen` impact was LOW (6 symbols, one direct caller, no
+  affected processes). No emulator, private data, phone mutation, or APK
+  change.
 - T189 was removed from the active board after independent Luna review of
   implementation `48df299` and documentation fix `b73f7cb` found no functional
   blocker. Its brief now records completion and the reviewed prompt, target,
