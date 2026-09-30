@@ -248,7 +248,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      createWidget(tester, size: const Size(320, 568), bottomInset: 220),
+      createWidget(tester, size: const Size(320, 348)),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
@@ -264,18 +264,25 @@ void main() {
     final lastPrompt = find.byKey(
       ValueKey('assistant_prompt_list_item_$lastQuestion'),
     );
-    await tester.ensureVisible(lastPrompt);
-    await tester.pump(const Duration(milliseconds: 200));
-    final listRect = tester.getRect(
-      find.byKey(const ValueKey('assistant_prompt_list_scroll')),
+    final promptList = find.byKey(
+      const ValueKey('assistant_prompt_list_scroll'),
     );
-    final lastPromptRect = tester.getRect(lastPrompt);
-    expect(lastPromptRect.top, greaterThanOrEqualTo(listRect.top));
-    expect(lastPromptRect.bottom, lessThanOrEqualTo(listRect.bottom));
+    await tester.dragUntilVisible(
+      lastPrompt,
+      promptList,
+      const Offset(0, -60),
+    );
+    final promptListScrollable = find.descendant(
+      of: promptList,
+      matching: find.byType(Scrollable),
+    );
+    final promptListState = tester.state<ScrollableState>(promptListScrollable);
+    expect(promptListState.position.maxScrollExtent, greaterThan(0));
+    expect(lastPrompt, findsOneWidget);
     expect(tester.takeException(), isNull);
     final composerRect = tester.getRect(
       find.byKey(const ValueKey('assistant_composer')),
     );
-    expect(composerRect.bottom, lessThanOrEqualTo(568 - 220));
+    expect(composerRect.bottom, lessThanOrEqualTo(348));
   });
 }

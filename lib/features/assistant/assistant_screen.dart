@@ -117,13 +117,16 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                             // keyboard opens. Reserve a bounded, scrollable
                             // prompt panel while leaving the conversation able
                             // to shrink without overflowing.
-                            final promptListHeight =
-                                bodyConstraints.maxHeight < 96
-                                    ? 0.0
-                                    : bodyConstraints.maxHeight < 240
-                                        ? bodyConstraints.maxHeight
-                                        : (bodyConstraints.maxHeight * 0.55)
-                                            .clamp(96.0, 236.0);
+                            final promptListHeight = bodyConstraints.maxHeight <
+                                    96
+                                ? 0.0
+                                : bodyConstraints.maxHeight < 240
+                                    ? (bodyConstraints.maxHeight * 0.55).clamp(
+                                        72.0,
+                                        bodyConstraints.maxHeight - 24.0,
+                                      )
+                                    : (bodyConstraints.maxHeight * 0.55)
+                                        .clamp(96.0, 236.0);
                             return Column(
                               children: [
                                 Expanded(

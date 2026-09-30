@@ -31,8 +31,11 @@ later hardening.
     a fixture that applied both the 348dp resize and a 220dp inset. A corrected
     route-size-only fixture still reproduced a real compact-height issue: the
     full header title and subtitle wrapped to 138dp and 155dp, leaving only
-    23dp for the AssistantScreen. The Ask-specific compact header addresses
-    that constrained-height case without changing the shared sheet scaffold.
+    23dp for the AssistantScreen. A submitted user message now verifies the
+    actual transcript ListView has positive scroll extent at 320×348/2× text;
+    its prompt panel is capped to leave transcript space in 96–240dp content
+    heights. The Ask-specific compact header addresses the route constraint
+    without changing the shared sheet scaffold.
   - Still open: Settings/Not transactions destination geometry (its fixture
     stalls during Drift-backed route teardown), transaction detail and nested
     sheet integration with the shell pill, Ask modal-route acceptance on device,

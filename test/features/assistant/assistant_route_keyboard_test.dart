@@ -12,8 +12,13 @@ import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
 class _StubAssistantController extends AssistantController {
   _StubAssistantController({required super.runtime, required super.database});
 
+  final askedQuestions = <String>[];
+
   @override
-  Future<String> ask(String question) async => 'Answer: $question';
+  Future<String> ask(String question) async {
+    askedQuestions.add(question);
+    return 'Answer: $question';
+  }
 }
 
 Future<void> _pumpAskRoute(
@@ -124,11 +129,27 @@ void main() {
         controller: controller,
       );
 
+      const question = 'Route transcript scroll check';
+      final composerField = find.descendant(
+        of: find.byKey(const ValueKey('assistant_composer')),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(composerField, question);
+      await tester.tap(find.byKey(const ValueKey('assistant_send_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        (controller as _StubAssistantController).askedQuestions,
+        contains(question),
+      );
+
       // Android adjustResize changes the available viewport from 568dp to
       // 348dp. Keep viewInsets at zero so the keyboard area is counted once.
       tester.view.physicalSize = const Size(320, 348);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.text(question), findsOneWidget);
 
       final composer = find.byKey(const ValueKey('assistant_composer'));
       expect(composer, findsOneWidget);
@@ -147,7 +168,30 @@ void main() {
         tester.getSize(find.byTooltip('Close')).height,
         greaterThanOrEqualTo(48),
       );
-      expect(find.byType(Scrollable), findsWidgets);
+
+      final messageList = find.ancestor(
+        of: find.text(question),
+        matching: find.byType(ListView),
+      );
+      expect(messageList, findsOneWidget);
+      final transcriptScrollable = find.ancestor(
+        of: find.text(question),
+        matching: find.byType(Scrollable),
+      );
+      expect(transcriptScrollable, findsOneWidget);
+      expect(
+        tester
+            .state<ScrollableState>(transcriptScrollable)
+            .position
+            .maxScrollExtent,
+        greaterThan(0),
+      );
+      final transcriptState =
+          tester.state<ScrollableState>(transcriptScrollable);
+      transcriptState.position.jumpTo(transcriptState.position.maxScrollExtent);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Answer: $question'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

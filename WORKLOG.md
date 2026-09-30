@@ -38,8 +38,12 @@
   leaving 23dp for the assistant content. Added an Ask-only compact header
   below 400dp; normal-height header remains unchanged. At 320×348 the composer
   remains visible, close target is 48dp, transcript remains scrollable, and no
-  layout exception occurs. The existing AssistantScreen test continues to
-  cover T-189's full-text vertical prompt rows and composer.
+  layout exception occurs. A real prompt submission now verifies the user
+  message's own transcript ListView has positive scroll extent and the answer
+  appears after scrolling. The AssistantScreen prompt panel is capped to leave
+  transcript space in 96–240dp content heights; prompt rows remain 48dp+ and
+  scrollable. Its keyboard regression now uses a 348dp viewport with zero
+  residual inset instead of applying both resize and inset.
 - Ask route and AssistantScreen tests pass 9/9; transaction detail/Note and
   full-screen sheet baseline pass 17/17; full Flutter suite passes 925/925;
   `flutter analyze --no-pub`, formatter, and diff checks are clean. GitNexus
