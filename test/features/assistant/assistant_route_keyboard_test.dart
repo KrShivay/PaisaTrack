@@ -1,0 +1,154 @@
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/widgets/bloom/bloom.dart';
+import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/features/assistant/assistant_screen.dart';
+import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
+import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
+
+class _StubAssistantController extends AssistantController {
+  _StubAssistantController({required super.runtime, required super.database});
+
+  @override
+  Future<String> ask(String question) async => 'Answer: $question';
+}
+
+Future<void> _pumpAskRoute(
+  WidgetTester tester, {
+  required AppDatabase database,
+  required AssistantController controller,
+}) async {
+  const viewport = Size(320, 568);
+  tester.view.physicalSize = viewport;
+  tester.view.devicePixelRatio = 1;
+  tester.view.viewPadding = const FakeViewPadding(bottom: 24);
+  tester.view.viewInsets = const FakeViewPadding();
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+    tester.view.resetViewPadding();
+    tester.view.resetViewInsets();
+  });
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWith((ref) async => database),
+        assistantControllerProvider.overrideWith((ref) async => controller),
+      ],
+      child: MaterialApp(
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: const TextScaler.linear(2),
+            ),
+            child: SizedBox(
+              width: viewport.width,
+              height: mediaQuery.size.height,
+              child: child!,
+            ),
+          );
+        },
+        home: Scaffold(
+          body: Center(
+            child: Builder(
+              builder: (context) => FilledButton(
+                onPressed: () {
+                  showBloomFullScreenSheet<void>(
+                    context: context,
+                    showBack: false,
+                    showClose: false,
+                    backgroundColor: const Color(0xFF0E0C1A),
+                    headerBuilder: AssistantScreen.sheetHeader,
+                    builder: (_) =>
+                        const AssistantScreen(showSheetHeader: false),
+                  );
+                },
+                child: const Text('Open Ask'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open Ask'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 350));
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late AppDatabase database;
+  late AssistantController controller;
+
+  setUp(() {
+    database = AppDatabase(NativeDatabase.memory());
+    controller = _StubAssistantController(
+      runtime: const NoopLlmRuntime(LlmUnavailableReason.modelAbsent),
+      database: database,
+    );
+  });
+
+  tearDown(() async {
+    await database.close();
+  });
+
+  testWidgets(
+    'Ask full-screen route composer fits compact 2x text baseline',
+    (tester) async {
+      await _pumpAskRoute(
+        tester,
+        database: database,
+        controller: controller,
+      );
+
+      final composer = find.byKey(const ValueKey('assistant_composer'));
+      expect(composer, findsOneWidget);
+      expect(tester.getRect(composer).bottom, lessThanOrEqualTo(568));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Ask full-screen route fits the keyboard-resized compact 2x viewport',
+    (tester) async {
+      await _pumpAskRoute(
+        tester,
+        database: database,
+        controller: controller,
+      );
+
+      // Android adjustResize changes the available viewport from 568dp to
+      // 348dp. Keep viewInsets at zero so the keyboard area is counted once.
+      tester.view.physicalSize = const Size(320, 348);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final composer = find.byKey(const ValueKey('assistant_composer'));
+      expect(composer, findsOneWidget);
+      expect(
+        MediaQuery.sizeOf(tester.element(composer)).height,
+        lessThanOrEqualTo(348),
+      );
+      expect(MediaQuery.viewInsetsOf(tester.element(composer)).bottom, 0);
+      expect(tester.getRect(composer).bottom, lessThanOrEqualTo(348));
+      expect(
+        tester.getRect(find.text('Ask PaisaTrack')).height,
+        lessThanOrEqualTo(40),
+      );
+      expect(find.text('On-device · no internet used'), findsNothing);
+      expect(
+        tester.getSize(find.byTooltip('Close')).height,
+        greaterThanOrEqualTo(48),
+      );
+      expect(find.byType(Scrollable), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
+}

@@ -26,6 +26,28 @@
   blocker. Its brief now records completion and the reviewed prompt, target,
   keyboard, semantics, tap, and rotation evidence.
 
+## 2026-09-30 — T-176 Ask compact keyboard route
+
+- Corrected the route harness to model one keyboard resize: it opens the real
+  full-screen Ask sheet at 320×568 and 2× text, then changes the viewport to
+  320×348 with zero residual `viewInsets`, matching the app's Android
+  `adjustResize` contract. The previous 42px overflow measurement combined a
+  348dp resized viewport with a second 220dp inset and overstated the failure.
+- The corrected route-size-only test still exposed a production layout issue:
+  the full Ask header title and subtitle wrapped to 138dp and 155dp at 2×,
+  leaving 23dp for the assistant content. Added an Ask-only compact header
+  below 400dp; normal-height header remains unchanged. At 320×348 the composer
+  remains visible, close target is 48dp, transcript remains scrollable, and no
+  layout exception occurs. The existing AssistantScreen test continues to
+  cover T-189's full-text vertical prompt rows and composer.
+- Ask route and AssistantScreen tests pass 9/9; transaction detail/Note and
+  full-screen sheet baseline pass 17/17; full Flutter suite passes 925/925;
+  `flutter analyze --no-pub`, formatter, and diff checks are clean. GitNexus
+  detect-changes reports LOW risk and no affected processes. T-176 remains open
+  for Settings, detail/nested-sheet shell integration, landscape, tap behavior,
+  and physical phone QA. No emulator, private data, phone mutation, or APK
+  change.
+
 ## 2026-09-30 — T-189 readable Ask prompt list
 
 - Replaced the three clipped horizontal composer chips shown after a chat

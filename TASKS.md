@@ -22,21 +22,28 @@ later hardening.
     mounting `HomeShell` in this fixture leaves Drift stream cleanup timers
     pending; shell lifecycle integration remains open. No production inset gap
     was demonstrated, so production code is unchanged.
-  - Unresolved route finding: a routed `AssistantScreen` at 320×568, 2× text,
-    with a simulated 220dp keyboard left only 348dp of content height and
-    overflowed vertically by 42px. The composer send target also fell outside
-    the 320dp viewport during the route fixture. The direct screen test does
-    not rule out a route-level layout issue; investigate the modal route and
-    keyboard resize contract before changing production code.
+  - Ask compact-keyboard slice: the production full-screen Ask route now has
+    a focused test at 320×568 and 2× text, then dynamically resizes to 320×348
+    with zero residual inset (the keyboard area is counted once, matching
+    `adjustResize`). The compact Ask-only header keeps the composer visible,
+    retains a 48dp close target, and leaves the transcript scrollable; normal
+    height keeps the full header. The earlier 42px overflow figure came from
+    a fixture that applied both the 348dp resize and a 220dp inset. A corrected
+    route-size-only fixture still reproduced a real compact-height issue: the
+    full header title and subtitle wrapped to 138dp and 155dp, leaving only
+    23dp for the AssistantScreen. The Ask-specific compact header addresses
+    that constrained-height case without changing the shared sheet scaffold.
   - Still open: Settings/Not transactions destination geometry (its fixture
     stalls during Drift-backed route teardown), transaction detail and nested
-    sheet integration with the shell pill, Ask modal-route keyboard acceptance,
+    sheet integration with the shell pill, Ask modal-route acceptance on device,
     2× landscape/compact combinations, tap action verification, and physical
     phone QA. No emulator, private SMS/DB data, phone mutation, or APK change.
-  - Focused verification: global bottom-inset route tests 3/3; full Flutter
-    suite 923/923; `flutter analyze --no-pub`, formatting, and diff check clean.
-    GitNexus detect-changes: 2 files / 18 symbols, LOW risk, no affected
-    processes. No production code changed.
+  - Focused verification: global bottom-inset route tests 3/3; Ask route plus
+    AssistantScreen tests 9/9; full Flutter suite 925/925; detail/Note and
+    full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
+    diff check, and GitNexus detect-changes clean. The Ask-only change is LOW
+    risk with no affected processes. No emulator, private SMS/DB data, phone
+    mutation, or APK change.
 
 ## Ready
 

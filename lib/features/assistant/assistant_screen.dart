@@ -32,8 +32,9 @@ class AssistantScreen extends ConsumerStatefulWidget {
 
   final bool showSheetHeader;
 
-  static Widget sheetHeader(BuildContext context) =>
-      const _AssistantSheetHeader();
+  static Widget sheetHeader(BuildContext context) => _AssistantSheetHeader(
+        compact: MediaQuery.sizeOf(context).height < 400,
+      );
 
   @override
   ConsumerState<AssistantScreen> createState() => _AssistantScreenState();
@@ -336,10 +337,53 @@ class _ComposerPromptList extends StatelessWidget {
 }
 
 class _AssistantSheetHeader extends StatelessWidget {
-  const _AssistantSheetHeader();
+  const _AssistantSheetHeader({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const BloomMascot(size: 28, bob: false, pulseRing: false),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Ask PaisaTrack',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColorTokens.bloomDarkTextPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  constraints: const BoxConstraints.tightFor(
+                    width: 48,
+                    height: 48,
+                  ),
+                  icon: const Icon(
+                    Icons.close,
+                    color: AppColorTokens.bloomDarkTextSecondary,
+                  ),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFF1E1B33)),
+        ],
+      );
+    }
+
     return Column(
       children: [
         Padding(
