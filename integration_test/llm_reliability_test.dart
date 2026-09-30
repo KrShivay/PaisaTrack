@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paisatrack/core/crypto/database_cipher.dart';
+import 'package:paisatrack/core/platform/recovery_qa_identity.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_controller.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent_classifier.dart';
@@ -15,6 +16,8 @@ import 'package:path_provider/path_provider.dart';
 ///   flutter run --debug -d <device> -t integration_test/llm_reliability_test.dart
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(verifyRecoveryQaIdentity);
 
   const runtime = PlatformLlmRuntime(enabled: true);
   const schema = <String, Object?>{

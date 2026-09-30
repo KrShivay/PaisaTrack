@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paisatrack/core/crypto/database_cipher.dart';
+import 'package:paisatrack/core/platform/recovery_qa_identity.dart';
 import 'package:paisatrack/core/platform/system_document_gateway.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -70,6 +71,7 @@ void main() {
   testWidgets('real Keystore slot restores a synthetic backup into SQLCipher', (
     tester,
   ) async {
+    await verifyRecoveryQaIdentity();
     const generationKeys = AndroidKeystoreDatabasePassphraseProvider();
     final initialGenerationIds = await generationKeys.getGenerationIds();
     expect(

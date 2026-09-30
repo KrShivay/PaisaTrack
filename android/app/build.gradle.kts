@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.execution.TaskExecutionGraphListener
 
 plugins {
     id("com.android.application")
@@ -13,11 +15,47 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val recoveryQaProperty = providers.gradleProperty("recoveryQa").orNull
+if (recoveryQaProperty != null && recoveryQaProperty !in setOf("true", "false")) {
+    throw GradleException("recoveryQa must be exactly 'true' or 'false'.")
+}
+val recoveryQaEnabled = recoveryQaProperty == "true"
+val recoveryQaRequestsReleaseArtifact = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("release", ignoreCase = true) ||
+        taskName.contains("bundle", ignoreCase = true)
+}
+if (recoveryQaEnabled && recoveryQaRequestsReleaseArtifact) {
+    throw GradleException(
+        "The isolated recovery QA identity is debug-only; do not request release or bundle artifacts."
+    )
+}
+gradle.taskGraph.addTaskExecutionGraphListener(
+    object : TaskExecutionGraphListener {
+        override fun graphPopulated(taskGraph: TaskExecutionGraph) {
+            val forbiddenTask = taskGraph.allTasks.firstOrNull { task ->
+                task.path.startsWith(":app:") &&
+                    (task.name.contains("release", ignoreCase = true) ||
+                        task.name.matches(
+                            Regex("^bundle(?:debug|profile|release)?$", RegexOption.IGNORE_CASE),
+                        ))
+            }
+            if (recoveryQaEnabled && forbiddenTask != null) {
+                throw GradleException(
+                    "The isolated recovery QA identity is debug-only; task graph includes ${forbiddenTask.path}."
+                )
+            }
+        }
+    },
+)
 
 android {
     namespace = "com.paisatrack"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    buildFeatures {
+        buildConfig = recoveryQaEnabled
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -73,6 +111,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        debug {
+            if (recoveryQaEnabled) {
+                applicationIdSuffix = ".recoveryqa"
+            }
+        }
+    }
+
+    if (recoveryQaEnabled) {
+        sourceSets.getByName("debug").apply {
+            manifest.srcFile("src/recoveryQa/AndroidManifest.xml")
+            java.srcDir("src/recoveryQa/kotlin")
+            res.srcDir("src/recoveryQa/res")
         }
     }
 }

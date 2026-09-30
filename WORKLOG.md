@@ -1,5 +1,22 @@
 # Current Handoff
 
+## 2026-10-01 — T-179a isolated recovery QA harness
+
+- Added a debug-only `com.paisatrack.recoveryqa` identity with a QA-only
+  manifest, pre-Flutter native guard, and Dart identity RPC. The default debug
+  package remains `com.paisatrack`; the QA manifest has no SMS permission or
+  receiver. Independent review accepted the identity/manifest boundary.
+- Full Flutter suite: 962/962; Android app and Keystore Gradle unit tests:
+  41/41; analyzer and formatting clean. The isolated launcher APK is code 4012,
+  245,684,950 bytes, SHA-256
+  `5e354dc6fefec7f41eb2d7280f37ec426ec6a327ffb2d86c05b2fe8f303022b4`.
+  QA `:app:assembleDebug` succeeds; QA aggregate `build`/`assemble` reject
+  app release task graphs before packaging.
+  `adb devices -l` is empty: no install, synthetic key reset, SAF selection,
+  or phone-side recovery was performed. T-179a remains Ready/open for physical
+  cold launch, real SAF restore, and fresh-process verification. See
+  [T-179a QA report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
+
 ## 2026-10-01 — v2012 owner-phone install and Ask portrait check
 
 - Built and independently reviewed the signed ARM64 `0.1.3+2012` artifact
@@ -39,17 +56,3 @@
   suite: 954/954; analyzer clean. As of this 2026-09-30 entry, the installed
   phone still ran the original build; the 2026-10-01 update above records the
   reviewed 4012 installation and bounded portrait retest.
-
-## 2026-09-30 — T-194 APK-size trial tracking
-
-- Signed ARM64 v2011 candidate: `codex/apk-size-trial` commit `4a9fdfa`,
-  26,180,416 bytes, SHA-256
-  `cb9a3deb34207ea4b9aef251f7ce411166e7ac59cc4d5cff3690844691672e29`.
-  Same-source control confirms all six native libraries are unchanged by the
-  release-only packaging setting; package/version/signer, ZIP, and alignment
-  checks passed. The candidate remains unpublished and was not installed.
-- T-194 is Ready for physical acceptance. The supported ARM64 phone was online
-  for the separate 2026-09-30 published-release launch, but candidate installed
-  storage and cold-start were not measured. The Gradle experiment remains
-  isolated on the candidate branch. GitNexus docs-only detection found 9
-  touched section symbols, 0 processes, LOW risk.

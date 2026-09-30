@@ -33,7 +33,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
 
-class MainActivity : FlutterActivity() {
+open class MainActivity : FlutterActivity() {
     private var pendingPermissionResult: MethodChannel.Result? = null
     private var notificationPermissionRequestInFlight = false
     private val pendingAskNowRequests = mutableListOf<PendingAskNowRequest>()

@@ -3,11 +3,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:paisatrack/core/crypto/database_cipher.dart';
+import 'package:paisatrack/core/platform/recovery_qa_identity.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:path_provider/path_provider.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(verifyRecoveryQaIdentity);
 
   testWidgets('keystore passphrase is stable until app storage is cleared', (
     tester,

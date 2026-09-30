@@ -8,6 +8,28 @@ later hardening.
 
 ## In Progress
 
+## Ready
+
+- [ ] T-179a (@codex) [P0] Verify lost-key recovery in an isolated physical QA app.
+  - Acceptance: the QA build has a distinct debug-only application ID and fails
+    closed on identity mismatch before providers, files, or Keystore access.
+    With synthetic SQLCipher data only, cold startup reaches the production
+    KeyLossScreen, selects a synthetic encrypted backup through Android SAF,
+    restores it, then a fresh process reopens and verifies sentinel rows. The
+    prior encrypted file family is compared byte-for-byte. A SHA-256 digest of
+    the synthetic replacement legacy passphrase value is compared before and
+    after restore; this does not attest Android Keystore alias or wrapped-
+    preference continuity. The QA manifest has no SMS permissions or incoming
+    SMS receiver. Never run the key-reset integration harness under
+    `com.paisatrack`.
+  - Existing baseline: Flutter, Keystore, Kotlin, and API 35 emulator rehearsal
+    checks are recorded in prior history; they do not prove the physical app
+    startup, SAF selection, or relaunch contract.
+  - Isolated QA build/guard evidence is recorded in
+    [the T-179a QA report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
+    No physical phase has run because ADB currently lists no connected device.
+  - Architecture boundary: [ADR 0019](docs/decisions/0019-isolated-recovery-qa-identity.md).
+
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -124,7 +146,6 @@ later hardening.
     diff check, and GitNexus detect-changes clean. No emulator, private
     SMS/DB data, phone mutation, or APK change.
 
-## Ready
 
 - [ ] T-164e [P0] Complete transaction timestamp-display parity across Activity
       grouping, detail, export, search/date filters, imports, and SMS capture.
@@ -279,13 +300,6 @@ later hardening.
     integrity check. The previous signed 4011 install is retained as historical
     evidence in `docs/release-signing.md`. T-193 physical preview/apply/undo
     acceptance remains open.
-
-- [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
-      Verification: 768 Flutter tests passed; analyzer and diff check clean;
-      Android keystore unit tests and app Kotlin compile passed; API 35 ARM64
-      emulator restored a synthetic archive through the real Keystore selector
-      into SQLCipher, reopened the active generation, and verified legacy bytes
-      remained unchanged. MainActivity relaunched successfully on emulator.
 
 <!-- P1 tasks ready for next phase -->
 
