@@ -41,9 +41,11 @@
 - Focused route suite 11/11; production HomeShell→Ask suite 3/3; existing
   HomeShell Activity nested-Navigator test 1/1; full Flutter suite 936/936;
   `flutter analyze --no-pub`, changed-file formatting, and `git diff --check`
-  clean. Final
-  GitNexus detect-changes sees 3 files, 18 symbols, 0 affected processes, LOW
-  risk. Pre-edit `TransactionDetailScreen` impact was HIGH (43 symbols, 18
+  clean. The previous Activity/detail/correction slice's GitNexus
+  detect-changes saw 3 files, 18 symbols, 0 affected processes, LOW risk. This
+  HomeShell/Ask slice's pre-commit GitNexus detect-changes saw 3 files, 5
+  indexed documentation symbols, 0 affected processes, LOW risk. Pre-edit
+  `TransactionDetailScreen` impact was HIGH (43 symbols, 18
   direct callers, one process); no production detail code changed. Earlier
   `NotTransactionsScreen` impact was LOW (6 symbols, one direct caller, no
   affected processes). No emulator, private data, phone mutation, or APK
