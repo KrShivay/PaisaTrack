@@ -45,24 +45,34 @@ class _NotTransactionsScreenState extends ConsumerState<NotTransactionsScreen> {
               final transaction = row.transaction;
               return ListTile(
                 title: Text(transaction.merchantRaw ?? 'Unlabeled message'),
-                subtitle: Text(
-                  DateTime.fromMillisecondsSinceEpoch(transaction.ts)
-                      .toLocal()
-                      .toString()
-                      .substring(0, 16),
-                ),
-                trailing: Text(
-                  formatSourceAmount(
-                    transaction.amount,
-                    currencyCode: transaction.currencyCode,
-                    currencySymbol: transaction.currencySymbol,
-                  ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateTime.fromMillisecondsSinceEpoch(transaction.ts)
+                          .toLocal()
+                          .toString()
+                          .substring(0, 16),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      formatSourceAmount(
+                        transaction.amount,
+                        currencyCode: transaction.currencyCode,
+                        currencySymbol: transaction.currencySymbol,
+                      ),
+                    ),
+                  ],
                 ),
                 onTap: () async {
                   final database = await ref.read(appDatabaseProvider.future);
                   final dispositions = SmsDispositionRepository(database);
                   await dispositions.restore(row.smsId);
-                  if (mounted) setState(() => _rows = _load());
+                  if (mounted) {
+                    setState(() {
+                      _rows = _load();
+                    });
+                  }
                 },
                 leading: const Icon(Icons.undo),
               );

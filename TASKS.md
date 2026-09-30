@@ -22,6 +22,17 @@ later hardening.
     mounting `HomeShell` in this fixture leaves Drift stream cleanup timers
     pending; shell lifecycle integration remains open. No production inset gap
     was demonstrated, so production code is unchanged.
+  - Settings/Not transactions slice: five real-route checks open Settings,
+    tap its Not transactions action, and assert the final synthetic history row
+    clears the production navigation pill at 24dp/48dp insets on 402×874,
+    320×568 at 2× text, and 568×320 at 1.5×/2× text. The inherited
+    `MediaQuery.padding.bottom` gives the history `ListView` its bottom inset;
+    no inset fix was needed. Tapping the row exposed and fixed a `setState`
+    callback returning `_load()`'s Future, and the compact 2× layout exposed
+    and fixed the trailing amount consuming the entire `ListTile` width. The
+    test unmounts the route and closes its in-memory Drift database inside the
+    test body so cleanup does not defer `StreamQueryStore.markAsClosed`'s
+    `Timer.run` until Flutter's post-test teardown.
   - Ask compact-keyboard slice: the production full-screen Ask route now has
     a focused test at 320×568 and 2× text, then dynamically resizes to 320×348
     with zero residual inset (the keyboard area is counted once, matching
@@ -36,13 +47,13 @@ later hardening.
     its prompt panel is capped to leave transcript space in 96–240dp content
     heights. The Ask-specific compact header addresses the route constraint
     without changing the shared sheet scaffold.
-  - Still open: Settings/Not transactions destination geometry (its fixture
-    stalls during Drift-backed route teardown), transaction detail and nested
-    sheet integration with the shell pill, Ask modal-route acceptance on device,
-    2× landscape/compact combinations, tap action verification, and physical
-    phone QA. No emulator, private SMS/DB data, phone mutation, or APK change.
-  - Focused verification: global bottom-inset route tests 3/3; Ask route plus
-    AssistantScreen tests 9/9; full Flutter suite 925/925; detail/Note and
+  - Still open: transaction detail and nested sheet integration with the shell
+    pill, Ask modal-route acceptance on device, remaining compact/landscape
+    combinations, and physical phone QA. No emulator, private SMS/DB data,
+    phone mutation, or APK change.
+  - Focused verification: global bottom-inset route tests 8/8, including five
+    Settings/Not transactions cases; Ask route plus AssistantScreen tests 9/9;
+    full Flutter suite 930/930; detail/Note and
     full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
     diff check, and GitNexus detect-changes clean. The Ask-only change is LOW
     risk with no affected processes. No emulator, private SMS/DB data, phone

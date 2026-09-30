@@ -2,25 +2,31 @@
 
 ## 2026-09-30 — T-176 bottom-inset route acceptance
 
-- Added real-route geometry checks using the production floating navigation
-  pill and bottom-inset adapter around the actual Trends destination. Final
-  content clears the pill with 24dp gesture and 48dp three-button insets at
-  402×874, and at 568×320 landscape with 1.5× text. The harness uses a nested
-  Navigator because mounting HomeShell leaves Drift stream cleanup timers
-  pending; shell lifecycle acceptance remains open.
-- Ask route diagnostic found a concrete unresolved issue: at 320×568, 2× text,
-  and a simulated 220dp keyboard (348dp remaining height), the routed screen
-  overflowed vertically by 42px and its send target was outside the 320dp
-  viewport. This is recorded for investigation; no production change was made.
-  Settings/Not transactions fixture cleanup also stalled. Detail/nested-sheet
-  integration, Ask modal keyboard, 2× compact/landscape, tap behavior, and
-  physical phone QA remain open. No emulator, private data, phone mutation, or
-  APK change.
-- Focused route tests 3/3; full Flutter suite 923/923; `flutter analyze
-  --no-pub`, formatting, and diff check clean. GitNexus impact before symbol
-  edits: `HomeShell` LOW and `BloomBottomInset` MEDIUM; no production symbols
-  changed. Detect-changes: 2 files / 18 symbols, LOW risk, 0 affected
-  processes.
+- Added five Settings→Not transactions route cases using synthetic in-memory
+  rows. The Settings action and last history row clear the production pill at
+  24dp/48dp insets on 402×874, 320×568 at 2× text, and 568×320 at 1.5×/2×;
+  each case taps the action and restores the last row. Flutter's default
+  `ListView` padding consumes the adapter's `MediaQuery.padding.bottom`, so no
+  inset production change was needed.
+- Restore tapping exposed a `setState` callback that returned the `_load()`
+  Future; it now assigns `_rows` inside a synchronous callback. The compact
+  2× route exposed a `ListTile` trailing-width assertion; date and amount now
+  wrap on separate subtitle lines. Drift teardown was traced to closing the DB
+  only in `addTearDown`, after Flutter removes stream subscribers; the fixture
+  now unmounts and closes the in-memory DB in `finally` before test teardown.
+- The original Trends checks remain: final content clears the pill at both
+  navigation insets on 402×874 and at 568×320/1.5×. The route harness uses a
+  nested Navigator with production pill/adapter because mounting `HomeShell`
+  leaves Drift stream cleanup timers pending; shell lifecycle integration,
+  detail/nested-sheet integration, Ask modal-route device acceptance, remaining
+  compact/landscape combinations, and physical phone QA remain open. No
+  emulator, private data, phone mutation, or APK change.
+- Focused route suite 8/8; full Flutter suite 930/930; `flutter analyze
+  --no-pub`, changed-file formatting, and `git diff --check` clean. GitNexus
+  detect-changes saw 10 symbols in 4 files, LOW risk, and zero affected
+  processes. Pre-edit `NotTransactionsScreen` impact was LOW (6 symbols, one
+  direct caller, no affected processes); the index was one commit behind the
+  release-doc HEAD. No HIGH/CRITICAL impact was reported.
 - T189 was removed from the active board after independent Luna review of
   implementation `48df299` and documentation fix `b73f7cb` found no functional
   blocker. Its brief now records completion and the reviewed prompt, target,
