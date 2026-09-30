@@ -22,6 +22,7 @@ import '../enrichment/decision_policy.dart';
 import '../enrichment/merchant_resolver.dart';
 import '../features/settings/app_settings.dart';
 import '../intelligence/llm/llm_runtime.dart';
+import 'capture_decision_provenance.dart';
 import 'captured_sms_source.dart';
 import 'duplicate_suppressor.dart';
 import 'llm_field_locator.dart';
@@ -183,6 +184,8 @@ class SmsIngestor {
     bool Function()? isCapturePausedResolver,
     bool Function(String sender)? isSenderPausedResolver,
     DecisionStatus? fixedStatus,
+    CaptureDecisionStatusMode captureDecisionStatusMode =
+        CaptureDecisionStatusMode.policy,
     Set<String>? knownTransactionIds,
     DecisionPolicy decisionPolicy = const DecisionPolicy(),
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
@@ -192,6 +195,7 @@ class SmsIngestor {
     FinancialCalendar? financialCalendar,
     int parserVersion = smsParserVersion,
   })  : _database = database,
+        _captureDecisionStatusMode = captureDecisionStatusMode,
         _parser = parser,
         _categorizer = categorizer,
         _merchantResolver = merchantResolver,
@@ -207,7 +211,16 @@ class SmsIngestor {
             expectedEventRepository ?? ExpectedEventRepository(database),
         _financialCalendar = financialCalendar,
         _parserVersion = parserVersion,
-        _now = now ?? DateTime.now;
+        _now = now ?? DateTime.now {
+    if ((captureDecisionStatusMode == CaptureDecisionStatusMode.policy &&
+            fixedStatus != null) ||
+        (captureDecisionStatusMode == CaptureDecisionStatusMode.fixedReview &&
+            fixedStatus != DecisionStatus.needsReview)) {
+      throw ArgumentError(
+        'Capture decision status mode does not match override',
+      );
+    }
+  }
 
   final AppDatabase _database;
   final ParserCascade _parser;
@@ -217,6 +230,7 @@ class SmsIngestor {
   final bool Function()? _isCapturePaused;
   final bool Function(String sender)? _isSenderPaused;
   final DecisionStatus? _fixedStatus;
+  final CaptureDecisionStatusMode _captureDecisionStatusMode;
   final Set<String>? _knownTransactionIds;
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
@@ -745,6 +759,32 @@ class SmsIngestor {
     MerchantResolution? merchant,
   }) {
     final timestamp = _now().toUtc();
+    final confidence = <String, Object?>{
+      'parser': {
+        'c': record.parseConfidence,
+        'src': record.parseSource.wireName,
+        if (record.templateId != null) 'template_id': record.templateId,
+        if (record.templateProvenance != null)
+          'provenance': record.templateProvenance,
+      },
+      'merchant': {
+        'v': merchant?.canonicalName ??
+            record.merchantRaw ??
+            record.counterpartyVpa,
+        'c': merchant?.confidence ?? record.parseConfidence,
+        'src': merchant?.source ?? record.parseSource.wireName,
+      },
+      if (categorization != null)
+        'category': {
+          'c': categorization.confidence,
+          'src': categorization.source,
+          if (categorization.ruleId != null) 'rule_id': categorization.ruleId,
+        },
+    };
+    CaptureDecisionProvenance.writeCurrent(
+      confidence,
+      statusMode: _captureDecisionStatusMode,
+    );
     return TransactionsCompanion.insert(
       id: 'txn_$smsId',
       ts: record.ts.toUtc().millisecondsSinceEpoch,
@@ -762,28 +802,7 @@ class SmsIngestor {
       categoryId: Value(categorization?.categoryId),
       parseSource: record.parseSource.wireName,
       smsId: Value(smsId),
-      confidenceJson: jsonEncode({
-        'parser': {
-          'c': record.parseConfidence,
-          'src': record.parseSource.wireName,
-          if (record.templateId != null) 'template_id': record.templateId,
-          if (record.templateProvenance != null)
-            'provenance': record.templateProvenance,
-        },
-        'merchant': {
-          'v': merchant?.canonicalName ??
-              record.merchantRaw ??
-              record.counterpartyVpa,
-          'c': merchant?.confidence ?? record.parseConfidence,
-          'src': merchant?.source ?? record.parseSource.wireName,
-        },
-        if (categorization != null)
-          'category': {
-            'c': categorization.confidence,
-            'src': categorization.source,
-            if (categorization.ruleId != null) 'rule_id': categorization.ruleId,
-          },
-      }),
+      confidenceJson: jsonEncode(confidence),
       status: status.wireName,
       duplicateOfTxnId: Value(duplicateOfTxnId),
       evidenceJson: Value(

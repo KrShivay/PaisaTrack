@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/captured_sms_source.dart';
+import 'package:paisatrack/capture/capture_decision_provenance.dart';
 import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/sms_backfill.dart';
@@ -145,8 +146,10 @@ void main() {
               explicitCategoryId: message.explicitCategoryId,
               labelSource: message.labelSource,
               sourceEvidenceAvailable: transaction?.evidenceJson != null,
-              // T-177a's production rows do not persist a decision-version key.
-              decisionVersion: null,
+              decisionVersion:
+                  CaptureDecisionProvenance.versionFromConfidenceJson(
+                transaction?.confidenceJson,
+              ),
             );
           });
           final report = CaptureReplayReport.fromObservations(
@@ -178,9 +181,25 @@ void main() {
           expect(report.cohorts.single.rowCount, 4);
           expect(report.cohorts.single.explicitLabelCount, 2);
           expect(report.missingSourceEvidenceRows, 1);
-          expect(report.missingDecisionVersionRows, 4);
+          expect(report.missingDecisionVersionRows, 1);
           expect(report.evidenceComplete, isFalse);
           expect(report.isHoldoutValidated, isFalse);
+          expect(
+            transactions.every(
+              (row) {
+                final provenance = CaptureDecisionProvenance.fromConfidenceJson(
+                  row.confidenceJson,
+                );
+                return provenance?.version ==
+                        CaptureDecisionProvenance.currentVersion &&
+                    provenance?.statusMode ==
+                        (mode == _CaptureMode.live
+                            ? CaptureDecisionStatusMode.policy
+                            : CaptureDecisionStatusMode.fixedReview);
+              },
+            ),
+            isTrue,
+          );
 
           // Historical and resume providers deliberately force review status;
           // live capture uses the normal decision policy.

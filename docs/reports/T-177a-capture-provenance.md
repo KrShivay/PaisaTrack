@@ -22,6 +22,17 @@ difference: live records merchant source `unembedded` from the resolver, while
 history/resume retain parser merchant text with source `template`. The fixture
 does not activate an LLM, classifier model, network request, or real inbox.
 
+Parsed production rows now also persist the supported
+`capture-decision-v1` contract marker in `confidence_json`, with `status_mode`
+set to `policy` for live capture and `fixed_review` for history/resume. The
+version applies to the category and initial-status decision, including its
+guards; the parser version remains separate. [ADR 0018](../decisions/0018-capture-decision-version.md)
+defines compatibility: legacy/malformed/unsupported markers remain unknown,
+are never backfilled, and cannot be counted as current-version evidence. The
+synthetic fixture reads this marker back through the shared contract and
+asserts both modes. The three parsed rows have the marker; the unrecognized
+message has no transaction and remains unversioned.
+
 ## Provenance matrix
 
 | Field or decision | Persisted evidence today | Current gap / interpretation |
@@ -31,7 +42,7 @@ does not activate an LLM, classifier model, network request, or real inbox.
 | Source currency | `currency_code` and `currency_symbol` are stored separately from the parsed amount. | A symbol such as `$` without an ISO code remains ambiguous; no conversion is inferred. |
 | Merchant identity | `merchant_raw`, `merchant_id`, and the `confidence_json.merchant` value/confidence/source. | Live calls `MerchantResolver`; history and resume currently do not. No identity merge is inferred from the parser string. |
 | Category | `category_id`; `confidence_json.category` records confidence/source and a rule ID when applicable. `Categorizer` runs rules, optional memory, optional local classifier, seed map, P2P default, optional LLM suggestion, then fallback. | `categorizerProvider` wires rules, seed map, `LocalClassifier`, and adaptive threshold; it supplies neither merchant-memory nor LLM-suggester callbacks. Helpers existing in source are not active production behavior. |
-| Transaction status | `transactions.status`; live uses the decision policy, while history/resume force `needs_review`. | No persisted decision-policy version is present in the row. An `auto` status is not a user label and cannot be counted as correctness evidence. |
+| Transaction status | `transactions.status`; `confidence_json.capture_decision` identifies the decision version and whether status mode is `policy` (live) or `fixed_review` (history/resume). | The marker versions the behavior, not its correctness. An `auto` status is not a user label and cannot be counted as correctness evidence. Legacy rows remain unversioned. |
 | User category decision | Versioned feedback links an explicit confirmation/correction to the prediction provenance used by the adaptive threshold safeguard. | Only explicit confirmation or correction can label an outcome. Silent predictions, status-only changes, and parser-only confirmation are excluded. |
 | Preview version and deferral | Not part of the capture transaction record. | This milestone adds neither field. Scoped preview/replay and persistent deferral are separate T-177c/T-177d contracts; any schema addition requires an ADR and backup/deletion review. |
 
@@ -57,13 +68,14 @@ presented as population precision. Missing source spans and absent decision
 versions are counted separately; they keep `evidenceComplete` false.
 
 The 4-row synthetic fixture produces 2 explicit labels, 3 predictions, 2
-evaluated outcomes (1 correct, 1 incorrect and corrected), 1 excluded unreviewed prediction,
-and 1 unparsed/unpredicted row. On that selected synthetic sample only,
+evaluated outcomes (1 correct, 1 incorrect and corrected), 1 excluded
+unreviewed prediction, and 1 unparsed/unpredicted row. Its three persisted
+transactions carry the current decision version; the unparsed row does not.
+On that selected synthetic sample only,
 precision is 1/2, decision coverage 3/4, explicit-label coverage 2/2, and user
-decisions 50 per 100 rows. All four rows lack a persisted decision version and
-the unparsed row lacks field spans, so evidence is incomplete. These figures
-verify report arithmetic only; they are not a baseline, holdout, or rollout
-gate.
+decisions 50 per 100 rows. One row lacks a persisted decision version and the
+unparsed row lacks field spans, so evidence is incomplete. These figures verify
+report arithmetic only; they are not a baseline, holdout, or rollout gate.
 
 This is local test/evaluation tooling, not a user-facing feature or production
 historical-data reader. Generating a real baseline still needs a consented,
@@ -88,8 +100,14 @@ reconciliation with the completed T-143a–c brief.
 
 - Collect a real local-only, chronological holdout with explicit user labels;
   report counts before any precision claim.
-- Add a capture-decision version to future provenance only after a separate
-  design/review that defines migration, backup, and deletion behavior.
+- Complete physical device capture coverage, including the app-resume lifecycle
+  and known-SMS-boundary behavior that the synthetic catch-up runner does not
+  exercise.
 - Record supported-device evidence for live delivery and resume catch-up.
 - Decide whether live/history/resume differences above are intended product
   behavior before changing any production wiring.
+
+Contract verification: focused provenance/ingest/backfill tests passed 57/57,
+the full Flutter suite passed 942/942, and `flutter analyze --no-pub` is clean.
+Independent review approved the version, status-mode, and legacy-compatibility
+contract without blocker. GitNexus graph results are in `WORKLOG.md`.

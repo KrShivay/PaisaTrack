@@ -15,6 +15,7 @@ import '../features/settings/app_settings.dart';
 import '../intelligence/nightly_job.dart';
 import '../intelligence/models/embedder.dart';
 import '../intelligence/recurring_detector.dart';
+import 'capture_decision_provenance.dart';
 import 'captured_sms_source.dart';
 import 'parser_cascade.dart';
 import 'permissions/sms_permission.dart';
@@ -460,6 +461,7 @@ final smsHistoryImportRunnerProvider =
     categorizer: categorizer,
     messageKindClassifier: messageKindClassifier,
     fixedStatus: DecisionStatus.needsReview,
+    captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
     knownTransactionIds: knownTransactionIds,
     // Avoid one embedding-model invocation per new historical merchant. Raw
     // merchant text and deterministic categorization are still imported.
@@ -493,6 +495,7 @@ final smsIncrementalCatchUpProvider =
       categorizer: categorizer,
       messageKindClassifier: messageKindClassifier,
       fixedStatus: DecisionStatus.needsReview,
+      captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
       askDailyBudgetResolver: () =>
           ref.read(appSettingsControllerProvider).valueOrNull?.askDailyBudget ??
           AppConstants.askNowDailyBudget,

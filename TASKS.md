@@ -8,6 +8,54 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
+  - Bounded milestone: add a local chronological replay/report contract and
+    synthetic fixtures that exercise live, history, and resume provider wiring;
+    document per-field provenance and deliberate path differences. Keep T-177a
+    open for real-data holdout, device capture coverage, and rollout gates.
+  - Active fix: unreviewed `auto` rows are not accuracy evidence and must never
+    lower the persisted category threshold. Lowering requires an explicit
+    user-confirmation feedback event with category-prediction provenance;
+    corrections remain error evidence and may raise the threshold. Historical
+    v1/v2 adaptive values are ignored so prior silent-row lowering cannot
+    persist. Completed chronological 50-outcome cohorts are fingerprinted;
+    changed outcomes replay those cohorts from the static default. If undo or
+    category removal leaves fewer than 50 eligible outcomes, the learned value,
+    count, and fingerprint are cleared.
+  - Synthetic milestone adds live/history/resume provider fixtures, a
+    chronological explicit-label report contract, and the provenance matrix in
+    `docs/reports/T-177a-capture-provenance.md`. T-140/T-143 status and their
+    production integration limits are reconciled there. Remaining T-177a gates:
+    real chronological holdout and physical capture coverage. The
+    `capture-decision-v1` contract records live `policy` vs history/resume
+    `fixed_review` mode in existing confidence JSON; ADR 0018 defines legacy
+    compatibility. Independent review passed without blocker. The resume
+    fixture calls the catch-up runner directly; app-resume lifecycle and
+    known-SMS-boundary behavior remain unverified alongside physical
+    live/resume capture.
+  - Verification: threshold tests 17/17; repository/detail/template-ledger
+    tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
+    and diff check clean. Same-count correction, v1/v2 state invalidation,
+    multiple cohorts, undo to 49 outcomes, and full category removal are
+    covered. GitNexus impact: `AdaptiveThresholdPolicy` HIGH (47 symbols / 4
+    flows), `TransactionRepository` CRITICAL (80 / 43 direct), `TransactionDetail`
+    CRITICAL (77 / 40 direct), `TransactionDetailScreen` HIGH (42 / 18 direct),
+    `TemplateTrustLedger` HIGH (90 / 12 direct); exact ledger `refresh` is
+    UNKNOWN with 2 dropped callers, text search corroborates call sites.
+    Detect-changes reports 25 symbols, 9 files, 4 processes, MEDIUM. No schema,
+    phone, or APK changes.
+  - Reviewed capture-decision slice: focused provenance/ingest/backfill tests
+    57/57; full Flutter suite 942/942; analyzer and diff check clean. GitNexus
+    detect-changes: 10 files, 28 symbols, 0 processes, LOW; independent
+    review passed. No schema migration, inference activation, accuracy claim,
+    phone, or APK change.
+  - Detail now has a separate evidence-backed parse-confirm action; it never
+    changes transaction status/category and intentionally does not count as
+    category-threshold evidence. Broad provider/provenance/baseline audit is
+    still open.
+
+## Ready
+
 - [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
     Activity header, and Trends header. Add narrow/wide viewport checks at
@@ -45,8 +93,6 @@ later hardening.
     covers 402×874/default portrait, 568×320/1.5×/24dp, and
     568×320/2×/48dp with the real floating pill. Independent review
     approved the updated diff. Physical-device QA remains pending.
-
-## Ready
 
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
@@ -125,45 +171,6 @@ later hardening.
     full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
     diff check, and GitNexus detect-changes clean. No emulator, private
     SMS/DB data, phone mutation, or APK change.
-
-- [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
-  - Bounded milestone: add a local chronological replay/report contract and
-    synthetic fixtures that exercise live, history, and resume provider wiring;
-    document per-field provenance and deliberate path differences. Keep T-177a
-    open for real-data holdout, device capture coverage, and rollout gates.
-  - Active fix: unreviewed `auto` rows are not accuracy evidence and must never
-    lower the persisted category threshold. Lowering requires an explicit
-    user-confirmation feedback event with category-prediction provenance;
-    corrections remain error evidence and may raise the threshold. Historical
-    v1/v2 adaptive values are ignored so prior silent-row lowering cannot
-    persist. Completed chronological 50-outcome cohorts are fingerprinted;
-    changed outcomes replay those cohorts from the static default. If undo or
-    category removal leaves fewer than 50 eligible outcomes, the learned value,
-    count, and fingerprint are cleared.
-  - Synthetic milestone adds live/history/resume provider fixtures, a
-    chronological explicit-label report contract, and the provenance matrix in
-    `docs/reports/T-177a-capture-provenance.md`. T-140/T-143 status and their
-    production integration limits are reconciled there. Remaining T-177a gates:
-    real chronological holdout, physical capture coverage, and a reviewed
-    capture-decision-version contract. Synthetic arithmetic is not a baseline.
-    Independent review passed without blocker. The resume fixture calls the
-    catch-up runner directly; app-resume lifecycle and known-SMS-boundary
-    behavior remain unverified alongside physical live/resume capture.
-  - Verification: threshold tests 17/17; repository/detail/template-ledger
-    tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
-    and diff check clean. Same-count correction, v1/v2 state invalidation,
-    multiple cohorts, undo to 49 outcomes, and full category removal are
-    covered. GitNexus impact: `AdaptiveThresholdPolicy` HIGH (47 symbols / 4
-    flows), `TransactionRepository` CRITICAL (80 / 43 direct), `TransactionDetail`
-    CRITICAL (77 / 40 direct), `TransactionDetailScreen` HIGH (42 / 18 direct),
-    `TemplateTrustLedger` HIGH (90 / 12 direct); exact ledger `refresh` is
-    UNKNOWN with 2 dropped callers, text search corroborates call sites.
-    Detect-changes reports 25 symbols, 9 files, 4 processes, MEDIUM. No schema,
-    phone, or APK changes.
-  - Detail now has a separate evidence-backed parse-confirm action; it never
-    changes transaction status/category and intentionally does not count as
-    category-threshold evidence. Broad provider/provenance/baseline audit is
-    still open.
 
 ## In Review
 
