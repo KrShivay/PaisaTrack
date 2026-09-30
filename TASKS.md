@@ -267,16 +267,18 @@ later hardening.
     received independent review with no blocker; the encrypted restore
     compatibility-test commit also passed independent review. No physical
     repair UI confirmation has been performed.
-  - Release follow-up: signed `0.1.3+2011` from main `3b2fb6b` is published.
-    On 2026-09-30, the exact ARM64 artifact from commit
-    `6ac898f564bfd307455a1b7201ab229a3fe09c80` (56,750,764 bytes; SHA-256
-    `218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`) was
-    installed with `adb install -r` on the motorola edge 50 pro. The pulled
-    installed base APK matched its hash; package/version/code and production
-    signer matched; `firstInstallTime` remained `2026-09-26 22:20:54`. Launch
-    reached resumed `MainActivity` with no matching recent app fatal/native-load
-    markers. This proves in-place package replacement, not stored-data integrity.
-    Physical preview/apply/undo acceptance remains open.
+  - Release follow-up: the current public release is signed ARM64
+    `0.1.3+2012`, effective code `4012`, published on `apk-downloads` in commit
+    `79614386e4f5271c5ccefc67eca66368642fb7ae`. Its source release commit is
+    `9f966992f8665c4f7fea72882af1270cb34b3c3b`; APK size is 56,750,764 bytes
+    and SHA-256 is
+    `d028507574978ede386a5c3a1560415f8551f502887ad87f89ed20f2da0bd403`.
+    The 2026-10-01 in-place install and bounded portrait Ask checks are recorded
+    in [the owner-phone report](docs/reports/release-v2012-owner-phone-install-2026-10-01.md).
+    `firstInstallTime` remained `2026-09-26 22:20:54`; this is not a stored-data
+    integrity check. The previous signed 4011 install is retained as historical
+    evidence in `docs/release-signing.md`. T-193 physical preview/apply/undo
+    acceptance remains open.
 
 - [ ] T-179a (@codex) [P0] Recover safely from a lost database key.
       Verification: 768 Flutter tests passed; analyzer and diff check clean;

@@ -16,7 +16,9 @@
   at 2× a safe swipe exposed one suggestion control. Close returned Home.
   Font/rotation settings were restored. No messages or transaction edits were
   made; no private records were inspected. Landscape and broader T-176/T-167c
-  acceptance remain open, and this artifact remains unpublished.
+  acceptance remain open. The exact artifact was published to `apk-downloads`
+  in commit `79614386e4f5271c5ccefc67eca66368642fb7ae`; only the APK file
+  changed.
 
 ## 2026-09-30 — T-176 Ask IME route fix
 

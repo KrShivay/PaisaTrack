@@ -57,7 +57,9 @@ messages were entered or submitted, no suggestions were selected, no
 transactions were edited, and no clear, reset, restore, or backup operation
 was performed. No private financial text or records were inspected.
 
-The 4012 artifact remains unpublished. T-176 still needs landscape,
+The 4012 artifact was published on `apk-downloads` in commit
+`79614386e4f5271c5ccefc67eca66368642fb7ae`; the fetched public APK blob matched
+the verified size and SHA-256. T-176 still needs landscape,
 three-button navigation, and other route coverage; T-167c and broader release
 device acceptance remain open. This check does not establish stored-data
 integrity or complete release acceptance.

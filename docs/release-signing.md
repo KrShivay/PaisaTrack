@@ -27,9 +27,9 @@ PaisaTrack enforces release signing security for production builds.
    ./.tooling/flutter/bin/flutter build appbundle --release
    ```
 
-## Published APK
+## Previously published APK (0.1.3+2011)
 
-The currently published download is `0.1.3+2011`, an ARM64 APK for 64-bit ARM
+The previously published download was `0.1.3+2011`, an ARM64 APK for 64-bit ARM
 Android devices, built from the `pubspec.yaml` version at source commit
 `3b2fb6b`. Flutter's
 `--split-per-abi` build applies the ARM64 version-code offset of `2000`, so the
@@ -53,9 +53,9 @@ detail UI remains open. Broader T-167c responsive-layout, T-176 screen-inset,
 T-179a key-recovery, T-177a capture/holdout, and T-194 size-trial acceptance
 also remain open.
 
-## Unpublished 0.1.3+2012 build and install check
+## Published APK (0.1.3+2012)
 
-The signed ARM64 candidate was built from commit
+The signed ARM64 release was built from commit
 `9f966992f8665c4f7fea72882af1270cb34b3c3b` with Flutter 3.44.4. It is
 56,750,764 bytes with SHA-256
 `d028507574978ede386a5c3a1560415f8551f502887ad87f89ed20f2da0bd403` and reports
@@ -74,8 +74,10 @@ replacement only, not stored-data integrity. The initial launch request
 remained behind the Android keyguard; after the owner unlocked the phone, Ask
 composer/close behavior passed bounded portrait checks at 1×, 1.5×, and 2× with
 the real IME, and one 2× scroll exposed one prompt control. Landscape and other
-routes remain untested. This 4012 candidate is unpublished; broader device
-acceptance remains open. Detailed evidence:
+routes remain untested. The exact artifact was published on `apk-downloads` in
+commit `79614386e4f5271c5ccefc67eca66368642fb7ae`; the fetched public APK blob
+matched the verified size and SHA-256 above. Broader device acceptance remains
+open. Detailed evidence:
 [2026-10-01 owner-phone install check](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
 ## Unpublished APK-size trial (T-194)
