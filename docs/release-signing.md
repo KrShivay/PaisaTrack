@@ -29,19 +29,20 @@ PaisaTrack enforces release signing security for production builds.
 
 ## Published APK
 
-The currently published download is `0.1.3+2008`, an ARM64 APK for 64-bit ARM
+The currently published download is `0.1.3+2009`, an ARM64 APK for 64-bit ARM
 Android devices, built from the current `pubspec.yaml` version. Flutter's
 `--split-per-abi` build applies the ARM64 version-code offset of `2000`, so the
-effective APK version code is `4008`. The published APK is 56,750,764 bytes
+effective APK version code is `4009`. The published APK is 56,750,764 bytes
 (56.75 MB decimal), with SHA-256
-`0f78b18200a899a2cddc9b4d7a02ecce6e18fe8a226e49103b168f910def3930`.
+`b383c199bf38dc7fedbd571dc11cb8073850553b1e96ed633407dd25d4c79bc9`.
 Its package is `com.paisatrack`, version name `0.1.3`, and production
 certificate SHA-256
 `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
-An in-place upgrade to code `4008` passed on the ARM64 phone; the original
-first-install time was preserved, the app remained foregrounded, and no crash
-exit occurred. T-193 backup/restore compatibility and physical acceptance of
-the currency-repair detail UI remain open. Broader T-167c responsive-layout,
+An in-place upgrade to code `4009` passed on the ARM64 phone. Its
+`firstInstallTime` remained `2026-09-26 22:20:54`; the app process remained live
+after launch, and its newest exit-info entry was `PACKAGE UPDATED`. T-193
+synthetic backup/restore coverage is in place; physical acceptance of the
+currency-repair detail UI remains open. Broader T-167c responsive-layout,
 T-176 screen-inset, and T-179a key-recovery acceptance also remain open.
 Resolve dependencies, then build from the repository root with:
 

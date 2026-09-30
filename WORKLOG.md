@@ -52,21 +52,6 @@
   and physical phone QA. No emulator, private data, phone mutation, or APK
   change.
 
-## 2026-09-30 — T-189 readable Ask prompt list
-
-- Replaced the three clipped horizontal composer chips shown after a chat
-  starts with a scrollable vertical list of the same rotating catalogue
-  prompts. Full text wraps, every row remains a labeled 48dp+ button, and
-  sending or manually rotating advances the same three-question window. The
-  initial searchable catalogue and local assistant contract are unchanged.
-- Widget tests cover exact prompt text/send/rotation, semantics and target
-  size, 320dp at 2× text, and final-row reachability plus composer placement in
-  a keyboard-resized sheet. Assistant tests 7/7; full Flutter suite 924/924;
-  `flutter analyze --no-pub`, formatter check, and diff check clean.
-- GitNexus pre-edit impact: `_ComposerPromptChips` and `_AssistantScreenState`
-  MEDIUM (13 affected symbols, 5 direct each). Detect-changes: 6 files / 24
-  symbols, LOW risk, no affected processes. No data or schema changes.
-
 ## 2026-09-30 — T-193 legacy currency repair
 
 - The source-backed per-transaction detail preview/apply/undo repair was
@@ -78,8 +63,9 @@
 - Added a synthetic encrypted chunked-backup restore integration test. A legacy
   null-currency transaction with retained raw SMS and amount evidence remains
   previewable after restore and successfully applies/undoes INR. Its expired
-  counterpart is detached from its omitted SMS and remains ineligible. No
-  production code, schema, migration, private data, or APK changed.
+  counterpart is detached from its omitted SMS and remains ineligible. The
+  compatibility test changes no production code, schema, migration, private
+  data, or release artifact.
 - Focused backup and repair-service tests 40/40; full Flutter suite 915/915;
   `flutter analyze --no-pub`, changed-file formatting, and diff check clean.
   GitNexus detect-changes: 9 documentation section symbols in TASKS, WORKLOG,
@@ -90,13 +76,14 @@
   The encrypted restore compatibility-test commit independently reviewed
   without a blocker. Physical UI preview/apply/undo confirmation remains
   pending.
-- Published signed ARM64 `0.1.3+2008` to `apk-downloads`, commit
-  `7971aeb7df39d210ae68a289fdff5debb20578ca`. APK size 56,750,764 bytes,
-  SHA-256 `0f78b18200a899a2cddc9b4d7a02ecce6e18fe8a226e49103b168f910def3930`;
-  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4008`,
+- Published signed ARM64 `0.1.3+2009` to `apk-downloads`, commit
+  `091e6256979c335de9c779c5fc729477fca832cb`. APK size 56,750,764 bytes,
+  SHA-256 `b383c199bf38dc7fedbd571dc11cb8073850553b1e96ed633407dd25d4c79bc9`;
+  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4009`,
   production certificate SHA-256
   `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
-  Owner reports the in-place phone upgrade preserved firstInstallTime and left
-  the app process alive without a crash exit. Synthetic encrypted
-  backup/restore compatibility is now covered; physical repair-preview/apply/
-  undo acceptance remains open.
+  The in-place phone upgrade preserved `firstInstallTime` (`2026-09-26
+  22:20:54`); the app launched with a live process and the newest exit-info
+  entry was `PACKAGE UPDATED`. Synthetic encrypted backup/restore
+  compatibility is covered; physical repair-preview/apply/undo acceptance
+  remains open.

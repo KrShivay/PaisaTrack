@@ -112,14 +112,16 @@ later hardening.
     preview/apply/undo, while an expired source is detached and remains
     ineligible. GitNexus detect-changes: 9 documentation section symbols in
     TASKS, WORKLOG, and T-193 notes, LOW risk, no affected processes; the test
-    file has no indexed symbols. No
-    production code, schema, migration, or APK changed. Source-backed repair
+    file has no indexed symbols. The added compatibility test changes no
+    production code, schema, migration, or release artifact. Source-backed repair
     received independent review with no blocker; the encrypted restore
     compatibility-test commit also passed independent review. No physical
     repair UI confirmation has been performed.
-  - Release follow-up: signed `0.1.3+2008` is installed in place on the ARM64
-    phone (effective code 4008; firstInstallTime unchanged; app process alive
-    without crash exit). Physical preview/apply/undo acceptance remains open.
+  - Release follow-up: signed `0.1.3+2009` is installed in place on the ARM64
+    phone (effective code 4009; `firstInstallTime` remained
+    `2026-09-26 22:20:54`; the app launched with a live process and the newest
+    exit-info entry was `PACKAGE UPDATED`). Physical preview/apply/undo
+    acceptance remains open.
 
 - [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,
