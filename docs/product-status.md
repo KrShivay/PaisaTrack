@@ -1,7 +1,8 @@
 # Product Status
 
-Status date: 2026-09-30
-Code baseline: main at `5c98365`, including T-187 source-currency fidelity.
+Status date: 2026-10-01
+Code baseline: main at `3d5f310`, including the T-176 Ask IME route fix and
+T-187 source-currency fidelity.
 Physical-device acceptance for T-176 and T-179a remains open.
 
 This is the source of truth for current product state. Normative technical
@@ -85,7 +86,7 @@ normative boundaries.
 | Delete everything | Deletes database/native state, DB key, Dart settings, and import markers | Physical-device erasure acceptance remains |
 | Accessibility | Reduced motion and some semantics/responsive tests exist | Touch targets, TalkBack labels/order, contrast, large text, and device acceptance are incomplete |
 | Offline behavior | Core finance and inference work offline after optional model downloads | Background/device-only behavior is not fully accepted on physical hardware |
-| Release/distribution | Production-signed ARM64 `0.1.3+2011` download was verified by hash/certificate and installed/launched on the target phone; signing guard and rotation/rollback documentation exist | CI/device test lanes, store distribution, data-integrity checks, and broader physical acceptance remain |
+| Release/distribution | Public production-signed ARM64 `0.1.3+2011` download remains verified; an unpublished signed `0.1.3+2012` / code `4012` candidate was independently verified and installed in-place on the target phone; bounded Ask portrait checks passed at 1×, 1.5×, and 2× | Landscape, other routes, CI/device test lanes, store distribution, data-integrity checks, and broader physical acceptance remain |
 
 The stored global monthly budget and merchant-cap prototype are not T-098.
 T-098 is a future per-category, per-month budget feature and depends on a shared
@@ -148,6 +149,24 @@ ARM64 release artifact and physical launch, 2026-09-30:
   markers. This launch did not exercise optional inference paths. T-193 physical
   preview/apply/undo, T-194 storage/cold-start measurement, and the separate
   responsive, capture, and recovery acceptance gates remain open.
+
+ARM64 release candidate install check, 2026-10-01:
+
+- The unpublished `0.1.3+2012` candidate from release commit
+  `9f966992f8665c4f7fea72882af1270cb34b3c3b` passed package/version/code,
+  production-signer, ARM64 ABI, native-library packaging, ZIP-integrity, and
+  alignment checks. SHA-256 is
+  `d028507574978ede386a5c3a1560415f8551f502887ad87f89ed20f2da0bd403`.
+- `adb install -r` succeeded on the motorola edge 50 pro. The installed base APK
+  matched the candidate hash and signer; `firstInstallTime` remained
+  `2026-09-26 22:20:54`. This confirms in-place replacement only, not
+  stored-data integrity.
+- The first launcher request remained behind keyguard. After the owner unlocked
+  the phone, Ask composer and close behavior passed bounded 1×, 1.5×, and 2×
+  portrait checks with the real IME; one 2× scroll exposed one prompt control.
+  Landscape and other routes remain untested, and the candidate remains
+  unpublished. T-176/T-167c physical acceptance remains open. See the
+  [owner-phone install report](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
 T-187 source-currency fidelity, reviewed and shipped on 2026-09-29:
 

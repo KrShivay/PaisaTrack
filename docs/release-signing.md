@@ -30,7 +30,8 @@ PaisaTrack enforces release signing security for production builds.
 ## Published APK
 
 The currently published download is `0.1.3+2011`, an ARM64 APK for 64-bit ARM
-Android devices, built from the current `pubspec.yaml` version. Flutter's
+Android devices, built from the `pubspec.yaml` version at source commit
+`3b2fb6b`. Flutter's
 `--split-per-abi` build applies the ARM64 version-code offset of `2000`, so the
 effective APK version code is `4011`. The published APK is 56,750,764 bytes
 (56.75 MB decimal), with SHA-256
@@ -51,6 +52,31 @@ paths were not exercised. T-193 physical acceptance of the currency-repair
 detail UI remains open. Broader T-167c responsive-layout, T-176 screen-inset,
 T-179a key-recovery, T-177a capture/holdout, and T-194 size-trial acceptance
 also remain open.
+
+## Unpublished 0.1.3+2012 build and install check
+
+The signed ARM64 candidate was built from commit
+`9f966992f8665c4f7fea72882af1270cb34b3c3b` with Flutter 3.44.4. It is
+56,750,764 bytes with SHA-256
+`d028507574978ede386a5c3a1560415f8551f502887ad87f89ed20f2da0bd403` and reports
+package `com.paisatrack`, version `0.1.3`, effective ARM64 code `4012`, and
+production certificate SHA-256
+`6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`. The APK
+contains only `arm64-v8a`, sets `extractNativeLibs=false`, and stores all six
+native libraries uncompressed. ZIP integrity and `zipalign -c -v 4` passed;
+the Android app and keystore Gradle unit-test tasks passed.
+
+On 2026-10-01, this exact artifact was installed with `adb install -r` on the
+motorola edge 50 pro. The pulled installed base APK matched its SHA-256, size,
+and production signer; package code `4012` was installed and
+`firstInstallTime` remained `2026-09-26 22:20:54`. This confirms in-place
+replacement only, not stored-data integrity. The initial launch request
+remained behind the Android keyguard; after the owner unlocked the phone, Ask
+composer/close behavior passed bounded portrait checks at 1×, 1.5×, and 2× with
+the real IME, and one 2× scroll exposed one prompt control. Landscape and other
+routes remain untested. This 4012 candidate is unpublished; broader device
+acceptance remains open. Detailed evidence:
+[2026-10-01 owner-phone install check](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
 ## Unpublished APK-size trial (T-194)
 

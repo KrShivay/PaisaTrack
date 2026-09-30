@@ -8,6 +8,122 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
+  - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
+    transaction detail, nested sheets, and floating actions through their real
+    routes. Verify final rows and actions clear the floating navigation in
+    gesture and three-button modes, and remain visible/tappable with the
+    keyboard, compact/landscape viewports, and large text.
+  - Verified acceptance slice: a route harness mounts the production
+    `HomeFloatingNavPill`, `BloomBottomInset` adapter, and actual Trends route.
+    The Trends final section clears the actual pill at 24dp gesture and 48dp
+    three-button insets on 402×874, and at 568×320 landscape with 1.5× text.
+    A separate bounded `HomeShell` route test now covers its actual pill and
+    Ask modal. These earlier synthetic checks did not demonstrate a production
+    inset gap; the later physical Ask test did, and the scoped route fix is
+    recorded below.
+  - Settings/Not transactions slice: five real-route checks open Settings,
+    tap its Not transactions action, and assert the final synthetic history row
+    clears the production navigation pill at 24dp/48dp insets on 402×874,
+    320×568 at 2× text, and 568×320 at 1.5×/2× text. The inherited
+    `MediaQuery.padding.bottom` gives the history `ListView` its bottom inset;
+    no inset fix was needed. Tapping the row exposed and fixed a `setState`
+    callback returning `_load()`'s Future, and the compact 2× layout exposed
+    and fixed the trailing amount consuming the entire `ListTile` width. The
+    test unmounts the route and closes its in-memory Drift database inside the
+    test body so cleanup does not defer `StreamQueryStore.markAsClosed`'s
+    `Timer.run` until Flutter's post-test teardown.
+  - Ask compact-keyboard slice: the production full-screen Ask route now has
+    a focused test at 320×568 and 2× text, then dynamically resizes to 320×348
+    with zero residual inset to model a window-resize platform contract. The
+    API 36 phone later reported a full-height app window plus a nonzero IME
+    inset despite `adjustResize`; the synthetic resize case covers only that
+    alternate contract and does not substitute for physical behavior. The
+    compact Ask-only header keeps the composer visible,
+    retains a 48dp close target, and leaves the transcript scrollable; normal
+    height keeps the full header. The earlier 42px overflow figure came from
+    a fixture that applied both the 348dp resize and a 220dp inset, double-
+    counting the keyboard only in that test setup. A corrected route-size-only
+    fixture still reproduced a compact-height issue: the
+    full header title and subtitle wrapped to 138dp and 155dp, leaving only
+    23dp for the AssistantScreen. A submitted user message now verifies the
+    actual transcript ListView has positive scroll extent at 320×348/2× text;
+    its prompt panel is capped to leave transcript space in 96–240dp content
+    heights. The full-screen sheet helper adds opt-in keyboard avoidance for
+    HomeShell → Ask; other full-screen callers retain their existing inset
+    behavior.
+  - Activity/detail/correction slice: three cases use the production
+    `TransactionsScreen`, `HomeFloatingNavPill`, bottom-inset adapter, detail
+    route, and nested correction sheet with synthetic provider data. At
+    402×874/24dp/1× and 568×320/24dp/1.5× plus 568×320/48dp/2×, the Activity
+    transaction row scrolls clear of the pill and remains tappable; the detail
+    edit action opens the correction sheet and its direction choice remains
+    tappable. No detail or sheet inset defect was demonstrated, so production
+    code is unchanged. The test fixture keeps the route under a nested
+    Navigator with the production pill/adapter because mounting `HomeShell`
+    leaves Drift stream cleanup timers pending.
+  - HomeShell/Ask integration slice: three tests open Ask through the
+    production `HomeFloatingNavPill` and root modal route. At 402×874, the pill
+    respects simulated 24dp gesture and 48dp three-button safe padding and the
+    composer mounts. At 320×568/2× text, a full-window route with 220dp of
+    `viewInsets` keeps the 48dp close target and composer within the 348dp
+    visible area and preserves the inset for nested routes. The direct Ask
+    route test separately covers a synthetic resize to 320×348 with zero
+    residual inset. The focused fixture leaves the database unopened,
+    explicitly unmounts the shell, and completes without a Drift teardown
+    timer. The existing HomeShell Activity nested-Navigator test also passes
+    in isolation. Physical keyboard behavior remains a device-only gate.
+  - T-176 route-audit follow-up for T-167c: a trial through the real Sort
+    detail caller exposed `WeeklyReviewScreen`'s card/action `Column` overflowing
+    at 568×320 by 30dp with 1.5× text/24dp gesture inset and by 86dp with 2×
+    text/48dp three-button inset. At 2× the card is outside the viewport, so
+    this caller cannot reach detail. Existing Weekly Review widget tests use
+    the default portrait viewport and do not cover compact landscape. Keep the
+    layout fix in T-167c; no production review-screen change is part of T-176.
+  - The synthetic Sort→detail route now passes after the T-167c responsive
+    fix; physical-device QA remains pending. The phone was online for the
+    unrelated 2026-09-30 v2011 release install/launch. Still open: Ask
+    modal-route acceptance on a physical device and remaining compact/
+    landscape combinations. The synthetic route tests used no emulator,
+    inspected no private SMS/DB data, and changed no phone or APK state.
+  - Physical QA on the exact published v0.1.3+2011 artifact from source
+    `3b2fb6b` confirmed Ask composer occlusion by the IME in default portrait at
+    1× and 1.5×, with repeated settled-IME metrics and local screenshots.
+    No messages were entered or submitted; no suggestion was selected, and no
+    transaction edits, SMS scan, permission, key, backup, reset, or restore
+    operation was performed. Settings were restored. Physical acceptance
+    failed and remains open; synthetic resize tests do not close it. Evidence:
+    [T-176 physical Ask keyboard QA](docs/reports/T-176-physical-ask-ime-2026-09-30.md).
+  - Merged Ask fix (`3d5f310`): the full-screen sheet helper now has opt-in keyboard
+    avoidance, enabled only for HomeShell → Ask, preserving existing inset
+    ownership for other callers. The Ask header selects compact layout from
+    available route height after subtracting `viewInsets`; descendants retain
+    the original `MediaQuery.viewInsets` for nested routes. Regression-first
+    full-window/220dp-inset test failed before the fix with the composer bottom
+    at 548dp (visible bottom 348dp). Direct Ask tests cover full-window plus
+    inset and resized-window plus zero inset; a nested modal test verifies
+    inset preservation. The production HomeShell route now covers both
+    320×568/2× with a 220dp inset and a phone-like 434×964/1× viewport with a
+    370dp inset; both cases clear the IME, close Ask, and return Home. Focused
+    helper/Ask/HomeShell/category/detail suites passed 29/29; full Flutter
+    suite 954/954; analyzer and formatter clean. This is synthetic
+    verification; the implementation is in main. Physical verification on the
+    reviewed 4012 build is recorded in
+    [the 2026-10-01 install/Ask report](docs/reports/release-v2012-owner-phone-install-2026-10-01.md).
+    Ask opened through the production pill and the empty composer remained
+    above the real IME at 1×, 1.5×, and 2× portrait. At 2×, one safe scroll
+    exposed a suggestion row above the keyboard; no suggestion was selected.
+    The close target worked, the route returned Home, and settings were restored.
+    Landscape, three-button navigation, other T-176 routes, and the broader
+    T-167c matrix remain untested; both physical acceptance tasks remain open.
+  - Focused verification: global bottom-inset route tests 11/11, including
+    Activity/detail/correction at three viewports; Ask route plus
+    AssistantScreen tests 9/9; production HomeShell→Ask route 3/3 and existing
+    HomeShell Activity route 1/1; full Flutter suite 936/936; detail/Note and
+    full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
+    diff check, and GitNexus detect-changes clean. No emulator, private
+    SMS/DB data, phone mutation, or APK change.
+
 ## Ready
 
 - [ ] T-164e [P0] Complete transaction timestamp-display parity across Activity
@@ -124,113 +240,6 @@ later hardening.
     approved the updated diff. Physical-device QA remains pending.
 
 ## In Review
-
-- [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
-  - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
-    transaction detail, nested sheets, and floating actions through their real
-    routes. Verify final rows and actions clear the floating navigation in
-    gesture and three-button modes, and remain visible/tappable with the
-    keyboard, compact/landscape viewports, and large text.
-  - Verified acceptance slice: a route harness mounts the production
-    `HomeFloatingNavPill`, `BloomBottomInset` adapter, and actual Trends route.
-    The Trends final section clears the actual pill at 24dp gesture and 48dp
-    three-button insets on 402×874, and at 568×320 landscape with 1.5× text.
-    A separate bounded `HomeShell` route test now covers its actual pill and
-    Ask modal. No production inset gap was demonstrated, so production code
-    is unchanged.
-  - Settings/Not transactions slice: five real-route checks open Settings,
-    tap its Not transactions action, and assert the final synthetic history row
-    clears the production navigation pill at 24dp/48dp insets on 402×874,
-    320×568 at 2× text, and 568×320 at 1.5×/2× text. The inherited
-    `MediaQuery.padding.bottom` gives the history `ListView` its bottom inset;
-    no inset fix was needed. Tapping the row exposed and fixed a `setState`
-    callback returning `_load()`'s Future, and the compact 2× layout exposed
-    and fixed the trailing amount consuming the entire `ListTile` width. The
-    test unmounts the route and closes its in-memory Drift database inside the
-    test body so cleanup does not defer `StreamQueryStore.markAsClosed`'s
-    `Timer.run` until Flutter's post-test teardown.
-  - Ask compact-keyboard slice: the production full-screen Ask route now has
-    a focused test at 320×568 and 2× text, then dynamically resizes to 320×348
-    with zero residual inset to model a window-resize platform contract. The
-    API 36 phone later reported a full-height app window plus a nonzero IME
-    inset despite `adjustResize`; the synthetic resize case covers only that
-    alternate contract and does not substitute for physical behavior. The
-    compact Ask-only header keeps the composer visible,
-    retains a 48dp close target, and leaves the transcript scrollable; normal
-    height keeps the full header. The earlier 42px overflow figure came from
-    a fixture that applied both the 348dp resize and a 220dp inset, double-
-    counting the keyboard only in that test setup. A corrected route-size-only
-    fixture still reproduced a compact-height issue: the
-    full header title and subtitle wrapped to 138dp and 155dp, leaving only
-    23dp for the AssistantScreen. A submitted user message now verifies the
-    actual transcript ListView has positive scroll extent at 320×348/2× text;
-    its prompt panel is capped to leave transcript space in 96–240dp content
-    heights. The Ask-specific compact header addresses the route constraint
-    without changing the shared sheet scaffold.
-  - Activity/detail/correction slice: three cases use the production
-    `TransactionsScreen`, `HomeFloatingNavPill`, bottom-inset adapter, detail
-    route, and nested correction sheet with synthetic provider data. At
-    402×874/24dp/1× and 568×320/24dp/1.5× plus 568×320/48dp/2×, the Activity
-    transaction row scrolls clear of the pill and remains tappable; the detail
-    edit action opens the correction sheet and its direction choice remains
-    tappable. No detail or sheet inset defect was demonstrated, so production
-    code is unchanged. The test fixture keeps the route under a nested
-    Navigator with the production pill/adapter because mounting `HomeShell`
-    leaves Drift stream cleanup timers pending.
-  - HomeShell/Ask integration slice: three tests open Ask through the
-    production `HomeFloatingNavPill` and root modal route. At 402×874, the pill
-    respects simulated 24dp gesture and 48dp three-button safe padding and the
-    composer mounts. At 320×568/2× text, a full-window route with 220dp of
-    `viewInsets` keeps the 48dp close target and composer within the 348dp
-    visible area and preserves the inset for nested routes. The direct Ask
-    route test separately covers a synthetic resize to 320×348 with zero
-    residual inset. The focused fixture leaves the database unopened,
-    explicitly unmounts the shell, and completes without a Drift teardown
-    timer. The existing HomeShell Activity nested-Navigator test also passes
-    in isolation. Physical keyboard behavior remains a device-only gate.
-  - T-176 route-audit follow-up for T-167c: a trial through the real Sort
-    detail caller exposed `WeeklyReviewScreen`'s card/action `Column` overflowing
-    at 568×320 by 30dp with 1.5× text/24dp gesture inset and by 86dp with 2×
-    text/48dp three-button inset. At 2× the card is outside the viewport, so
-    this caller cannot reach detail. Existing Weekly Review widget tests use
-    the default portrait viewport and do not cover compact landscape. Keep the
-    layout fix in T-167c; no production review-screen change is part of T-176.
-  - The synthetic Sort→detail route now passes after the T-167c responsive
-    fix; physical-device QA remains pending. The phone was online for the
-    unrelated 2026-09-30 v2011 release install/launch. Still open: Ask
-    modal-route acceptance on a physical device and remaining compact/
-    landscape combinations. The synthetic route tests used no emulator,
-    inspected no private SMS/DB data, and changed no phone or APK state.
-  - Physical QA on the exact published v0.1.3+2011 artifact from source
-    `3b2fb6b` confirmed Ask composer occlusion by the IME in default portrait at
-    1× and 1.5×, with repeated settled-IME metrics and local screenshots.
-    No messages were entered or submitted; no suggestion was selected, and no
-    transaction edits, SMS scan, permission, key, backup, reset, or restore
-    operation was performed. Settings were restored. Physical acceptance
-    failed and remains open; synthetic resize tests do not close it. Evidence:
-    [T-176 physical Ask keyboard QA](docs/reports/T-176-physical-ask-ime-2026-09-30.md).
-  - Fix slice in review: the full-screen sheet helper now has opt-in keyboard
-    avoidance, enabled only for HomeShell → Ask, preserving existing inset
-    ownership for other callers. The Ask header selects compact layout from
-    available route height after subtracting `viewInsets`; descendants retain
-    the original `MediaQuery.viewInsets` for nested routes. Regression-first
-    full-window/220dp-inset test failed before the fix with the composer bottom
-    at 548dp (visible bottom 348dp). Direct Ask tests cover full-window plus
-    inset and resized-window plus zero inset; a nested modal test verifies
-    inset preservation. The production HomeShell route now covers both
-    320×568/2× with a 220dp inset and a phone-like 434×964/1× viewport with a
-    370dp inset; both cases clear the IME, close Ask, and return Home. Focused
-    helper/Ask/HomeShell/category/detail suites passed 29/29; full Flutter
-    suite 954/954; analyzer and formatter clean. This is synthetic
-    verification only: the owner phone still runs source `3b2fb6b`; re-test on
-    a reviewed build before closing the physical gate.
-  - Focused verification: global bottom-inset route tests 11/11, including
-    Activity/detail/correction at three viewports; Ask route plus
-    AssistantScreen tests 9/9; production HomeShell→Ask route 3/3 and existing
-    HomeShell Activity route 1/1; full Flutter suite 936/936; detail/Note and
-    full-screen sheet baseline 17/17; `flutter analyze --no-pub`, formatter,
-    diff check, and GitNexus detect-changes clean. No emulator, private
-    SMS/DB data, phone mutation, or APK change.
 
 - [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
   - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps

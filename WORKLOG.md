@@ -1,5 +1,23 @@
 # Current Handoff
 
+## 2026-10-01 — v2012 owner-phone install and Ask portrait check
+
+- Built and independently reviewed the signed ARM64 `0.1.3+2012` artifact
+  from release commit `9f966992f8665c4f7fea72882af1270cb34b3c3b`. Android app
+  and keystore Gradle unit tests passed: 31 app tests and 10 keystore tests,
+  zero failures. Flutter focused 29/29, full 954/954, analyzer, and formatting
+  evidence is from unchanged source at `3d5f310`; the version-only bump did not
+  rerun that suite. Artifact metadata and install evidence:
+  [v2012 owner-phone report](docs/reports/release-v2012-owner-phone-install-2026-10-01.md).
+- The candidate installed via `adb install -r`; package code 4012, installed
+  base hash, and production signer matched, while `firstInstallTime` remained
+  `2026-09-26 22:20:54`. Ask opened via the production pill. The focused empty
+  composer stayed 59–62 px above the real IME at 1×, 1.5×, and 2× portrait;
+  at 2× a safe swipe exposed one suggestion control. Close returned Home.
+  Font/rotation settings were restored. No messages or transaction edits were
+  made; no private records were inspected. Landscape and broader T-176/T-167c
+  acceptance remain open, and this artifact remains unpublished.
+
 ## 2026-09-30 — T-176 Ask IME route fix
 
 - Physical QA on the published v0.1.3+2011 build from source `3b2fb6b` found
@@ -16,9 +34,9 @@
   exercise 320×568/2× with a 220dp inset and phone-like 434×964/1× with a
   370dp inset, then hide the IME, close Ask, and verify return to Home. Focused
   helper/Ask/HomeShell/category/detail keyboard tests: 29/29; full Flutter
-  suite: 954/954; analyzer clean. The installed phone still runs the original
-  build; T-176 and T-167c physical acceptance remains open pending review and
-  re-test.
+  suite: 954/954; analyzer clean. As of this 2026-09-30 entry, the installed
+  phone still ran the original build; the 2026-10-01 update above records the
+  reviewed 4012 installation and bounded portrait retest.
 
 ## 2026-09-30 — T-194 APK-size trial tracking
 
@@ -33,29 +51,3 @@
   storage and cold-start were not measured. The Gradle experiment remains
   isolated on the candidate branch. GitNexus docs-only detection found 9
   touched section symbols, 0 processes, LOW risk.
-
-## 2026-09-30 — ARM64 0.1.3+2011 release
-
-- Built the signed ARM64 APK from main `3b2fb6b` after changing only the
-  release version to `0.1.3+2011`. Published it to `apk-downloads` in commit
-  `6ac898f564bfd307455a1b7201ab229a3fe09c80`. The 56,750,764-byte APK has
-  SHA-256 `218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`,
-  package `com.paisatrack`, version name `0.1.3`, effective ARM64 code `4011`,
-  and production certificate SHA-256
-  `6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`.
-- On 2026-09-30, fetched `app-release-arm64.apk` from that exact public commit,
-  reverified its size, SHA-256, package/version/code, ARM64-only native ABI, and
-  production signer, then installed it on the motorola edge 50 pro with
-  `adb install -r` (success). The installed base APK matched the published
-  artifact byte-for-byte at 56,750,764 bytes and the same SHA-256. The phone
-  reported code `4011` before and after; `firstInstallTime` stayed
-  `2026-09-26 22:20:54`, confirming in-place replacement only, not data
-  integrity. Before this install, the phone held a same-version 130,104,007-byte
-  local build with a different hash.
-- `MainActivity` launched and remained resumed with a live app process. A
-  recent, narrowly filtered AndroidRuntime/linker log sample contained no app
-  fatal or native-load failure markers. The APK includes the Flutter, SQLCipher,
-  LiteRT-LM, and MediaPipe ARM64 libraries; optional native inference paths were
-  not exercised. No private screens or financial data were inspected. T-193
-  preview/apply/undo, T-194 storage/cold-start measurement, and the separate
-  responsive, capture, and recovery device gates remain open.
