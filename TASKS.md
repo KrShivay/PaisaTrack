@@ -8,6 +8,24 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-194 [P1] Trial compressed ARM64 native-library packaging.
+  - Bounded trial: set AGP `jniLibs.useLegacyPackaging=true` for the release
+    variant only, build a signed ARM64 `0.1.3+2011` candidate from the baseline,
+    and compare
+    its ZIP entries and metadata with the current signed APK and a same-source
+    default-packaging control.
+    No app feature/code, version, dependency, or published artifact change.
+  - Acceptance: candidate is at most 27,000,000 bytes; `com.paisatrack`,
+    version `0.1.3` / effective code `4011`, and production signer match the
+    release baseline. All six ARM64 native library paths and hashes match a
+    same-source default-packaging control. ZIP integrity/alignment checks pass;
+    manifest extraction behavior is recorded. Record expected installed-size
+    and startup tradeoff, then measure both on the supported physical device.
+  - No phone install or APK publication while the release device is offline.
+    Keep T-194 open until that physical storage/startup acceptance is recorded.
+    Revert the packaging flag if physical acceptance fails.
+  - Details and artifact evidence: [T-194](docs/tasks/T-194.md).
+
 ## Ready
 
 - [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.

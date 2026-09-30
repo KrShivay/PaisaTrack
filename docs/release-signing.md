@@ -45,6 +45,27 @@ offline; the phone remains on `0.1.3+2010` (effective code `4010`;
 synthetic backup/restore coverage is in place; physical acceptance of the
 currency-repair detail UI remains open. Broader T-167c responsive-layout,
 T-176 screen-inset, and T-179a key-recovery acceptance also remain open.
+
+## Unpublished APK-size trial (T-194)
+
+A signed ARM64 trial setting `jniLibs.useLegacyPackaging=true` on the release
+variant through AGP's Variant API produced a
+26,180,416-byte candidate (SHA-256
+`cb9a3deb34207ea4b9aef251f7ce411166e7ac59cc4d5cff3690844691672e29`), a
+30,570,348-byte reduction from the published artifact. Package, version,
+effective ARM64 code, and production signing certificate match the published
+APK. The candidate compresses all six native libraries and sets
+`extractNativeLibs=true`; the same-source control build confirms all six
+uncompressed library contents are unchanged by the packaging toggle.
+The debug ARM64 build still has `extractNativeLibs=false` and uncompressed
+native libraries.
+
+This candidate has not been installed or published. Extraction is projected
+to add about 23,069,324 bytes to installed storage relative to the current APK;
+physical storage and cold-start impact remain unmeasured because the supported
+phone is offline. Keep the published artifact above unchanged, and leave T-194
+open until physical acceptance is recorded.
+
 Resolve dependencies, then build from the repository root with:
 
 ```bash
