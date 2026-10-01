@@ -61,22 +61,59 @@ release-named dependency tasks do not block the isolated debug build.
   `:app:bundleRelease` rejected during configuration.
 - `git diff --check`: clean.
 
-## Physical gate remains open
+## Physical acceptance run — 2026-10-01
 
-At the last device preflight, `adb devices -l` listed no connected device. No
-APK was installed; no phone-side app, database, key, permission, backup, or
-restore operation was performed. The following acceptance has not been
-observed: cold-launching the QA wrapper into the real `KeyLossScreen`, choosing
-the staged synthetic archive through Android SAF, restoring it, and verifying
-the sentinel rows from a new process. Keystore alias/wrapped-preference
-continuity also remains unproven. Keep T-179a open for that physical run.
+Device: owner Motorola edge 50 pro (`ro.serialno` `ZD222KTYNC`, Android 16)
+over wireless ADB. Every phase was built with
+`ORG_GRADLE_PROJECT_recoveryQa=true`, `--dart-define=PAISATRACK_RECOVERY_QA=true`
+and `--target-platform android-arm64`. Prepare and the launcher came from
+`8df44e8`; the final verify re-run came from `28a9498` plus the marker fix.
+`git diff --name-only 8df44e8 28a9498` touches only SMS capture, calendar and
+dashboard code: no recovery, database, crypto, Android or pubspec file. All
+builds reported `com.paisatrack.recoveryqa` version code 2012 (`aapt2` and
+`dumpsys`), signed by debug certificate
+`f43ef54d1d5cd4e925565d40c082bf91db31b8c55ba0f3ebca644bf0a619774d`. The
+2012 code differs from the 4012 recorded for the earlier preserved artifact in
+the table above; that APK no longer exists, so it was neither reused nor
+compared. Launcher APK SHA-256 for this run:
+`5350c18e2bfbe09f4fd5d9d056e1a1c514fba0b0ff81d14302a5b92f63799dfd`.
 
-When the phone is available, run the two integration targets in order with
-`ORG_GRADLE_PROJECT_recoveryQa=true` and
-`--dart-define=PAISATRACK_RECOVERY_QA=true`: first
-`integration_test/recovery_qa_fixture_test.dart`, then launch the QA package's
-ordinary entrypoint, stage only the emitted synthetic `.ptrack` into Downloads,
-observe the real KeyLossScreen, select that file through SAF, and finally run
-`integration_test/recovery_qa_verify_test.dart` in a fresh process. Never run
-the key-reset harness under `com.paisatrack` or grant SMS permissions to the QA
-package.
+Evidence retained outside the repository: command logs, the KeyLossScreen
+and post-restore screenshots, and an owner/QA package snapshot taken after the
+final phase (`dumpsys`: owner appId 10438, code 4012, unchanged timestamps; QA
+appId 11017, code 2012, zero SMS permission lines). Fail-closed identity
+behaviour rests on the earlier reviewed host/build checks; this physical run
+exercised only the matching-identity path.
+
+Safety: `flutter test` reinstalls by uninstalling the *built* package if an
+install fails, so the launcher APK was built and inspected with `aapt2` and
+`apksigner` before any device phase (package `com.paisatrack.recoveryqa`, no
+`READ_SMS`/`RECEIVE_SMS`, launcher label "PaisaTrack Recovery QA"). Device
+phases used `--no-uninstall`; the launcher used plain `adb install -r`. The QA
+package (appId 11017) has no SMS permission requested or granted; the owner
+package (appId 10438) stayed at code 4012 with `firstInstallTime`
+`2026-09-26 22:20:54` and `lastUpdateTime` `2026-10-01 00:31:39` before the first and after
+the final phase. No owner data, key, backup or setting was read or changed; font
+scale (1.0) and rotation (0) were never modified.
+
+| Phase | Observation |
+|---|---|
+| Prepare (`recovery_qa_fixture_test.dart`) | Passed; `RECOVERY_QA_PREPARED` archive SHA-256 `f0ca6f37b227d2029c4e7851ee072c6a8f74ae3ac08166fc0ea807f37f21d5a6`, one synthetic transaction and payment source |
+| Stage | Archive pulled with `run-as`, hash re-checked, pushed to `Download/t179a-synthetic-recovery.ptrack` (hash matched on device) |
+| Cold launch (ordinary QA entrypoint) | `am start -W`: `LaunchState: COLD`; production `KeyLossScreen` ("Encryption Key Unavailable", "Restore backup") |
+| SAF selection and restore | Synthetic test passphrase entered; Restore opened `com.google.android.documentsui` PickActivity (focused-window dump); navigated to Downloads and selected the single UI-dump match for the synthetic file. The app routed to Home showing the synthetic sentinel row. The picker screenshot was discarded because its Recent view showed owner account names; the picker step is operator-observed from window/UI dumps |
+| Fresh-process verify (`recovery_qa_verify_test.dart`) | App force-stopped, no process; passed. `legacyDatabaseFamilyMatches` true, `preservedLegacyCopyMatches` true, `archiveSha256Matches` true, `qaLegacyPassphraseContinuitySha256Matches` true, sentinel rows 1/1, `integrity_check` ok, 0 foreign-key issues, 0 staging generations |
+
+The first verify run asserted the hash maps with deep `expect` (both passed)
+but emitted `false` for the two family-match marker fields because Dart
+`Map ==` is identity. The marker now uses `recoveryQaHashMapsEqual`
+(unit-tested); the verify phase was re-run from a fresh process with the fixed
+harness and reported `true` for both.
+
+Cleanup: the staged synthetic file was removed from Downloads. The QA package
+remains installed with synthetic data only; uninstalling it is safe and does
+not affect `com.paisatrack`.
+
+Not attested, by design: Android Keystore alias and wrapped-preference
+continuity. The passphrase digest proves only that the synthetic replacement
+legacy passphrase value was unchanged by restore.

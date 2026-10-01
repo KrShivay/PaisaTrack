@@ -3,7 +3,8 @@
 Status date: 2026-10-01
 Code baseline: main at `3d5f310`, including the T-176 Ask IME route fix and
 T-187 source-currency fidelity.
-Physical-device acceptance for T-176 and T-179a remains open.
+Physical-device acceptance for T-176 remains open; T-179a isolated lost-key
+recovery passed on a physical device (2026-10-01).
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,

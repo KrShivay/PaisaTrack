@@ -105,8 +105,9 @@ void main() {
       emitRecoveryQaMarker('RECOVERY_QA_VERIFIED', {
         'activeGenerationId': activeGenerationId,
         'legacyDatabaseFamilyMatches':
-            actualLegacyHashes == expectedLegacyHashes,
-        'preservedLegacyCopyMatches': preservedHashes == expectedLegacyHashes,
+            recoveryQaHashMapsEqual(actualLegacyHashes, expectedLegacyHashes),
+        'preservedLegacyCopyMatches':
+            recoveryQaHashMapsEqual(preservedHashes, expectedLegacyHashes),
         'archiveSha256Matches': archiveSha256 == manifest['archiveSha256'],
         'qaLegacyPassphraseContinuitySha256Matches':
             legacyPassphraseFingerprint ==

@@ -16,6 +16,26 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  test('compares recovery hash maps by entries', () {
+    final expected = {'paisatrack.db': 'a' * 64, 'paisatrack.db-wal': 'b' * 64};
+
+    expect(
+      recoveryQaHashMapsEqual(
+        {'paisatrack.db-wal': 'b' * 64, 'paisatrack.db': 'a' * 64},
+        expected,
+      ),
+      isTrue,
+    );
+    expect(
+      recoveryQaHashMapsEqual({'paisatrack.db': 'c' * 64}, expected),
+      isFalse,
+    );
+    expect(
+      recoveryQaHashMapsEqual({'paisatrack.db': 'a' * 64}, expected),
+      isFalse,
+    );
+  });
+
   test('persists a versioned manifest and hashes each legacy database file',
       () async {
     final database = File('${directory.path}/paisatrack.db');

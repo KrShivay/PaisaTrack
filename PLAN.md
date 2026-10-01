@@ -12,7 +12,8 @@ about uncertainty. Then explain and forecast recorded spending with evidence.
 
 ## Delivery order
 
-1. Finish T-176 and T-179a physical-device acceptance; retain capture,
+1. Finish T-176 physical-device acceptance (T-179a passed its isolated
+   physical recovery run on 2026-10-01); retain capture,
    visibility and recovery release blockers on the board. T-157b and PV-02
    passed independent review and are complete.
 2. T-177a: baseline and production-wiring audit. Resolve contradictory legacy

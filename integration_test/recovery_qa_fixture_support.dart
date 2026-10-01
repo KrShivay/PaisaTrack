@@ -9,6 +9,15 @@ const recoveryQaManifestName = 't179a-recovery-qa-manifest.json';
 const recoveryQaManifestVersion = 1;
 const recoveryQaArchiveName = 't179a-synthetic-recovery.ptrack';
 
+/// Deep equality for SHA-256 hash maps; `Map ==` is identity in Dart.
+bool recoveryQaHashMapsEqual(
+  Map<String, String> first,
+  Map<String, String> second,
+) {
+  if (first.length != second.length) return false;
+  return first.entries.every((entry) => second[entry.key] == entry.value);
+}
+
 Future<Map<String, String>> hashDatabaseFamily(File baseFile) async {
   final hashes = <String, String>{};
   for (final suffix in const ['', '-wal', '-shm', '-journal']) {

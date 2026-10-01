@@ -10,26 +10,6 @@ later hardening.
 
 ## Ready
 
-- [ ] T-179a (@codex) [P0] Verify lost-key recovery in an isolated physical QA app.
-  - Acceptance: the QA build has a distinct debug-only application ID and fails
-    closed on identity mismatch before providers, files, or Keystore access.
-    With synthetic SQLCipher data only, cold startup reaches the production
-    KeyLossScreen, selects a synthetic encrypted backup through Android SAF,
-    restores it, then a fresh process reopens and verifies sentinel rows. The
-    prior encrypted file family is compared byte-for-byte. A SHA-256 digest of
-    the synthetic replacement legacy passphrase value is compared before and
-    after restore; this does not attest Android Keystore alias or wrapped-
-    preference continuity. The QA manifest has no SMS permissions or incoming
-    SMS receiver. Never run the key-reset integration harness under
-    `com.paisatrack`.
-  - Existing baseline: Flutter, Keystore, Kotlin, and API 35 emulator rehearsal
-    checks are recorded in prior history; they do not prove the physical app
-    startup, SAF selection, or relaunch contract.
-  - Isolated QA build/guard evidence is recorded in
-    [the T-179a QA report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
-    No physical phase has run because ADB currently lists no connected device.
-  - Architecture boundary: [ADR 0019](docs/decisions/0019-isolated-recovery-qa-identity.md).
-
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -437,7 +417,7 @@ T-154a.
 Completed T-145a/b, T-146a/b, T-147a/b, T-148a/b, and T-152a are mapped in
 `docs/archive/planning-cleanup-2026-09.md`.
 
-Follow `PLAN.md` for delivery priority: finish T-176 and T-179a physical-device
+Follow `PLAN.md` for delivery priority: finish T-176 physical-device
 acceptance, then T-177a. T-157b and PV-02 passed independent review and were
 removed from the active board. Recheck T-153a integration only if its
 implementation is still needed; T-151b remains open pending a supported

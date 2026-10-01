@@ -25,22 +25,22 @@
   time on unmodified main is recorded in TASKS (T-164e/T-178a). No phone, APK,
   or schema change.
 
-## 2026-10-01 — T-179a isolated recovery QA harness
+## 2026-10-01 — T-179a physical recovery acceptance (closed)
 
-- Added a debug-only `com.paisatrack.recoveryqa` identity with a QA-only
-  manifest, pre-Flutter native guard, and Dart identity RPC. The default debug
-  package remains `com.paisatrack`; the QA manifest has no SMS permission or
-  receiver. Independent review accepted the identity/manifest boundary.
-- Full Flutter suite: 962/962; Android app and Keystore Gradle unit tests:
-  41/41; analyzer and formatting clean. The isolated launcher APK is code 4012,
-  245,684,950 bytes, SHA-256
-  `5e354dc6fefec7f41eb2d7280f37ec426ec6a327ffb2d86c05b2fe8f303022b4`.
-  QA `:app:assembleDebug` succeeds; QA aggregate `build`/`assemble` reject
-  app release task graphs before packaging.
-  `adb devices -l` is empty: no install, synthetic key reset, SAF selection,
-  or phone-side recovery was performed. T-179a remains Ready/open for physical
-  cold launch, real SAF restore, and fresh-process verification. See
-  [T-179a QA report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
+- With the phone on wireless ADB, the isolated `com.paisatrack.recoveryqa`
+  debug build (code 2012, debug signer, no SMS permissions) ran prepare, cold
+  launch to the production KeyLossScreen, real SAF selection of the synthetic
+  archive, restore, and fresh-process verify: legacy family and preserved copy
+  byte-identical, archive and passphrase digests matched, sentinel rows,
+  integrity and foreign keys ok. Flutter's install fallback uninstalls the
+  built package on failure, so the APK identity was checked with `aapt2`
+  before any device phase and all phases used `--no-uninstall`/`install -r`.
+  The owner package stayed at 4012 with unchanged install timestamps; no
+  owner data, key, backup or setting was touched. The verify marker compared
+  hash maps by identity; `recoveryQaHashMapsEqual` fixes it (unit test 3/3)
+  and the re-run reported true. Evidence:
+  [T-179a report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
+  Keystore alias continuity remains unattested by design.
 
 ## 2026-10-01 — v2012 owner-phone install and Ask portrait check
 
