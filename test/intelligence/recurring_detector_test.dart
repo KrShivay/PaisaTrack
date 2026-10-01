@@ -110,7 +110,8 @@ void main() {
     for (final entry in [
       ('s1', DateTime.utc(2026, 1, 1), 499.0, 'settled'),
       ('s2', DateTime.utc(2026, 1, 31), 499.0, 'settled'),
-      ('pending', DateTime.utc(2026, 3, 2), 649.0, 'pending'),
+      ('s3', DateTime.utc(2026, 3, 2), 499.0, 'settled'),
+      ('pending', DateTime.utc(2026, 4, 2), 649.0, 'pending'),
     ]) {
       await txn(
         id: entry.$1,
@@ -131,7 +132,10 @@ void main() {
           ..where((row) => row.kind.equals('price_creep')))
         .get();
     expect(priceCreep, isEmpty);
-    expect(detections, isEmpty);
+    expect(detections, hasLength(1));
+    expect(detections.single.occurrences, 3);
+    expect(detections.single.expectedAmount, 499);
+    expect(await database.select(database.recurringSeries).get(), hasLength(1));
   });
 
   test('detects separate recurring series per currency bucket', () async {

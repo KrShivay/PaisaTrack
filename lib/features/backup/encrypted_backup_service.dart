@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -11,6 +12,7 @@ import 'package:path/path.dart' as p;
 
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../intelligence/derived_reads_service.dart';
 import '../../data/repositories/payee_evidence_repository.dart';
 import '../../capture/parser_version.dart';
 import '../../core/platform/system_document_gateway.dart';
@@ -112,6 +114,8 @@ class EncryptedBackupService {
     AesGcm? cipher,
     DateTime Function()? clock,
     EncryptedBackupLimits limits = const EncryptedBackupLimits(),
+    this.onImportCompleted,
+    this.onImportRefreshError,
   })  : _database = database,
         _random = random ?? Random.secure(),
         _kdf = kdf ??
@@ -132,6 +136,27 @@ class EncryptedBackupService {
   final AesGcm _cipher;
   final DateTime Function() _clock;
   final EncryptedBackupLimits _limits;
+  final Future<void> Function()? onImportCompleted;
+  final void Function(Object error, StackTrace stackTrace)?
+      onImportRefreshError;
+
+  Future<void> _notifyImportCompleted() async {
+    try {
+      await onImportCompleted?.call();
+    } on Object catch (error, stackTrace) {
+      final onError = onImportRefreshError;
+      if (onError != null) {
+        onError(error, stackTrace);
+      } else {
+        developer.log(
+          'Backup imported, but derived reads could not be refreshed',
+          name: 'paisa.backup',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
+  }
 
   Future<File> exportToFile({
     required Directory directory,
@@ -250,6 +275,7 @@ class EncryptedBackupService {
         onProgress: onProgress,
         cancellation: cancellation,
       );
+      await _notifyImportCompleted();
       return;
     }
     await importBytes(
@@ -384,6 +410,7 @@ class EncryptedBackupService {
     } on TypeError catch (e) {
       throw EncryptedBackupException('Malformed archive table row: $e');
     }
+    await _notifyImportCompleted();
   }
 
   Future<void> _exportChunkedFile({
@@ -2118,5 +2145,8 @@ final encryptedBackupServiceProvider =
   final database = await ref.watch(appDatabaseProvider.future);
   return EncryptedBackupService(
     database: database,
+    onImportCompleted: () async =>
+        (await ref.read(derivedReadsServiceProvider.future))
+            .invalidate(immediate: true),
   );
 });

@@ -5,6 +5,7 @@ import '../../core/format.dart';
 import '../../data/db/database.dart' show Transaction;
 import '../../data/db/database_provider.dart';
 import '../../data/repositories/sms_disposition_repository.dart';
+import '../../intelligence/derived_reads_service.dart';
 
 /// Persisted corrections remain reversible even after the source SMS expires.
 class NotTransactionsScreen extends ConsumerStatefulWidget {
@@ -66,7 +67,11 @@ class _NotTransactionsScreenState extends ConsumerState<NotTransactionsScreen> {
                 ),
                 onTap: () async {
                   final database = await ref.read(appDatabaseProvider.future);
-                  final dispositions = SmsDispositionRepository(database);
+                  final dispositions = SmsDispositionRepository(
+                    database,
+                    derivedReadsService:
+                        await ref.read(derivedReadsServiceProvider.future),
+                  );
                   await dispositions.restore(row.smsId);
                   if (mounted) {
                     setState(() {

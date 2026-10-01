@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **PaisaTrack-T193** (7722 symbols, 16964 relationships, 308 execution flows).
+This project is indexed by GitNexus as **PaisaTrack** (8587 symbols, 17883 relationships, 286 execution flows).
 
 > Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
 
@@ -26,10 +26,10 @@ This project is indexed by GitNexus as **PaisaTrack-T193** (7722 symbols, 16964 
 
 | Resource | Use for |
 | --- | --- |
-| `gitnexus://repo/PaisaTrack-T193/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/PaisaTrack-T193/clusters` | All functional areas |
-| `gitnexus://repo/PaisaTrack-T193/processes` | All execution flows |
-| `gitnexus://repo/PaisaTrack-T193/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/PaisaTrack/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/PaisaTrack/clusters` | All functional areas |
+| `gitnexus://repo/PaisaTrack/processes` | All execution flows |
+| `gitnexus://repo/PaisaTrack/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 

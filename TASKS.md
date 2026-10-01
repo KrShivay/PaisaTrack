@@ -30,8 +30,15 @@ later hardening.
     series). Assistant net = eligible credits minus eligible spending debits;
     mixed-currency answers keep every currency and drop the fake 0.0 scalar.
     The anomaly floor stays INR-only (documented; no FX).
-  - a3 freshness: recompute/invalidate insights after edits, inserts,
-    deletes, links; anomaly baselines that never revise.
+  - a3 freshness (done 2026-10-02): one `DerivedReadsService` (debounced,
+    single-flight, one trailing run, run-start generation stamp) rebuilds
+    recurring series, anomaly baselines, forecasts and insights after any
+    transaction/category/source write, immediately after backup or
+    not-transaction restore, once after bulk SMS imports, and at startup
+    when the stamp is missing or stale; the nightly job reuses its stages.
+    Recurring series ids and user-paused status survive rebuilds. Anomaly
+    baselines are rebuilt from completed, zero-filled periods (current
+    partial period excluded; stale anomaly rows deleted).
   - a4 provenance and coverage: typed claims with evidence ids, coverage and
     calculation version; refunds/transfer links in eligibility (ADR first if
     schema is needed).

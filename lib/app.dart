@@ -15,6 +15,7 @@ import 'features/onboarding/onboarding_screen.dart';
 import 'features/recovery/database_error_screen.dart';
 import 'features/recovery/key_loss_screen.dart';
 import 'features/settings/app_settings.dart';
+import 'intelligence/derived_reads_service.dart';
 
 enum AppStartupDestination { loading, home, onboarding }
 
@@ -52,6 +53,7 @@ class PaisaTrackApp extends ConsumerWidget {
     // permission-granted, database-ready preconditions hold.
     ref.watch(smsBackfillProvider);
     ref.watch(askNowNotificationControllerProvider);
+    ref.watch(derivedReadsServiceProvider);
 
     final dbAsync = ref.watch(appDatabaseProvider);
     final permission = ref.watch(smsPermissionControllerProvider);

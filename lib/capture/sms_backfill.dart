@@ -14,6 +14,7 @@ import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
 import '../features/settings/app_settings.dart';
 import '../intelligence/nightly_job.dart';
+import '../intelligence/derived_reads_service.dart';
 import '../intelligence/models/embedder.dart';
 import '../intelligence/recurring_detector.dart';
 import 'capture_decision_provenance.dart';
@@ -287,22 +288,29 @@ class SmsIncrementalCatchUp {
     required SmsIngestor ingestor,
     required SmsInboxReader reader,
     required BackfillMarker marker,
+    DerivedReadsService? derivedReads,
     int pageSize = AppConstants.smsHistoryImportPageSize,
   })  : _database = database,
         _ingestor = ingestor,
         _reader = reader,
         _marker = marker,
+        _derivedReads = derivedReads,
         _pageSize = pageSize;
 
   final AppDatabase _database;
   final SmsIngestor _ingestor;
   final SmsInboxReader _reader;
   final BackfillMarker _marker;
+  final DerivedReadsService? _derivedReads;
   final int _pageSize;
   Future<SmsImportResult>? _active;
 
   Future<SmsImportResult> run() {
-    return _active ??= _run().whenComplete(() => _active = null);
+    final derivedReads = _derivedReads;
+    return _active ??= (derivedReads == null
+            ? _run()
+            : derivedReads.withInvalidationSuspended(_run))
+        .whenComplete(() => _active = null);
   }
 
   Future<SmsImportResult> _run() async {
@@ -388,11 +396,14 @@ class SmsHistoryImporter implements SmsHistoryImportRunner {
   SmsHistoryImporter({
     required SmsBackfiller backfiller,
     required BackfillMarker marker,
+    DerivedReadsService? derivedReads,
   })  : _backfiller = backfiller,
-        _marker = marker;
+        _marker = marker,
+        _derivedReads = derivedReads;
 
   final SmsBackfiller _backfiller;
   final BackfillMarker _marker;
+  final DerivedReadsService? _derivedReads;
   Future<SmsImportResult>? _active;
 
   @override
@@ -400,9 +411,13 @@ class SmsHistoryImporter implements SmsHistoryImportRunner {
     bool force = false,
     void Function(SmsImportProgress progress)? onProgress,
   }) {
-    return _active ??= _run(force: force, onProgress: onProgress).whenComplete(
-      () => _active = null,
-    );
+    final derivedReads = _derivedReads;
+    return _active ??= (derivedReads == null
+            ? _run(force: force, onProgress: onProgress)
+            : derivedReads.withInvalidationSuspended(
+                () => _run(force: force, onProgress: onProgress),
+              ))
+        .whenComplete(() => _active = null);
   }
 
   Future<SmsImportResult> _run({
@@ -442,6 +457,7 @@ class SmsHistoryImporter implements SmsHistoryImportRunner {
 final smsHistoryImportRunnerProvider =
     FutureProvider<SmsHistoryImportRunner>((ref) async {
   final database = await ref.watch(appDatabaseProvider.future);
+  final derivedReads = await ref.watch(derivedReadsServiceProvider.future);
   final knownTransactionIds =
       (await database.select(database.transactions).get())
           .map((row) => row.id)
@@ -477,12 +493,14 @@ final smsHistoryImportRunnerProvider =
       reader: ref.watch(smsInboxReaderProvider),
     ),
     marker: ref.watch(backfillMarkerProvider),
+    derivedReads: derivedReads,
   );
 });
 
 final smsIncrementalCatchUpProvider =
     FutureProvider<SmsIncrementalCatchUp>((ref) async {
   final database = await ref.watch(appDatabaseProvider.future);
+  final derivedReads = await ref.watch(derivedReadsServiceProvider.future);
   final parser = ParserCascade(
     templateMatcher: await ref.watch(templateMatcherProvider.future),
   );
@@ -505,6 +523,7 @@ final smsIncrementalCatchUpProvider =
     ),
     reader: ref.watch(smsInboxReaderProvider),
     marker: ref.watch(backfillMarkerProvider),
+    derivedReads: derivedReads,
   );
 });
 
@@ -512,15 +531,19 @@ final smsIncrementalCatchUpBootstrapProvider = Provider<void>((ref) {
   final permission = ref.watch(smsPermissionControllerProvider).valueOrNull;
   final catchUp = ref.watch(smsIncrementalCatchUpProvider).valueOrNull;
   final database = ref.watch(appDatabaseProvider).valueOrNull;
+  final derivedReads = ref.watch(derivedReadsServiceProvider).valueOrNull;
   final backfill = ref.watch(smsBackfillProvider);
   if (permission != SmsPermissionStatus.granted ||
       catchUp == null ||
       database == null ||
+      derivedReads == null ||
       backfill.isLoading) {
     return;
   }
 
-  void runCatchUp() => unawaited(_runCatchUpSafely(catchUp, database));
+  void runCatchUp() => unawaited(
+        _runCatchUpSafely(catchUp, database, derivedReads),
+      );
   final observer = _SmsCatchUpLifecycleObserver(runCatchUp);
   WidgetsBinding.instance.addObserver(observer);
   ref.onDispose(() => WidgetsBinding.instance.removeObserver(observer));
@@ -530,16 +553,19 @@ final smsIncrementalCatchUpBootstrapProvider = Provider<void>((ref) {
 Future<void> _runCatchUpSafely(
   SmsIncrementalCatchUp catchUp,
   AppDatabase database,
+  DerivedReadsService derivedReads,
 ) async {
   try {
-    await catchUp.run();
-    await ForegroundRecurringScanner(
-      database,
-      embedder: const PlatformEmbedder(),
-    ).runIfStale();
-    await NightlyPipeline.production(database).runStages(
-      only: {NightlyStage.purgeExpiredRawSms},
-    );
+    await derivedReads.withInvalidationSuspended(() async {
+      await catchUp.run();
+      await ForegroundRecurringScanner(
+        database,
+        embedder: const PlatformEmbedder(),
+      ).runIfStale();
+      await NightlyPipeline.production(database).runStages(
+        only: {NightlyStage.purgeExpiredRawSms},
+      );
+    });
   } catch (error, stackTrace) {
     developer.log(
       'Incremental SMS catch-up failed',

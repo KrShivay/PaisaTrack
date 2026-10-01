@@ -223,7 +223,7 @@ LEFT JOIN categories c ON c.id = t.category_id
       for (final row in allRows)
         if (FinancialEligibility.includesSpendingDebit(
           row,
-          categoryIsSpending: row.categoryId == 'non-spending' ? false : null,
+          categoryIsSpending: row.categoryId != 'non-spending',
         ))
           row.id,
     };
@@ -241,5 +241,28 @@ LEFT JOIN categories c ON c.id = t.category_id
     );
     expect(drift, expected);
     expect(helper, expected);
+  });
+
+  test('base SQL and Drift agree for settled credits', () async {
+    final sqlRows = await database.customSelect(
+      '''
+SELECT t.id, ${FinancialEligibility.baseSql} AS eligible
+FROM transactions t
+''',
+      readsFrom: {database.transactions},
+    ).get();
+    final sql = {
+      for (final row in sqlRows)
+        if (row.read<bool>('eligible')) row.read<String>('id'),
+    };
+    final drift = (await (database.select(database.transactions)
+              ..where(FinancialEligibility.base))
+            .get())
+        .map((row) => row.id)
+        .toSet();
+
+    expect(sql, contains('credit'));
+    expect(drift, contains('credit'));
+    expect(drift, sql);
   });
 }

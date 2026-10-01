@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:drift/drift.dart' show Expression;
+import 'dart:async';
+import 'package:drift/drift.dart' show Expression, TableUpdateQuery;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,14 +25,36 @@ final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
   final monthKey = insightMonthKeyForPeriod(period);
 
   return dbAsync.when(
-    data: (db) => (db.select(db.insights)
-          ..where(
-            (i) => Expression.and([
-              i.period.equals(monthKey),
-              i.dismissed.equals(false),
+    data: (db) => Stream.multi((controller) {
+      var active = true;
+      Future<void> emitInsights() async {
+        final insights = await (db.select(db.insights)
+              ..where(
+                (i) => Expression.and([
+                  i.period.equals(monthKey),
+                  i.dismissed.equals(false),
+                ]),
+              ))
+            .get();
+        if (active) controller.add(insights);
+      }
+
+      unawaited(emitInsights());
+      final updates = db
+          .tableUpdates(
+            TableUpdateQuery.onAllTables([
+              db.insights,
+              db.transactions,
+              db.categories,
+              db.paymentSources,
             ]),
-          ))
-        .watch(),
+          )
+          .listen((_) => unawaited(emitInsights()));
+      controller.onCancel = () {
+        active = false;
+        return updates.cancel();
+      };
+    }),
     loading: () => const Stream<List<Insight>>.empty(),
     error: (err, st) => Stream<List<Insight>>.error(err, st),
   );

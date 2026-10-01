@@ -5,6 +5,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/recurring_repository.dart';
 import 'package:paisatrack/data/repositories/sms_disposition_repository.dart';
 import 'package:paisatrack/intelligence/recurring_detector.dart';
+import 'package:paisatrack/intelligence/derived_reads_service.dart';
 
 void main() {
   late AppDatabase database;
@@ -98,7 +99,64 @@ void main() {
     );
   });
 
-  test('rebuild preserves a user-paused recurring series status', () async {
+  test('restore stays successful when derived refresh fails after commit',
+      () async {
+    final now = DateTime.now().toUtc();
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_refresh_failure',
+            sender: 'synthetic-bank',
+            body: 'Synthetic body',
+            receivedAt: now,
+            purgeAfter: now.add(const Duration(days: 30)),
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_refresh_failure',
+            ts: now.millisecondsSinceEpoch,
+            amount: 100,
+            direction: 'debit',
+            channel: 'upi',
+            smsId: const Value('sms_refresh_failure'),
+            parseSource: 'test',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    final transaction =
+        await database.select(database.transactions).getSingle();
+    final repository = SmsDispositionRepository(database);
+    await repository.markNotTransaction(transaction);
+
+    final derivedReads = DerivedReadsService(
+      database,
+      listenForChanges: false,
+      pipeline: (_) async => throw StateError('refresh failed'),
+      onError: (_, __) {},
+    );
+    addTearDown(derivedReads.dispose);
+    await derivedReads.startupReconciliation;
+
+    await expectLater(
+      SmsDispositionRepository(
+        database,
+        derivedReadsService: derivedReads,
+      ).restore('sms_refresh_failure'),
+      completes,
+    );
+    expect(
+      (await database.select(database.transactions).getSingle())
+          .isNotTransaction,
+      isFalse,
+    );
+    expect(await repository.isMarked('sms_refresh_failure'), isFalse);
+  });
+
+  test('mark and restore rebuild recurring series without losing status',
+      () async {
     final now = DateTime.now().toUtc();
     await database.into(database.merchants).insert(
           MerchantsCompanion.insert(
@@ -153,14 +211,21 @@ void main() {
     final transaction = await (database.select(database.transactions)
           ..where((row) => row.id.equals('txn_recurring_0')))
         .getSingle();
-    await SmsDispositionRepository(database).markNotTransaction(transaction);
+    final derivedReads = DerivedReadsService(database);
+    addTearDown(derivedReads.dispose);
+    final disposition = SmsDispositionRepository(
+      database,
+      derivedReadsService: derivedReads,
+    );
+    await disposition.markNotTransaction(transaction);
+    await derivedReads.invalidate(immediate: true);
 
     final rebuilt = await database.select(database.recurringSeries).getSingle();
     expect(rebuilt.merchantId, series.merchantId);
     expect(rebuilt.id, isNot(series.id));
     expect(rebuilt.status, 'paused');
 
-    await SmsDispositionRepository(database).restore('sms_recurring_synthetic');
+    await disposition.restore('sms_recurring_synthetic');
     final restored =
         await database.select(database.recurringSeries).getSingle();
     expect(restored.id, series.id);

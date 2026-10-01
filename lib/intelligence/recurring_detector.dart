@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../data/db/database.dart';
 import '../data/analytics/financial_eligibility.dart';
 import '../data/models/source_currency.dart';
+import '../data/repositories/recurring_status_memory.dart';
 import 'models/embedder.dart';
 
 const _foregroundScanCheckpointKey = 'recurring_foreground_scan_checkpoint_v2';
@@ -169,6 +170,11 @@ class RecurringDetector {
     // Keep the database transaction limited to persistence. Clustering can be
     // expensive on imported histories and must not starve unrelated reads.
     await _database.transaction(() async {
+      final existing = {
+        for (final series
+            in await _database.select(_database.recurringSeries).get())
+          series.id: series,
+      };
       for (final write in pendingWrites) {
         final detection = write.detection;
         await _ensureMerchant(
@@ -177,25 +183,37 @@ class RecurringDetector {
           write.points,
           knownMerchantIds: knownMerchantIds,
         );
-        await _database.into(_database.recurringSeries).insertOnConflictUpdate(
-              RecurringSeriesCompanion.insert(
-                id: detection.id,
-                merchantId: detection.merchantId,
-                label: detection.label,
-                expectedAmount: detection.expectedAmount,
-                tolerancePct: amountTolerancePct,
-                period: detection.period,
-                periodDays: detection.periodDays,
-                nextExpectedDate: detection.nextExpectedDate,
-                lastAmount: detection.lastAmount,
-                amountTrend: detection.amountTrend,
-                occurrences: detection.occurrences,
-                status: detection.status,
-                kind: detection.kind,
-                currencyCode: Value(detection.currencyCode),
-                currencySymbol: Value(detection.currencySymbol),
-              ),
-            );
+        final companion = RecurringSeriesCompanion.insert(
+          id: detection.id,
+          merchantId: detection.merchantId,
+          label: detection.label,
+          expectedAmount: detection.expectedAmount,
+          tolerancePct: amountTolerancePct,
+          period: detection.period,
+          periodDays: detection.periodDays,
+          nextExpectedDate: detection.nextExpectedDate,
+          lastAmount: detection.lastAmount,
+          amountTrend: detection.amountTrend,
+          occurrences: detection.occurrences,
+          status: detection.status,
+          kind: detection.kind,
+          currencyCode: Value(detection.currencyCode),
+          currencySymbol: Value(detection.currencySymbol),
+        );
+        final previous = existing[detection.id];
+        if (previous == null) {
+          await _database.into(_database.recurringSeries).insert(companion);
+        } else {
+          final userControlled =
+              RecurringStatusMemory.isUserControlled(previous.status);
+          await (_database.update(_database.recurringSeries)
+                ..where((row) => row.id.equals(detection.id)))
+              .write(
+            userControlled
+                ? companion.copyWith(status: const Value.absent())
+                : companion,
+          );
+        }
       }
     });
     return detections;

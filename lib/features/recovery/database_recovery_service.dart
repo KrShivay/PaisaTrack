@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/crypto/database_cipher.dart';
+import '../../core/clock.dart';
+import '../../core/financial_calendar.dart';
 import '../../core/platform/system_document_gateway.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_file_lock.dart';
 import '../../data/db/database_provider.dart';
+import '../../intelligence/derived_reads_service.dart';
 import '../backup/encrypted_backup_service.dart';
 
 class DatabaseRecoveryResult {
@@ -41,7 +44,9 @@ class DatabaseRecoveryService {
     this.databaseFactory,
     this.archiveCopy,
     this.generationCleanup,
-  });
+    DateTime Function()? clock,
+    this.calendar,
+  }) : _clock = clock ?? DateTime.now;
 
   final Directory directory;
   final GenerationDatabasePassphraseProvider passphrases;
@@ -50,6 +55,8 @@ class DatabaseRecoveryService {
       databaseFactory;
   final RecoveryArchiveCopy? archiveCopy;
   final RecoveryGenerationCleanup? generationCleanup;
+  final DateTime Function() _clock;
+  final FinancialCalendar? calendar;
 
   Future<DatabaseRecoveryResult?> restoreFromDocument({
     required String passphrase,
@@ -91,6 +98,14 @@ class DatabaseRecoveryService {
         cancellation: cancellation,
       );
       if (!imported) return null;
+
+      final derivedReads = DerivedReadsService(
+        database,
+        clock: _clock,
+        calendar: calendar,
+        listenForChanges: false,
+      );
+      await derivedReads.rebuildAll();
 
       final transactionCount = await _countRows(database, 'transactions');
       final paymentSourceCount = await _countRows(database, 'payment_sources');
@@ -277,6 +292,8 @@ final databaseRecoveryServiceProvider = FutureProvider<DatabaseRecoveryService>(
       directory: await ref.watch(databaseDirectoryProvider.future),
       passphrases: passphraseProvider,
       documents: ref.watch(systemDocumentGatewayProvider),
+      clock: ref.watch(clockProvider),
+      calendar: ref.watch(financialCalendarProvider),
     );
   },
 );

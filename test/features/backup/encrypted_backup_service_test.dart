@@ -105,6 +105,31 @@ void main() {
     expect(restoredDisposition.smsId, 'synthetic_sms_id');
   });
 
+  test('derived refresh failure does not fail a committed backup import',
+      () async {
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: 'correct horse battery staple',
+    );
+    await database.delete(database.categories).go();
+    final logged = <Object>[];
+    final importer = EncryptedBackupService(
+      database: database,
+      random: Random(7),
+      clock: () => DateTime.utc(2026, 8, 2),
+      onImportCompleted: () async => throw StateError('pipeline failed'),
+      onImportRefreshError: (error, _) => logged.add(error),
+    );
+
+    await importer.importFromFile(
+      file: file,
+      passphrase: 'correct horse battery staple',
+    );
+
+    expect(await database.select(database.categories).get(), isNotEmpty);
+    expect(logged, hasLength(1));
+  });
+
   test('legacy and chunked backups preserve bare-dollar source buckets',
       () async {
     final now = DateTime.utc(2026, 7, 16);

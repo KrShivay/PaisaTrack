@@ -4,9 +4,12 @@ import 'dart:ui';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../core/financial_calendar.dart';
+import '../core/clock.dart';
 import '../core/crypto/database_cipher.dart';
 import '../data/db/database.dart';
 import '../data/db/database_file_lock.dart';
@@ -14,13 +17,10 @@ import '../data/db/database_provider.dart';
 import '../enrichment/decision_policy.dart';
 import '../enrichment/local_classifier.dart';
 import '../enrichment/merchant_clusterer.dart';
-import 'anomaly_detector.dart';
-import 'burn_rate_forecaster.dart';
-import 'insights_engine.dart';
+import 'derived_reads_service.dart';
 import 'llm/llm_runtime.dart';
 import 'models/embedder.dart';
 import 'narrative_insight_generator.dart';
-import 'recurring_detector.dart';
 
 const nightlyWorkName = 'paisatrack-nightly-intelligence';
 const nightlyTaskName = 'nightly-intelligence-v1';
@@ -52,16 +52,30 @@ class NightlyPipeline {
     required Map<NightlyStage, NightlyStageAction> actions,
     this.timeLimit = const Duration(minutes: 3),
     DateTime Function()? clock,
+    FinancialCalendar? calendar,
   })  : _database = database,
         _actions = actions,
-        _clock = clock ?? DateTime.now;
+        _clock = clock ?? DateTime.now,
+        _calendar = calendar ?? FinancialCalendar();
 
   factory NightlyPipeline.production(
     AppDatabase database, {
     Embedder recurringEmbedder = const NoopEmbedder(),
+    DateTime Function()? clock,
+    FinancialCalendar? calendar,
   }) {
+    final sharedCalendar = calendar ?? FinancialCalendar();
+    final derivedReads = DerivedReadsService(
+      database,
+      clock: clock ?? DateTime.now,
+      calendar: sharedCalendar,
+      recurringEmbedder: recurringEmbedder,
+      listenForChanges: false,
+    );
     return NightlyPipeline(
       database: database,
+      clock: clock,
+      calendar: sharedCalendar,
       actions: {
         NightlyStage.purgeExpiredRawSms: (now) async {
           await database.transaction(() async {
@@ -81,13 +95,10 @@ class NightlyPipeline {
           });
         },
         NightlyStage.recurringScan: (now) async {
-          await RecurringDetector(
-            database,
-            embedder: recurringEmbedder,
-          ).run(today: now);
+          await derivedReads.rebuildRecurring(today: now);
         },
         NightlyStage.baselines: (now) async {
-          await AnomalyDetector(database).run(today: now);
+          await derivedReads.rebuildAnomalies(today: now);
         },
         NightlyStage.retrainClassifier: (_) async {
           await ClassifierTrainer(database).train(minimumNewFeedback: 30);
@@ -99,12 +110,12 @@ class NightlyPipeline {
           await MerchantClusterer(database).cluster();
         },
         NightlyStage.precomputeInsights: (now) async {
-          await BurnRateForecaster(database).run(today: now);
-          await InsightsEngine(database).run(today: now);
+          await derivedReads.rebuildForecastAndInsights(today: now);
           await NarrativeInsightGenerator(
             database,
             const PlatformLlmRuntime(),
           ).run(today: now);
+          await derivedReads.writeFreshnessStamp();
         },
       },
     );
@@ -114,6 +125,7 @@ class NightlyPipeline {
   final Map<NightlyStage, NightlyStageAction> _actions;
   final Duration timeLimit;
   final DateTime Function() _clock;
+  final FinancialCalendar _calendar;
 
   Future<NightlyRunResult> run({DateTime? now}) => runStages(now: now);
 
@@ -179,9 +191,11 @@ class NightlyPipeline {
         );
   }
 
-  String _dayKey(DateTime value) =>
-      '${value.year}-${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')}';
+  String _dayKey(DateTime value) {
+    final local = _calendar.localDate(value);
+    return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
+  }
 }
 
 @pragma('vm:entry-point')
@@ -193,13 +207,17 @@ void nightlyCallbackDispatcher() {
     final directory = await getApplicationDocumentsDirectory();
     return withDatabaseFileLock(directory, () async {
       final database = await _openWorkerDatabase();
+      final providers = ProviderContainer();
       try {
         final result = await NightlyPipeline.production(
           database,
           recurringEmbedder: const PlatformEmbedder(),
+          clock: providers.read(clockProvider),
+          calendar: providers.read(financialCalendarProvider),
         ).run();
         return result.completed;
       } finally {
+        providers.dispose();
         await closeAppDatabase(database);
       }
     });

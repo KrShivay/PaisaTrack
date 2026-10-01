@@ -212,13 +212,13 @@ WHERE t.ts >= ? AND t.ts < ?
 SELECT
   COALESCE(SUM(CASE
     WHEN t.ts >= ? AND t.ts < ? AND t.direction = 'debit'
-      AND COALESCE(c.is_spending, 1) = 1 THEN t.amount ELSE 0 END), 0) AS debit,
+      AND ${FinancialEligibility.categorySpendingSql} THEN t.amount ELSE 0 END), 0) AS debit,
   COALESCE(SUM(CASE
     WHEN t.ts >= ? AND t.ts < ? AND t.direction = 'credit'
       THEN t.amount ELSE 0 END), 0) AS credit,
   COALESCE(SUM(CASE
     WHEN t.ts >= ? AND t.ts < ? AND t.direction = 'debit'
-      AND COALESCE(c.is_spending, 1) = 1 THEN t.amount ELSE 0 END), 0) AS previous
+      AND ${FinancialEligibility.categorySpendingSql} THEN t.amount ELSE 0 END), 0) AS previous
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE ${FinancialEligibility.baseSql}

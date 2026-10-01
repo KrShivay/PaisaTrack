@@ -288,6 +288,10 @@ void main() {
         .singleWhere((bucket) => bucket.currencyCode == 'USD');
     expect((inr.current, inr.previous), (500.0, 300.0));
     expect((usd.current, usd.previous), (20.0, 0.0));
+    expect(comparison.current, equals(null));
+    expect(comparison.previous, equals(null));
+    expect(comparison.delta, equals(null));
+    expect(comparison.percent, equals(null));
     expect(answer, contains(r'$20.00 USD'));
     expect(answer, contains('₹500.00'));
     expect(answer, contains('₹300.00'));

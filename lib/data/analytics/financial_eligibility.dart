@@ -7,6 +7,9 @@ import '../db/database.dart';
 /// The SQL fragments deliberately name the aliases used by grouped queries;
 /// callers must join categories as `c` when applying [spendingDebitSql].
 abstract final class FinancialEligibility {
+  /// Shared joined-SQL fragment for the default-spending category rule.
+  static const categorySpendingSql = 'COALESCE(c.is_spending, 1) = 1';
+
   /// Common settled row validity before source-policy flags are applied.
   static Expression<bool> settledTransaction($TransactionsTable t) =>
       t.isDeleted.equals(false) &
@@ -49,7 +52,7 @@ $settledSql  AND t.is_analytics_excluded = 0
 
   static const spendingDebitSql = '''
 $baseSql  AND t.direction = 'debit'
-  AND COALESCE(c.is_spending, 1) = 1\n''';
+  AND $categorySpendingSql\n''';
 
   /// Settled spending before source-policy exclusions, for explaining rows
   /// removed specifically by those flags (not for headline totals).
@@ -57,9 +60,10 @@ $baseSql  AND t.direction = 'debit'
 $settledSql  AND t.direction = 'debit'
   AND COALESCE(c.is_spending, 1) = 1\n''';
 
+  /// Row-level test oracle; production queries use the Drift/SQL fragments.
   static bool includesSpendingDebit(
     Transaction transaction, {
-    bool? categoryIsSpending,
+    required bool categoryIsSpending,
   }) =>
       !transaction.isDeleted &&
       !transaction.isNotTransaction &&
@@ -68,5 +72,5 @@ $settledSql  AND t.direction = 'debit'
       transaction.ownedTransferId == null &&
       transaction.lifecycleState == 'settled' &&
       transaction.direction == 'debit' &&
-      (categoryIsSpending ?? true);
+      categoryIsSpending;
 }

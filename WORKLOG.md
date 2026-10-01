@@ -1,5 +1,24 @@
 # Current Handoff
 
+## 2026-10-02 — T-178a a3 derived-read freshness
+
+- Insights, anomalies, forecasts and recurring series were refreshed only
+  nightly or after not-transaction changes, so edits left Trends stale for up
+  to a day, and anomaly baselines froze partial periods and ignored zero-spend
+  periods. `DerivedReadsService` now rebuilds them after every relevant write
+  (debounced, single-flight, startup reconciliation, backfill suspension)
+  and the nightly job shares its stages. Anomaly baselines are rebuilt from
+  completed zero-filled periods. User-paused recurring series keep their
+  status across rebuilds and amount drift.
+- Impact: `SmsIngestor`/`AppDatabase` CRITICAL; detectors, insights engine,
+  `SmsDispositionRepository` HIGH. Verified: analyzer clean, full suite
+  1031/1031, intelligence/data 231/231 under TZ=UTC and America/New_York.
+  Three review rounds (startup blanking, double trailing runs, freshness
+  race, lost wakeup across suspension, same-merchant series collision all
+  fixed with fail-before tests). Also restores the AGENTS.md/CLAUDE.md
+  GitNexus block that `f6bdc6c` overwrote with a worktree index name.
+- The a1 entry is in Git history (`0e6d8c4`).
+
 ## 2026-10-02 — T-193 QA fixture and repair/onboarding fixes
 
 - Owner data has no repair-eligible row (all currency-unknown rows are from
@@ -35,21 +54,3 @@
   6,000-row recurring timing test is flaky under machine load (failed once at
   5.39s, passed in isolation runs).
 - The 2026-10-01 T-164e date-slice entry is in Git history.
-
-## 2026-10-01 — T-178a a1 fair comparison windows
-
-- Every month-over-month comparison compared a partial current month with the
-  full previous month (owner phone on 1 Oct: "97% lower spend than last
-  month"). `FinancialCalendar.comparablePrior`, `throughToday` and
-  `elapsedDays` now define one same-elapsed-days window used by insights
-  `category_delta` (window stored in the payload; legacy rows keep old copy),
-  the dashboard/Trends card (honest label when the prior month is clamped),
-  and assistant comparisons; a `clockProvider` keeps provider and widget in
-  agreement. Six-month trend bounds moved onto `FinancialCalendar`.
-- Impact: `FinancialCalendar` CRITICAL, `DashboardPeriod`/`InsightsEngine`/
-  `IntentValidator`/`AnswerRenderer` HIGH. Verified: analyzer clean, full
-  suite 986/986 (IST host), intelligence/dashboard/insights/core 296/296
-  under both `TZ=UTC` and `TZ=America/New_York`. Two independent review
-  rounds; the first blocked a wall-clock-dependent widget test (fails on the
-  last day of a month), fixed with the injected clock. The v2012 install
-  evidence remains in its report and the T-193 release note.

@@ -20,6 +20,42 @@ void main() {
     await database.close();
   });
 
+  Future<void> addHistory({
+    required String prefix,
+    required double amount,
+    required int periods,
+    required DateTime currentStart,
+    required bool monthly,
+    String? merchantId,
+    String? categoryId,
+    String currencyCode = 'INR',
+    String currencySymbol = '₹',
+  }) async {
+    for (var index = periods; index > 0; index--) {
+      final date = monthly
+          ? DateTime.utc(currentStart.year, currentStart.month - index, 1)
+          : currentStart.subtract(Duration(days: index * 7 - 1));
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: '$prefix-$index',
+              ts: date.millisecondsSinceEpoch,
+              amount: amount,
+              currencyCode: Value(currencyCode),
+              currencySymbol: Value(currencySymbol),
+              direction: 'debit',
+              channel: 'test',
+              merchantId: Value(merchantId),
+              categoryId: Value(categoryId),
+              parseSource: 'template',
+              confidenceJson: '{}',
+              status: 'confirmed',
+              createdAt: date,
+              updatedAt: date,
+            ),
+          );
+    }
+  }
+
   test(
       'An annual premium in a detected recurring series raises a suppressed anomaly',
       () async {
@@ -35,16 +71,14 @@ void main() {
           ),
         );
 
-    // Baseline for merchant 'm_lic' (mean ₹100, std 10, 10 periods)
-    await database.into(database.baselines).insert(
-          BaselinesCompanion.insert(
-            key: 'mer:m_lic|code:INR:month',
-            mean: 100.0,
-            std: 10.0,
-            n: 10,
-            updatedAt: monthStart.subtract(const Duration(days: 35)),
-          ),
-        );
+    await addHistory(
+      prefix: 'lic-history',
+      amount: 100,
+      periods: 8,
+      currentStart: monthStart,
+      monthly: true,
+      merchantId: 'm_lic',
+    );
 
     // Active recurring series for LIC annual insurance
     await database.into(database.recurringSeries).insert(
@@ -104,16 +138,14 @@ void main() {
     final now = DateTime.utc(2026, 7, 10);
     final weekStart = DateTime.utc(2026, 7, 6); // Monday
 
-    // Baseline for category 'food_dining' (mean ₹20, std 5, 10 periods)
-    await database.into(database.baselines).insert(
-          BaselinesCompanion.insert(
-            key: 'cat:food_dining|code:INR:week',
-            mean: 20.0,
-            std: 5.0,
-            n: 10,
-            updatedAt: weekStart.subtract(const Duration(days: 10)),
-          ),
-        );
+    await addHistory(
+      prefix: 'food-history',
+      amount: 20,
+      periods: 8,
+      currentStart: weekStart,
+      monthly: false,
+      categoryId: 'food_dining',
+    );
 
     // Transaction for ₹150 (swing > 2.5σ but below ₹500 floor)
     await database.into(database.transactions).insert(
@@ -162,16 +194,14 @@ void main() {
           ),
         );
 
-    // Baseline for merchant 'm_hospital' (mean ₹1000, std 200, 10 periods)
-    await database.into(database.baselines).insert(
-          BaselinesCompanion.insert(
-            key: 'mer:m_hospital|code:INR:month',
-            mean: 1000.0,
-            std: 200.0,
-            n: 10,
-            updatedAt: monthStart.subtract(const Duration(days: 35)),
-          ),
-        );
+    await addHistory(
+      prefix: 'hospital-history',
+      amount: 1000,
+      periods: 8,
+      currentStart: monthStart,
+      monthly: true,
+      merchantId: 'm_hospital',
+    );
 
     // Large transaction for ₹25,000 (genuine anomaly)
     await database.into(database.transactions).insert(
@@ -203,15 +233,16 @@ void main() {
   test('INR alert floor does not suppress source-currency anomalies', () async {
     final now = DateTime.utc(2026, 7, 10);
     final weekStart = DateTime.utc(2026, 7, 6);
-    await database.into(database.baselines).insert(
-          BaselinesCompanion.insert(
-            key: 'cat:food_dining|code:USD:week',
-            mean: 100,
-            std: 10,
-            n: 10,
-            updatedAt: weekStart.subtract(const Duration(days: 10)),
-          ),
-        );
+    await addHistory(
+      prefix: 'usd-food-history',
+      amount: 100,
+      periods: 8,
+      currentStart: weekStart,
+      monthly: false,
+      categoryId: 'food_dining',
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+    );
     await database.into(database.transactions).insert(
           TransactionsCompanion.insert(
             id: 'usd_food',

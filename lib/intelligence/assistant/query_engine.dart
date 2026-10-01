@@ -375,9 +375,12 @@ class AssistantQueryEngine {
       ...currentByCurrency.keys,
       ...previousByCurrency.keys,
     };
+    final hasComparableScalar = currentByCurrency.length == 1 &&
+        previousByCurrency.length == 1 &&
+        currentByCurrency.keys.single == previousByCurrency.keys.single;
     return ComparisonQueryResult(
-      current: current.currencyBuckets.length <= 1 ? current.value : null,
-      previous: previous.currencyBuckets.length <= 1 ? previous.value : null,
+      current: hasComparableScalar ? current.value : null,
+      previous: hasComparableScalar ? previous.value : null,
       currencyBuckets: [
         for (final key in currencyKeys)
           (

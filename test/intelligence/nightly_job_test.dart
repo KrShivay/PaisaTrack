@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/nightly_job.dart';
 
@@ -111,5 +114,26 @@ void main() {
     expect(second.completed, isTrue);
     expect(second.stagesRun, isEmpty);
     expect(calls, NightlyStage.values.length);
+  });
+
+  test('checkpoint day uses the shared clock and financial calendar', () async {
+    final pipeline = NightlyPipeline(
+      database: database,
+      actions: {
+        for (final stage in NightlyStage.values) stage: (_) async {},
+      },
+      clock: () => DateTime.utc(2026, 7, 11, 19),
+      calendar: const FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
+    );
+
+    await pipeline.run();
+
+    final checkpoint = await (database.select(database.modelMeta)
+          ..where((row) => row.key.equals('nightly_pipeline_checkpoint_v1')))
+        .getSingle();
+    expect(jsonDecode(checkpoint.value), {
+      'day': '2026-07-12',
+      'next_stage': NightlyStage.values.length,
+    });
   });
 }

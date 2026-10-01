@@ -16,6 +16,7 @@ import '../../data/models/normalized_transaction_record.dart'
     show FieldEvidence;
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/sms_disposition_repository.dart';
+import '../../intelligence/derived_reads_service.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../enrichment/source_currency_repair_service.dart';
 import 'detail/transaction_detail_evidence.dart';
@@ -1039,7 +1040,10 @@ class _TransactionDetailScreenState
     final smsId = transaction.smsId;
     if (smsId == null) return;
     final database = await ref.read(appDatabaseProvider.future);
-    final dispositions = SmsDispositionRepository(database);
+    final dispositions = SmsDispositionRepository(
+      database,
+      derivedReadsService: await ref.read(derivedReadsServiceProvider.future),
+    );
     await dispositions.markNotTransaction(transaction);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

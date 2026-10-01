@@ -501,8 +501,8 @@ class SmsIngestor {
   /// Imports one inbox page under a single outer transaction so Drift emits
   /// one coherent change notification instead of rebuilding consumers once
   /// per SMS. Nested per-message transactions preserve failure isolation.
-  Future<SmsBatchIngestResult> ingestBatch(List<RawSms> messages) {
-    return _database.transaction(() async {
+  Future<SmsBatchIngestResult> ingestBatch(List<RawSms> messages) async {
+    final result = await _database.transaction(() async {
       final succeededIds = <String>{};
       final createdTxnIds = <String>{};
       final alreadyKnownIds = <String>{};
@@ -598,6 +598,7 @@ class SmsIngestor {
         failedIds: failedIds,
       );
     });
+    return result;
   }
 
   /// Id of an already-stored transaction describing the same real-world

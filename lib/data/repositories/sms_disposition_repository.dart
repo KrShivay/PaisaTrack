@@ -1,20 +1,22 @@
+import 'dart:developer' as developer;
+
 import 'package:drift/drift.dart';
 
 import '../../core/financial_calendar.dart';
 import '../db/database.dart';
-import '../../intelligence/anomaly_detector.dart';
-import '../../intelligence/burn_rate_forecaster.dart';
-import '../../intelligence/insights_engine.dart';
-import '../../intelligence/recurring_detector.dart';
+import '../../intelligence/derived_reads_service.dart';
 import 'expected_event_repository.dart';
 import 'payee_evidence_repository.dart';
-import 'recurring_status_memory.dart';
 
 /// Persists a user's correction without retaining SMS content.
 class SmsDispositionRepository {
-  const SmsDispositionRepository(this.database);
+  const SmsDispositionRepository(
+    this.database, {
+    this.derivedReadsService,
+  });
 
   final AppDatabase database;
+  final DerivedReadsService? derivedReadsService;
 
   Future<void> markNotTransaction(
     Transaction transaction,
@@ -50,7 +52,7 @@ class SmsDispositionRepository {
             ..where((row) => row.transactionId.equals(transaction.id)))
           .go();
     });
-    await refreshDerivedReads();
+    await derivedReadsService?.invalidate();
   }
 
   Future<void> restore(String smsId) async {
@@ -94,32 +96,15 @@ class SmsDispositionRepository {
     await ExpectedEventRepository(database).reconcileExpectedEvents(
       today: DateTime.utc(today.year, today.month, today.day),
     );
-    await refreshDerivedReads();
-  }
-
-  Future<void> refreshDerivedReads() async {
-    final previousSeries =
-        await database.select(database.recurringSeries).get();
-    await database.delete(database.recurringSeries).go();
-    await RecurringDetector(database).run();
-    await AnomalyDetector(database).run();
-    await BurnRateForecaster(database).run();
-    await InsightsEngine(database).run();
-    final previousStatus = await RecurringStatusMemory.read(database);
-    for (final series in previousSeries) {
-      if (!RecurringStatusMemory.isUserControlled(series.status)) continue;
-      final key = RecurringStatusMemory.identity(series);
-      previousStatus[key] = series.status;
-      await RecurringStatusMemory.remember(database, key, series.status);
-    }
-    for (final series
-        in await database.select(database.recurringSeries).get()) {
-      final key = RecurringStatusMemory.identity(series);
-      final status = previousStatus[key];
-      if (status == null) continue;
-      await (database.update(database.recurringSeries)
-            ..where((row) => row.id.equals(series.id)))
-          .write(RecurringSeriesCompanion(status: Value(status)));
+    try {
+      await derivedReadsService?.invalidate(immediate: true);
+    } on Object catch (error, stackTrace) {
+      developer.log(
+        'SMS disposition restored, but derived reads could not be refreshed',
+        name: 'paisa.sms',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
