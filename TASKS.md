@@ -8,6 +8,30 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-178a [P1] Evidence-linked insights and fair comparisons
+      ([brief](docs/tasks/T-178.md)). Delivered in slices a1–a4.
+  - a1 fair comparison windows (done 2026-10-01): one
+    `FinancialCalendar.comparablePrior`/`throughToday`/`elapsedDays` contract
+    compares a partial current month with the same elapsed local days of the
+    prior month (clamped to shorter months) in insights `category_delta`
+    (payload records the window), the dashboard/Trends month-over-month card,
+    and assistant comparisons; completed months keep full windows. An
+    injectable `clockProvider` makes dashboard and card agree. Six-month trend
+    bounds use `FinancialCalendar` (fixes the `TZ=America/New_York` failure).
+    Owner phone (4012, pre-fix) showed "97% lower spend than last month" on
+    1 Oct. Product decision recorded in code: the assistant clips a prior full
+    month whenever the current month is partial.
+  - a2 eligibility parity (next): one shared Drift eligibility expression;
+    recurring detection settled-only; assistant net/currency parity.
+  - a3 freshness: recompute/invalidate insights after edits, inserts,
+    deletes, links; anomaly baselines that never revise.
+  - a4 provenance and coverage: typed claims with evidence ids, coverage and
+    calculation version; refunds/transfer links in eligibility (ADR first if
+    schema is needed).
+  - Follow-up noted in review: safe-today and projected-spend month math use
+    device-local `DateTime(now.year, now.month + 1, 0)` instead of
+    `FinancialCalendar`.
+
 ## Ready
 
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
@@ -513,7 +537,6 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Grounded AI
 
-- [ ] T-178a [P1] Validate insight claims and comparison correctness against source data.
 - [ ] T-178b [P1] Validate forecast ranges, data coverage, and backtesting.
 - [ ] T-178c [P2] Add typed Hinglish assistant intents over validated results.
 - [ ] T-178d [P2] Add local evaluation, performance gates, and staged release.

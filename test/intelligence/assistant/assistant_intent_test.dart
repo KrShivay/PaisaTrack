@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent.dart';
 
 void main() {
@@ -16,6 +17,42 @@ void main() {
     expect(range.start, DateTime(2026, 7).toUtc());
     expect(range.end, DateTime(2026, 8).toUtc());
     expect(range.label, '2026-07');
+  });
+
+  test('all date range kinds use the injected financial calendar', () {
+    const calendar = FinancialCalendar.fixed(Duration(hours: -5));
+    final validator = IntentValidator(
+      categories: const {},
+      calendar: calendar,
+      clock: () => DateTime.utc(2026, 10, 3, 15),
+    );
+
+    AssistantTimeRange range(Object? value) => (validator.validate({
+          'intent': 'period_total',
+          'time_range': value,
+        }) as ValidIntent)
+            .intent
+            .range!;
+
+    final month = range({'kind': 'month', 'month': '2026-10'});
+    expect(month.start, DateTime.utc(2026, 10, 1, 5));
+    expect(month.end, DateTime.utc(2026, 11, 1, 5));
+
+    final lastDays = range({'kind': 'last_n_days', 'n_days': 3});
+    expect(lastDays.start, DateTime.utc(2026, 10, 1, 5));
+    expect(lastDays.end, DateTime.utc(2026, 10, 4, 5));
+
+    final custom = range({
+      'kind': 'range',
+      'start': '2026-10-02',
+      'end': '2026-10-03',
+    });
+    expect(custom.start, DateTime.utc(2026, 10, 2, 5));
+    expect(custom.end, DateTime.utc(2026, 10, 4, 5));
+
+    final allTime = range({'kind': 'all_time'});
+    expect(allTime.start, DateTime.utc(1970, 1, 1, 5));
+    expect(allTime.end, DateTime.utc(2026, 10, 4, 5));
   });
 
   final now = DateTime.utc(2026, 7, 12);

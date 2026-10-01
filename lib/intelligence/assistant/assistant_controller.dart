@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../core/financial_calendar.dart';
 import '../../data/db/database.dart';
 import '../llm/llm_request.dart';
 import '../llm/llm_runtime.dart';
@@ -19,10 +20,12 @@ class AssistantController {
     required this.runtime,
     required this.database,
     this.clock = DateTime.now,
-  });
+    FinancialCalendar? calendar,
+  }) : calendar = calendar ?? FinancialCalendar();
   final LlmRuntime runtime;
   final AppDatabase database;
   final DateTime Function() clock;
+  final FinancialCalendar calendar;
   final List<AssistantMessage> _history = [];
   final Map<String, Map<String, Object?>> _llmIntentCache = {};
   static const _maxCachedIntents = 32;
@@ -97,6 +100,7 @@ class AssistantController {
     }
     final validated = IntentValidator(
       categories: categories,
+      calendar: calendar,
       clock: clock,
     ).validate((extracted as LlmSuccess<Map<String, Object?>>).value);
     if (validated is InvalidIntent) {
@@ -106,7 +110,11 @@ class AssistantController {
       return _record('${validated.refusal.message}$suggestions');
     }
     final intent = (validated as ValidIntent).intent;
-    final result = await AssistantQueryEngine(database).run(intent);
+    final result = await AssistantQueryEngine(
+      database,
+      calendar: calendar,
+      clock: clock,
+    ).run(intent);
     return _record(const AnswerRenderer().render(intent, result));
   }
 

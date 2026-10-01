@@ -109,18 +109,28 @@ void main() {
     });
 
     const insightRow = Insight(
-      id: 'fees_total:2026-07',
+      id: 'category_delta:2026-07:Food',
       period: '2026-07',
-      kind: 'fees_total',
-      payloadJson: '{"total": 150.0, "count": 2}',
+      kind: 'category_delta',
+      payloadJson:
+          '{"category_name":"Food","delta_fraction":0.2,"currency_code":"INR","current_start":"2026-07-01","current_end":"2026-07-03","previous_start":"2026-06-01","previous_end":"2026-06-03"}',
+      dismissed: false,
+    );
+    const legacyInsightRow = Insight(
+      id: 'category_delta:2026-07:Transport',
+      period: '2026-07',
+      kind: 'category_delta',
+      payloadJson:
+          '{"category_name":"Transport","delta_fraction":0.1,"currency_code":"INR"}',
       dismissed: false,
     );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          activeInsightsProvider
-              .overrideWith((ref) => Stream.value([insightRow])),
+          activeInsightsProvider.overrideWith(
+            (ref) => Stream.value([insightRow, legacyInsightRow]),
+          ),
           dashboardAggregateProvider.overrideWith(
             (ref) async => const DashboardAggregateSnapshot(
               debitTotal: 0,
@@ -170,6 +180,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('Trends'), findsOneWidget);
-    expect(find.text('Fees & Charges Alert'), findsOneWidget);
+    expect(find.text('Category Shift'), findsNWidgets(2));
+    expect(
+      find.text(
+        'Food spending increased by 20% in INR over the same days last month.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'Transport spending increased by 10% in INR compared to last month.',
+      ),
+      findsOneWidget,
+    );
   });
 }

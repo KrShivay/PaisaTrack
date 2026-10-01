@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent.dart';
+import 'package:paisatrack/intelligence/assistant/answer_renderer.dart';
 import 'package:paisatrack/intelligence/assistant/query_engine.dart';
 
 import 'category_test_data.dart';
@@ -123,6 +125,83 @@ void main() {
       expect(comparison.percent, 1);
     },
   );
+
+  test('current month comparison uses matching elapsed days and labels them',
+      () async {
+    const calendar = FinancialCalendar.fixed(Duration(hours: -5));
+    final now = DateTime.utc(2026, 10, 3, 15);
+    engine = AssistantQueryEngine(
+      database,
+      calendar: calendar,
+      clock: () => now,
+    );
+    DateTime localDay(int month, int day) =>
+        calendar.day(2026, month, day).start.add(const Duration(hours: 12));
+
+    await txn('oct', localDay(10, 3), 800);
+    await txn('oct_future', localDay(10, 4), 7000);
+    await txn('sep1', localDay(9, 1), 200);
+    await txn('sep2', localDay(9, 2), 300);
+    await txn('sep3', localDay(9, 3), 500);
+    await txn('sep_later', localDay(9, 4), 8000);
+
+    final current = calendar.month(2026, 10);
+    final prior = calendar.month(2026, 9);
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.monthOverMonth,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: AssistantTimeRange(current.start, current.end, label: '2026-10'),
+      compareRange:
+          AssistantTimeRange(prior.start, prior.end, label: '2026-09'),
+    );
+    final comparison = await engine.run(intent) as ComparisonQueryResult;
+
+    expect(comparison.current, 800);
+    expect(comparison.previous, 1000);
+    expect(comparison.currentLabel, 'this month to date');
+    expect(comparison.previousLabel, 'the same elapsed days last month');
+    final answer = const AnswerRenderer().render(intent, comparison);
+    expect(answer, contains('Current period (this month to date)'));
+    expect(
+      answer,
+      contains('Previous period (the same elapsed days last month)'),
+    );
+  });
+
+  test('completed month assistant comparison keeps full prior month', () async {
+    const calendar = FinancialCalendar.fixed(Duration(hours: -5));
+    final now = DateTime.utc(2026, 10, 3, 15);
+    engine = AssistantQueryEngine(
+      database,
+      calendar: calendar,
+      clock: () => now,
+    );
+    DateTime localDay(int month, int day) =>
+        calendar.day(2026, month, day).start.add(const Duration(hours: 12));
+
+    await txn('sep_early', localDay(9, 3), 800);
+    await txn('sep_late', localDay(9, 30), 7000);
+    await txn('aug_early', localDay(8, 1), 100);
+    await txn('aug_late', localDay(8, 30), 900);
+
+    final current = calendar.month(2026, 9);
+    final prior = calendar.month(2026, 8);
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.monthOverMonth,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: AssistantTimeRange(current.start, current.end, label: '2026-09'),
+      compareRange:
+          AssistantTimeRange(prior.start, prior.end, label: '2026-08'),
+    );
+    final comparison = await engine.run(intent) as ComparisonQueryResult;
+
+    expect(comparison.current, 7800);
+    expect(comparison.previous, 1000);
+    expect(comparison.currentLabel, '2026-09');
+    expect(comparison.previousLabel, '2026-08');
+  });
 
   test('assistant totals keep explicit USD and bare dollar in separate buckets',
       () async {

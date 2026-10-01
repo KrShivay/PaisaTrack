@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
@@ -304,6 +305,105 @@ void main() {
     expect(comparison.current, 300);
     expect(comparison.previous, 200);
     expect(comparison.pctChange, 0.5);
-    expect(period.comparisonLabel, 'vs previous period');
+    expect(
+      period.comparisonLabelAt(DateTime.utc(2026, 7, 10)),
+      'vs previous period',
+    );
+  });
+
+  test('partial month uses the same days in the previous month', () {
+    const calendar = FinancialCalendar.fixed(Duration(hours: 5, minutes: 30));
+    final now = DateTime.utc(2026, 10, 3, 8);
+    final period = DashboardPeriod.month(now, calendar: calendar);
+    final previous = period.previousAt(now);
+
+    expect(previous.start, DateTime.utc(2026, 8, 31, 18, 30));
+    expect(previous.end, DateTime.utc(2026, 9, 3, 18, 30));
+    expect(period.comparisonLabelAt(now), 'vs same days last month');
+  });
+
+  test('March comparison label accounts for February ending earlier', () {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    final period = DashboardPeriod.month(
+      DateTime.utc(2026, 3, 30, 12),
+      calendar: calendar,
+    );
+
+    expect(
+      period.comparisonLabelAt(DateTime.utc(2026, 3, 30, 12)),
+      'vs previous month',
+    );
+    expect(
+      period.previousAt(DateTime.utc(2026, 3, 30, 12)).end,
+      calendar.month(2026, 2).end,
+    );
+  });
+
+  test('completed month and last-days periods keep full prior windows', () {
+    const calendar = FinancialCalendar.fixed(Duration(hours: 5, minutes: 30));
+    final now = DateTime.utc(2026, 10, 3, 8);
+    final completed = DashboardPeriod.month(
+      DateTime.utc(2026, 9, 15),
+      calendar: calendar,
+    );
+    final completedPrevious = completed.previousAt(now);
+    expect(
+      completedPrevious.start,
+      calendar.month(2026, 8).start,
+    );
+    expect(
+      completedPrevious.end,
+      calendar.month(2026, 8).end,
+    );
+    expect(completed.comparisonLabelAt(now), 'vs previous month');
+
+    final lastDays = DashboardPeriod.lastDays(
+      7,
+      now: now,
+      calendar: calendar,
+    );
+    final lastDaysPrevious = lastDays.previousAt(now);
+    expect(
+      lastDaysPrevious.end.difference(lastDaysPrevious.start),
+      lastDays.end.difference(lastDays.start),
+    );
+  });
+
+  test('six-month trend uses the injected negative-offset calendar', () async {
+    const calendar = FinancialCalendar.fixed(Duration(hours: -5));
+    final period = DashboardPeriod.month(
+      DateTime.utc(2026, 7, 15, 12),
+      calendar: calendar,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        dashboardAggregateProvider.overrideWith(
+          (ref) async => _snapshot(
+            trendByMonth: {
+              '2026-02': 200,
+              '2026-03': 300,
+              '2026-04': 400,
+              '2026-05': 500,
+              '2026-06': 600,
+              '2026-07': 700,
+            },
+          ),
+        ),
+        dashboardPeriodProvider.overrideWith((ref) => period),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(dashboardAggregateProvider.future);
+
+    final points = container.read(sixMonthTrendProvider).value!;
+    expect(points.map((point) => point.month), [
+      DateTime.utc(2026, 2),
+      DateTime.utc(2026, 3),
+      DateTime.utc(2026, 4),
+      DateTime.utc(2026, 5),
+      DateTime.utc(2026, 6),
+      DateTime.utc(2026, 7),
+    ]);
+    expect(points.map((point) => point.spend), [200, 300, 400, 500, 600, 700]);
   });
 }

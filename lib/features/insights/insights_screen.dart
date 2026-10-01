@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' show Expression;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/clock.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
@@ -274,6 +275,7 @@ class InsightsScreen extends ConsumerWidget {
                 _MoMComparisonCard(
                   mom: mom.requireValue,
                   currentSpend: totals.requireValue.debitTotal,
+                  period: period,
                   isDark: isDark,
                 ),
                 const SizedBox(height: 24),
@@ -465,6 +467,17 @@ class _NarrativeInsightCard extends StatelessWidget {
           final delta = (payload['delta_fraction'] as num?)?.toDouble() ?? 0.0;
           final pct = (delta.abs() * 100).toStringAsFixed(0);
           final direction = delta > 0 ? 'increased' : 'decreased';
+          final currentEnd =
+              DateTime.tryParse(payload['current_end'] as String? ?? '');
+          final previousEnd =
+              DateTime.tryParse(payload['previous_end'] as String? ?? '');
+          final previousMonthEnd = previousEnd == null
+              ? null
+              : DateTime(previousEnd.year, previousEnd.month + 1, 0);
+          final previousWindowIsTruncated = currentEnd != null &&
+              previousEnd != null &&
+              previousMonthEnd != null &&
+              previousEnd.day != previousMonthEnd.day;
           final currency = _currencyDisclosure(
             payload['currency_code'] as String?,
             payload['currency_symbol'] as String?,
@@ -472,7 +485,7 @@ class _NarrativeInsightCard extends StatelessWidget {
           return _InsightDisplaySpec(
             title: 'Category Shift',
             body:
-                '$category spending $direction by $pct% in $currency compared to last month.',
+                '$category spending $direction by $pct% in $currency ${previousWindowIsTruncated ? 'over the same days last month.' : 'compared to last month.'}',
             icon: Icons.trending_up_rounded,
           );
         case 'duplicate_subscription':
@@ -686,19 +699,24 @@ class _BarColumn extends StatelessWidget {
   }
 }
 
-class _MoMComparisonCard extends StatelessWidget {
+class _MoMComparisonCard extends ConsumerWidget {
   const _MoMComparisonCard({
     required this.mom,
     required this.currentSpend,
+    required this.period,
     required this.isDark,
   });
 
   final MonthOverMonthSpend mom;
   final double currentSpend;
+  final DashboardPeriod period;
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(clockProvider)();
+    final partialMonth = period.isPartialMonthAt(now);
+    final comparisonLabel = period.comparisonLabelAt(now);
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
     final pctChange = mom.pctChange ?? 0.0;
     final isIncrease = pctChange > 0;
@@ -758,7 +776,7 @@ class _MoMComparisonCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${formatInr(currentSpend)} spent so far vs ${formatInr(mom.previous)} last month',
+                  '${formatInr(currentSpend)} spent${partialMonth ? ' so far' : ''} $comparisonLabel ${formatInr(mom.previous)}',
                   style: AppTheme.bloomDisplay(
                     12,
                     FontWeight.w400,

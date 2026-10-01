@@ -1,3 +1,5 @@
+import '../../core/financial_calendar.dart';
+
 enum AssistantIntentKind {
   periodTotal('period_total'),
   categoryBreakdown('category_breakdown'),
@@ -147,9 +149,14 @@ const assistantIntentSchema = <String, Object?>{
 };
 
 class IntentValidator {
-  const IntentValidator({required this.categories, this.clock = DateTime.now});
+  IntentValidator({
+    required this.categories,
+    FinancialCalendar? calendar,
+    this.clock = DateTime.now,
+  }) : calendar = calendar ?? FinancialCalendar();
 
   final Map<String, String> categories;
+  final FinancialCalendar calendar;
   final DateTime Function() clock;
 
   IntentValidationResult validate(Map<String, Object?> json) {
@@ -345,17 +352,19 @@ class IntentValidator {
       value == null ? null : _range(value);
 
   AssistantTimeRange? _range(Object? value, {bool upcoming = false}) {
+    final localNow = calendar.localDate(clock());
+    final today = calendar.day(localNow.year, localNow.month, localNow.day);
     if (value == null && upcoming) {
-      final start = _localDayUtc(clock());
+      final start = today.start;
       return AssistantTimeRange(
         start,
-        start.add(const Duration(days: 30)),
+        calendar.day(localNow.year, localNow.month, localNow.day + 30).start,
         label: 'the next 30 days',
       );
     }
     final map = _stringMap(value);
     if (map == null) return null;
-    final now = _localDayUtc(clock());
+    final now = today.start;
     final kind = map['kind'];
     DateTime? start;
     DateTime? end;
@@ -366,23 +375,31 @@ class IntentValidator {
       final year = int.tryParse(parts[0]);
       final month = int.tryParse(parts[1]);
       if (year == null || month == null || month < 1 || month > 12) return null;
-      start = DateTime(year, month).toUtc();
-      end = DateTime(year, month + 1).toUtc();
+      final period = calendar.month(year, month);
+      start = period.start;
+      end = period.end;
       label = '${parts[0]}-${parts[1]}';
     } else if (kind == 'last_n_days') {
       final days = map['n_days'];
       if (days is! int || days < 1 || days > 3660) return null;
-      end = now.add(const Duration(days: 1));
-      start = end.subtract(Duration(days: days));
+      end = today.end;
+      final firstDay = DateTime.utc(
+        localNow.year,
+        localNow.month,
+        localNow.day - days + 1,
+      );
+      start = calendar.day(firstDay.year, firstDay.month, firstDay.day).start;
       label = 'the last $days days';
     } else if (kind == 'range') {
       start = _parseLocalDate(map['start'] as String?);
       final inclusiveEnd = _parseLocalDate(map['end'] as String?);
-      if (inclusiveEnd != null) end = inclusiveEnd.add(const Duration(days: 1));
+      if (inclusiveEnd != null) {
+        end = calendar.dayContaining(inclusiveEnd).end;
+      }
       label = '${map['start']} to ${map['end']}';
     } else if (kind == 'all_time') {
-      start = DateTime.utc(1970);
-      end = now.add(const Duration(days: 1));
+      start = calendar.day(1970, 1, 1).start;
+      end = today.end;
       label = 'all time';
     }
     if (start == null || end == null || !start.isBefore(end)) return null;
@@ -390,21 +407,18 @@ class IntentValidator {
     return AssistantTimeRange(start, end, label: label!);
   }
 
-  static DateTime _localDayUtc(DateTime value) =>
-      DateTime(value.year, value.month, value.day).toUtc();
-
-  static DateTime? _parseLocalDate(String? value) {
+  DateTime? _parseLocalDate(String? value) {
     final parts = (value ?? '').split('-');
     if (parts.length != 3) return null;
     final year = int.tryParse(parts[0]);
     final month = int.tryParse(parts[1]);
     final day = int.tryParse(parts[2]);
     if (year == null || month == null || day == null) return null;
-    final local = DateTime(year, month, day);
+    final local = DateTime.utc(year, month, day);
     if (local.year != year || local.month != month || local.day != day) {
       return null;
     }
-    return local.toUtc();
+    return calendar.day(year, month, day).start;
   }
 
   static Map<String, Object?>? _stringMap(Object? value) =>

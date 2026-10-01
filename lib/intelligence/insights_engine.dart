@@ -62,9 +62,13 @@ class InsightsEngine {
     final now = calendar.localDate(instant);
     final currentPeriod = calendar.monthContaining(instant);
     final currentStart = currentPeriod.start;
-    final nextMonth = currentPeriod.end;
-    final previousStart =
-        DateTime.utc(now.year, now.month - 1).subtract(calendar.timeZoneOffset);
+    final currentEnd = calendar.throughToday(currentPeriod, instant).end;
+    final fullPrevious = calendar.month(now.year, now.month - 1);
+    final comparablePrevious = calendar.comparablePrior(
+      current: currentPeriod,
+      prior: fullPrevious,
+      now: instant,
+    );
     final period = calendar.monthKey(instant);
 
     return _database.transaction(() async {
@@ -73,9 +77,11 @@ class InsightsEngine {
             ..where(
               (t) =>
                   t.ts.isBiggerOrEqualValue(
-                    previousStart.millisecondsSinceEpoch,
+                    comparablePrevious.start.millisecondsSinceEpoch,
                   ) &
-                  t.ts.isSmallerThanValue(nextMonth.millisecondsSinceEpoch) &
+                  t.ts.isSmallerThanValue(
+                    currentPeriod.end.millisecondsSinceEpoch,
+                  ) &
                   t.isAnalyticsExcluded.equals(false) &
                   t.ownedTransferId.isNull() &
                   t.isDeleted.equals(false) &
@@ -110,9 +116,11 @@ class InsightsEngine {
         ..._categoryDeltas(
           transactions,
           currentStart,
-          nextMonth,
+          currentEnd,
+          comparablePrevious,
           categories,
           period,
+          calendar,
         ),
         ..._missedAutopay(period, recurring),
       ];
@@ -249,9 +257,11 @@ class InsightsEngine {
   Iterable<_InsightSpec> _categoryDeltas(
     List<Transaction> transactions,
     DateTime currentStart,
-    DateTime nextMonth,
+    DateTime currentEnd,
+    FinancialPeriod previousPeriod,
     Map<String, String> categories,
     String period,
+    FinancialCalendar calendar,
   ) sync* {
     final current = <String, double>{};
     final previous = <String, double>{};
@@ -261,9 +271,13 @@ class InsightsEngine {
       if (categoryId == null) continue;
       final instant = _date(txn);
       final target =
-          !instant.isBefore(currentStart) && instant.isBefore(nextMonth)
+          !instant.isBefore(currentStart) && instant.isBefore(currentEnd)
               ? current
-              : previous;
+              : !instant.isBefore(previousPeriod.start) &&
+                      instant.isBefore(previousPeriod.end)
+                  ? previous
+                  : null;
+      if (target == null) continue;
       final currency = SourceCurrency(
         code: txn.currencyCode,
         symbol: txn.currencySymbol,
@@ -292,6 +306,18 @@ class InsightsEngine {
           'current_total': currentAmount,
           'previous_total': previousAmount,
           'delta_fraction': delta,
+          // Inclusive local dates make both windows checkable; SQL uses
+          // half-open UTC instants for the actual query.
+          'current_start': _dateLabel(calendar, currentStart),
+          'current_end': _dateLabel(
+            calendar,
+            currentEnd.subtract(const Duration(microseconds: 1)),
+          ),
+          'previous_start': _dateLabel(calendar, previousPeriod.start),
+          'previous_end': _dateLabel(
+            calendar,
+            previousPeriod.end.subtract(const Duration(microseconds: 1)),
+          ),
         },
       );
     }
@@ -335,4 +361,11 @@ class InsightsEngine {
 
   DateTime _date(Transaction txn) =>
       DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true);
+
+  String _dateLabel(FinancialCalendar calendar, DateTime instant) {
+    final date = calendar.localDate(instant);
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
 }

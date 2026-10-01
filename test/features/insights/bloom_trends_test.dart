@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/clock.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
@@ -8,7 +10,7 @@ import 'package:paisatrack/features/insights/insights_screen.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> pumpTrends(WidgetTester tester) async {
+  Future<void> pumpTrends(WidgetTester tester, DateTime now) async {
     tester.view.physicalSize = const Size(402, 874);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -19,6 +21,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          clockProvider.overrideWith((ref) => () => now),
+          dashboardPeriodProvider.overrideWith(
+            (ref) => DashboardPeriod.month(
+              now,
+              calendar: const FinancialCalendar.fixed(Duration.zero),
+            ),
+          ),
           dashboardAggregateProvider
               .overrideWith((ref) async => _emptyDashboardAggregate),
         ],
@@ -34,7 +43,7 @@ void main() {
   group('Bloom Trends / InsightsScreen', () {
     testWidgets('renders title, Recurring button, and 6-month trend chart',
         (tester) async {
-      await pumpTrends(tester);
+      await pumpTrends(tester, DateTime.utc(2026, 10, 15));
 
       expect(find.text('Trends'), findsOneWidget);
       expect(find.text('Recurring'), findsOneWidget);
@@ -53,7 +62,7 @@ void main() {
 
     testWidgets('lists foreign and unknown source totals separately',
         (tester) async {
-      await pumpTrends(tester);
+      await pumpTrends(tester, DateTime.utc(2026, 10, 15));
 
       await tester.scrollUntilVisible(
         find.text('OTHER SOURCE CURRENCIES · THIS PERIOD'),
@@ -69,7 +78,7 @@ void main() {
     });
 
     testWidgets('renders Month-over-Month comparison card', (tester) async {
-      await pumpTrends(tester);
+      await pumpTrends(tester, DateTime.utc(2026, 10, 15));
 
       await tester.scrollUntilVisible(
         find.text('MONTH OVER MONTH'),
@@ -78,6 +87,20 @@ void main() {
       );
       expect(find.text('MONTH OVER MONTH'), findsOneWidget);
       expect(find.textContaining('spent so far'), findsOneWidget);
+      expect(find.textContaining('vs same days last month'), findsOneWidget);
+    });
+
+    testWidgets('last day of month labels the full prior month',
+        (tester) async {
+      await pumpTrends(tester, DateTime.utc(2026, 10, 31, 12));
+
+      await tester.scrollUntilVisible(
+        find.text('MONTH OVER MONTH'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('vs previous month'), findsOneWidget);
+      expect(find.textContaining('vs same days last month'), findsNothing);
     });
   });
 }

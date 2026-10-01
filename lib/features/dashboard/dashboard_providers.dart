@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/clock.dart';
 import '../../core/financial_calendar.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/dashboard_repository.dart';
@@ -90,16 +91,37 @@ class DashboardPeriod {
   }
 
   int elapsedDays([DateTime? value]) {
-    final tomorrow = calendar.dayContaining(value ?? DateTime.now()).end;
-    final effectiveEnd = end.isBefore(tomorrow) ? end : tomorrow;
-    if (!start.isBefore(effectiveEnd)) return 0;
-    return effectiveEnd.difference(start).inDays;
+    return calendar.elapsedDays(
+      FinancialPeriod(start: start, end: end),
+      value ?? DateTime.now(),
+    );
   }
 
-  DashboardPeriod get previous {
+  DashboardPeriod previousAt(DateTime now) {
     if (isCalendarMonth) {
-      return DashboardPeriod.month(
-        start.subtract(const Duration(days: 1)),
+      final current = FinancialPeriod(start: start, end: end);
+      final currentLocal = calendar.localDate(start);
+      final fullPrevious = calendar.month(
+        currentLocal.year,
+        currentLocal.month - 1,
+      );
+      final prior = calendar.comparablePrior(
+        current: current,
+        prior: fullPrevious,
+        now: now,
+      );
+      if (prior.start == fullPrevious.start && prior.end == fullPrevious.end) {
+        return DashboardPeriod.month(prior.start, calendar: calendar);
+      }
+      return DashboardPeriod(
+        start: prior.start,
+        end: prior.end,
+        label: _rangeLabel(
+          calendar.localDate(prior.start),
+          calendar
+              .localDate(prior.end.subtract(const Duration(microseconds: 1))),
+        ),
+        isCalendarMonth: false,
         calendar: calendar,
       );
     }
@@ -120,8 +142,28 @@ class DashboardPeriod {
     );
   }
 
-  String get comparisonLabel =>
-      isCalendarMonth ? 'vs previous month' : 'vs previous period';
+  String comparisonLabelAt(DateTime now) {
+    if (isCalendarMonth && isCurrentMonth(now)) {
+      final current = FinancialPeriod(start: start, end: end);
+      final localStart = calendar.localDate(start);
+      final fullPrevious = calendar.month(
+        localStart.year,
+        localStart.month - 1,
+      );
+      final comparable = calendar.comparablePrior(
+        current: current,
+        prior: fullPrevious,
+        now: now,
+      );
+      if (comparable.end != fullPrevious.end) {
+        return 'vs same days last month';
+      }
+    }
+    return isCalendarMonth ? 'vs previous month' : 'vs previous period';
+  }
+
+  bool isPartialMonthAt(DateTime now) =>
+      isCurrentMonth(now) && end.isAfter(calendar.dayContaining(now).end);
 
   DateTime get trendAnchor => end.subtract(const Duration(microseconds: 1));
 
@@ -179,7 +221,7 @@ final selectedDashboardMetricProvider = StateProvider<DashboardMetricChoice>(
 );
 
 final dashboardPeriodProvider = StateProvider<DashboardPeriod>(
-  (ref) => DashboardPeriod.month(DateTime.now()),
+  (ref) => DashboardPeriod.month(ref.watch(clockProvider)()),
 );
 
 final dashboardAggregateProvider =
@@ -187,10 +229,19 @@ final dashboardAggregateProvider =
   ref.watch(transactionListProvider);
   final database = await ref.watch(appDatabaseProvider.future);
   final period = ref.watch(dashboardPeriodProvider);
-  final previous = period.previous;
+  final now = ref.watch(clockProvider)();
+  final previous = period.previousAt(now);
   final anchor = period.trendAnchor;
-  final trendStart = DateTime(anchor.year, anchor.month - (_trendMonths - 1));
-  final trendEnd = DateTime(anchor.year, anchor.month + 1);
+  final localAnchor = period.calendar.localDate(anchor);
+  final trendStart = period.calendar
+      .month(localAnchor.year, localAnchor.month - (_trendMonths - 1))
+      .start;
+  final trendEnd = period.calendar
+      .month(
+        localAnchor.year,
+        localAnchor.month + 1,
+      )
+      .start;
   return DashboardRepository(database).load(
     DashboardQueryWindow(
       start: period.start,
@@ -252,7 +303,8 @@ final monthNetProvider = Provider<AsyncValue<double>>((ref) {
 });
 
 final dailyAverageSpendProvider = Provider<AsyncValue<double>>((ref) {
-  final daysElapsed = ref.watch(dashboardPeriodProvider).elapsedDays();
+  final now = ref.watch(clockProvider)();
+  final daysElapsed = ref.watch(dashboardPeriodProvider).elapsedDays(now);
   return ref.watch(monthDirectionTotalsProvider).whenData(
         (totals) => daysElapsed <= 0 ? 0.0 : totals.debitTotal / daysElapsed,
       );
@@ -260,9 +312,9 @@ final dailyAverageSpendProvider = Provider<AsyncValue<double>>((ref) {
 
 final commitmentsTotalProvider = Provider<double>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return 0;
+  final now = ref.watch(clockProvider)();
+  if (!period.isCurrentMonth(now)) return 0;
   final upcoming = ref.watch(upcomingRecurringProvider);
-  final now = DateTime.now();
   var sum = 0.0;
   for (final series in upcoming) {
     if (series.currencyCode == 'INR' &&
@@ -278,14 +330,14 @@ final commitmentsTotalProvider = Provider<double>((ref) {
 /// Only meaningful for the current calendar month — returns null otherwise.
 final safeTodayValueProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return const AsyncData(null);
+  final now = ref.watch(clockProvider)();
+  if (!period.isCurrentMonth(now)) return const AsyncData(null);
 
   final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
   if (budget == null) return const AsyncData(null);
 
   final commitments = ref.watch(commitmentsTotalProvider);
   return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
-    final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final daysRemaining = daysInMonth - now.day + 1;
     if (daysRemaining <= 0) return 0.0;
@@ -297,14 +349,15 @@ final safeTodayValueProvider = Provider<AsyncValue<double?>>((ref) {
 /// Only meaningful for the current calendar month — returns null otherwise.
 final runwayValueProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return const AsyncData(null);
+  final now = ref.watch(clockProvider)();
+  if (!period.isCurrentMonth(now)) return const AsyncData(null);
 
   final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
   if (budget == null) return const AsyncData(null);
 
   final commitments = ref.watch(commitmentsTotalProvider);
   return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
-    final daysElapsed = period.elapsedDays();
+    final daysElapsed = period.elapsedDays(now);
     final burn = daysElapsed <= 0 ? 0.0 : totals.debitTotal / daysElapsed;
     if (burn <= 0) return null;
     return (budget - totals.debitTotal - commitments) / burn;
@@ -313,9 +366,9 @@ final runwayValueProvider = Provider<AsyncValue<double?>>((ref) {
 
 final projectedMonthEndSpendProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
-  if (!period.isCurrentMonth()) return const AsyncData(null);
+  final now = ref.watch(clockProvider)();
+  if (!period.isCurrentMonth(now)) return const AsyncData(null);
   return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
-    final now = DateTime.now();
     final daysElapsed = now.day;
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     if (daysElapsed <= 0) return totals.debitTotal;
@@ -451,11 +504,15 @@ class MonthPoint {
 const _trendMonths = 6;
 
 final sixMonthTrendProvider = Provider<AsyncValue<List<MonthPoint>>>((ref) {
-  final anchor = ref.watch(dashboardPeriodProvider).trendAnchor;
+  final period = ref.watch(dashboardPeriodProvider);
+  final localAnchor = period.calendar.localDate(period.trendAnchor);
   return ref.watch(dashboardAggregateProvider).whenData((aggregate) {
     final points = <MonthPoint>[];
     for (var i = _trendMonths - 1; i >= 0; i--) {
-      final month = DateTime(anchor.year, anchor.month - i);
+      final month = DateTime.utc(
+        localAnchor.year,
+        localAnchor.month - i,
+      );
       final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
       points.add(
         MonthPoint(month: month, spend: aggregate.trendByMonth[key] ?? 0),

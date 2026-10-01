@@ -24,6 +24,8 @@ class AnswerRenderer {
             : 'Period: ${intent.range!.label}\nResult:\n${items.map((item) => '${item.label}: ${formatSourceAmount(item.total, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}').join('\n')}\nFilters: ${_filters(intent)}',
         ComparisonQueryResult(
           :final currencyBuckets,
+          :final currentLabel,
+          :final previousLabel,
         ) =>
           currencyBuckets.isEmpty
               ? 'No same-currency comparison is available.'
@@ -41,7 +43,7 @@ class AnswerRenderer {
                     currencyCode: bucket.currencyCode,
                     currencySymbol: bucket.currencySymbol,
                   );
-                  return 'Current: $currentValue. Previous: $previousValue. Difference: ${formatSourceAmount(change, currencyCode: bucket.currencyCode, currencySymbol: bucket.currencySymbol)}${ratio == null ? '' : ' (${(ratio * 100).toStringAsFixed(1)}%)'}.';
+                  return 'Current period (${currentLabel ?? intent.range!.label}): $currentValue. Previous period (${previousLabel ?? intent.compareRange!.label}): $previousValue. Difference: ${formatSourceAmount(change, currencyCode: bucket.currencyCode, currencySymbol: bucket.currencySymbol)}${ratio == null ? '' : ' (${(ratio * 100).toStringAsFixed(1)}%)'}.';
                 }).join('\n'),
         RecurringQueryResult(:final items) => items.isEmpty
             ? 'No recurring payments are due in ${intent.range!.label}.'

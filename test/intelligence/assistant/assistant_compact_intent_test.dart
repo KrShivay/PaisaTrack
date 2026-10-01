@@ -108,8 +108,11 @@ void main() {
       'cmo': '2026-06',
     });
 
-    expect(answer, contains('Current:'));
-    expect(answer, contains('Previous:'));
+    expect(answer, contains('Current period (this month to date):'));
+    expect(
+      answer,
+      contains('Previous period (the same elapsed days last month):'),
+    );
   });
 
   test(

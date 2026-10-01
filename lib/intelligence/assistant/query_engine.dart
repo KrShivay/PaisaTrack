@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../core/financial_calendar.dart';
 import '../../data/db/database.dart';
 import '../../data/models/source_currency.dart';
 import 'assistant_intent.dart';
@@ -61,6 +62,8 @@ class ComparisonQueryResult extends AssistantQueryResult {
     required this.current,
     required this.previous,
     this.currencyBuckets = const [],
+    this.currentLabel,
+    this.previousLabel,
   });
   final double current;
   final double previous;
@@ -71,6 +74,8 @@ class ComparisonQueryResult extends AssistantQueryResult {
         String? currencyCode,
         String? currencySymbol
       })> currencyBuckets;
+  final String? currentLabel;
+  final String? previousLabel;
   double get delta => current - previous;
   double? get percent => previous == 0 ? null : delta / previous;
 }
@@ -107,8 +112,16 @@ class InsightsQueryResult extends AssistantQueryResult {
 }
 
 class AssistantQueryEngine {
-  const AssistantQueryEngine(this.database);
+  AssistantQueryEngine(
+    this.database, {
+    FinancialCalendar? calendar,
+    DateTime Function()? clock,
+  })  : calendar = calendar ?? FinancialCalendar(),
+        clock = clock ?? DateTime.now;
+
   final AppDatabase database;
+  final FinancialCalendar calendar;
+  final DateTime Function() clock;
 
   Future<AssistantQueryResult> run(AssistantIntent intent) =>
       switch (intent.kind) {
@@ -282,13 +295,66 @@ class AssistantQueryEngine {
   }
 
   Future<ComparisonQueryResult> _comparison(AssistantIntent intent) async {
-    final current = await _total(intent);
+    final currentRange = intent.range!;
+    var boundedCurrentRange = currentRange;
+    var priorRange = intent.compareRange!;
+    var currentLabel = currentRange.label;
+    var previousLabel = priorRange.label;
+    final now = clock();
+    final currentMonth = calendar.monthContaining(now);
+    final monthLocal = calendar.localDate(currentMonth.start);
+    final fullPrior = calendar.month(monthLocal.year, monthLocal.month - 1);
+    final comparingCurrentMonth = currentRange.start == currentMonth.start &&
+        currentRange.end == currentMonth.end &&
+        priorRange.start == fullPrior.start &&
+        priorRange.end == fullPrior.end;
+    if (comparingCurrentMonth) {
+      // A partial current month intentionally clips a requested full prior
+      // month (including prompts such as "full September") to comparable days.
+      final comparable = calendar.comparablePrior(
+        current: currentMonth,
+        prior: fullPrior,
+        now: now,
+      );
+      if (comparable.end != fullPrior.end) {
+        final throughToday = calendar.throughToday(currentMonth, now).end;
+        boundedCurrentRange = AssistantTimeRange(
+          currentRange.start,
+          throughToday.isBefore(currentRange.end)
+              ? throughToday
+              : currentRange.end,
+          label: 'this month to date',
+        );
+        priorRange = AssistantTimeRange(
+          comparable.start,
+          comparable.end,
+          label: 'the same elapsed days last month',
+        );
+        currentLabel = 'this month to date';
+        previousLabel = priorRange.label;
+      }
+    }
+    final current = await _total(
+      AssistantIntent(
+        kind: intent.kind,
+        metric: intent.metric,
+        aggregation: intent.aggregation,
+        range: boundedCurrentRange,
+        compareRange: intent.compareRange,
+        categoryId: intent.categoryId,
+        categoryName: intent.categoryName,
+        categoryIds: intent.categoryIds,
+        categoryNames: intent.categoryNames,
+        merchant: intent.merchant,
+        direction: intent.direction,
+      ),
+    );
     final previous = await _total(
       AssistantIntent(
         kind: AssistantIntentKind.periodTotal,
         metric: intent.metric,
         aggregation: AssistantAggregation.sum,
-        range: intent.compareRange,
+        range: priorRange,
         categoryId: intent.categoryId,
         categoryIds: intent.categoryIds,
         categoryNames: intent.categoryNames,
@@ -312,6 +378,8 @@ class AssistantQueryEngine {
               currencySymbol: bucket.currencySymbol
             ),
       ],
+      currentLabel: currentLabel,
+      previousLabel: previousLabel,
     );
   }
 

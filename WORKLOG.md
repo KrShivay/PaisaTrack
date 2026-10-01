@@ -1,5 +1,23 @@
 # Current Handoff
 
+## 2026-10-01 — T-178a a1 fair comparison windows
+
+- Every month-over-month comparison compared a partial current month with the
+  full previous month (owner phone on 1 Oct: "97% lower spend than last
+  month"). `FinancialCalendar.comparablePrior`, `throughToday` and
+  `elapsedDays` now define one same-elapsed-days window used by insights
+  `category_delta` (window stored in the payload; legacy rows keep old copy),
+  the dashboard/Trends card (honest label when the prior month is clamped),
+  and assistant comparisons; a `clockProvider` keeps provider and widget in
+  agreement. Six-month trend bounds moved onto `FinancialCalendar`.
+- Impact: `FinancialCalendar` CRITICAL, `DashboardPeriod`/`InsightsEngine`/
+  `IntentValidator`/`AnswerRenderer` HIGH. Verified: analyzer clean, full
+  suite 986/986 (IST host), intelligence/dashboard/insights/core 296/296
+  under both `TZ=UTC` and `TZ=America/New_York`. Two independent review
+  rounds; the first blocked a wall-clock-dependent widget test (fails on the
+  last day of a month), fixed with the injected clock. The v2012 install
+  evidence remains in its report and the T-193 release note.
+
 ## 2026-10-01 — T-164e SMS body-date, picker, and insights month-key slice
 
 - ADB listed no device, so T-179a physical recovery stayed blocked; this
@@ -41,23 +59,3 @@
   and the re-run reported true. Evidence:
   [T-179a report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
   Keystore alias continuity remains unattested by design.
-
-## 2026-10-01 — v2012 owner-phone install and Ask portrait check
-
-- Built and independently reviewed the signed ARM64 `0.1.3+2012` artifact
-  from release commit `9f966992f8665c4f7fea72882af1270cb34b3c3b`. Android app
-  and keystore Gradle unit tests passed: 31 app tests and 10 keystore tests,
-  zero failures. Flutter focused 29/29, full 954/954, analyzer, and formatting
-  evidence is from unchanged source at `3d5f310`; the version-only bump did not
-  rerun that suite. Artifact metadata and install evidence:
-  [v2012 owner-phone report](docs/reports/release-v2012-owner-phone-install-2026-10-01.md).
-- The candidate installed via `adb install -r`; package code 4012, installed
-  base hash, and production signer matched, while `firstInstallTime` remained
-  `2026-09-26 22:20:54`. Ask opened via the production pill. The focused empty
-  composer stayed 59–62 px above the real IME at 1×, 1.5×, and 2× portrait;
-  at 2× a safe swipe exposed one suggestion control. Close returned Home.
-  Font/rotation settings were restored. No messages or transaction edits were
-  made; no private records were inspected. Landscape and broader T-176/T-167c
-  acceptance remain open. The exact artifact was published to `apk-downloads`
-  in commit `79614386e4f5271c5ccefc67eca66368642fb7ae`; only the APK file
-  changed.

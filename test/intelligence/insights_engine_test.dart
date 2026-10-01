@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/insights_engine.dart';
 
@@ -88,6 +89,12 @@ void main() {
     await category('fees_charges', 'Fees & Charges');
     await category('food', 'Food');
     await txn('fee', DateTime.utc(2026, 7, 2), 25, 'fees_charges');
+    await txn(
+      'fee_later_this_month',
+      DateTime.utc(2026, 7, 20),
+      7,
+      'fees_charges',
+    );
     await txn('food_previous', DateTime.utc(2026, 6, 2), 100, 'food');
     await txn('food_current', DateTime.utc(2026, 7, 2), 150, 'food');
     await recurring(id: 'stream_a', merchantId: 'streaming');
@@ -136,13 +143,58 @@ void main() {
     final fee = rows.singleWhere((row) => row.kind == 'fees_total');
     expect(
       (jsonDecode(fee.payloadJson) as Map<String, Object?>)['total'],
-      25,
+      32,
     );
     final delta = rows.singleWhere((row) => row.kind == 'category_delta');
     expect(
       (jsonDecode(delta.payloadJson) as Map<String, Object?>)['delta_fraction'],
       0.5,
     );
+  });
+
+  test('category delta compares the same elapsed local days and records them',
+      () async {
+    const calendar = FinancialCalendar.fixed(Duration(hours: 5, minutes: 30));
+    await category('food', 'Food');
+    DateTime localDay(int month, int day) =>
+        DateTime.utc(2026, month, day).subtract(calendar.timeZoneOffset);
+
+    await txn('oct_food', localDay(10, 3), 800, 'food');
+    await txn('sep_1', localDay(9, 1), 300, 'food');
+    await txn('sep_2', localDay(9, 2), 300, 'food');
+    await txn('sep_3', localDay(9, 3), 400, 'food');
+    await txn('sep_later', localDay(9, 4), 8000, 'food');
+
+    await InsightsEngine(database, calendar: calendar).run(
+      today: DateTime.utc(2026, 10, 3, 8),
+    );
+
+    final rows = await (database.select(database.insights)
+          ..where((row) => row.kind.equals('category_delta')))
+        .get();
+    final payload = jsonDecode(rows.single.payloadJson) as Map<String, Object?>;
+    expect(payload['current_total'], 800);
+    expect(payload['previous_total'], 1000);
+    expect(payload['delta_fraction'], -0.2);
+    expect(payload['current_start'], '2026-10-01');
+    expect(payload['current_end'], '2026-10-03');
+    expect(payload['previous_start'], '2026-09-01');
+    expect(payload['previous_end'], '2026-09-03');
+  });
+
+  test('category delta keeps skipping a zero previous denominator', () async {
+    await category('food', 'Food');
+    await txn('oct_food', DateTime.utc(2026, 10, 3), 800, 'food');
+
+    await InsightsEngine(
+      database,
+      calendar: const FinancialCalendar.fixed(Duration.zero),
+    ).run(today: DateTime.utc(2026, 10, 3));
+
+    final rows = await (database.select(database.insights)
+          ..where((row) => row.kind.equals('category_delta')))
+        .get();
+    expect(rows, isEmpty);
   });
 
   test('rerun is idempotent, preserves dismissal, and clears stale rows',

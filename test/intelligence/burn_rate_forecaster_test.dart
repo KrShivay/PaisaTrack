@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/burn_rate_forecaster.dart';
 
@@ -71,7 +72,10 @@ void main() {
       duplicateOf: 'source',
     );
 
-    final forecast = await BurnRateForecaster(database).run(
+    final forecast = await BurnRateForecaster(
+      database,
+      calendar: const FinancialCalendar.fixed(Duration.zero),
+    ).run(
       today: DateTime.utc(2026, 7, 10),
     );
 
@@ -96,7 +100,10 @@ void main() {
       await txn('m$month', DateTime.utc(2026, month, 1), 100);
     }
     await txn('current', DateTime.utc(2026, 7, 10), 110);
-    final forecaster = BurnRateForecaster(database);
+    final forecaster = BurnRateForecaster(
+      database,
+      calendar: const FinancialCalendar.fixed(Duration.zero),
+    );
 
     final boundary = await forecaster.run(today: DateTime.utc(2026, 7, 10));
     expect(boundary.deviationFraction, closeTo(0.10, 0.0000001));

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/core/util/money_utils.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
@@ -61,7 +62,10 @@ void main() {
 
     expect(snapshot.debitTotal, 1500.0);
 
-    final forecaster = BurnRateForecaster(database);
+    final forecaster = BurnRateForecaster(
+      database,
+      calendar: const FinancialCalendar.fixed(Duration.zero),
+    );
     final forecast = await forecaster.run(today: DateTime.utc(2026, 7, 10));
 
     expect(forecast.currentSpend, 1500.0);
