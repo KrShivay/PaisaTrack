@@ -66,33 +66,14 @@ class AnomalyDetector {
     required String? Function(Transaction txn) identityOf,
     required FeatureFlagsState flagsState,
   }) async {
-    final candidates = await (_database.select(_database.transactions)
+    final rows = await (_database.select(_database.transactions)
           ..where(
             (t) =>
                 t.ts.isBiggerOrEqualValue(start.millisecondsSinceEpoch) &
                 t.ts.isSmallerThanValue(end.millisecondsSinceEpoch) &
-                t.isAnalyticsExcluded.equals(false) &
-                t.ownedTransferId.isNull() &
-                t.isDeleted.equals(false) &
-                t.isNotTransaction.equals(false) &
-                t.duplicateOfTxnId.isNull() &
-                t.lifecycleState.equals('settled') &
-                t.direction.equals('debit'),
+                FinancialEligibility.spendingDebit(t, _database.categories),
           ))
         .get();
-    final categoryIsSpending = {
-      for (final category in await _database.select(_database.categories).get())
-        category.id: category.isSpending,
-    };
-    final rows = candidates
-        .where(
-          (transaction) => FinancialEligibility.includesSpendingDebit(
-            transaction,
-            categoryIsSpending:
-                categoryIsSpending[transaction.categoryId] ?? true,
-          ),
-        )
-        .toList(growable: false);
     final groups = <String, List<Transaction>>{};
     for (final txn in rows) {
       final identity = identityOf(txn);
@@ -129,6 +110,7 @@ class AnomalyDetector {
           : existing.mean + flagsState.anomalyAlertSigma * existing.std;
 
       final first = entry.value.first;
+      // The configured floor is INR-denominated; do not invent FX conversions.
       final isBelowFloor = first.currencyCode == 'INR' &&
           aggregate < flagsState.anomalyAlertFloorAmount;
       final merchantIdentity = entry.value.first.merchantId;

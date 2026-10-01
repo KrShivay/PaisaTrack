@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/intelligence/insights_engine.dart';
 import 'package:paisatrack/intelligence/models/embedder.dart';
 import 'package:paisatrack/intelligence/recurring_detector.dart';
 
@@ -39,6 +40,7 @@ void main() {
     String? currencyCode,
     String? currencySymbol,
     String direction = 'debit',
+    String lifecycleState = 'settled',
   }) {
     return database.into(database.transactions).insert(
           TransactionsCompanion.insert(
@@ -56,6 +58,7 @@ void main() {
             parseSource: 'template',
             confidenceJson: '{}',
             status: 'auto',
+            lifecycleState: Value(lifecycleState),
             createdAt: date,
             updatedAt: date,
           ),
@@ -90,6 +93,45 @@ void main() {
     expect(rows.single.occurrences, 4);
     expect(rows.single.kind, 'subscription');
     expect(rows.single.status, 'active');
+  });
+
+  test('pending amount cannot create a recurring price creep', () async {
+    await merchant('streaming', 'StreamFlix');
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'bills_utilities',
+            name: 'Bills & Utilities',
+            icon: 'receipt_long',
+            isSpending: true,
+            sortOrder: 1,
+            isUserCreated: false,
+          ),
+        );
+    for (final entry in [
+      ('s1', DateTime.utc(2026, 1, 1), 499.0, 'settled'),
+      ('s2', DateTime.utc(2026, 1, 31), 499.0, 'settled'),
+      ('pending', DateTime.utc(2026, 3, 2), 649.0, 'pending'),
+    ]) {
+      await txn(
+        id: entry.$1,
+        merchantId: 'streaming',
+        categoryId: 'bills_utilities',
+        date: entry.$2,
+        amount: entry.$3,
+        lifecycleState: entry.$4,
+      );
+    }
+
+    final detections = await RecurringDetector(database).run(
+      today: DateTime.utc(2026, 4, 2),
+    );
+
+    await InsightsEngine(database).run(today: DateTime.utc(2026, 4, 2));
+    final priceCreep = await (database.select(database.insights)
+          ..where((row) => row.kind.equals('price_creep')))
+        .get();
+    expect(priceCreep, isEmpty);
+    expect(detections, isEmpty);
   });
 
   test('detects separate recurring series per currency bucket', () async {

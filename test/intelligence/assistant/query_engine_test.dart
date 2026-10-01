@@ -237,8 +237,8 @@ void main() {
     expect(result.count, 3);
     expect(
       result.value,
-      0,
-      reason: 'multi-currency scalar is intentionally unavailable',
+      equals(null),
+      reason: 'mixed currencies do not have a meaningful scalar total',
     );
     expect(result.currencyBuckets, hasLength(3));
     expect(result.currencyBuckets.map((bucket) => bucket.key).toSet(), {
@@ -246,6 +246,51 @@ void main() {
       'code:USD',
       r'symbol:$',
     });
+  });
+
+  test('comparison keeps currencies that appear in only one period', () async {
+    await txn(
+      'current-inr',
+      DateTime.utc(2026, 7, 2),
+      500,
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+    );
+    await txn(
+      'current-usd',
+      DateTime.utc(2026, 7, 3),
+      20,
+      currencyCode: 'USD',
+      currencySymbol: r'$',
+    );
+    await txn(
+      'previous-inr',
+      DateTime.utc(2026, 6, 2),
+      300,
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+    );
+
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.monthOverMonth,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: july,
+      compareRange: june,
+    );
+    final comparison = await engine.run(intent) as ComparisonQueryResult;
+    final answer = const AnswerRenderer().render(intent, comparison);
+
+    expect(comparison.currencyBuckets, hasLength(2));
+    final inr = comparison.currencyBuckets
+        .singleWhere((bucket) => bucket.currencyCode == 'INR');
+    final usd = comparison.currencyBuckets
+        .singleWhere((bucket) => bucket.currencyCode == 'USD');
+    expect((inr.current, inr.previous), (500.0, 300.0));
+    expect((usd.current, usd.previous), (20.0, 0.0));
+    expect(answer, contains(r'$20.00 USD'));
+    expect(answer, contains('₹500.00'));
+    expect(answer, contains('₹300.00'));
   });
 
   test('category breakdown does not rank nominal totals across currencies',

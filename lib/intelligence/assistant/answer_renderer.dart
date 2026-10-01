@@ -67,10 +67,12 @@ class AnswerRenderer {
     AssistantAggregation aggregation,
     List<AssistantCurrencyBucket> buckets,
     int count,
-    double value,
+    double? value,
   ) {
     if (aggregation == AssistantAggregation.count) return count.toString();
-    if (buckets.isEmpty) return formatSourceAmount(value);
+    if (buckets.isEmpty) {
+      return value == null ? 'total unavailable' : formatSourceAmount(value);
+    }
     return buckets
         .map(
           (bucket) => formatSourceAmount(

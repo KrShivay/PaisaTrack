@@ -188,13 +188,8 @@ SELECT COALESCE(SUM(t.amount), 0) AS total, COUNT(*) AS cnt
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
-  AND t.is_deleted = 0
-  AND t.is_not_transaction = 0
-  AND t.duplicate_of_txn_id IS NULL
-  AND t.lifecycle_state = 'settled'
-  AND t.direction = 'debit'
+  AND ${FinancialEligibility.spendingDebitBeforeSourcePolicySql}
   AND t.currency_code = 'INR'
-  AND COALESCE(c.is_spending, 1) = 1
   AND (t.owned_transfer_id IS NOT NULL OR t.is_analytics_excluded = 1)
 ''',
       variables: [

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../core/financial_calendar.dart';
+import '../../data/analytics/financial_eligibility.dart';
 import '../../data/db/database.dart';
 import '../../data/models/source_currency.dart';
 import 'assistant_intent.dart';
@@ -18,7 +19,7 @@ class TotalQueryResult extends AssistantQueryResult {
     required this.label,
     this.currencyBuckets = const [],
   });
-  final double value;
+  final double? value;
   final int count;
   final String label;
   final List<AssistantCurrencyBucket> currencyBuckets;
@@ -65,8 +66,8 @@ class ComparisonQueryResult extends AssistantQueryResult {
     this.currentLabel,
     this.previousLabel,
   });
-  final double current;
-  final double previous;
+  final double? current;
+  final double? previous;
   final List<
       ({
         double current,
@@ -76,8 +77,11 @@ class ComparisonQueryResult extends AssistantQueryResult {
       })> currencyBuckets;
   final String? currentLabel;
   final String? previousLabel;
-  double get delta => current - previous;
-  double? get percent => previous == 0 ? null : delta / previous;
+  double? get delta =>
+      current == null || previous == null ? null : current! - previous!;
+  double? get percent => previous == null || previous == 0 || delta == null
+      ? null
+      : delta! / previous!;
 }
 
 class RecurringQueryItem {
@@ -146,28 +150,26 @@ class AssistantQueryEngine {
       for (final category in categories) category.id: category.parentId,
     };
     final categoryScope = _descendantCategoryIds(selectedIds, categoryParents);
-    final nonSpendingIds = categories
-        .where((category) => !category.isSpending)
-        .map((category) => category.id)
-        .toSet();
     final query = database.select(database.transactions)
       ..where((row) {
-        Expression<bool> predicate =
+        final withinRange =
             row.ts.isBiggerOrEqualValue(range.start.millisecondsSinceEpoch) &
-                row.ts.isSmallerThanValue(range.end.millisecondsSinceEpoch) &
-                row.isDeleted.equals(false) &
-                row.isNotTransaction.equals(false) &
-                row.duplicateOfTxnId.isNull() &
-                row.isAnalyticsExcluded.equals(false) &
-                row.ownedTransferId.isNull() &
-                row.lifecycleState.equals('settled');
+                row.ts.isSmallerThanValue(range.end.millisecondsSinceEpoch);
+        final eligible = switch (intent.metric) {
+          AssistantMetric.spend =>
+            FinancialEligibility.spendingDebit(row, database.categories),
+          AssistantMetric.income =>
+            FinancialEligibility.base(row) & row.direction.equals('credit'),
+          AssistantMetric.net => FinancialEligibility.base(row) &
+              (row.direction.equals('credit') |
+                  FinancialEligibility.spendingDebit(
+                    row,
+                    database.categories,
+                  )),
+        };
+        Expression<bool> predicate = withinRange & eligible;
         if (categoryScope.isNotEmpty) {
           predicate &= row.categoryId.isIn(categoryScope);
-        }
-        if (intent.metric == AssistantMetric.spend &&
-            nonSpendingIds.isNotEmpty) {
-          predicate &=
-              row.categoryId.isNull() | row.categoryId.isNotIn(nonSpendingIds);
         }
         if (intent.direction != null) {
           predicate &= row.direction.equals(intent.direction!);
@@ -238,7 +240,7 @@ class AssistantQueryEngine {
         ? selected.length.toDouble()
         : buckets.length == 1
             ? buckets.single.amount
-            : 0.0;
+            : null;
     return TotalQueryResult(
       value: value,
       count: selected.length,
@@ -363,20 +365,29 @@ class AssistantQueryEngine {
         direction: intent.direction,
       ),
     );
+    final currentByCurrency = {
+      for (final bucket in current.currencyBuckets) bucket.key: bucket,
+    };
+    final previousByCurrency = {
+      for (final bucket in previous.currencyBuckets) bucket.key: bucket,
+    };
+    final currencyKeys = {
+      ...currentByCurrency.keys,
+      ...previousByCurrency.keys,
+    };
     return ComparisonQueryResult(
-      current: current.value,
-      previous: previous.value,
+      current: current.currencyBuckets.length <= 1 ? current.value : null,
+      previous: previous.currencyBuckets.length <= 1 ? previous.value : null,
       currencyBuckets: [
-        for (final bucket in current.currencyBuckets)
-          if (previous.currencyBuckets.any((prior) => prior.key == bucket.key))
-            (
-              current: bucket.amount,
-              previous: previous.currencyBuckets
-                  .firstWhere((prior) => prior.key == bucket.key)
-                  .amount,
-              currencyCode: bucket.currencyCode,
-              currencySymbol: bucket.currencySymbol
-            ),
+        for (final key in currencyKeys)
+          (
+            current: currentByCurrency[key]?.amount ?? 0,
+            previous: previousByCurrency[key]?.amount ?? 0,
+            currencyCode: currentByCurrency[key]?.currencyCode ??
+                previousByCurrency[key]?.currencyCode,
+            currencySymbol: currentByCurrency[key]?.currencySymbol ??
+                previousByCurrency[key]?.currencySymbol,
+          ),
       ],
       currentLabel: currentLabel,
       previousLabel: previousLabel,

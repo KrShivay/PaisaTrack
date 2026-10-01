@@ -124,12 +124,23 @@ void main() {
           '{"category_name":"Transport","delta_fraction":0.1,"currency_code":"INR"}',
       dismissed: false,
     );
+    const feesInsightRow = Insight(
+      id: 'fees_total:2026-07',
+      period: '2026-07',
+      kind: 'fees_total',
+      payloadJson: '{"total":32,"currency_code":"INR"}',
+      dismissed: false,
+    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           activeInsightsProvider.overrideWith(
-            (ref) => Stream.value([insightRow, legacyInsightRow]),
+            (ref) => Stream.value([
+              insightRow,
+              legacyInsightRow,
+              feesInsightRow,
+            ]),
           ),
           dashboardAggregateProvider.overrideWith(
             (ref) async => const DashboardAggregateSnapshot(
@@ -181,6 +192,7 @@ void main() {
 
     expect(find.text('Trends'), findsOneWidget);
     expect(find.text('Category Shift'), findsNWidgets(2));
+    expect(find.text('Fees & Charges Alert'), findsOneWidget);
     expect(
       find.text(
         'Food spending increased by 20% in INR over the same days last month.',

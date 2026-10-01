@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart';
 
 import '../data/db/database.dart';
+import '../data/analytics/financial_eligibility.dart';
 import '../data/models/source_currency.dart';
 import 'models/embedder.dart';
 
@@ -59,6 +60,8 @@ class RecurringDetector {
   final Embedder _embedder;
 
   /// Detects and upserts every qualifying merchant/amount stream atomically.
+  /// Uses settled eligibility for every direction; income series are valid,
+  /// and recurring detection is not limited to spending categories.
   Future<List<RecurringDetection>> run({DateTime? today}) async {
     final scanDate = (today ?? DateTime.now()).toUtc();
     final transactions = await (_database.select(_database.transactions)
@@ -67,11 +70,7 @@ class RecurringDetector {
                 (t.merchantId.isNotNull() |
                     t.counterpartyVpa.isNotNull() |
                     t.merchantRaw.isNotNull()) &
-                t.isAnalyticsExcluded.equals(false) &
-                t.ownedTransferId.isNull() &
-                t.isDeleted.equals(false) &
-                t.isNotTransaction.equals(false) &
-                t.duplicateOfTxnId.isNull(),
+                FinancialEligibility.base(t),
           ))
         .get();
     final merchants = {

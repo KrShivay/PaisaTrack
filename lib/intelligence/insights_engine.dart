@@ -73,7 +73,7 @@ class InsightsEngine {
 
     return _database.transaction(() async {
       final recurring = await _database.select(_database.recurringSeries).get();
-      final candidates = await (_database.select(_database.transactions)
+      final transactions = await (_database.select(_database.transactions)
             ..where(
               (t) =>
                   t.ts.isBiggerOrEqualValue(
@@ -82,33 +82,13 @@ class InsightsEngine {
                   t.ts.isSmallerThanValue(
                     currentPeriod.end.millisecondsSinceEpoch,
                   ) &
-                  t.isAnalyticsExcluded.equals(false) &
-                  t.ownedTransferId.isNull() &
-                  t.isDeleted.equals(false) &
-                  t.isNotTransaction.equals(false) &
-                  t.duplicateOfTxnId.isNull() &
-                  t.lifecycleState.equals('settled') &
-                  t.direction.equals('debit'),
+                  FinancialEligibility.spendingDebit(t, _database.categories),
             ))
           .get();
       final categories = {
         for (final row in await _database.select(_database.categories).get())
           row.id: row.name,
       };
-      final categoryIsSpending = {
-        for (final row in await _database.select(_database.categories).get())
-          row.id: row.isSpending,
-      };
-      final transactions = candidates
-          .where(
-            (transaction) => FinancialEligibility.includesSpendingDebit(
-              transaction,
-              categoryIsSpending:
-                  categoryIsSpending[transaction.categoryId] ?? true,
-            ),
-          )
-          .toList(growable: false);
-
       final specs = <_InsightSpec>[
         ..._duplicateSubscriptions(period, recurring),
         ..._fees(period, transactions, currentStart, categories),

@@ -21,8 +21,15 @@ later hardening.
     Owner phone (4012, pre-fix) showed "97% lower spend than last month" on
     1 Oct. Product decision recorded in code: the assistant clips a prior full
     month whenever the current month is partial.
-  - a2 eligibility parity (next): one shared Drift eligibility expression;
-    recurring detection settled-only; assistant net/currency parity.
+  - a2 eligibility parity (done 2026-10-02): `FinancialEligibility.base()`/
+    `spendingDebit()` Drift builders now drive insights, anomalies,
+    forecasts, recurring scans, assistant queries and dashboard exclusions;
+    a parity test checks SQL, Drift and the row helper. Recurring detection
+    counts settled rows only (pending/failed debits no longer create false
+    price-creep or count as paid autopay; refunds no longer feed income
+    series). Assistant net = eligible credits minus eligible spending debits;
+    mixed-currency answers keep every currency and drop the fake 0.0 scalar.
+    The anomaly floor stays INR-only (documented; no FX).
   - a3 freshness: recompute/invalidate insights after edits, inserts,
     deletes, links; anomaly baselines that never revise.
   - a4 provenance and coverage: typed claims with evidence ids, coverage and

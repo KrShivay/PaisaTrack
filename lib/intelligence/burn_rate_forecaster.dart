@@ -52,38 +52,17 @@ class BurnRateForecaster {
       final nextMonth = currentPeriod.end;
       final historyStart = DateTime.utc(now.year, now.month - trailingMonths)
           .subtract(calendar.timeZoneOffset);
-      final rows = await (_database.select(_database.transactions)
+      final eligible = await (_database.select(_database.transactions)
             ..where(
               (t) =>
                   t.ts.isBiggerOrEqualValue(
                     historyStart.millisecondsSinceEpoch,
                   ) &
                   t.ts.isSmallerThanValue(nextMonth.millisecondsSinceEpoch) &
-                  t.isAnalyticsExcluded.equals(false) &
-                  t.ownedTransferId.isNull() &
-                  t.isDeleted.equals(false) &
-                  t.isNotTransaction.equals(false) &
-                  t.duplicateOfTxnId.isNull() &
-                  t.lifecycleState.equals('settled') &
-                  t.direction.equals('debit') &
+                  FinancialEligibility.spendingDebit(t, _database.categories) &
                   t.currencyCode.equals('INR'),
             ))
           .get();
-
-      final categoryIsSpending = {
-        for (final category
-            in await _database.select(_database.categories).get())
-          category.id: category.isSpending,
-      };
-      final eligible = rows
-          .where(
-            (transaction) => FinancialEligibility.includesSpendingDebit(
-              transaction,
-              categoryIsSpending:
-                  categoryIsSpending[transaction.categoryId] ?? true,
-            ),
-          )
-          .toList(growable: false);
 
       final dailySpend = <String, double>{};
       for (final transaction in eligible) {

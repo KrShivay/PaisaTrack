@@ -1,5 +1,23 @@
 # Current Handoff
 
+## 2026-10-02 — T-178a a2 eligibility parity
+
+- The settled-spending rule was restated by hand in five engines. One Drift
+  builder on `FinancialEligibility` now serves insights, anomalies, burn-rate,
+  recurring, assistant and dashboard exclusions, with a SQL/Drift/row parity
+  test. Recurring detection is settled-only (a pending ₹649 event previously
+  produced a false price-creep insight). Assistant net matches the dashboard
+  contract (old: ₹270, contract: ₹350) and mixed-currency answers keep every
+  currency.
+- Impact: RecurringDetector/AnomalyDetector/InsightsEngine/BurnRateForecaster/
+  DashboardRepository HIGH. Verified: analyzer clean, full suite 991/991,
+  intelligence/data/dashboard 258/258 under TZ=UTC and America/New_York.
+  Independent review approved; its follow-ups (same-currency guard on
+  comparison scalars, shared `_loadTotals` fragment) are folded into a3. The
+  6,000-row recurring timing test is flaky under machine load (failed once at
+  5.39s, passed in isolation runs).
+- The 2026-10-01 T-164e date-slice entry is in Git history.
+
 ## 2026-10-01 — T-178a a1 fair comparison windows
 
 - Every month-over-month comparison compared a partial current month with the
@@ -17,31 +35,6 @@
   rounds; the first blocked a wall-clock-dependent widget test (fails on the
   last day of a month), fixed with the injected clock. The v2012 install
   evidence remains in its report and the T-193 release note.
-
-## 2026-10-01 — T-164e SMS body-date, picker, and insights month-key slice
-
-- ADB listed no device, so T-179a physical recovery stayed blocked; this
-  non-device P0 slice was taken instead. Date-only SMS body values were
-  stored as UTC-midnight instants (IST showed an invented 5:30 am; negative
-  offsets moved the day). `FinancialCalendar.resolveDateOnly` now keeps
-  `receivedAt` for same/future local days and uses local midnight for earlier
-  days, for both template and generic parsing. One `financialCalendarProvider`
-  feeds live capture, history import, and catch-up. The dashboard range picker
-  seeds local dates clamped to today. Trends and the Dashboard insight card
-  queried the previous month in IST; they now use the period calendar's month
-  key. Stored rows are unchanged; body-dated SMS more than 10 minutes apart no
-  longer auto-pair as duplicates (tests document it).
-- GitNexus pre-edit impact: `parseDate`, `SmsIngestor`, `ParserCascade`,
-  `TemplateMatcher` and `FinancialCalendar` CRITICAL, `FieldNormalizer` HIGH;
-  provider UNKNOWNs corroborated by text search. Verification on the IST host:
-  `flutter analyze --no-pub` clean, full suite 971/971, capture/fixtures/
-  insights/core subset 319/319 under `TZ=UTC` and 321/321 under
-  `TZ=America/New_York` (with the picker test), format and diff checks clean.
-  Two independent reviews: the first required pinning host-zone-dependent
-  fixture tests; the second approved, with calendar-plumbing DRY fixes
-  applied after it. A pre-existing six-month-trend failure under New York
-  time on unmodified main is recorded in TASKS (T-164e/T-178a). No phone, APK,
-  or schema change.
 
 ## 2026-10-01 — T-179a physical recovery acceptance (closed)
 
