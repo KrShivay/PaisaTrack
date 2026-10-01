@@ -20,8 +20,7 @@ import '../recurring/recurring_screen.dart';
 final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
   final dbAsync = ref.watch(appDatabaseProvider);
   final period = ref.watch(dashboardPeriodProvider);
-  final monthKey =
-      '${period.start.year}-${period.start.month.toString().padLeft(2, '0')}';
+  final monthKey = insightMonthKeyForPeriod(period);
 
   return dbAsync.when(
     data: (db) => (db.select(db.insights)
@@ -36,6 +35,9 @@ final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
     error: (err, st) => Stream<List<Insight>>.error(err, st),
   );
 });
+
+String insightMonthKeyForPeriod(DashboardPeriod period) =>
+    period.calendar.monthKey(period.start);
 
 /// Redesigned Bloom Trends (Insights) screen with scoped period picker,
 /// narrative insight cards with dismissal, 6-month bar chart, MoM comparison,

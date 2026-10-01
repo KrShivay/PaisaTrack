@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/template_engine/field_normalizer.dart';
 import 'package:paisatrack/capture/template_engine/template_registry.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 
 void main() {
-  const normalizer = FieldNormalizer();
+  const normalizer = FieldNormalizer(
+    calendar: FinancialCalendar.fixed(Duration.zero),
+  );
 
   test('parses Indian comma amount formats', () {
     expect(normalizer.parseAmount('₹1,00,000.50'), 100000.50);
@@ -22,17 +25,22 @@ void main() {
       channel: 'card',
       dateFormat: 'dd-MM-yy',
     );
+    const istNormalizer = FieldNormalizer(
+      calendar: FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
+    );
     const body =
-        'Spent USD 2525\nAxis Card 2525\n01-09-26\nSHOP\nAvl Limit: INR 500';
-    final record = normalizer.normalizeTemplateMatch(
+        'Spent USD 2525\nAxis Card 2525\n02-09-26\nSHOP\nAvl Limit: INR 500';
+    final receivedAt = DateTime.utc(2026, 9, 1, 22, 10);
+    final record = istNormalizer.normalizeTemplateMatch(
       match: template.regex.firstMatch(body)!,
       template: template,
-      fallbackTimestamp: DateTime.utc(2026, 9, 1),
+      fallbackTimestamp: receivedAt,
     );
 
     expect(record.amount, 2525);
     expect(record.currencyCode, 'USD');
     expect(record.currencySymbol, r'$');
+    expect(record.ts, receivedAt);
   });
 
   test('parses dd-MM-yy dates', () {
@@ -40,17 +48,61 @@ void main() {
       normalizer.parseDate(
         value: '05-07-26',
         format: 'dd-MM-yy',
-        fallback: DateTime.utc(2026),
+        receivedAt: DateTime.utc(2026, 12, 31),
       ),
       DateTime.utc(2026, 7, 5),
     );
   });
 
-  test('parsed date epoch milliseconds are timezone-stable', () {
+  test('same local day keeps the receive instant in IST', () {
+    const istNormalizer = FieldNormalizer(
+      calendar: FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
+    );
+    final receivedAt = DateTime.utc(2026, 7, 5, 22, 10);
+    final parsed = istNormalizer.parseDate(
+      value: '06-07-26',
+      format: 'dd-MM-yy',
+      receivedAt: receivedAt,
+    );
+
+    expect(parsed, receivedAt);
+  });
+
+  test('earlier local day resolves to local midnight at negative offset', () {
+    const negativeOffsetNormalizer = FieldNormalizer(
+      calendar: FinancialCalendar.fixed(Duration(hours: -5)),
+    );
+    final receivedAt = DateTime.utc(2026, 3, 2, 17);
+    final parsed = negativeOffsetNormalizer.parseDate(
+      value: '01-03-26',
+      format: 'dd-MM-yy',
+      receivedAt: receivedAt,
+    );
+
+    expect(parsed, DateTime.utc(2026, 3, 1, 5));
+    final localDate = negativeOffsetNormalizer.calendar.localDate(parsed);
+    expect((localDate.year, localDate.month, localDate.day), (2026, 3, 1));
+  });
+
+  test('future local date retains the receive instant in IST', () {
+    const istNormalizer = FieldNormalizer(
+      calendar: FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
+    );
+    final receivedAt = DateTime.utc(2026, 3, 1, 22, 10);
+    final parsed = istNormalizer.parseDate(
+      value: '03-03-26',
+      format: 'dd-MM-yy',
+      receivedAt: receivedAt,
+    );
+
+    expect(parsed, receivedAt);
+  });
+
+  test('earlier parsed date uses configured local midnight instant', () {
     final parsed = normalizer.parseDate(
       value: '05/07/26',
       format: 'dd/MM/yy',
-      fallback: DateTime.utc(2026),
+      receivedAt: DateTime.utc(2026, 12, 31),
     );
 
     expect(parsed.isUtc, isTrue);
@@ -65,7 +117,7 @@ void main() {
       normalizer.parseDate(
         value: '02-01-2023',
         format: 'dd-MM-yyyy',
-        fallback: DateTime.utc(2026),
+        receivedAt: DateTime.utc(2026, 12, 31),
       ),
       DateTime.utc(2023, 1, 2),
     );
@@ -76,7 +128,7 @@ void main() {
       normalizer.parseDate(
         value: '08Oct23',
         format: 'ddMMMyy',
-        fallback: DateTime.utc(2026),
+        receivedAt: DateTime.utc(2026, 12, 31),
       ),
       DateTime.utc(2023, 10, 8),
     );
@@ -87,7 +139,7 @@ void main() {
       normalizer.parseDate(
         value: '08Xyz23',
         format: 'ddMMMyy',
-        fallback: DateTime.utc(2026, 5, 1),
+        receivedAt: DateTime.utc(2026, 5, 1),
       ),
       DateTime.utc(2026, 5, 1),
     );

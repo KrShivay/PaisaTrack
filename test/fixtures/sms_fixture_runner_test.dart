@@ -1,8 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:paisatrack/capture/parser_cascade.dart';
-import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 
 import '../support/fixture_loader.dart';
 
@@ -30,9 +28,7 @@ void main() {
       (fixture) => fixture.id == 'sample/unparsed',
     );
     expect(fixture.provenance, FixtureProvenance.device);
-    const cascade = ParserCascade(
-      templateMatcher: TemplateMatcher(registries: []),
-    );
+    final cascade = fixtureParserCascade(registries: []);
 
     final actual = await parseFixtureCase(cascade, fixture);
 

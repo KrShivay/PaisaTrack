@@ -1,8 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:paisatrack/capture/parser_cascade.dart';
-import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/capture/template_engine/template_registry.dart';
 
 import 'sms_fixture_runner.dart';
@@ -23,9 +21,7 @@ List<TemplateRegistry> _loadRegistries() {
 }
 
 void main() {
-  final cascade = ParserCascade(
-    templateMatcher: TemplateMatcher(registries: _loadRegistries()),
-  );
+  final cascade = fixtureParserCascade(registries: _loadRegistries());
 
   test('declined/failed/future-event SMS never produce a transaction',
       () async {
@@ -101,9 +97,7 @@ void main() {
   test(
       'generic fallback parses >=80% of positive fixtures without '
       'contradicting amount, direction, or account hint', () async {
-    const genericOnly = ParserCascade(
-      templateMatcher: TemplateMatcher(registries: []),
-    );
+    final genericOnly = fixtureParserCascade(registries: []);
     final cases = await SmsFixtureRunner(
       root: Directory('test/fixtures/sms'),
     ).loadCases();

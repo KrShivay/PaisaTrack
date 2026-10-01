@@ -2,9 +2,29 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:paisatrack/capture/parser_cascade.dart';
+import 'package:paisatrack/capture/generic_transaction_parser.dart';
+import 'package:paisatrack/capture/template_engine/field_normalizer.dart';
+import 'package:paisatrack/capture/template_engine/template_matcher.dart';
+import 'package:paisatrack/capture/template_engine/template_registry.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/core/result.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
+
+const fixtureCalendar = FinancialCalendar.fixed(Duration.zero);
+
+ParserCascade fixtureParserCascade({
+  required List<TemplateRegistry> registries,
+}) =>
+    ParserCascade(
+      templateMatcher: TemplateMatcher(
+        registries: registries,
+        normalizer: const FieldNormalizer(calendar: fixtureCalendar),
+      ),
+      genericTransactionParser: const GenericTransactionParser(
+        fieldNormalizer: FieldNormalizer(calendar: fixtureCalendar),
+      ),
+    );
 
 /// Discovers sanitized SMS parser fixtures and compares parser output.
 class SmsFixtureRunner {

@@ -1,5 +1,30 @@
 # Current Handoff
 
+## 2026-10-01 — T-164e SMS body-date, picker, and insights month-key slice
+
+- ADB listed no device, so T-179a physical recovery stayed blocked; this
+  non-device P0 slice was taken instead. Date-only SMS body values were
+  stored as UTC-midnight instants (IST showed an invented 5:30 am; negative
+  offsets moved the day). `FinancialCalendar.resolveDateOnly` now keeps
+  `receivedAt` for same/future local days and uses local midnight for earlier
+  days, for both template and generic parsing. One `financialCalendarProvider`
+  feeds live capture, history import, and catch-up. The dashboard range picker
+  seeds local dates clamped to today. Trends and the Dashboard insight card
+  queried the previous month in IST; they now use the period calendar's month
+  key. Stored rows are unchanged; body-dated SMS more than 10 minutes apart no
+  longer auto-pair as duplicates (tests document it).
+- GitNexus pre-edit impact: `parseDate`, `SmsIngestor`, `ParserCascade`,
+  `TemplateMatcher` and `FinancialCalendar` CRITICAL, `FieldNormalizer` HIGH;
+  provider UNKNOWNs corroborated by text search. Verification on the IST host:
+  `flutter analyze --no-pub` clean, full suite 971/971, capture/fixtures/
+  insights/core subset 319/319 under `TZ=UTC` and 321/321 under
+  `TZ=America/New_York` (with the picker test), format and diff checks clean.
+  Two independent reviews: the first required pinning host-zone-dependent
+  fixture tests; the second approved, with calendar-plumbing DRY fixes
+  applied after it. A pre-existing six-month-trend failure under New York
+  time on unmodified main is recorded in TASKS (T-164e/T-178a). No phone, APK,
+  or schema change.
+
 ## 2026-10-01 — T-179a isolated recovery QA harness
 
 - Added a debug-only `com.paisatrack.recoveryqa` identity with a QA-only
@@ -36,23 +61,3 @@
   acceptance remain open. The exact artifact was published to `apk-downloads`
   in commit `79614386e4f5271c5ccefc67eca66368642fb7ae`; only the APK file
   changed.
-
-## 2026-09-30 — T-176 Ask IME route fix
-
-- Physical QA on the published v0.1.3+2011 build from source `3b2fb6b` found
-  the Ask composer fully covered by the settled IME at 1× and 1.5×. The phone
-  was restored to portrait, font scale 1.0, and Home with IME hidden. No text was
-  entered or submitted, no suggestion was selected, and no transaction edits,
-  SMS scan, permission, key, backup, reset, or restore operation was performed.
-  Geometry and scope: [T-176 physical Ask QA report](docs/reports/T-176-physical-ask-ime-2026-09-30.md).
-- The fix adds opt-in keyboard avoidance to the full-screen sheet helper and
-  enables it only for HomeShell → Ask; Ask's compact header uses the remaining
-  route height after the IME inset. A regression-first test failed before the
-  fix (composer bottom 548dp vs 348dp visible); full-window/inset, resized
-  window/zero-inset, and nested-modal cases pass. Production HomeShell tests
-  exercise 320×568/2× with a 220dp inset and phone-like 434×964/1× with a
-  370dp inset, then hide the IME, close Ask, and verify return to Home. Focused
-  helper/Ask/HomeShell/category/detail keyboard tests: 29/29; full Flutter
-  suite: 954/954; analyzer clean. As of this 2026-09-30 entry, the installed
-  phone still ran the original build; the 2026-10-01 update above records the
-  reviewed 4012 installation and bounded portrait retest.

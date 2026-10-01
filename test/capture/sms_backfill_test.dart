@@ -14,6 +14,7 @@ import 'package:paisatrack/capture/sms_ingestion.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/core/result.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
@@ -342,6 +343,9 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWith((ref) async => database),
         smsInboxReaderProvider.overrideWithValue(reader),
+        financialCalendarProvider.overrideWithValue(
+          const FinancialCalendar.fixed(Duration.zero),
+        ),
         backfillMarkerProvider.overrideWithValue(
           FakeBackfillMarker(version: smsHistoryImportVersion),
         ),
@@ -361,6 +365,10 @@ void main() {
           '${transactions.map((row) => row.smsId).toList()}',
     );
     expect(transactions.single.smsId, 'sms_provider_fixture');
+    expect(
+      transactions.single.ts,
+      DateTime.utc(2023, 11, 7).millisecondsSinceEpoch,
+    );
     expect(transactions.single.lifecycleState, 'settled');
     final rawRows = await database.select(database.rawSms).get();
     final balanceRaw = rawRows.singleWhere(
@@ -373,15 +381,21 @@ void main() {
   test('production history provider uses lifecycle cues without an LLM',
       () async {
     final reader = FakeInboxReader.single([
-      syntheticMessage(
-        'sms_history_balance',
-        'Available balance INR 500.00. Monthly view shows Rs 100 spent.',
+      RawSms(
+        id: 'sms_history_fixture',
+        sender: 'VK-SBIUPI',
+        body: File('test/fixtures/sms/sbi/sbi_debit_dearupi_01.txt')
+            .readAsStringSync(),
+        receivedAt: DateTime.utc(2026, 7, 6, 15, 51),
       ),
     ]);
     final container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWith((ref) async => database),
         smsInboxReaderProvider.overrideWithValue(reader),
+        financialCalendarProvider.overrideWithValue(
+          const FinancialCalendar.fixed(Duration.zero),
+        ),
         backfillMarkerProvider.overrideWithValue(FakeBackfillMarker()),
       ],
     );
@@ -392,11 +406,13 @@ void main() {
     final result = await importer.run(force: true);
 
     expect(result.processed, 1);
-    expect(await database.select(database.transactions).get(), isEmpty);
-    final raw = (await database.select(database.rawSms).get()).single;
-    expect(raw.id, 'sms_history_balance');
-    expect(raw.processed, isTrue);
-    expect(raw.failureReason, isNull);
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions, hasLength(1));
+    expect(transactions.single.smsId, 'sms_history_fixture');
+    expect(
+      transactions.single.ts,
+      DateTime.utc(2023, 11, 7).millisecondsSinceEpoch,
+    );
   });
 
   test('current import version skips automatic scan', () async {
@@ -740,8 +756,9 @@ class FakeParserCascade extends ParserCascade {
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
-    RawSms sms,
-  ) async {
+    RawSms sms, {
+    FinancialCalendar? calendar,
+  }) async {
     if (throwIds.contains(sms.id)) throw StateError('simulated parse failure');
     if (unparsedIds.contains(sms.id)) {
       return const Err(ParseFailure.unparsed);

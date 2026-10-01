@@ -65,8 +65,9 @@ final templateMatcherProvider = FutureProvider<TemplateMatcher>((ref) async {
 
 /// Parser cascade used by live SMS ingestion.
 final parserCascadeProvider = FutureProvider<ParserCascade>((ref) async {
+  final templateMatcher = await ref.watch(templateMatcherProvider.future);
   return ParserCascade(
-    templateMatcher: await ref.watch(templateMatcherProvider.future),
+    templateMatcher: templateMatcher,
     llmFieldLocator: LlmFieldLocator(ref.watch(llmRuntimeProvider)),
   );
 });
@@ -122,6 +123,7 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
               [];
       return paused.contains(sender.trim().toUpperCase());
     },
+    financialCalendar: ref.watch(financialCalendarProvider),
   );
   final subscription = source.messages().listen(
     (sms) => unawaited(_ingestSafely(ingestor, sms)),
@@ -209,7 +211,7 @@ class SmsIngestor {
         _messageKindClassifier = messageKindClassifier,
         _expectedEventRepository =
             expectedEventRepository ?? ExpectedEventRepository(database),
-        _financialCalendar = financialCalendar,
+        _financialCalendar = financialCalendar ?? FinancialCalendar(),
         _parserVersion = parserVersion,
         _now = now ?? DateTime.now {
     if ((captureDecisionStatusMode == CaptureDecisionStatusMode.policy &&
@@ -236,7 +238,7 @@ class SmsIngestor {
   final DuplicateSuppressor _duplicateSuppressor;
   final MessageKindClassifier? _messageKindClassifier;
   final ExpectedEventRepository _expectedEventRepository;
-  final FinancialCalendar? _financialCalendar;
+  final FinancialCalendar _financialCalendar;
   final int _parserVersion;
   final DateTime Function() _now;
 
@@ -244,9 +246,7 @@ class SmsIngestor {
 
   /// Reconciles stored expectations on startup and after each persisted SMS.
   Future<void> reconcileExpectedEvents() {
-    final localToday = (_financialCalendar ?? FinancialCalendar()).localDate(
-      _now(),
-    );
+    final localToday = _financialCalendar.localDate(_now());
     return _expectedEventRepository.reconcileExpectedEvents(
       today: DateTime.utc(localToday.year, localToday.month, localToday.day),
     );
@@ -300,7 +300,10 @@ class SmsIngestor {
             _messageKindClassifier?.classify(sms.body) ?? MessageKind.unknown;
 
         if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
-          final parseResult = await _parser.parse(sms);
+          final parseResult = await _parser.parse(
+            sms,
+            calendar: _financialCalendar,
+          );
           int amountPaise = 0;
           int? amountLowPaise;
           int? amountHighPaise;
@@ -394,7 +397,10 @@ class SmsIngestor {
             ),
         };
 
-        final parseResult = await _parser.parse(sms);
+        final parseResult = await _parser.parse(
+          sms,
+          calendar: _financialCalendar,
+        );
         switch (parseResult) {
           case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
             final directionCue =
@@ -649,7 +655,7 @@ class SmsIngestor {
   }
 
   Future<int> _countAskedToday() async {
-    final calendar = _financialCalendar ?? FinancialCalendar();
+    final calendar = _financialCalendar;
     final start = calendar.dayContaining(_now()).start;
     final askedCount = _database.transactions.id.count();
     final askedQuery = _database.selectOnly(_database.transactions)
@@ -854,8 +860,7 @@ class SmsIngestor {
 
   DateTime _reminderExpectedDate(String body, DateTime fallback) {
     DateTime fallbackDate() {
-      final localDate =
-          (_financialCalendar ?? FinancialCalendar()).localDate(fallback);
+      final localDate = _financialCalendar.localDate(fallback);
       return DateTime.utc(localDate.year, localDate.month, localDate.day);
     }
 

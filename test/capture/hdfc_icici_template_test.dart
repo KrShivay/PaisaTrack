@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/capture/template_engine/field_normalizer.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/capture/template_engine/template_registry.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
 
 void main() {
-  final fallbackDate = DateTime.utc(2026, 1, 1);
+  final fallbackDate = DateTime.utc(2026, 7, 31);
 
   group('HDFC Bank Template Registry', () {
     late TemplateRegistry registry;
@@ -16,7 +18,12 @@ void main() {
       final jsonString =
           File('assets/templates/hdfcbk.json').readAsStringSync();
       registry = TemplateRegistry.fromJson(jsonString);
-      matcher = TemplateMatcher(registries: [registry]);
+      matcher = TemplateMatcher(
+        registries: [registry],
+        normalizer: const FieldNormalizer(
+          calendar: FinancialCalendar.fixed(Duration.zero),
+        ),
+      );
     });
 
     test('matches HDFC sender patterns', () {
@@ -128,7 +135,12 @@ void main() {
       final jsonString =
           File('assets/templates/icicib.json').readAsStringSync();
       registry = TemplateRegistry.fromJson(jsonString);
-      matcher = TemplateMatcher(registries: [registry]);
+      matcher = TemplateMatcher(
+        registries: [registry],
+        normalizer: const FieldNormalizer(
+          calendar: FinancialCalendar.fixed(Duration.zero),
+        ),
+      );
     });
 
     test('matches ICICI sender patterns', () {

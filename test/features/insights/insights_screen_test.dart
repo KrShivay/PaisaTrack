@@ -2,10 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
 
 void main() {
+  test('insight period key uses the period calendar across UTC month edge', () {
+    const calendar = FinancialCalendar.fixed(
+      Duration(hours: 5, minutes: 30),
+    );
+    final period = DashboardPeriod.month(
+      DateTime.utc(2026, 10, 15, 12),
+      calendar: calendar,
+    );
+
+    expect(period.start, DateTime.utc(2026, 9, 30, 18, 30));
+    expect(insightMonthKeyForPeriod(period), '2026-10');
+  });
+
   Future<void> pumpScreen(
     WidgetTester tester, {
     Size size = const Size(402, 874),

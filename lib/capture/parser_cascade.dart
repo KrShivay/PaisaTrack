@@ -1,4 +1,5 @@
 import '../core/result.dart';
+import '../core/financial_calendar.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/raw_sms.dart';
 import 'generic_transaction_parser.dart';
@@ -29,14 +30,21 @@ class ParserCascade {
   /// Expected parser misses return [Err] instead of throwing so callers can
   /// persist the raw SMS and retry with later parsers or user feedback.
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
-    RawSms sms,
-  ) async {
-    final templateResult = await _templateMatcher.match(sms);
+    RawSms sms, {
+    FinancialCalendar? calendar,
+  }) async {
+    final templateResult = await _templateMatcher.match(
+      sms,
+      calendar: calendar,
+    );
     if (templateResult != null) {
       return Ok(templateResult);
     }
 
-    final genericResult = _genericTransactionParser.parse(sms);
+    final genericResult = _genericTransactionParser.parse(
+      sms,
+      calendar: calendar,
+    );
     if (genericResult != null) {
       return Ok(genericResult);
     }

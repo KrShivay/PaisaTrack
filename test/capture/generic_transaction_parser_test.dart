@@ -1,12 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/generic_transaction_parser.dart';
 import 'package:paisatrack/capture/span_verifier.dart';
+import 'package:paisatrack/capture/template_engine/field_normalizer.dart';
 import 'package:paisatrack/core/constants.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
 
 void main() {
-  const parser = GenericTransactionParser();
+  const parser = GenericTransactionParser(
+    fieldNormalizer: FieldNormalizer(
+      calendar: FinancialCalendar.fixed(Duration.zero),
+    ),
+  );
 
   RawSms sms(String body, {String sender = 'VK-HDFCBK'}) => RawSms(
         id: body,
@@ -282,11 +288,44 @@ void main() {
 
   test('parses the transaction date when its leading word is capitalized', () {
     final record = parser.parse(
-      sms('Rs. 250.00 sent from a/c xx1234 On 14-Sep-26 via UPI'),
+      sms('Rs. 250.00 sent from a/c xx1234 On 09-Jul-26 via UPI'),
     );
 
     expect(record, isNotNull);
-    expect(record!.ts, DateTime.utc(2026, 9, 14));
+    expect(record!.ts, DateTime.utc(2026, 7, 9));
+  });
+
+  test('same local day keeps receive clock in generic parser output', () {
+    const calendar = FinancialCalendar.fixed(
+      Duration(hours: 5, minutes: 30),
+    );
+    const istParser = GenericTransactionParser(
+      fieldNormalizer: FieldNormalizer(calendar: calendar),
+    );
+    final receivedAt = DateTime.utc(2026, 3, 1, 22, 10);
+    const body = 'Rs. 250.00 sent from a/c xx1234 on 02-Mar-26 via UPI';
+    final record = istParser.parse(
+      RawSms(
+        id: 'synthetic-ist-date-only',
+        sender: 'VK-HDFCBK',
+        body: body,
+        receivedAt: receivedAt,
+      ),
+    );
+
+    expect(record, isNotNull);
+    expect(record!.ts, receivedAt);
+    final localTimestamp = calendar.localDate(record.ts);
+    expect(
+      (
+        localTimestamp.year,
+        localTimestamp.month,
+        localTimestamp.day,
+        localTimestamp.hour,
+        localTimestamp.minute,
+      ),
+      (2026, 3, 2, 3, 40),
+    );
   });
 
   test('abstains on future, pending, and scheduled payment wording', () {

@@ -6,6 +6,29 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/bloom/bloom_sheet_scaffold.dart';
 import 'dashboard_providers.dart';
 
+/// Converts a dashboard period into the date-only values accepted by the
+/// range picker, clamped to its inclusive latest selectable day.
+DateTimeRange dateRangePickerSeed({
+  required DashboardPeriod period,
+  required DateTime lastDate,
+}) {
+  DateTime pickerDate(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  final calendar = period.calendar;
+  final localStart = pickerDate(calendar.localDate(period.start));
+  final localEndBoundary = calendar.localDate(period.end);
+  final inclusiveLocalEnd = DateTime(
+    localEndBoundary.year,
+    localEndBoundary.month,
+    localEndBoundary.day - 1,
+  );
+  final maximum = pickerDate(lastDate);
+  final start = localStart.isAfter(maximum) ? maximum : localStart;
+  final end = inclusiveLocalEnd.isAfter(maximum) ? maximum : inclusiveLocalEnd;
+  return DateTimeRange(start: start, end: end);
+}
+
 /// Modal sheet for choosing dashboard timeframe / period.
 class BloomDatePeriodSheet extends ConsumerWidget {
   const BloomDatePeriodSheet({super.key});
@@ -86,13 +109,14 @@ class BloomDatePeriodSheet extends ConsumerWidget {
                   ),
                 ),
                 onTap: () async {
+                  final lastDate = DateTime.now();
                   final picked = await showDateRangePicker(
                     context: context,
                     firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                    initialDateRange: DateTimeRange(
-                      start: currentPeriod.start,
-                      end: currentPeriod.end.subtract(const Duration(days: 1)),
+                    lastDate: lastDate,
+                    initialDateRange: dateRangePickerSeed(
+                      period: currentPeriod,
+                      lastDate: lastDate,
                     ),
                   );
                   if (picked != null) {

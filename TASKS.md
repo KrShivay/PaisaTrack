@@ -158,6 +158,23 @@ later hardening.
     without changing stored instants or treating date-only SMS values as UTC
     instants. The Activity/Dashboard row-clock slice is also complete; see
     WORKLOG.md for verification evidence.
+  - Completed SMS body-date/picker/insights-key slice (2026-10-01): date-only
+    SMS body values resolve through `FinancialCalendar.resolveDateOnly`
+    (same/future local day keeps `receivedAt`; earlier day uses local midnight)
+    for template and generic parsing; live, history import and catch-up share
+    `financialCalendarProvider`. Dashboard range-picker seeds use local dates
+    clamped to today; Trends/Dashboard insight queries use the period
+    calendar's month key (IST previously read the prior month). Stored rows are
+    not reinterpreted. Dedup consequence, covered by tests: identical body
+    dates are no longer identity evidence, so body-dated SMS >10 minutes apart
+    do not auto-pair. Independent review approved.
+  - Still open: detail/export DRY (`formatDetailDate` and two export date
+    splitters re-implement `format.dart` helpers), export has no offset/zone
+    column, `TransactionFilterSheet` has no production caller, manual-entry
+    date pick drops time of day, no statement/CSV importer exists to verify,
+    and `dashboard_providers.dart` six-month trend uses device-local month
+    bounds outside `FinancialCalendar` (fails under `TZ=America/New_York`
+    on unmodified main; tracked with T-178a period fairness).
 
 - [ ] T-194 [P1] Measure installed storage and cold-start for the compressed
       ARM64 APK-size trial.

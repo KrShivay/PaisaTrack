@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:paisatrack/capture/parser_cascade.dart';
-import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/capture/template_engine/template_registry.dart';
 
 import 'sms_fixture_runner.dart';
@@ -41,9 +39,7 @@ void main() {
     final registry = TemplateRegistry.fromJson(
       File('assets/templates/pnb.json').readAsStringSync(),
     );
-    final cascade = ParserCascade(
-      templateMatcher: TemplateMatcher(registries: [registry]),
-    );
+    final cascade = fixtureParserCascade(registries: [registry]);
     var matched = 0;
     final mismatches = <String>[];
     for (final fixture in positives) {

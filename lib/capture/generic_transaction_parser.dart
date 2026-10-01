@@ -1,4 +1,5 @@
 import '../core/constants.dart';
+import '../core/financial_calendar.dart';
 import '../data/models/normalized_transaction_record.dart';
 import '../data/models/source_currency.dart';
 import '../data/models/raw_sms.dart';
@@ -71,7 +72,11 @@ class GenericTransactionParser {
   );
 
   /// Parses [sms] only when its transaction signals meet the fallback guard.
-  NormalizedTransactionRecord? parse(RawSms sms) => _evaluate(sms).record;
+  NormalizedTransactionRecord? parse(
+    RawSms sms, {
+    FinancialCalendar? calendar,
+  }) =>
+      _evaluate(sms, calendar: calendar).record;
 
   /// Explains why the fallback guard rejected [sms], or null when it parses.
   ///
@@ -83,7 +88,7 @@ class GenericTransactionParser {
   /// Runs the guard once, yielding either the parsed record or the reason the
   /// guard stopped. Exactly one field is non-null.
   ({NormalizedTransactionRecord? record, GenericParseRejection? rejection})
-      _evaluate(RawSms sms) {
+      _evaluate(RawSms sms, {FinancialCalendar? calendar}) {
     final body = sms.body;
     if (_hardReject.hasMatch(body)) {
       return (record: null, rejection: GenericParseRejection.hardRejectTerm);
@@ -124,7 +129,6 @@ class GenericTransactionParser {
     final vpa = _vpa.firstMatch(body)?.group(1);
     RegExpMatch? dateMatch;
     DateTime? transactionDate;
-    final invalidDate = DateTime.utc(1900);
     for (final candidate in _transactionDate.allMatches(body)) {
       if (candidate.start < direction.end ||
           candidate.start - direction.end > 80) {
@@ -136,18 +140,21 @@ class GenericTransactionParser {
       }
 
       final value = candidate.group(1)!;
-      final parsedDate = _fieldNormalizer.parseDate(
+      final parsedDate = _fieldNormalizer.parseDateComponents(
         value: value,
         format: 'dd-MMM-yy',
-        fallback: invalidDate,
       );
       final day = int.parse(value.split('-').first);
-      if (parsedDate == invalidDate || parsedDate.day != day) {
+      if (parsedDate == null || parsedDate.day != day) {
         continue;
       }
 
       dateMatch = candidate;
-      transactionDate = parsedDate;
+      transactionDate = _fieldNormalizer.resolveDateOnly(
+        date: parsedDate,
+        receivedAt: sms.receivedAt,
+        calendar: calendar,
+      );
       break;
     }
     if (account == null &&

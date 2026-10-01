@@ -1,3 +1,4 @@
+import '../../core/financial_calendar.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/models/source_currency.dart';
 import 'template_registry.dart';
@@ -7,7 +8,11 @@ import 'template_registry.dart';
 /// Templates own pattern recognition; this class owns parsing, normalization,
 /// and privacy-preserving formatting such as account hints.
 class FieldNormalizer {
-  const FieldNormalizer();
+  const FieldNormalizer({FinancialCalendar? calendar}) : _calendar = calendar;
+
+  final FinancialCalendar? _calendar;
+
+  FinancialCalendar get calendar => _calendar ?? FinancialCalendar();
 
   /// Builds a normalized transaction from a template match.
   ///
@@ -17,6 +22,7 @@ class FieldNormalizer {
     required RegExpMatch match,
     required SmsTemplate template,
     required DateTime fallbackTimestamp,
+    FinancialCalendar? calendar,
   }) {
     final amountGroup = _namedGroup(match, 'amount');
     final amount = parseAmount(amountGroup);
@@ -27,7 +33,8 @@ class FieldNormalizer {
     final parsedTs = parseDate(
       value: dateGroup,
       format: template.dateFormat,
-      fallback: fallbackTimestamp,
+      receivedAt: fallbackTimestamp,
+      calendar: calendar,
     );
 
     final input = match.input;
@@ -269,24 +276,42 @@ class FieldNormalizer {
   DateTime parseDate({
     required String? value,
     required String? format,
-    required DateTime fallback,
+    required DateTime receivedAt,
+    FinancialCalendar? calendar,
+  }) {
+    final date = parseDateComponents(value: value, format: format);
+    if (date == null) return receivedAt;
+    return resolveDateOnly(
+      date: date,
+      receivedAt: receivedAt,
+      calendar: calendar,
+    );
+  }
+
+  /// Parses a date-only value into UTC-backed calendar components.
+  ///
+  /// This value is not a stored instant. Call [resolveDateOnly] before using
+  /// it as a transaction timestamp.
+  DateTime? parseDateComponents({
+    required String? value,
+    required String? format,
   }) {
     if (value == null || format == null) {
-      return fallback;
+      return null;
     }
 
     if (format == 'ddMMMyy') {
-      return _parseAlphaMonthDate(value) ?? fallback;
+      return _parseAlphaMonthDate(value);
     }
 
     if (format == 'dd-MMM-yy' || format == 'dd/MMM/yy') {
       final parts = value.split(RegExp(r'[-/]'));
       if (parts.length != 3) {
-        return fallback;
+        return null;
       }
       final month = _monthNames[parts[1].toLowerCase()];
       if (month == null) {
-        return fallback;
+        return null;
       }
       final day = int.tryParse(parts[0]);
       final year = int.tryParse(parts[2]);
@@ -298,7 +323,7 @@ class FieldNormalizer {
 
     final parts = value.split(RegExp(r'[-/]'));
     if (parts.length != 3) {
-      return fallback;
+      return null;
     }
 
     final first = int.tryParse(parts[0]);
@@ -315,8 +340,18 @@ class FieldNormalizer {
       return DateTime.utc(third, second, first);
     }
 
-    return fallback;
+    return null;
   }
+
+  /// Resolves parsed date-only calendar components against an SMS receive
+  /// instant using the configured [FinancialCalendar].
+  DateTime resolveDateOnly({
+    required DateTime date,
+    required DateTime receivedAt,
+    FinancialCalendar? calendar,
+  }) =>
+      (calendar ?? this.calendar)
+          .resolveDateOnly(date: date, receivedAt: receivedAt);
 
   static const Map<String, int> _monthNames = {
     'jan': 1,

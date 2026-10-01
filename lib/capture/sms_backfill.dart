@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants.dart';
+import '../core/financial_calendar.dart';
 import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
 import '../data/models/raw_sms.dart';
@@ -458,6 +459,7 @@ final smsHistoryImportRunnerProvider =
   final ingestor = SmsIngestor(
     database: database,
     parser: parser,
+    financialCalendar: ref.watch(financialCalendarProvider),
     categorizer: categorizer,
     messageKindClassifier: messageKindClassifier,
     fixedStatus: DecisionStatus.needsReview,
@@ -492,6 +494,7 @@ final smsIncrementalCatchUpProvider =
     ingestor: SmsIngestor(
       database: database,
       parser: parser,
+      financialCalendar: ref.watch(financialCalendarProvider),
       categorizer: categorizer,
       messageKindClassifier: messageKindClassifier,
       fixedStatus: DecisionStatus.needsReview,

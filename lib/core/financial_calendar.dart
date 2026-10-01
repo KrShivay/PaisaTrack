@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 /// Converts user-visible local calendar periods into the UTC instants stored
 /// in SQLite. PaisaTrack is India-first, so a fixed device offset is adequate
 /// for its supported calendar (India has no daylight-saving transitions).
@@ -12,6 +14,17 @@ class FinancialCalendar {
   FinancialPeriod dayContaining(DateTime instant) {
     final local = _localWallClock(instant);
     return _period(local.year, local.month, local.day);
+  }
+
+  /// Resolves an SMS date-only value without inventing a transaction clock.
+  /// Same-day and future dates retain the receive instant; earlier dates use
+  /// midnight at that local day's UTC boundary.
+  DateTime resolveDateOnly({
+    required DateTime date,
+    required DateTime receivedAt,
+  }) {
+    final start = _period(date.year, date.month, date.day).start;
+    return start.isBefore(dayContaining(receivedAt).start) ? start : receivedAt;
   }
 
   FinancialPeriod monthContaining(DateTime instant) {
@@ -45,6 +58,11 @@ class FinancialCalendar {
   DateTime _localWallClock(DateTime instant) =>
       instant.toUtc().add(timeZoneOffset);
 }
+
+/// Shared calendar used by capture, history import, and catch-up ingestion.
+final financialCalendarProvider = Provider<FinancialCalendar>(
+  (ref) => FinancialCalendar(),
+);
 
 class FinancialPeriod {
   const FinancialPeriod({required this.start, required this.end});

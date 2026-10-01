@@ -1,4 +1,5 @@
 import '../../core/constants.dart';
+import '../../core/financial_calendar.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/models/raw_sms.dart';
 import 'field_normalizer.dart';
@@ -26,7 +27,10 @@ class TemplateMatcher {
   ///
   /// Returns `null` for expected misses so [ParserCascade] can try later
   /// strategies without treating the SMS as exceptional.
-  Future<NormalizedTransactionRecord?> match(RawSms sms) async {
+  Future<NormalizedTransactionRecord?> match(
+    RawSms sms, {
+    FinancialCalendar? calendar,
+  }) async {
     for (final registry in _registries) {
       if (!registry.matchesSender(sms.sender)) {
         continue;
@@ -43,6 +47,7 @@ class TemplateMatcher {
             match: match,
             template: template,
             fallbackTimestamp: sms.receivedAt,
+            calendar: calendar,
           );
           // Public fixtures are useful coverage, but without device/statement
           // evidence they must never enter the silent auto-label band (ADR 0005).

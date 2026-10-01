@@ -11,6 +11,7 @@ import 'package:paisatrack/capture/message_kind_classifier.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
+import 'package:paisatrack/capture/template_engine/field_normalizer.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
@@ -896,6 +897,102 @@ void main() {
     expect(transactions[1].duplicateOfTxnId, 'txn_sms_bank');
   });
 
+  test('body-dated transaction pairs with an undated echo within ten minutes',
+      () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    const normalizer = FieldNormalizer(calendar: calendar);
+    final bodyDatedAt = DateTime.utc(2026, 7, 5, 10, 30);
+    final echoAt = DateTime.utc(2026, 7, 5, 10, 35);
+    final records = {
+      'sms_dated': _sampleRecord(
+        ts: normalizer.parseDate(
+          value: '05-07-26',
+          format: 'dd-MM-yy',
+          receivedAt: bodyDatedAt,
+        ),
+      ),
+      'sms_undated_echo': _sampleRecord(ts: echoAt),
+    };
+    final ingestor = _ingestorFor(
+      database,
+      null,
+      recordsById: records,
+      financialCalendar: calendar,
+    );
+
+    await ingestor.ingest(
+      _messageAt(
+        'sms_dated',
+        bodyDatedAt,
+        body: 'Rs 449 paid to Amazon on 05-07-26',
+      ),
+    );
+    await ingestor.ingest(
+      _messageAt('sms_undated_echo', echoAt, body: 'Rs 449 paid to Amazon'),
+    );
+
+    final transactions = await (database.select(database.transactions)
+          ..orderBy([(row) => OrderingTerm.asc(row.ts)]))
+        .get();
+    expect(transactions, hasLength(2));
+    expect(transactions.first.ts, bodyDatedAt.millisecondsSinceEpoch);
+    expect(transactions.last.ts, echoAt.millisecondsSinceEpoch);
+    expect(transactions.last.duplicateOfTxnId, transactions.first.id);
+  });
+
+  test('same body date over ten minutes apart does not establish identity',
+      () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    const normalizer = FieldNormalizer(calendar: calendar);
+    final firstAt = DateTime.utc(2026, 7, 5, 10, 30);
+    final secondAt = DateTime.utc(2026, 7, 5, 10, 45);
+    final records = {
+      'sms_same_date_a': _sampleRecord(
+        ts: normalizer.parseDate(
+          value: '05-07-26',
+          format: 'dd-MM-yy',
+          receivedAt: firstAt,
+        ),
+      ),
+      'sms_same_date_b': _sampleRecord(
+        ts: normalizer.parseDate(
+          value: '05-07-26',
+          format: 'dd-MM-yy',
+          receivedAt: secondAt,
+        ),
+      ),
+    };
+    final ingestor = _ingestorFor(
+      database,
+      null,
+      recordsById: records,
+      financialCalendar: calendar,
+    );
+
+    await ingestor.ingest(
+      _messageAt(
+        'sms_same_date_a',
+        firstAt,
+        body: 'Rs 449 paid to Amazon on 05-07-26',
+      ),
+    );
+    await ingestor.ingest(
+      _messageAt(
+        'sms_same_date_b',
+        secondAt,
+        body: 'Rs 449 paid to Amazon on 05-07-26',
+      ),
+    );
+
+    final transactions = await (database.select(database.transactions)
+          ..orderBy([(row) => OrderingTerm.asc(row.ts)]))
+        .get();
+    expect(transactions, hasLength(2));
+    expect(transactions.first.ts, firstAt.millisecondsSinceEpoch);
+    expect(transactions.last.ts, secondAt.millisecondsSinceEpoch);
+    expect(transactions.every((row) => row.duplicateOfTxnId == null), isTrue);
+  });
+
   test(
       'production parser registry ingests a real SBI fixture through '
       'smsCaptureBootstrapProvider', () async {
@@ -908,6 +1005,9 @@ void main() {
         as Map<String, Object?>;
     final container = ProviderContainer(
       overrides: [
+        financialCalendarProvider.overrideWithValue(
+          const FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
+        ),
         smsPermissionGateProvider.overrideWithValue(
           FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
         ),
@@ -952,7 +1052,12 @@ void main() {
     expect(transactions.single.merchantRaw, record['merchant_raw']);
     expect(transactions.single.accountHint, record['account_hint']);
     expect(transactions.single.refId, record['ref_id']);
-    expect(transactions.single.ts, record['ts']);
+    expect(
+      transactions.single.ts,
+      DateTime.utc(2023, 11, 7)
+          .subtract(const Duration(hours: 5, minutes: 30))
+          .millisecondsSinceEpoch,
+    );
   });
 
   test('live provider gates non-transactions and keeps model lifecycle labels',
@@ -1218,6 +1323,14 @@ RawSms _message(String id, {String? body}) {
   );
 }
 
+RawSms _messageAt(String id, DateTime receivedAt, {required String body}) =>
+    RawSms(
+      id: id,
+      sender: 'VK-HDFCBK',
+      body: body,
+      receivedAt: receivedAt,
+    );
+
 /// Raw payload in the shape the native SMS EventChannel emits.
 Map<String, Object?> _channelPayload(String id) {
   return {
@@ -1384,8 +1497,9 @@ class FakeParserCascade extends ParserCascade {
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
-    RawSms sms,
-  ) async {
+    RawSms sms, {
+    FinancialCalendar? calendar,
+  }) async {
     parseCalls++;
     if (_processingError != null) throw _processingError!;
     if (_error != null) return Err(_error!);
