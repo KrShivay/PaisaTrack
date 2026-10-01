@@ -68,13 +68,13 @@ class SourceCurrencyRepairService {
   final DateTime Function() _clock;
   static const _normalizer = FieldNormalizer();
   static final _amountPattern =
-      RegExp(r'(?<![\d.,])\d[\d,]*(?:\.\d{1,2})?(?![\d.,])');
+      RegExp(r'(?<![\d,])\d[\d,]*(?:\.\d{1,2})?(?![\d.,])');
   static final _currencyBefore = RegExp(
-    r'(?<![A-Za-z0-9])(?:USD|US\$|INR|Rs\.?|₹|\$)\s*$',
+    r'(?<![A-Za-z0-9])(?:USD|US\$|INR\.?|Rs\.?|₹|\$)\s*$',
     caseSensitive: false,
   );
   static final _currencyAfter = RegExp(
-    r'^\s*(USD|US\$|INR|Rs\.?|₹|\$)(?=\s|$|[.,])',
+    r'^\s*(USD|US\$|INR|Rs\.?|₹|\$)(?=\s|$|[.,])(?!\s*\d)',
     caseSensitive: false,
   );
 
@@ -213,7 +213,7 @@ class SourceCurrencyRepairService {
         }
         final start = evidence.start + number.start;
         final end = evidence.start + number.end;
-        final currency = _normalizer.currencyEvidenceAtAmount(
+        final currency = _currencyEvidenceAtAmount(
           sms.body,
           start,
           end,
@@ -221,7 +221,9 @@ class SourceCurrencyRepairService {
         if (currency == null ||
             currency.currency.code != 'INR' ||
             !_hasExactlyOneAdjacentToken(sms.body, start, end) ||
-            SourceCurrency.fromToken(currency.evidence.verbatim)?.code !=
+            SourceCurrency.fromToken(
+                  currency.evidence.verbatim.replaceFirst(RegExp(r'\.$'), ''),
+                )?.code !=
                 'INR') {
           continue;
         }
@@ -255,5 +257,46 @@ class SourceCurrencyRepairService {
     final before = _currencyBefore.firstMatch(left);
     final after = _currencyAfter.firstMatch(right);
     return (before == null) != (after == null);
+  }
+
+  ({SourceCurrency currency, FieldEvidence evidence})?
+      _currencyEvidenceAtAmount(
+    String body,
+    int amountStart,
+    int amountEnd,
+  ) {
+    final evidence = _normalizer.currencyEvidenceAtAmount(
+      body,
+      amountStart,
+      amountEnd,
+    );
+    if (evidence != null) {
+      if (evidence.evidence.start >= amountEnd &&
+          RegExp(r'^\s*\d').hasMatch(body.substring(evidence.evidence.end))) {
+        return null;
+      }
+      return evidence;
+    }
+
+    final prefixStart = math.max(0, amountStart - 16);
+    final prefix = body.substring(prefixStart, amountStart);
+    final punctuatedInr = RegExp(
+      r'(?<![A-Za-z])INR\.\s*$',
+      caseSensitive: false,
+    ).firstMatch(prefix);
+    if (punctuatedInr == null) return null;
+
+    const token = 'INR.';
+    final tokenStart = prefixStart + punctuatedInr.start;
+    return (
+      currency: const SourceCurrency(code: 'INR', symbol: '₹'),
+      evidence: FieldEvidence(
+        field: 'currency',
+        start: tokenStart,
+        end: tokenStart + token.length,
+        verbatim: token,
+        extractor: 'source_currency_repair_fallback',
+      ),
+    );
   }
 }

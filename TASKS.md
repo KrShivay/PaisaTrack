@@ -328,6 +328,19 @@ later hardening.
     integrity check. The previous signed 4011 install is retained as historical
     evidence in `docs/release-signing.md`. T-193 physical preview/apply/undo
     acceptance remains open.
+  - Owner-phone check (2026-10-01): every currency-unknown row is from 2023,
+    beyond the 30-day raw-SMS retention, so no row is eligible; the detail
+    correctly offers no repair (expired-source negative case observed). A
+    synthetic QA fixture for `com.paisatrack.recoveryqa` now provides an
+    eligible row; procedure in
+    [the T-193 QA report](docs/reports/T-193-currency-repair-qa-2026-10-01.md).
+  - Fixes found while building it (reviewed): amounts directly after a dotted
+    token (`Rs.500`, `INR.500`) were never repairable; a currency token that
+    precedes another number (`A/c no.1234 Rs 500`) no longer counts as a
+    suffix. "I'll add things myself" now persists as `onboardingCompleted`
+    (single source of truth), so no-SMS users no longer see onboarding on
+    every cold start; permission refreshes keep Home mounted and load errors
+    fall through to onboarding instead of spinning.
 
 <!-- P1 tasks ready for next phase -->
 

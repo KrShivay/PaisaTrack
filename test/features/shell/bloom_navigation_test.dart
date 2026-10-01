@@ -37,6 +37,9 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWith((ref) async => database),
+            appSettingsControllerProvider.overrideWith(
+              () => _StaticSettingsController(const AppSettings()),
+            ),
             smsPermissionGateProvider.overrideWithValue(
               FakeSmsPermissionGate(
                 initialStatus: SmsPermissionStatus.granted,
@@ -81,6 +84,9 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWith((ref) async => database),
+            appSettingsControllerProvider.overrideWith(
+              () => _StaticSettingsController(const AppSettings()),
+            ),
             smsPermissionGateProvider.overrideWithValue(
               FakeSmsPermissionGate(
                 initialStatus: SmsPermissionStatus.granted,
@@ -111,6 +117,9 @@ void main() {
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWith((ref) async => database),
+            appSettingsControllerProvider.overrideWith(
+              () => _StaticSettingsController(const AppSettings()),
+            ),
             smsPermissionGateProvider.overrideWithValue(
               FakeSmsPermissionGate(
                 initialStatus: SmsPermissionStatus.granted,
@@ -254,4 +263,13 @@ void main() {
       expect(restored.streak, 5);
     });
   });
+}
+
+class _StaticSettingsController extends AppSettingsController {
+  _StaticSettingsController(this._settings);
+
+  final AppSettings _settings;
+
+  @override
+  Future<AppSettings> build() async => _settings;
 }

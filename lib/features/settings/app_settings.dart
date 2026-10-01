@@ -39,6 +39,7 @@ class AppSettings {
     this.streak = 0,
     this.isCapturePaused = false,
     this.pausedSenders = const [],
+    this.onboardingCompleted = false,
   });
 
   final AppThemeChoice themeChoice;
@@ -47,6 +48,7 @@ class AppSettings {
   final int streak;
   final bool isCapturePaused;
   final List<String> pausedSenders;
+  final bool onboardingCompleted;
 
   AppSettings copyWith({
     AppThemeChoice? themeChoice,
@@ -55,6 +57,7 @@ class AppSettings {
     int? streak,
     bool? isCapturePaused,
     List<String>? pausedSenders,
+    bool? onboardingCompleted,
   }) {
     return AppSettings(
       themeChoice: themeChoice ?? this.themeChoice,
@@ -63,6 +66,7 @@ class AppSettings {
       streak: streak ?? this.streak,
       isCapturePaused: isCapturePaused ?? this.isCapturePaused,
       pausedSenders: pausedSenders ?? this.pausedSenders,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 
@@ -74,6 +78,7 @@ class AppSettings {
       'streak': streak,
       'is_capture_paused': isCapturePaused,
       'paused_senders': pausedSenders,
+      'onboarding_completed': onboardingCompleted,
     };
   }
 
@@ -87,10 +92,12 @@ class AppSettings {
       showPaise: json['show_paise'] as bool? ?? true,
       streak: json['streak'] as int? ?? 0,
       isCapturePaused: json['is_capture_paused'] as bool? ?? false,
-      pausedSenders: (json['paused_senders'] as List?)
-              ?.cast<String>()
-              .toList() ??
-          const [],
+      pausedSenders:
+          (json['paused_senders'] as List?)?.cast<String>().toList() ??
+              const [],
+      onboardingCompleted: (json['onboarding_completed'] ??
+              json['continue_without_sms']) as bool? ??
+          false,
     );
   }
 }
@@ -184,6 +191,13 @@ class AppSettingsController extends AsyncNotifier<AppSettings> {
   Future<void> setCapturePaused(bool paused) async {
     final next = (state.valueOrNull ?? const AppSettings()).copyWith(
       isCapturePaused: paused,
+    );
+    await _save(next);
+  }
+
+  Future<void> setOnboardingCompleted(bool value) async {
+    final next = (state.valueOrNull ?? const AppSettings()).copyWith(
+      onboardingCompleted: value,
     );
     await _save(next);
   }

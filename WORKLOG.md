@@ -1,5 +1,23 @@
 # Current Handoff
 
+## 2026-10-02 — T-193 QA fixture and repair/onboarding fixes
+
+- Owner data has no repair-eligible row (all currency-unknown rows are from
+  2023; raw SMS is kept 30 days), so a synthetic fixture for the isolated QA
+  package was added (prepare + fresh-process verify; procedure in the T-193
+  QA report). Building it exposed that `Rs.500`-style amounts were never
+  repairable; the service now accepts dotted currency tokens and rejects a
+  token that precedes another number. "Continue without SMS" was in-memory
+  only; it is now a persisted `onboardingCompleted` setting with one source
+  of truth, Home stays mounted during permission refreshes, and load errors
+  route to onboarding.
+- Impact: `SourceCurrencyRepairService` and `AppSettingsController`
+  CRITICAL, `AppSettings` HIGH. Verified: analyzer clean, full suite green
+  (1007/1007 after rebase onto a2),
+  QA targets compile to `com.paisatrack.recoveryqa`. Three review rounds.
+  Physical preview/apply/undo remains pending. The T-179a closure entry is in
+  Git history (`10092b0`).
+
 ## 2026-10-02 — T-178a a2 eligibility parity
 
 - The settled-spending rule was restated by hand in five engines. One Drift
@@ -35,20 +53,3 @@
   rounds; the first blocked a wall-clock-dependent widget test (fails on the
   last day of a month), fixed with the injected clock. The v2012 install
   evidence remains in its report and the T-193 release note.
-
-## 2026-10-01 — T-179a physical recovery acceptance (closed)
-
-- With the phone on wireless ADB, the isolated `com.paisatrack.recoveryqa`
-  debug build (code 2012, debug signer, no SMS permissions) ran prepare, cold
-  launch to the production KeyLossScreen, real SAF selection of the synthetic
-  archive, restore, and fresh-process verify: legacy family and preserved copy
-  byte-identical, archive and passphrase digests matched, sentinel rows,
-  integrity and foreign keys ok. Flutter's install fallback uninstalls the
-  built package on failure, so the APK identity was checked with `aapt2`
-  before any device phase and all phases used `--no-uninstall`/`install -r`.
-  The owner package stayed at 4012 with unchanged install timestamps; no
-  owner data, key, backup or setting was touched. The verify marker compared
-  hash maps by identity; `recoveryQaHashMapsEqual` fixes it (unit test 3/3)
-  and the re-run reported true. Evidence:
-  [T-179a report](docs/reports/T-179a-isolated-recovery-qa-2026-10-01.md).
-  Keystore alias continuity remains unattested by design.

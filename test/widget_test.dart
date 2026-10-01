@@ -10,14 +10,76 @@ import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/features/home/home_shell.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
+import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
 
 import 'support/fake_sms_permission_gate.dart';
 import 'support/fake_captured_sms_source.dart';
 
 void main() {
+  test('persisted completion routes denied permission to Home', () {
+    expect(
+      appStartupDestination(
+        permission: const AsyncData<SmsPermissionStatus>(
+          SmsPermissionStatus.denied,
+        ),
+        settings: const AsyncData<AppSettings>(
+          AppSettings(onboardingCompleted: true),
+        ),
+      ),
+      AppStartupDestination.home,
+    );
+  });
+
+  test('permission refresh with previous value keeps completed onboarding home',
+      () {
+    final permission =
+        const AsyncLoading<SmsPermissionStatus>().copyWithPrevious(
+      const AsyncData<SmsPermissionStatus>(SmsPermissionStatus.denied),
+    );
+
+    expect(
+      appStartupDestination(
+        permission: permission,
+        settings: const AsyncData<AppSettings>(
+          AppSettings(onboardingCompleted: true),
+        ),
+      ),
+      AppStartupDestination.home,
+    );
+  });
+
+  test('settings loading routes to startup screen', () {
+    expect(
+      appStartupDestination(
+        permission: const AsyncData<SmsPermissionStatus>(
+          SmsPermissionStatus.denied,
+        ),
+        settings: const AsyncLoading<AppSettings>(),
+      ),
+      AppStartupDestination.loading,
+    );
+  });
+
+  test('load errors fall through to onboarding instead of spinning', () {
+    expect(
+      appStartupDestination(
+        permission: AsyncError<SmsPermissionStatus>(
+          StateError('channel'),
+          StackTrace.empty,
+        ),
+        settings: AsyncError<AppSettings>(
+          StateError('settings'),
+          StackTrace.empty,
+        ),
+      ),
+      AppStartupDestination.onboarding,
+    );
+  });
+
   testWidgets('renders startup progress before permission lookup completes',
       (tester) async {
     final database = AppDatabase(NativeDatabase.memory());
@@ -26,6 +88,9 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
+          appSettingsControllerProvider.overrideWith(
+            () => _StaticSettingsController(const AppSettings()),
+          ),
           smsPermissionGateProvider.overrideWithValue(gate),
         ],
         child: const PaisaTrackApp(),
@@ -49,6 +114,9 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
+          appSettingsControllerProvider.overrideWith(
+            () => _StaticSettingsController(const AppSettings()),
+          ),
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
           ),
@@ -78,6 +146,52 @@ void main() {
     await database.close();
   });
 
+  testWidgets('permission request preserves the existing HomeShell state',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final gate = _DelayedRequestSmsPermissionGate();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          appSettingsControllerProvider.overrideWith(
+            () => _StaticSettingsController(
+              const AppSettings(onboardingCompleted: true),
+            ),
+          ),
+          smsPermissionGateProvider.overrideWithValue(gate),
+          capturedSmsSourceProvider
+              .overrideWithValue(const FakeCapturedSmsSource()),
+        ],
+        child: const PaisaTrackApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final homeState = tester.state(find.byType(HomeShell));
+    await tester.tap(find.text('Activity').last);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeShell)),
+      listen: false,
+    );
+    final pendingRequest =
+        container.read(smsPermissionControllerProvider.notifier).request();
+    await tester.pump();
+
+    expect(find.text('Loading your local data…'), findsNothing);
+    expect(tester.state(find.byType(HomeShell)), same(homeState));
+
+    gate.completeRequest(SmsPermissionStatus.denied);
+    await pendingRequest;
+    await tester.pump();
+    expect(tester.state(find.byType(HomeShell)), same(homeState));
+
+    await database.close();
+  });
+
   testWidgets('boots with an in-memory app database override', (tester) async {
     final database = AppDatabase(NativeDatabase.memory());
 
@@ -86,6 +200,9 @@ void main() {
         overrides: [
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
+          appSettingsControllerProvider.overrideWith(
+            () => _StaticSettingsController(const AppSettings()),
           ),
           capturedSmsSourceProvider
               .overrideWithValue(const FakeCapturedSmsSource()),
@@ -124,6 +241,31 @@ class _DelayedSmsPermissionGate implements SmsPermissionGate {
 
   @override
   Future<SmsPermissionStatus> request() async => SmsPermissionStatus.denied;
+
+  @override
+  Future<void> openAppSettings() async {}
+}
+
+class _StaticSettingsController extends AppSettingsController {
+  _StaticSettingsController(this._settings);
+
+  final AppSettings _settings;
+
+  @override
+  Future<AppSettings> build() async => _settings;
+}
+
+class _DelayedRequestSmsPermissionGate implements SmsPermissionGate {
+  final _requestResult = Completer<SmsPermissionStatus>();
+
+  void completeRequest(SmsPermissionStatus status) =>
+      _requestResult.complete(status);
+
+  @override
+  Future<SmsPermissionStatus> status() async => SmsPermissionStatus.denied;
+
+  @override
+  Future<SmsPermissionStatus> request() => _requestResult.future;
 
   @override
   Future<void> openAppSettings() async {}

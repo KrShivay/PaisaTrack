@@ -7,6 +7,7 @@ import '../../capture/sms_backfill.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
+import '../settings/app_settings.dart';
 
 /// First-run Bloom onboarding screen that requests SMS permission honestly and
 /// transparently in a single screen.
@@ -427,8 +428,10 @@ class _CtaButtons extends ConsumerWidget {
       onPrimaryTap = isBusy ? null : controller.openSettings;
     } else if (status == SmsPermissionStatus.granted) {
       primaryLabel = 'Continue to PaisaTrack';
-      onPrimaryTap = () {
-        ref.read(continueWithoutSmsProvider.notifier).state = true;
+      onPrimaryTap = () async {
+        await ref
+            .read(appSettingsControllerProvider.notifier)
+            .setOnboardingCompleted(true);
       };
     } else {
       primaryLabel = 'Allow SMS access';
@@ -451,15 +454,33 @@ class _CtaButtons extends ConsumerWidget {
               ),
               textStyle: AppTheme.bloomDisplay(15, FontWeight.w600),
             ),
-            child: Text(primaryLabel),
+            child: isBusy
+                ? const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Text('Requesting…'),
+                    ],
+                  )
+                : Text(primaryLabel),
           ),
         ),
         const SizedBox(height: 10),
         // Secondary plain text button #7A7596 13px
         Center(
           child: TextButton(
-            onPressed: () {
-              ref.read(continueWithoutSmsProvider.notifier).state = true;
+            onPressed: () async {
+              await ref
+                  .read(appSettingsControllerProvider.notifier)
+                  .setOnboardingCompleted(true);
             },
             child: Text(
               "I'll add things myself",

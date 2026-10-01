@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/features/onboarding/onboarding_screen.dart';
+import 'package:paisatrack/features/settings/app_settings.dart';
 
 import '../../support/fake_sms_permission_gate.dart';
 
@@ -40,6 +43,35 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Allow SMS access'), findsNothing);
   });
 
+  testWidgets('granted primary CTA saves onboarding completion',
+      (tester) async {
+    final settingsController = _RecordingSettingsController();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
+          appSettingsControllerProvider.overrideWith(() => settingsController),
+        ],
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final button = find.widgetWithText(
+      FilledButton,
+      'Continue to PaisaTrack',
+    );
+    expect(button, findsOneWidget);
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(settingsController.savedOnboardingCompleted, isTrue);
+  });
+
   testWidgets('denied shows the request button and grants on tap',
       (tester) async {
     final gate = FakeSmsPermissionGate(
@@ -60,6 +92,27 @@ void main() {
     expect(find.text('SMS access granted. Capture is on.'), findsOneWidget);
   });
 
+  testWidgets('shows a busy state while the SMS permission request is pending',
+      (tester) async {
+    final gate = _DelayedRequestSmsPermissionGate();
+    await pumpOnboarding(tester, gate);
+
+    final button = find.widgetWithText(FilledButton, 'Allow SMS access');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(find.text('Requesting…'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+
+    gate.completeRequest(SmsPermissionStatus.denied);
+    await tester.pump();
+  });
+
   testWidgets(
       'permanently denied points to settings and shows Open settings button',
       (tester) async {
@@ -74,30 +127,21 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Open settings'), findsOneWidget);
   });
 
-  testWidgets('denied offers continue-without-SMS and sets the flag',
-      (tester) async {
-    late WidgetRef capturedRef;
+  testWidgets('secondary onboarding CTA saves completion', (tester) async {
+    final settingsController = _RecordingSettingsController();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.denied),
           ),
+          appSettingsControllerProvider.overrideWith(() => settingsController),
         ],
-        child: MaterialApp(
-          home: Consumer(
-            builder: (context, ref, _) {
-              capturedRef = ref;
-              return const OnboardingScreen();
-            },
-          ),
-        ),
+        child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-
-    expect(capturedRef.read(continueWithoutSmsProvider), isFalse);
 
     final continueButton =
         find.widgetWithText(TextButton, "I'll add things myself");
@@ -107,9 +151,7 @@ void main() {
     await tester.tap(continueButton);
     await tester.pump();
 
-    // The routing flag flips so PaisaTrackApp shows HomeShell instead of
-    // trapping the user on onboarding (S1 lockout fix).
-    expect(capturedRef.read(continueWithoutSmsProvider), isTrue);
+    expect(settingsController.savedOnboardingCompleted, isTrue);
   });
 
   testWidgets('permanently denied still offers continue-without-SMS',
@@ -126,4 +168,34 @@ void main() {
       findsOneWidget,
     );
   });
+}
+
+class _RecordingSettingsController extends AppSettingsController {
+  bool? savedOnboardingCompleted;
+
+  @override
+  Future<AppSettings> build() async => const AppSettings();
+
+  @override
+  Future<void> setOnboardingCompleted(bool value) async {
+    savedOnboardingCompleted = value;
+    state = AsyncData(
+      (state.valueOrNull ?? const AppSettings()).copyWith(
+        onboardingCompleted: value,
+      ),
+    );
+  }
+}
+
+class _DelayedRequestSmsPermissionGate extends FakeSmsPermissionGate {
+  final _requestResult = Completer<SmsPermissionStatus>();
+
+  void completeRequest(SmsPermissionStatus status) =>
+      _requestResult.complete(status);
+
+  @override
+  Future<SmsPermissionStatus> request() {
+    requestCalls++;
+    return _requestResult.future;
+  }
 }

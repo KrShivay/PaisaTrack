@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../capture/permissions/sms_permission_provider.dart';
-import '../../core/theme/app_tokens.dart';
 import '../../core/crypto/database_cipher.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../data/db/database_provider.dart';
 import '../backup/encrypted_backup_service.dart';
+import '../settings/app_settings.dart';
 import 'database_recovery_service.dart';
 
 class KeyLossScreen extends ConsumerStatefulWidget {
@@ -55,7 +55,9 @@ class _KeyLossScreenState extends ConsumerState<KeyLossScreen> {
         return;
       }
 
-      ref.read(continueWithoutSmsProvider.notifier).state = true;
+      await ref
+          .read(appSettingsControllerProvider.notifier)
+          .setOnboardingCompleted(true);
       ref.invalidate(appDatabaseProvider);
       await ref.read(appDatabaseProvider.future);
       if (mounted) {

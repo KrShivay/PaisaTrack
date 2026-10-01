@@ -133,6 +133,54 @@ void main() {
     expect(preview.amountPaise, 123450);
   });
 
+  test('accepts amounts immediately after punctuated INR tokens', () async {
+    final cases = [
+      ('Rs.1,234.50', 'Rs.1,234.50', 1234.5),
+      ('Rs. 1,234.50', 'Rs. 1,234.50', 1234.5),
+      ('INR.500', 'INR.500', 500.0),
+      ('Rs1,234', 'Rs1,234', 1234.0),
+    ];
+
+    for (var index = 0; index < cases.length; index++) {
+      final (verbatim, body, amount) = cases[index];
+      final id = 'txn_punctuated_$index';
+      await insertCandidate(
+        id: id,
+        body: body,
+        amount: amount,
+        parseSource: 'generic',
+        extractor: 'generic_regex',
+        evidenceVerbatim: verbatim,
+        evidenceStart: body.indexOf(verbatim),
+      );
+
+      expect(await service.preview(id), isNotNull, reason: body);
+    }
+  });
+
+  test('rejects numeric fragments that continue decimals or grouped amounts',
+      () async {
+    const decimalBody = 'Paid Rs.1.5';
+    await insertCandidate(
+      id: 'txn_decimal_fragment',
+      body: decimalBody,
+      amount: 5,
+      evidenceVerbatim: '5',
+      evidenceStart: decimalBody.lastIndexOf('5'),
+    );
+    const groupedBody = 'Paid Rs.12,345';
+    await insertCandidate(
+      id: 'txn_grouped_fragment',
+      body: groupedBody,
+      amount: 345,
+      evidenceVerbatim: '345',
+      evidenceStart: groupedBody.lastIndexOf('345'),
+    );
+
+    expect(await service.preview('txn_decimal_fragment'), isNull);
+    expect(await service.preview('txn_grouped_fragment'), isNull);
+  });
+
   test('accepts local LLM evidence only when its bounded amount span verifies',
       () async {
     const body = 'Paid 500 INR to Cafe';
@@ -161,6 +209,26 @@ void main() {
     );
 
     expect((await service.preview('txn_suffix'))?.currencyToken, 'Rs.');
+  });
+
+  test('rejects suffix currency tokens before a later reference amount',
+      () async {
+    const cases = [
+      ('txn_account_reference', 'A/c no.1234 Rs 500', '1234', 1234.0),
+      ('txn_reference', 'Ref.12345 Rs 500', '12345', 12345.0),
+    ];
+    for (final (id, body, amountText, amount) in cases) {
+      await insertCandidate(
+        id: id,
+        body: body,
+        amount: amount,
+        evidenceVerbatim: amountText,
+        evidenceStart: body.indexOf(amountText),
+      );
+    }
+
+    expect(await service.preview('txn_account_reference'), isNull);
+    expect(await service.preview('txn_reference'), isNull);
   });
 
   test('apply is idempotent and undo changes only currency fields', () async {

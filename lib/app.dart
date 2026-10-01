@@ -16,6 +16,26 @@ import 'features/recovery/database_error_screen.dart';
 import 'features/recovery/key_loss_screen.dart';
 import 'features/settings/app_settings.dart';
 
+enum AppStartupDestination { loading, home, onboarding }
+
+AppStartupDestination appStartupDestination({
+  required AsyncValue<SmsPermissionStatus> permission,
+  required AsyncValue<AppSettings> settings,
+}) {
+  // Only a first load with no value yet waits; a refresh keeps the current
+  // route mounted, and a load error falls through rather than spinning.
+  bool firstLoad(AsyncValue<Object?> value) =>
+      value.isLoading && !value.hasValue && !value.hasError;
+  if (firstLoad(permission) || firstLoad(settings)) {
+    return AppStartupDestination.loading;
+  }
+  if (permission.valueOrNull == SmsPermissionStatus.granted ||
+      settings.valueOrNull?.onboardingCompleted == true) {
+    return AppStartupDestination.home;
+  }
+  return AppStartupDestination.onboarding;
+}
+
 /// Root widget for the PaisaTrack Flutter application.
 ///
 /// App-wide providers, navigation, and theme configuration should be attached
@@ -35,16 +55,14 @@ class PaisaTrackApp extends ConsumerWidget {
 
     final dbAsync = ref.watch(appDatabaseProvider);
     final permission = ref.watch(smsPermissionControllerProvider);
-    final continueWithoutSms = ref.watch(continueWithoutSmsProvider);
     final settings = ref.watch(appSettingsControllerProvider);
 
     final Widget homeWidget = switch (dbAsync) {
-      AsyncData() => switch (permission) {
-          AsyncData(:final value) when value == SmsPermissionStatus.granted =>
-            const HomeShell(),
-          AsyncLoading() => const _StartupScreen(),
-          _ when continueWithoutSms => const HomeShell(),
-          _ => const OnboardingScreen(),
+      AsyncData() => switch (
+            appStartupDestination(permission: permission, settings: settings)) {
+          AppStartupDestination.loading => const _StartupScreen(),
+          AppStartupDestination.home => const HomeShell(),
+          AppStartupDestination.onboarding => const OnboardingScreen(),
         },
       AsyncError(:final error) when error is DatabaseKeyLostError =>
         const KeyLossScreen(),
