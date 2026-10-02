@@ -238,9 +238,8 @@ void main() {
           }).toSet();
           expect(
             merchantSources,
-            mode == _CaptureMode.live ? {'unembedded'} : {'template'},
-            reason: 'live resolves merchant identity; history/resume currently '
-                'retain parser merchant text without the resolver',
+            {'new'},
+            reason: 'all capture paths use the same exact-name resolver',
           );
           expect(
             transactions.every((row) {

@@ -12,6 +12,7 @@ import '../data/db/database_provider.dart';
 import '../data/models/raw_sms.dart';
 import '../enrichment/categorizer.dart';
 import '../enrichment/decision_policy.dart';
+import '../enrichment/merchant_resolver.dart';
 import '../features/settings/app_settings.dart';
 import '../intelligence/nightly_job.dart';
 import '../intelligence/derived_reads_service.dart';
@@ -220,6 +221,7 @@ class SmsBackfiller {
     FutureOr<void> Function(SmsInboxCursor cursor)? onPageCompleted,
     void Function(SmsImportProgress progress)? onProgress,
   }) async {
+    final merchantResolutionRun = await _ingestor.beginMerchantResolutionRun();
     var processed = 0;
     var failed = 0;
     var transactionsFound = 0;
@@ -233,7 +235,10 @@ class SmsBackfiller {
     var cursor = initialCursor;
     do {
       final page = await _reader.readPage(before: cursor, limit: _pageSize);
-      final batch = await _ingestor.ingestBatch(page.messages);
+      final batch = await _ingestor.ingestBatch(
+        page.messages,
+        merchantResolutionRun: merchantResolutionRun,
+      );
       failed += batch.failed;
       processed += page.messages.length;
       transactionsFound += batch.createdTxnIds.length;
@@ -317,6 +322,7 @@ class SmsIncrementalCatchUp {
     if (await _marker.completedVersion() < smsHistoryImportVersion) {
       return const SmsImportResult(processed: 0, failed: 0, skipped: true);
     }
+    final merchantResolutionRun = await _ingestor.beginMerchantResolutionRun();
     var cursor = null as SmsInboxCursor?;
     var processed = 0;
     var failed = 0;
@@ -364,7 +370,10 @@ class SmsIncrementalCatchUp {
         }
         pending.add(sms);
       }
-      final batch = await _ingestor.ingestBatch(pending);
+      final batch = await _ingestor.ingestBatch(
+        pending,
+        merchantResolutionRun: merchantResolutionRun,
+      );
       failed += batch.failed;
       processed += pending.length;
       if (page.nextCursor != null && page.nextCursor == cursor) {
@@ -478,6 +487,7 @@ final smsHistoryImportRunnerProvider =
     financialCalendar: ref.watch(financialCalendarProvider),
     categorizer: categorizer,
     messageKindClassifier: messageKindClassifier,
+    merchantResolver: ref.watch(merchantResolverProvider(database)),
     fixedStatus: DecisionStatus.needsReview,
     captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
     knownTransactionIds: knownTransactionIds,
@@ -515,6 +525,7 @@ final smsIncrementalCatchUpProvider =
       financialCalendar: ref.watch(financialCalendarProvider),
       categorizer: categorizer,
       messageKindClassifier: messageKindClassifier,
+      merchantResolver: ref.watch(merchantResolverProvider(database)),
       fixedStatus: DecisionStatus.needsReview,
       captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
       askDailyBudgetResolver: () =>

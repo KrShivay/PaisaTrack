@@ -253,7 +253,10 @@ class SmsIngestor {
   }
 
   /// Inserts the raw SMS, attempts parsing, and stores a transaction on success.
-  Future<void> ingest(RawSms sms) async {
+  Future<void> ingest(
+    RawSms sms, {
+    MerchantResolutionRun? merchantResolutionRun,
+  }) async {
     if (_isCapturePaused?.call() == true) return;
     if (_isSenderPaused?.call(sms.sender) == true) return;
     final disposition = await (_database.select(_database.smsDispositions)
@@ -264,6 +267,7 @@ class SmsIngestor {
     if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     final flagsRepo = FeatureFlagRepository(_database);
     final flagsState = await flagsRepo.getFlags();
+    final stagedMerchantRun = merchantResolutionRun?.stage();
 
     try {
       await _database.transaction(() async {
@@ -421,7 +425,13 @@ class SmsIngestor {
             }
 
             final duplicateOfTxnId = await _findDuplicateOfExisting(value);
-            final merchant = await _merchantResolver?.resolve(value);
+            final merchant = await _merchantResolver?.resolve(
+              value,
+              run: stagedMerchantRun,
+              allowSuggestions: duplicateOfTxnId == null &&
+                  _captureDecisionStatusMode ==
+                      CaptureDecisionStatusMode.policy,
+            );
             final categorization = await _categorizer?.categorize(
               value,
               merchantEmbedding: merchant?.embedding,
@@ -502,6 +512,9 @@ class SmsIngestor {
         }
         await reconcileExpectedEvents();
       });
+      if (stagedMerchantRun != null) {
+        merchantResolutionRun!.commit(stagedMerchantRun);
+      }
     } catch (_) {
       await _recordProcessingFailure(sms, flagsState);
       rethrow;
@@ -511,7 +524,10 @@ class SmsIngestor {
   /// Imports one inbox page under a single outer transaction so Drift emits
   /// one coherent change notification instead of rebuilding consumers once
   /// per SMS. Nested per-message transactions preserve failure isolation.
-  Future<SmsBatchIngestResult> ingestBatch(List<RawSms> messages) async {
+  Future<SmsBatchIngestResult> ingestBatch(
+    List<RawSms> messages, {
+    MerchantResolutionRun? merchantResolutionRun,
+  }) async {
     final result = await _database.transaction(() async {
       final succeededIds = <String>{};
       final createdTxnIds = <String>{};
@@ -559,7 +575,7 @@ class SmsIngestor {
         }
         attemptedSmsIds.add(sms.id);
         try {
-          await ingest(sms);
+          await ingest(sms, merchantResolutionRun: merchantResolutionRun);
           succeededIds.add(sms.id);
         } catch (_) {
           failed++;
@@ -609,6 +625,10 @@ class SmsIngestor {
       );
     });
     return result;
+  }
+
+  Future<MerchantResolutionRun?> beginMerchantResolutionRun() async {
+    return await _merchantResolver?.beginImportRun();
   }
 
   /// Id of an already-stored transaction describing the same real-world
@@ -790,6 +810,8 @@ class SmsIngestor {
             record.counterpartyVpa,
         'c': merchant?.confidence ?? record.parseConfidence,
         'src': merchant?.source ?? record.parseSource.wireName,
+        if (merchant?.suggestedMerchantId != null)
+          'suggested_merchant_id': merchant!.suggestedMerchantId,
       },
       if (categorization != null)
         'category': {

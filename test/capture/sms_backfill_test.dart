@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
@@ -22,7 +23,9 @@ import 'package:paisatrack/data/models/raw_sms.dart';
 import 'package:paisatrack/enrichment/decision_policy.dart';
 import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
+import 'package:paisatrack/enrichment/merchant_resolver.dart';
 import 'package:paisatrack/enrichment/seed_category_map.dart';
+import 'package:paisatrack/intelligence/models/embedder.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -94,6 +97,70 @@ void main() {
     expect(
       transactions.map((row) => row.id),
       containsAll(['txn_sms_current', 'txn_sms_2022']),
+    );
+  });
+
+  test('live, history, and catch-up resolve decorated payee identity equally',
+      () async {
+    final resolver = MerchantResolver(database, const NoopEmbedder());
+    final record = NormalizedTransactionRecord(
+      amount: 449,
+      direction: TransactionDirection.debit,
+      channel: TransactionChannel.upi,
+      merchantRaw: 'UPI-SWIGGY',
+      counterpartyVpa: 'swiggy@ybl',
+      accountHint: null,
+      balanceAfter: null,
+      refId: null,
+      ts: DateTime.utc(2026, 5, 2, 9, 15),
+      parseSource: ParseSource.template,
+      parseConfidence: 0.97,
+    );
+    final live = SmsIngestor(
+      database: database,
+      parser: FakeParserCascade(record),
+      messageKindClassifier: _testMessageKindClassifier,
+      merchantResolver: resolver,
+    );
+    await live.ingest(message('sms_identity_live'));
+
+    final history = SmsBackfiller(
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(record),
+        messageKindClassifier: _testMessageKindClassifier,
+        merchantResolver: resolver,
+      ),
+      reader: FakeInboxReader.single([message('sms_identity_history')]),
+    );
+    await history.run();
+
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(record),
+        messageKindClassifier: _testMessageKindClassifier,
+        merchantResolver: resolver,
+      ),
+      reader: FakeInboxReader.single([message('sms_identity_catchup')]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+    await catchUp.run();
+
+    final rows = await (database.select(database.transactions)
+          ..where(
+            (row) => row.smsId.isIn([
+              'sms_identity_live',
+              'sms_identity_history',
+              'sms_identity_catchup',
+            ]),
+          ))
+        .get();
+    expect(rows, hasLength(3));
+    expect(
+      rows.map((row) => row.merchantId),
+      everyElement('merchant_SWIGGY'),
     );
   });
 
@@ -248,6 +315,29 @@ void main() {
     final decision = confidence['capture_decision']! as Map<String, Object?>;
     expect(decision['status_mode'], 'fixed_review');
     expect(decision['category_source'], 'rule');
+  });
+
+  test('fixed-review history import skips merchant embeddings', () async {
+    final embedder = _CountingEmbedder();
+    final record = _sampleRecord;
+    final result = await SmsBackfiller(
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(record),
+        categorizer: Categorizer(
+          rules: RuleRepository(database),
+          seedMap: SeedCategoryMap(const {}),
+        ),
+        merchantResolver: MerchantResolver(database, embedder),
+        fixedStatus: DecisionStatus.needsReview,
+        captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader.single([message('sms_fixed_review_no_embed')]),
+    ).run();
+
+    expect(result.parsed, 1);
+    expect(embedder.calls, 0);
   });
 
   test('aggregates privacy-safe outcome counts across pages', () async {
@@ -447,6 +537,7 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWith((ref) async => database),
         smsInboxReaderProvider.overrideWithValue(reader),
+        embedderProvider.overrideWithValue(const NoopEmbedder()),
         financialCalendarProvider.overrideWithValue(
           const FinancialCalendar.fixed(Duration.zero),
         ),
@@ -474,6 +565,7 @@ void main() {
       DateTime.utc(2023, 11, 7).millisecondsSinceEpoch,
     );
     expect(transactions.single.lifecycleState, 'settled');
+    expect(transactions.single.merchantId, 'merchant_JANEDOE');
     final rawRows = await database.select(database.rawSms).get();
     final balanceRaw = rawRows.singleWhere(
       (row) => row.id == 'sms_provider_balance',
@@ -497,6 +589,7 @@ void main() {
       overrides: [
         appDatabaseProvider.overrideWith((ref) async => database),
         smsInboxReaderProvider.overrideWithValue(reader),
+        embedderProvider.overrideWithValue(const NoopEmbedder()),
         financialCalendarProvider.overrideWithValue(
           const FinancialCalendar.fixed(Duration.zero),
         ),
@@ -513,6 +606,7 @@ void main() {
     final transactions = await database.select(database.transactions).get();
     expect(transactions, hasLength(1));
     expect(transactions.single.smsId, 'sms_history_fixture');
+    expect(transactions.single.merchantId, 'merchant_JANEDOE');
     expect(
       transactions.single.ts,
       DateTime.utc(2023, 11, 7).millisecondsSinceEpoch,
@@ -767,6 +861,25 @@ void main() {
     expect(result.skipped, isTrue);
     expect(reader.readCount, 0);
   });
+}
+
+class _CountingEmbedder implements Embedder {
+  int calls = 0;
+
+  @override
+  Future<Float32List?> embed(String text) async {
+    calls++;
+    return null;
+  }
+
+  @override
+  Future<bool> isModelAvailable() async => true;
+
+  @override
+  Future<bool> downloadModel() async => true;
+
+  @override
+  Future<bool> deleteModel() async => true;
 }
 
 final _testMessageKindClassifier = MessageKindClassifier.fromJson(

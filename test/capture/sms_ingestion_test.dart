@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:drift/native.dart';
@@ -133,13 +134,12 @@ void main() {
     final confidence =
         jsonDecode(transactions.single.confidenceJson) as Map<String, Object?>;
     expect(confidence['parser'], {'c': 0.97, 'src': 'template'});
-    // T-051: the merchant block now comes from MerchantResolver, not the raw
-    // parser record. There's no platform embedder channel in this widget
-    // test host, so resolution falls back to 'unembedded' at confidence 0.
+    // Exact names receive stable IDs even when no platform embedding model is
+    // available on this widget test host.
     expect(confidence['merchant'], {
       'v': 'AMZN*MKTPLC',
-      'c': 0.0,
-      'src': 'unembedded',
+      'c': 1.0,
+      'src': 'new',
     });
     expect(confidence['category'], {'c': 0.8, 'src': 'seed'});
   });
@@ -263,6 +263,50 @@ void main() {
     expect(await database.select(database.transactions).get(), hasLength(1));
     expect(await database.select(database.rawSms).get(), isEmpty);
     expect(await database.select(database.smsDispositions).get(), hasLength(1));
+  });
+
+  test('failed message merchant snapshot additions are discarded', () async {
+    final first = _sampleRecord(merchantRaw: 'ROUND3 SHOP');
+    final records = {
+      'sms_merchant_rollback': first,
+      'sms_merchant_retry': first,
+    };
+    await database.customStatement('''
+      CREATE TRIGGER fail_first_merchant_transaction
+      BEFORE INSERT ON transactions
+      WHEN NEW.id = 'txn_sms_merchant_rollback'
+      BEGIN
+        SELECT RAISE(ABORT, 'synthetic transaction write failure');
+      END;
+    ''');
+    final ingestor = _ingestorFor(
+      database,
+      null,
+      recordsById: records,
+      merchantResolver: MerchantResolver(database, const NoopEmbedder()),
+    );
+    final run = await ingestor.beginMerchantResolutionRun();
+
+    final result = await ingestor.ingestBatch(
+      [
+        _message('sms_merchant_rollback'),
+        _message('sms_merchant_retry'),
+      ],
+      merchantResolutionRun: run,
+    );
+
+    expect(result.failedIds, {'sms_merchant_rollback'});
+    expect(result.parsedIds, {'sms_merchant_retry'});
+    final transaction =
+        await database.select(database.transactions).getSingle();
+    expect(transaction.smsId, 'sms_merchant_retry');
+    expect(transaction.merchantId, isNotNull);
+    expect(
+      await (database.select(database.merchants)
+            ..where((row) => row.id.equals(transaction.merchantId!)))
+          .getSingleOrNull(),
+      isNotNull,
+    );
   });
 
   test('persists template id and provenance in parser confidence metadata',
@@ -451,6 +495,11 @@ void main() {
           ..where((row) => row.smsId.equals('sms_similarity_rule')))
         .getSingle();
     expect(txn.status, 'needs_review');
+    expect(txn.merchantId, isNull);
+    final confidence = jsonDecode(txn.confidenceJson) as Map<String, Object?>;
+    final merchant = confidence['merchant']! as Map<String, Object?>;
+    expect(merchant['src'], 'suggestion');
+    expect(merchant['suggested_merchant_id'], 'merchant_swiggy');
   });
 
   test('decision policy asks once then auto-classifies a seen counterparty',
@@ -953,11 +1002,13 @@ void main() {
       ),
       'sms_undated_echo': _sampleRecord(ts: echoAt),
     };
+    final embedder = _CountingEmbedder();
     final ingestor = _ingestorFor(
       database,
       null,
       recordsById: records,
       financialCalendar: calendar,
+      merchantResolver: MerchantResolver(database, embedder),
     );
 
     await ingestor.ingest(
@@ -978,6 +1029,7 @@ void main() {
     expect(transactions.first.ts, bodyDatedAt.millisecondsSinceEpoch);
     expect(transactions.last.ts, echoAt.millisecondsSinceEpoch);
     expect(transactions.last.duplicateOfTxnId, transactions.first.id);
+    expect(embedder.calls, 1);
   });
 
   test('same body date over ten minutes apart does not establish identity',
@@ -1326,6 +1378,25 @@ void main() {
     expect(transactions.single.lifecycleState, 'settled');
     expect(model.extractCalls, 1);
   });
+}
+
+class _CountingEmbedder implements Embedder {
+  int calls = 0;
+
+  @override
+  Future<Float32List?> embed(String text) async {
+    calls++;
+    return null;
+  }
+
+  @override
+  Future<bool> isModelAvailable() async => true;
+
+  @override
+  Future<bool> downloadModel() async => true;
+
+  @override
+  Future<bool> deleteModel() async => true;
 }
 
 SmsIngestor _ingestorFor(

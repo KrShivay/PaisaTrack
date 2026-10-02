@@ -87,8 +87,9 @@ events, not relax the transaction parser's future-event rejection.
 
 ## Identity and categorization
 
-`MerchantResolver` checks normalized aliases, then local embedding similarity,
-then creates a merchant when no safe match exists. `Categorizer` applies:
+`MerchantResolver` checks explicit user aliases and exact canonical names before
+deterministic creation; embeddings provide review suggestions only.
+`Categorizer` applies:
 
 1. user rules;
 2. optional confirmed-history memory callback;
@@ -120,9 +121,24 @@ supplied the category.
 sequencing used by transaction detail and Sort; each screen supplies only its
 optimistic presentation update and inverse callback.
 
-User labels extend canonical merchant/counterparty identity and alias resolution.
-They can map multiple aliases, preview affected history, and refuse conflicting
-merges without replacing raw source fields.
+`PayeeKey` supplies one name key and one VPA key across capture and user-label
+resolution. It strips only `UPI-`, `UPI/`, `VPS*`, and `POS ` prefixes and the
+trailing legal suffixes `LTD` and `LIMITED`; store numbers and city names are
+preserved. VPA keys retain the PSP handle, so the same local VPA name on YBL and
+Axis stays distinct. Live capture, full history import, and incremental catch-up
+all use `SmsIngestor` with the same resolver. Resolution checks user VPA aliases,
+user name aliases, exact canonical names, then exact legacy aliases. New
+merchant IDs use the normalized name key (or full VPA key when no name exists),
+and named payments also record their VPA alias for later VPA-only rows.
+
+Embedding similarity is review-only: it stores a suggestion in capture
+provenance, leaves `merchant_id` unset, and writes no alias. Phone-number VPAs
+can resolve existing user aliases but never create a merchant automatically.
+Capture does not rewrite existing rows. A preview-counted, reversible backfill
+for rows with `merchant_id IS NULL` and an exact user-label key/alias match is
+deferred until the settings UI can show the affected history and offer Undo.
+User labels still map multiple explicit aliases, preview affected history, and
+refuse conflicting merges without replacing raw source fields.
 
 ## Analytics and intelligence
 

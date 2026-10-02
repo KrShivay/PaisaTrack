@@ -1,3 +1,5 @@
+import 'payee_identity_key.dart';
+
 /// Counterparty identity classification (T-136a).
 enum CounterpartyKind {
   person('person'),
@@ -70,11 +72,7 @@ class CounterpartyKeyParser {
     String? merchantRaw,
   }) {
     if (merchantRaw != null && merchantRaw.isNotEmpty) {
-      // Card descriptor: strip trailing store numbers & city names
-      var normalized = merchantRaw.toUpperCase().trim();
-      normalized = normalized.replaceAll(RegExp(r'\s+\d{3,}\b'), ''); // Strip trailing store numbers (e.g. 4471)
-      normalized = normalized.replaceAll(RegExp(r'\s+(BANGALORE|MUMBAI|DELHI|GURGAON|HYDERABAD|CHENNAI|KOLKATA|PUNE)\b'), ''); // Strip trailing city
-      final cleanKey = normalized.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+      final cleanKey = PayeeKey.parse(name: merchantRaw).nameKey;
 
       return CounterpartyIdentity(
         identityKey: 'MERCHANT_$cleanKey',
@@ -94,16 +92,18 @@ class CounterpartyKeyParser {
       if (trailingDigitMatch != null) {
         final prefix = trailingDigitMatch.group(1)!;
         if (_knownPspTokens.contains(prefix)) {
-          core = prefix; // Known PSP token -> keep core (e.g., paytm-9876543210 -> paytm)
+          core =
+              prefix; // Known PSP token -> keep core (e.g., paytm-9876543210 -> paytm)
         }
       }
 
       // 2. Check aggregator QR prefix
       final upperCore = core.toUpperCase();
-      final isQrMerchant = _qrPrefixes.any((prefix) => upperCore.startsWith(prefix));
+      final isQrMerchant =
+          _qrPrefixes.any((prefix) => upperCore.startsWith(prefix));
       if (isQrMerchant) {
         return CounterpartyIdentity(
-          identityKey: 'MERCHANT_QR_${upperCore.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+          identityKey: 'MERCHANT_QR_${PayeeKey.parse(vpa: vpa).vpaKey}',
           kind: CounterpartyKind.merchant,
           pspFamily: psp,
         );
@@ -112,27 +112,32 @@ class CounterpartyKeyParser {
       // 3. Check if core is a known PSP token
       if (_knownPspTokens.contains(core)) {
         return CounterpartyIdentity(
-          identityKey: 'MERCHANT_${upperCore.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+          identityKey:
+              'MERCHANT_${PayeeIdentityKey.normalize(upperCore)}${PayeeIdentityKey.normalize(psp)}',
           kind: CounterpartyKind.merchant,
           pspFamily: psp,
         );
       }
 
-      // 4. Check if local part contains a phone number (>= 10 digits)
+      // 4. Check if the local part is a phone-like numeric identity (>= 7 digits)
       final phoneMatch = RegExp(r'\d{10,}').firstMatch(localPart);
-      if (phoneMatch != null || RegExp(r'^\d{10,}$').hasMatch(localPart)) {
+      if (phoneMatch != null || RegExp(r'^\d{7,}$').hasMatch(localPart)) {
         final phoneHash = hashPhone(localPart);
         return CounterpartyIdentity(
-          identityKey: 'PERSON_PHONE_$phoneHash',
+          identityKey:
+              'PERSON_PHONE_${phoneHash}_${PayeeIdentityKey.normalize(psp)}',
           kind: CounterpartyKind.person,
           pspFamily: psp,
         );
       }
 
       final isKnownMerchantToken = _knownPspTokens.contains(core);
-      final kind = isKnownMerchantToken ? CounterpartyKind.merchant : CounterpartyKind.unknown;
+      final kind = isKnownMerchantToken
+          ? CounterpartyKind.merchant
+          : CounterpartyKind.unknown;
       return CounterpartyIdentity(
-        identityKey: '${isKnownMerchantToken ? 'MERCHANT' : 'VPA'}_${upperCore.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+        identityKey:
+            '${isKnownMerchantToken ? 'MERCHANT' : 'VPA'}_${PayeeKey.parse(vpa: vpa).vpaKey}',
         kind: kind,
         inferredName: localPart,
         pspFamily: psp,

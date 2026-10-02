@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/payee_evidence_repository.dart';
 import 'package:paisatrack/data/repositories/payee_label_repository.dart';
+import 'package:paisatrack/data/models/normalized_transaction_record.dart';
+import 'package:paisatrack/enrichment/merchant_resolver.dart';
+import 'package:paisatrack/intelligence/models/embedder.dart';
 
 void main() {
   late AppDatabase database;
@@ -89,6 +92,57 @@ void main() {
       containsAll(['AMZN Mktplace', 'Amazon Pay India']),
     );
     expect(transactions.first.counterpartyVpa, 'amazon@apl');
+  });
+
+  test(
+      'stores swept UPI-prefixed evidence under the established correction key',
+      () async {
+    await insertTransaction(id: 'existing', merchantRaw: 'UPI-SWIGGY');
+    final key = PayeeEvidenceRepository.companionsFor(
+      transactionId: 'future',
+      merchantRaw: 'UPI-SWIGGY',
+    ).single.normalizedKey.value;
+    expect(key, 'UPISWIGGY');
+
+    final affected = await repository.saveLabel(
+      label: 'Food delivery',
+      aliases: const ['UPI-SWIGGY'],
+    );
+    final resolution = await MerchantResolver(
+      database,
+      const NoopEmbedder(),
+    ).resolve(
+      NormalizedTransactionRecord(
+        amount: 250,
+        direction: TransactionDirection.debit,
+        channel: TransactionChannel.upi,
+        merchantRaw: 'UPI-SWIGGY',
+        counterpartyVpa: null,
+        accountHint: null,
+        balanceAfter: null,
+        refId: null,
+        ts: DateTime.utc(2026, 7, 17),
+        parseSource: ParseSource.template,
+        parseConfidence: 0.97,
+      ),
+    );
+    await insertTransaction(
+      id: 'future',
+      merchantRaw: 'UPI-SWIGGY',
+      merchantId: resolution.merchantId,
+    );
+
+    expect(affected, 1);
+    final alias = await (database.select(database.merchantAliases)
+          ..where((row) => row.alias.equals('UPISWIGGY')))
+        .getSingle();
+    final futurePage = await repository.loadPage(
+      const PayeeIdentityQuery(search: 'UPI-SWIGGY'),
+    );
+    expect(alias.source, 'user');
+    expect(futurePage.items, hasLength(1));
+    expect(futurePage.items.single.displayName, 'Food delivery');
+    expect(futurePage.items.single.transactionCount, 2);
   });
 
   test('refuses aliases that would merge two existing payees', () async {

@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../enrichment/merchant_clusterer.dart';
-import '../../enrichment/merchant_resolver.dart';
+import '../../enrichment/payee_identity_key.dart';
 import '../db/database.dart';
 import '../db/database_provider.dart';
 
@@ -478,8 +478,9 @@ ORDER BY identity_key ASC, display_value COLLATE BINARY ASC
       if (merchantId != null && row.merchantId == merchantId) return true;
       return [row.merchantRaw, row.counterpartyVpa]
           .whereType<String>()
-          .map(MerchantResolver.normalizeAlias)
-          .any(normalizedAliases.contains);
+          .map((value) {
+        return PayeeKey.keyFor(value);
+      }).any(normalizedAliases.contains);
     }).toList(growable: false);
   }
 
@@ -488,7 +489,7 @@ ORDER BY identity_key ASC, display_value COLLATE BINARY ASC
     for (final alias in aliases) {
       final trimmed = alias.trim();
       if (trimmed.isEmpty) continue;
-      final normalized = MerchantResolver.normalizeAlias(trimmed);
+      final normalized = PayeeKey.keyFor(trimmed);
       if (normalized.isNotEmpty) result[normalized] = trimmed;
     }
     return result;

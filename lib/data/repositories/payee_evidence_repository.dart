@@ -78,7 +78,7 @@ class PayeeEvidenceRepository {
   }) {
     final displayValue = value?.trim();
     if (displayValue == null || displayValue.isEmpty) return;
-    final normalizedKey = PayeeIdentityKey.normalize(displayValue);
+    final normalizedKey = PayeeKey.keyFor(displayValue);
     if (normalizedKey.isEmpty) return;
     rows.add(
       PayeeEvidenceCompanion.insert(

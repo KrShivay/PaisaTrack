@@ -35,19 +35,25 @@ void main() {
     await database.close();
   });
 
-  test('previewBackfill lists affected rows before write and leaves merchant_raw untouched', () async {
+  test(
+      'previewBackfill lists affected rows before write and leaves merchant_raw untouched',
+      () async {
     final preview = await service.previewBackfill();
     expect(preview, hasLength(1));
     expect(preview.first.txnId, 'txn_bf_1');
     expect(preview.first.merchantRaw, 'SWIGGY INSTAMART BANGALORE');
-    expect(preview.first.newIdentityKey, 'MERCHANT_SWIGGYINSTAMART');
+    expect(preview.first.newIdentityKey, 'MERCHANT_SWIGGYINSTAMARTBANGALORE');
 
     // Verify database row is untouched during preview
-    final txn = await (database.select(database.transactions)..where((t) => t.id.equals('txn_bf_1'))).getSingle();
+    final txn = await (database.select(database.transactions)
+          ..where((t) => t.id.equals('txn_bf_1')))
+        .getSingle();
     expect(txn.merchantRaw, 'SWIGGY INSTAMART BANGALORE');
   });
 
-  test('applyBackfill writes counterparties and undoBackfill restores prior state', () async {
+  test(
+      'applyBackfill writes counterparties and undoBackfill restores prior state',
+      () async {
     final preview = await service.previewBackfill();
     final result = await service.applyBackfill(preview);
 
@@ -55,13 +61,18 @@ void main() {
 
     final counterparties = await database.select(database.counterparties).get();
     expect(counterparties, hasLength(1));
-    expect(counterparties.first.identityKey, 'MERCHANT_SWIGGYINSTAMART');
+    expect(
+      counterparties.first.identityKey,
+      'MERCHANT_SWIGGYINSTAMARTBANGALORE',
+    );
 
     final undone = await service.undoBackfill(result.checkpointId);
     expect(undone, isTrue);
 
     // Verify raw source text remains untouched
-    final txn = await (database.select(database.transactions)..where((t) => t.id.equals('txn_bf_1'))).getSingle();
+    final txn = await (database.select(database.transactions)
+          ..where((t) => t.id.equals('txn_bf_1')))
+        .getSingle();
     expect(txn.merchantRaw, 'SWIGGY INSTAMART BANGALORE');
   });
 }
