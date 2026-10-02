@@ -87,7 +87,12 @@ class DerivedReadsService {
       return waiter.future;
     }
     _timer?.cancel();
-    final staleWrite = _markFreshnessStale();
+    final staleWrite = _markFreshnessStale().catchError(
+      (Object error, StackTrace stackTrace) {
+        _failImmediateWaiters(error, stackTrace);
+        Error.throwWithStackTrace(error, stackTrace);
+      },
+    );
     if (_suspendDepth > 0) return staleWrite;
     final running = _running;
     if (running != null) {
@@ -288,8 +293,14 @@ class DerivedReadsService {
 
   Future<T> withInvalidationSuspended<T>(Future<T> Function() action) async {
     _suspendDepth++;
+    late T result;
+    Object? actionError;
+    StackTrace? actionStackTrace;
     try {
-      return await action();
+      result = await action();
+    } on Object catch (error, stackTrace) {
+      actionError = error;
+      actionStackTrace = stackTrace;
     } finally {
       _suspendDepth--;
       if (_suspendDepth == 0 &&
@@ -300,14 +311,36 @@ class DerivedReadsService {
         if (immediate) {
           unawaited(
             invalidate(immediate: true).catchError(
-              (Object _, StackTrace __) {},
+              (Object error, StackTrace stackTrace) {
+                _onError(error, stackTrace);
+              },
             ),
           );
         } else {
-          await invalidate();
+          try {
+            await invalidate();
+          } on Object catch (error, stackTrace) {
+            if (actionError == null) {
+              actionError = error;
+              actionStackTrace = stackTrace;
+            }
+          }
         }
       }
     }
+    final error = actionError;
+    final stackTrace = actionStackTrace;
+    if (error != null && stackTrace != null) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    return result;
+  }
+
+  void _failImmediateWaiters(Object error, StackTrace stackTrace) {
+    for (final waiter in _immediateWaiters) {
+      if (!waiter.isCompleted) waiter.completeError(error, stackTrace);
+    }
+    _immediateWaiters.clear();
   }
 
   Future<void> _markFreshnessStale() {

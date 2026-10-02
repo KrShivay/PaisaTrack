@@ -523,6 +523,45 @@ void main() {
     await derived.invalidate(immediate: true);
   });
 
+  test('resume stale-mark failure completes suspended immediate waiters',
+      () async {
+    final derived = service();
+    addTearDown(derived.dispose);
+    await derived.startupReconciliation;
+    late Future<void> waiter;
+
+    await derived.withInvalidationSuspended(() async {
+      waiter = derived.invalidate(immediate: true);
+      await database.close();
+    });
+
+    await expectLater(waiter, throwsA(anything));
+  });
+
+  test('resume invalidation failure preserves the original action error',
+      () async {
+    final derived = service();
+    addTearDown(derived.dispose);
+    await derived.startupReconciliation;
+    late Future<void> waiter;
+
+    await expectLater(
+      derived.withInvalidationSuspended(() async {
+        waiter = derived.invalidate(immediate: true);
+        await database.close();
+        throw StateError('original action error');
+      }),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'original action error',
+        ),
+      ),
+    );
+    await expectLater(waiter, throwsA(anything));
+  });
+
   test('bulk changes resume with one derived rebuild', () async {
     await category('food');
     await database.into(database.modelMeta).insert(

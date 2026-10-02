@@ -25,10 +25,6 @@ void main() {
 
       expect(flags.enableLocalLlm, AppConstants.enableLocalLlm);
       expect(
-        flags.enableNarrativeInsights,
-        AppConstants.enableNarrativeInsights,
-      );
-      expect(
         flags.silentConfidenceThreshold,
         AppConstants.silentConfidenceThreshold,
       );

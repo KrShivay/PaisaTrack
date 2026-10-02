@@ -1,11 +1,10 @@
-import 'dart:convert';
-
 import 'package:drift/drift.dart';
 
 import '../../core/financial_calendar.dart';
 import '../../data/analytics/financial_eligibility.dart';
 import '../../data/db/database.dart';
 import '../../data/models/source_currency.dart';
+import '../claim.dart';
 import 'assistant_intent.dart';
 
 sealed class AssistantQueryResult {
@@ -105,9 +104,9 @@ class RecurringQueryResult extends AssistantQueryResult {
 }
 
 class InsightQueryItem {
-  const InsightQueryItem(this.kind, this.figures);
+  const InsightQueryItem(this.kind, this.text);
   final String kind;
-  final Map<String, num> figures;
+  final String text;
 }
 
 class InsightsQueryResult extends AssistantQueryResult {
@@ -423,7 +422,14 @@ class AssistantQueryEngine {
   Future<InsightsQueryResult> _insights(AssistantIntent intent) async {
     final rows = await database.select(database.insights).get();
     final items = <InsightQueryItem>[];
-    for (final row in rows.where((row) => !row.dismissed)) {
+    final fresh = await freshClaims(
+      database,
+      rows.where((row) => !row.dismissed),
+      calendar: calendar,
+    );
+    final names = await loadClaimDisplayNames(database);
+    const renderer = ClaimRenderer();
+    for (final row in fresh) {
       if (intent.range != null) {
         final period = DateTime.tryParse('${row.period.substring(0, 7)}-01');
         if (period == null ||
@@ -432,13 +438,16 @@ class AssistantQueryEngine {
           continue;
         }
       }
-      final decoded = _object(row.payloadJson);
-      items.add(
-        InsightQueryItem(row.kind, {
-          for (final entry in decoded.entries)
-            if (entry.value is num) entry.key: entry.value! as num,
-        }),
+      final claim = const ClaimValidator().parse(row);
+      if (claim == null) continue;
+      final display = renderer.render(
+        claim,
+        categoryNames: names.categories,
+        merchantNames: names.merchants,
       );
+      if (display == null) continue;
+      items
+          .add(InsightQueryItem(row.kind, '${display.title}: ${display.body}'));
     }
     return InsightsQueryResult(items);
   }
@@ -474,12 +483,4 @@ class AssistantQueryEngine {
       metric == AssistantMetric.net && row.direction == 'debit'
           ? -row.amount
           : row.amount;
-  static Map<String, Object?> _object(String source) {
-    try {
-      final value = jsonDecode(source);
-      return value is Map<String, Object?> ? value : const {};
-    } on FormatException {
-      return const {};
-    }
-  }
 }

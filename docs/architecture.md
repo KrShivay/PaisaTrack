@@ -147,6 +147,39 @@ merges without replacing raw source fields.
 - Nightly work purges expired raw SMS, refreshes recurring/baseline/classifier
   state, and recomputes insights with checkpoints.
 
+## Insight claim contract
+
+Deterministic insight rows store a versioned claim envelope at
+`insights.payload_json.claim`; this reuses the existing JSON column and adds no
+schema. The envelope identifies the calculation version and stable `claim_id`,
+records `basis: observed`, scope, comparable date windows, numeric metrics,
+coverage, and a stable input hash over every scope-matched evidence row,
+including its identity, amount, category, currency, timestamp, direction, and
+financial eligibility fields. Evidence IDs are sorted and capped at 50;
+`total_count`, `truncated`, and the full evidence digest retain the full scope.
+
+Supported calculations are category deltas, recorded fees, duplicate
+subscriptions, recurring price changes, and missed autopay. Category deltas
+compare equal elapsed local days for partial months; a zero previous total
+abstains. Currency buckets remain separate, including unknown currency.
+Coverage counts unreviewed rows, unknown currencies, and exclusions for
+unsettled rows, owned transfers, analytics exclusions, non-spending categories,
+and credits. Refunds remain gross recorded debits because production refund
+links are not implemented.
+
+`ClaimValidator` rejects malformed/unknown claims and inconsistent category
+arithmetic. `ClaimRenderer` supplies all visible insight and assistant text from
+typed fields; payload prose is ignored. Both dashboard and Trends hide legacy,
+anomaly, forecast, and stale claims. A read checks the hash for each displayed
+claim's recomputed scope, so an edit hides it until `DerivedReadsService` recomputes
+it. “Why?” opens Activity filtered to the cited IDs and labels truncated
+evidence as “showing 50 of N”. Dismissal stays on the stable claim row ID across
+recomputation. Free-text narrative generation is removed; T-178c may add
+closed-set claim selection.
+
+Trends can be empty when no supported, fresh claim exists for the selected
+period; aggregate charts may still have data.
+
 Current boundaries that must be preserved while fixing the UI:
 
 - SQL aggregates are the only valid source for full-period totals. A loading or
@@ -208,11 +241,11 @@ and arbitrary fuzzy matching remain unsupported.
 
 See `docs/schema.md`, `docs/privacy.md`, and ADRs before changing these boundaries.
 
-## Proposed assistance and AI work
+## Remaining assistance and AI work
 
 The [smart assistance plan](plans/smart-transaction-assistance.md) and
 [AI report](reports/grounded-ai-opportunities.md) extend existing components.
-They do not describe shipped behavior. [Proposed ADR 0011](decisions/0011-evidence-backed-assistance.md)
+They describe the remaining work. [ADR 0011](decisions/0011-evidence-backed-assistance.md)
 separates source facts, user-confirmed labels, suggestions, and forecast estimates;
 requires scoped correction/undo; and limits model output to supported claims.
 Current SQL arithmetic, evidence preservation and offline fallback remain the

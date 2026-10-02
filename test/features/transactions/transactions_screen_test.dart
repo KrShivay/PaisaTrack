@@ -652,7 +652,9 @@ class _ControlledTransactionRepository extends TransactionRepository {
     DateTime? start,
     DateTime? end,
     ActivityTransactionCursor? cursor,
+    Set<String>? transactionIds,
   }) {
+    assert(transactionIds == null || transactionIds.isNotEmpty);
     final controller = StreamController<ActivityTransactionPage>();
     cursors.add(cursor);
     controllers.add(controller);

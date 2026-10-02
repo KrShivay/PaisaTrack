@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_state_views.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
+import '../../core/widgets/transaction_filter_sheet.dart';
 import '../../core/undo/undo_controller.dart';
 import '../../data/db/database.dart' show Category;
 import '../../data/db/database_provider.dart';
@@ -28,17 +29,24 @@ class TransactionsScreen extends ConsumerStatefulWidget {
     this.initialCategoryId,
     this.initialCategoryName,
     this.initialMerchant,
+    this.initialTransactionIds,
+    this.initialEvidenceTotalCount,
   });
 
   final String? initialCategoryId;
   final String? initialCategoryName;
   final String? initialMerchant;
+  final Set<String>? initialTransactionIds;
+  final int? initialEvidenceTotalCount;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
 }
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
+  late final TransactionFilters _initialEvidenceFilters = TransactionFilters(
+    ids: widget.initialTransactionIds ?? const {},
+  );
   final _searchController = TextEditingController();
   String _query = '';
   ActivityFilterChoice _activeFilter = ActivityFilterChoice.all;
@@ -55,6 +63,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   List<TransactionListItem> _filterItems(List<TransactionListItem> items) {
     return items.where((item) {
+      final evidenceIds = widget.initialTransactionIds;
+      if (evidenceIds != null && !evidenceIds.contains(item.id)) return false;
       if (widget.initialCategoryId != null &&
           item.categoryId != widget.initialCategoryId) {
         return false;
@@ -201,7 +211,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pageAsync = ref.watch(activityTransactionPageProvider);
+    final pageAsync = widget.initialTransactionIds == null
+        ? ref.watch(activityTransactionPageProvider)
+        : ref.watch(evidenceTransactionPageProvider(_initialEvidenceFilters));
     final page = pageAsync.valueOrNull;
     final items = page?.rows ?? const <TransactionListItem>[];
     final hasMore = page?.hasMore ?? false;
@@ -253,17 +265,37 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final compact = constraints.maxWidth < 360 ||
+                            (widget.initialEvidenceTotalCount != null &&
+                                constraints.maxWidth < 600) ||
                             MediaQuery.textScalerOf(context).scale(1) >= 1.5;
-                        final title = Text(
-                          'Activity',
-                          style: AppTheme.bloomDisplay(
-                            22,
-                            FontWeight.w700,
-                            letterSpacing: -0.03,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
+                        final title = Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Activity',
+                              style: AppTheme.bloomDisplay(
+                                22,
+                                FontWeight.w700,
+                                letterSpacing: -0.03,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextPrimary
+                                    : AppColorTokens.ink,
+                              ),
+                            ),
+                            if (widget.initialEvidenceTotalCount != null &&
+                                widget.initialEvidenceTotalCount! >
+                                    (widget.initialTransactionIds?.length ?? 0))
+                              Text(
+                                'Showing ${widget.initialTransactionIds?.length ?? 0} of ${widget.initialEvidenceTotalCount} supporting transactions',
+                                style: AppTheme.bloomDisplay(
+                                  12,
+                                  FontWeight.w400,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                              ),
+                          ],
                         );
                         return Padding(
                           padding:

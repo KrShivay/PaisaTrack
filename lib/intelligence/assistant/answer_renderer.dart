@@ -55,7 +55,7 @@ class AnswerRenderer {
                 .join('\n'),
         InsightsQueryResult(:final items) => items.isEmpty
             ? 'There are no active insights.'
-            : '${items.length} active insights: ${items.map((item) => item.kind.replaceAll('_', ' ')).join(', ')}.',
+            : items.map((item) => item.text).join('\n'),
       };
 
   static String _metric(AssistantMetric metric) => switch (metric) {

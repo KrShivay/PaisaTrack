@@ -1,5 +1,26 @@
 # Current Handoff
 
+## 2026-10-02 — T-178a a4 typed evidence-linked claims (T-178a closed)
+
+- Insights now carry a typed claim in the existing payload (window,
+  metrics, evidence ids with a digest over all evidence and eligibility
+  fields, per-claim coverage by exclusion reason). Only claims that pass the
+  validator and a read-time freshness recompute on the same
+  `FinancialCalendar` render, through a fixed observed-only renderer; "Why?"
+  opens Activity filtered to the evidence rows. Free-text narrative,
+  generic default text and advice copy were removed; anomaly and forecast
+  cards stay hidden until T-178b gives them claims. Refunds remain gross
+  (no production refund linking; T-100). Trends can be empty when no claim
+  qualifies; this is documented.
+- Impact: `InsightsEngine`/`TransactionRepository` CRITICAL,
+  `TransactionsScreen` HIGH. Verified: analyzer clean, full suite 1051/1051
+  (twice), intelligence/insights/dashboard/transactions 326/326 under UTC,
+  New York and Kolkata. Three review rounds (>50-row claims never rendering,
+  hash missing eligibility fields, leaked drift watches, write/read calendar
+  mismatch). The recurring scaling test now uses warm-up + best-of-3.
+- T-193 physical preview/apply/undo is staged on the phone's QA package and
+  waits for the phone to be unlocked; see TASKS.
+
 ## 2026-10-02 — T-164e detail/export/manual-entry slice
 
 - Transaction detail re-implemented the clock/month formatting; it now reuses
@@ -32,21 +53,3 @@
   fixed with fail-before tests). Also restores the AGENTS.md/CLAUDE.md
   GitNexus block that `f6bdc6c` overwrote with a worktree index name.
 - The a1 entry is in Git history (`0e6d8c4`).
-
-## 2026-10-02 — T-193 QA fixture and repair/onboarding fixes
-
-- Owner data has no repair-eligible row (all currency-unknown rows are from
-  2023; raw SMS is kept 30 days), so a synthetic fixture for the isolated QA
-  package was added (prepare + fresh-process verify; procedure in the T-193
-  QA report). Building it exposed that `Rs.500`-style amounts were never
-  repairable; the service now accepts dotted currency tokens and rejects a
-  token that precedes another number. "Continue without SMS" was in-memory
-  only; it is now a persisted `onboardingCompleted` setting with one source
-  of truth, Home stays mounted during permission refreshes, and load errors
-  route to onboarding.
-- Impact: `SourceCurrencyRepairService` and `AppSettingsController`
-  CRITICAL, `AppSettings` HIGH. Verified: analyzer clean, full suite green
-  (1007/1007 after rebase onto a2),
-  QA targets compile to `com.paisatrack.recoveryqa`. Three review rounds.
-  Physical preview/apply/undo remains pending. The T-179a closure entry is in
-  Git history (`10092b0`).

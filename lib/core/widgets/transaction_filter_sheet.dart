@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/repositories/transaction_repository.dart';
@@ -41,6 +42,7 @@ class TransactionFilters {
     this.recurring = TransactionRecurringFilter.all,
     this.source = TransactionSourceFilter.all,
     this.anomaly = TransactionAnomalyFilter.all,
+    this.ids = const {},
   });
 
   final DateTimeRange? dateRange;
@@ -55,6 +57,49 @@ class TransactionFilters {
   final TransactionRecurringFilter recurring;
   final TransactionSourceFilter source;
   final TransactionAnomalyFilter anomaly;
+  final Set<String> ids;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TransactionFilters &&
+      _sameRange(other.dateRange, dateRange) &&
+      other.categoryId == categoryId &&
+      other.categoryName == categoryName &&
+      other.merchant == merchant &&
+      other.account == account &&
+      other.channel == channel &&
+      other.minimumAmount == minimumAmount &&
+      other.maximumAmount == maximumAmount &&
+      other.review == review &&
+      other.recurring == recurring &&
+      other.source == source &&
+      other.anomaly == anomaly &&
+      setEquals(other.ids, ids);
+
+  @override
+  int get hashCode {
+    final range = dateRange;
+    return Object.hash(
+      range == null ? null : Object.hash(range.start, range.end),
+      categoryId,
+      categoryName,
+      merchant,
+      account,
+      channel,
+      minimumAmount,
+      maximumAmount,
+      review,
+      recurring,
+      source,
+      anomaly,
+      Object.hashAllUnordered(ids),
+    );
+  }
+
+  static bool _sameRange(DateTimeRange? left, DateTimeRange? right) =>
+      left == null
+          ? right == null
+          : right != null && left.start == right.start && left.end == right.end;
 
   bool get isEmpty => activeCount == 0;
 
@@ -83,6 +128,7 @@ class TransactionFilters {
       anomaly: field == TransactionFilterField.anomaly
           ? TransactionAnomalyFilter.all
           : anomaly,
+      ids: ids,
     );
   }
 
@@ -106,6 +152,7 @@ class TransactionFilters {
     required Set<String> recurringMerchantIds,
     required Set<String> anomalyTransactionIds,
   }) {
+    if (ids.isNotEmpty && !ids.contains(item.id)) return false;
     final range = dateRange;
     if (range != null) {
       final local = item.ts.toLocal();

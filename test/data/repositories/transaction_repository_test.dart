@@ -414,6 +414,24 @@ void main() {
     expect(page.nextCursor?.ts, page.rows.last.ts.millisecondsSinceEpoch);
   });
 
+  test('evidence id filter returns exactly the requested transaction rows',
+      () async {
+    for (final id in ['evidence_a', 'unrelated', 'evidence_b']) {
+      await _insertTxn(database, id: id);
+    }
+
+    final page = await TransactionRepository(database).watchTransactionPage(
+      limit: 2,
+      transactionIds: {'evidence_a', 'evidence_b'},
+    ).first;
+
+    expect(
+      page.rows.map((row) => row.id).toSet(),
+      {'evidence_a', 'evidence_b'},
+    );
+    expect(page.hasMore, isFalse);
+  });
+
   test('Activity page excludes deleted and duplicate-suppressed rows',
       () async {
     await _insertTxn(database, id: 'activity_visible');

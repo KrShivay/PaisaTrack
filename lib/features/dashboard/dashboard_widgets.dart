@@ -7,12 +7,13 @@ import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/widgets/bloom/bloom.dart';
-import '../../data/db/database.dart' show Insight;
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/budget_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../intelligence/claim.dart';
 import '../insights/insights_screen.dart';
 import '../settings/app_settings.dart';
+import '../transactions/transactions_screen.dart';
 import 'dashboard_providers.dart';
 
 /// Conic ring painter drawing category arcs in descending order with remainder arc.
@@ -1022,10 +1023,16 @@ class BloomInsightCard extends ConsumerWidget {
 
     final insight = insights.first;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final title = _insightTitle(insight);
-    final subtitle = _insightSubtitle(insight);
-
-    if (title == null) return const SizedBox.shrink();
+    final claim = const ClaimValidator().parse(insight);
+    final names = ref.watch(claimDisplayNamesProvider).valueOrNull;
+    final display = claim == null || names == null
+        ? null
+        : const ClaimRenderer().render(
+            claim,
+            categoryNames: names.categories,
+            merchantNames: names.merchants,
+          );
+    if (claim == null || display == null) return const SizedBox.shrink();
 
     final bg = isDark
         ? AppColorTokens.bloomGold.withValues(alpha: 0.14)
@@ -1065,7 +1072,7 @@ class BloomInsightCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  display.title,
                   style: AppTheme.bloomDisplay(
                     13,
                     FontWeight.w700,
@@ -1074,49 +1081,38 @@ class BloomInsightCard extends ConsumerWidget {
                         : const Color(0xFF3D2E06),
                   ),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppTheme.bloomDisplay(
-                      12,
-                      FontWeight.w400,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextSecondary
-                          : const Color(0xFF7E6A45),
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  display.body,
+                  style: AppTheme.bloomDisplay(
+                    12,
+                    FontWeight.w400,
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : const Color(0xFF7E6A45),
                   ),
-                ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => TransactionsScreen(
+                          initialTransactionIds: claim.evidenceIds.toSet(),
+                          initialEvidenceTotalCount: claim.evidenceCount,
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.help_outline_rounded, size: 17),
+                    label: const Text('Why?'),
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  String? _insightTitle(Insight insight) {
-    switch (insight.kind) {
-      case 'fees_total':
-        return 'Fees & Charges Alert';
-      case 'spike':
-        return 'Spending Spike Detected';
-      case 'trend_up':
-        return 'Spending Trending Up';
-      case 'trend_down':
-        return 'Spending Trending Down';
-      default:
-        return null;
-    }
-  }
-
-  String? _insightSubtitle(Insight insight) {
-    switch (insight.kind) {
-      case 'fees_total':
-        return 'Review your fees for ${insight.period}';
-      default:
-        return 'Check your ${insight.period} spending patterns';
-    }
   }
 }
 

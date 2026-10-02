@@ -18,9 +18,7 @@ import '../enrichment/decision_policy.dart';
 import '../enrichment/local_classifier.dart';
 import '../enrichment/merchant_clusterer.dart';
 import 'derived_reads_service.dart';
-import 'llm/llm_runtime.dart';
 import 'models/embedder.dart';
-import 'narrative_insight_generator.dart';
 
 const nightlyWorkName = 'paisatrack-nightly-intelligence';
 const nightlyTaskName = 'nightly-intelligence-v1';
@@ -111,10 +109,7 @@ class NightlyPipeline {
         },
         NightlyStage.precomputeInsights: (now) async {
           await derivedReads.rebuildForecastAndInsights(today: now);
-          await NarrativeInsightGenerator(
-            database,
-            const PlatformLlmRuntime(),
-          ).run(today: now);
+          // TODO(T-178c): allow model selection of validated claim IDs only.
           await derivedReads.writeFreshnessStamp();
         },
       },

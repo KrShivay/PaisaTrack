@@ -1,10 +1,19 @@
+import 'dart:convert';
+
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/data/db/database_provider.dart';
+import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
+import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
+import 'package:paisatrack/features/transactions/transactions_providers.dart';
+import 'package:paisatrack/features/transactions/transactions_screen.dart';
 
 void main() {
   test('insight period key uses the period calendar across UTC month edge', () {
@@ -65,6 +74,149 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('MONTH OVER MONTH'), findsOneWidget);
+  });
+
+  testWidgets('unknown and injected narrative rows never render',
+      (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    const injected = Insight(
+      id: 'narrative:2026-07',
+      period: '2026-07',
+      kind: 'narrative',
+      payloadJson: '{"body":"Injected LLM prose should not render"}',
+      dismissed: false,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
+          activeInsightsProvider
+              .overrideWith((ref) => Stream.value([injected])),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.textContaining('Injected LLM prose'), findsNothing);
+  });
+
+  testWidgets('Why opens exactly claim evidence and labels truncation',
+      (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    Set<String>? requestedIds;
+    TransactionListItem evidenceRow(String id, String name, double amount) =>
+        TransactionListItem(
+          id: id,
+          ts: DateTime.utc(2026, 7, 2),
+          amount: amount,
+          direction: TransactionDirection.debit,
+          displayName: name,
+          categoryName: 'Food',
+          categoryId: 'food',
+          categoryIcon: 'food',
+        );
+    const claimId = 'category_delta:2026-07:food:INR';
+    final claimRow = Insight(
+      id: claimId,
+      period: '2026-07',
+      kind: 'category_delta',
+      dismissed: false,
+      payloadJson: jsonEncode({
+        'claim': {
+          'v': 1,
+          'calc': 'category_delta@1',
+          'claim_id': claimId,
+          'basis': 'observed',
+          'scope': {
+            'category_id': 'food',
+            'currency_code': 'INR',
+            'currency_symbol': '₹',
+          },
+          'window': {
+            'current': ['2026-07-01', '2026-07-10'],
+            'previous': ['2026-06-01', '2026-06-10'],
+            'partial': true,
+          },
+          'metrics': {
+            'current_total': 150,
+            'previous_total': 100,
+            'delta_fraction': 0.5,
+          },
+          'evidence': {
+            'ids': ['evidence_a', 'evidence_b'],
+            'total_count': 3,
+            'truncated': true,
+          },
+          'coverage': {
+            'rows': 4,
+            'unreviewed': 0,
+            'unknown_currency': 0,
+            'excluded': {
+              'not_settled': 0,
+              'owned_transfer': 0,
+              'analytics_excluded': 0,
+              'non_spending': 0,
+              'credit': 0,
+            },
+          },
+          'input_hash': '0000000000000000',
+        },
+      }),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
+          activeInsightsProvider
+              .overrideWith((ref) => Stream.value([claimRow])),
+          evidenceTransactionPageProvider.overrideWith((ref, filters) {
+            requestedIds = filters.ids;
+            return Stream.value(
+              ActivityTransactionPage(
+                rows: [
+                  evidenceRow('evidence_a', 'Evidence A', 100),
+                  evidenceRow('evidence_b', 'Evidence B', 150),
+                ],
+                hasMore: false,
+              ),
+            );
+          }),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byTooltip('Why?'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(TransactionsScreen), findsOneWidget);
+    expect(find.text('Showing 2 of 3 supporting transactions'), findsOneWidget);
+    expect(find.text('Evidence A'), findsOneWidget);
+    expect(find.text('Evidence B'), findsOneWidget);
+    expect(requestedIds, {'evidence_a', 'evidence_b'});
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
   });
 
   testWidgets('offers retry when analytics fail and recovers on retry',

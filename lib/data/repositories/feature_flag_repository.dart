@@ -9,7 +9,6 @@ import '../db/database_provider.dart';
 /// Key definitions for feature flags and thresholds.
 abstract class FeatureFlagKeys {
   static const enableLocalLlm = 'enable_local_llm';
-  static const enableNarrativeInsights = 'enable_narrative_insights';
   static const silentConfidenceThreshold = 'silent_confidence_threshold';
   static const askConfidenceThreshold = 'ask_confidence_threshold';
   static const askNowDailyBudget = 'ask_now_daily_budget';
@@ -59,13 +58,6 @@ const featureFlagDefinitions = <FeatureFlagDefinition>[
     description: 'Allow on-device language-model parsing when available.',
     type: FeatureFlagValueType.boolean,
     defaultValue: AppConstants.enableLocalLlm,
-  ),
-  FeatureFlagDefinition(
-    key: FeatureFlagKeys.enableNarrativeInsights,
-    label: 'Narrative insights',
-    description: 'Allow local narrative insight generation when available.',
-    type: FeatureFlagValueType.boolean,
-    defaultValue: AppConstants.enableNarrativeInsights,
   ),
   FeatureFlagDefinition(
     key: FeatureFlagKeys.silentConfidenceThreshold,
@@ -225,11 +217,6 @@ class FeatureFlagsState {
   bool get enableLocalLlm => getBool(
         FeatureFlagKeys.enableLocalLlm,
         defaultValue: AppConstants.enableLocalLlm,
-      );
-
-  bool get enableNarrativeInsights => getBool(
-        FeatureFlagKeys.enableNarrativeInsights,
-        defaultValue: AppConstants.enableNarrativeInsights,
       );
 
   double get silentConfidenceThreshold => getDouble(

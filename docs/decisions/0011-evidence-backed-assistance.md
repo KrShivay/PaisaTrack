@@ -1,6 +1,8 @@
 # ADR 0011 — Evidence-backed transaction assistance and AI
 
-Status: proposed, 2026-09-26. No runtime or schema change implemented.
+Status: accepted-in-part, 2026-10-02. T-178a slice a4 implements the typed
+insight claim and fixed-rendering portions below; remaining assistant language
+work stays under T-178c. No schema or model/runtime dependency was added.
 
 ## Context
 

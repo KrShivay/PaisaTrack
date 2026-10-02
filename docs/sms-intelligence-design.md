@@ -217,7 +217,7 @@ Per the product owner's decision, inferred **descriptive** detail is permitted:
 | Category suggestion | Must clear the category threshold; otherwise review |
 | One-line description / context | Display only; never an aggregate input |
 | Message-kind hint (subscription, EMI, refund, reminder) | A *hint* into the lifecycle classifier, never the sole basis for a state change |
-| Narrative summaries over already-computed aggregates | Existing `NarrativeInsightGenerator` contract — numbers interpolated from SQL, prose from the model |
+| Narrative summaries over already-computed aggregates | Retired; any follow-up belongs in T-178c as closed-set claim-ID selection |
 
 Everything in that table is a **label**: wrong is annoying and one tap to fix.
 Everything above the boundary is **evidence**: wrong is a corrupted ledger.

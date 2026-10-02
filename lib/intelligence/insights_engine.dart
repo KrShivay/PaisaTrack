@@ -7,6 +7,7 @@ import '../core/format.dart';
 import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
 import '../data/models/source_currency.dart';
+import 'claim.dart';
 
 /// Result of one deterministic insight recomputation.
 class InsightsRunResult {
@@ -28,11 +29,19 @@ class _InsightSpec {
     required this.id,
     required this.kind,
     required this.payload,
+    required this.scope,
+    required this.window,
+    required this.metrics,
+    required this.evidenceRows,
   });
 
   final String id;
   final String kind;
   final Map<String, Object?> payload;
+  final Map<String, Object?> scope;
+  final Map<String, Object?> window;
+  final Map<String, num> metrics;
+  final List<Transaction> evidenceRows;
 }
 
 /// Precomputes deterministic, no-LLM insights for one local calendar month.
@@ -73,7 +82,19 @@ class InsightsEngine {
 
     return _database.transaction(() async {
       final recurring = await _database.select(_database.recurringSeries).get();
-      final transactions = await (_database.select(_database.transactions)
+      final scopedTransactions = await (_database.select(_database.transactions)
+            ..where(
+              (t) =>
+                  t.ts.isBiggerOrEqualValue(
+                    comparablePrevious.start.millisecondsSinceEpoch,
+                  ) &
+                  t.ts.isSmallerThanValue(
+                    currentPeriod.end.millisecondsSinceEpoch,
+                  ),
+            ))
+          .get();
+      final eligibleTransactions = await (_database
+              .select(_database.transactions)
             ..where(
               (t) =>
                   t.ts.isBiggerOrEqualValue(
@@ -85,14 +106,23 @@ class InsightsEngine {
                   FinancialEligibility.spendingDebit(t, _database.categories),
             ))
           .get();
-      final categories = {
-        for (final row in await _database.select(_database.categories).get())
-          row.id: row.name,
+      final categoryRows = await _database.select(_database.categories).get();
+      final categories = {for (final row in categoryRows) row.id: row.name};
+      final categoryEligibility = {
+        for (final row in categoryRows) row.id: row.isSpending,
       };
+      final transactions = eligibleTransactions;
       final specs = <_InsightSpec>[
-        ..._duplicateSubscriptions(period, recurring),
-        ..._fees(period, transactions, currentStart, categories),
-        ..._priceCreep(period, recurring),
+        ..._duplicateSubscriptions(period, recurring, transactions),
+        ..._fees(
+          period,
+          transactions,
+          currentStart,
+          currentEnd,
+          categories,
+          calendar,
+        ),
+        ..._priceCreep(period, recurring, transactions, calendar),
         ..._categoryDeltas(
           transactions,
           currentStart,
@@ -102,8 +132,10 @@ class InsightsEngine {
           period,
           calendar,
         ),
-        ..._missedAutopay(period, recurring),
+        ..._missedAutopay(period, recurring, transactions, calendar),
       ];
+      // No evidence means there is no observed claim to emit.
+      specs.removeWhere((spec) => spec.evidenceRows.isEmpty);
       specs.sort((a, b) => a.id.compareTo(b.id));
 
       final existing = await (_database.select(_database.insights)
@@ -121,12 +153,42 @@ class InsightsEngine {
           .go();
 
       for (final spec in specs) {
+        final claimScope = TypedClaim(
+          version: 1,
+          calculation: '${spec.kind}@1',
+          id: spec.id,
+          scope: spec.scope,
+          window: spec.window,
+          metrics: spec.metrics,
+          evidenceIds: const [],
+          evidenceCount: 0,
+          truncated: false,
+          inputHash: '',
+          raw: const {},
+        );
+        final evidenceRows = ClaimEvidenceScope.select(
+          claimScope,
+          scopedTransactions,
+          calendar: calendar,
+          categoryEligibility: categoryEligibility,
+        );
+        final coverage = _coverage(
+          ClaimEvidenceScope.select(
+            claimScope,
+            scopedTransactions,
+            calendar: calendar,
+            categoryEligibility: categoryEligibility,
+            eligibleOnly: false,
+          ),
+          categoryEligibility,
+        );
         await _database.into(_database.insights).insertOnConflictUpdate(
               InsightsCompanion.insert(
                 id: spec.id,
                 period: period,
                 kind: spec.kind,
-                payloadJson: jsonEncode(spec.payload),
+                payloadJson:
+                    jsonEncode(_claimPayload(spec, coverage, evidenceRows)),
                 dismissed: Value(existingById[spec.id]?.dismissed ?? false),
               ),
             );
@@ -146,6 +208,7 @@ class InsightsEngine {
   Iterable<_InsightSpec> _duplicateSubscriptions(
     String period,
     List<RecurringSery> recurring,
+    List<Transaction> transactions,
   ) sync* {
     final byMerchant = <String, List<RecurringSery>>{};
     for (final series in recurring) {
@@ -161,6 +224,12 @@ class InsightsEngine {
     for (final entry in byMerchant.entries) {
       if (entry.value.length < 2) continue;
       final sorted = [...entry.value]..sort((a, b) => a.id.compareTo(b.id));
+      final evidenceRows = _seriesEvidence(
+        sorted.first,
+        transactions,
+        matchAmount: false,
+      );
+      if (evidenceRows.isEmpty) continue;
       yield _InsightSpec(
         id: 'duplicate_subscription:$period:${entry.key}',
         kind: 'duplicate_subscription',
@@ -175,6 +244,20 @@ class InsightsEngine {
             (sum, series) => sum + _monthlyAmount(series),
           ),
         },
+        scope: {
+          'merchant_ids': [sorted.first.merchantId],
+          'currency_code': sorted.first.currencyCode,
+          'currency_symbol': sorted.first.currencySymbol,
+        },
+        window: _windowForRows(evidenceRows, partial: false),
+        metrics: {
+          'monthly_total': evidenceRows.fold<double>(
+            0,
+            (sum, row) => sum + row.amount,
+          ),
+          'series_count': evidenceRows.length,
+        },
+        evidenceRows: evidenceRows,
       );
     }
   }
@@ -183,7 +266,9 @@ class InsightsEngine {
     String period,
     List<Transaction> transactions,
     DateTime currentStart,
+    DateTime currentEnd,
     Map<String, String> categories,
+    FinancialCalendar calendar,
   ) sync* {
     final fees = transactions.where(
       (txn) =>
@@ -212,6 +297,29 @@ class InsightsEngine {
           'count': rows.length,
           'transaction_ids': [for (final txn in rows) txn.id]..sort(),
         },
+        scope: {
+          'category_ids': categories.entries
+              .where(
+                (entry) =>
+                    entry.key == 'fees_charges' ||
+                    entry.value == 'Fees & Charges',
+              )
+              .map((entry) => entry.key)
+              .toList()
+            ..sort(),
+          'currency_code': first.currencyCode,
+          'currency_symbol': first.currencySymbol,
+        },
+        window: _window(
+          currentStart,
+          currentEnd.subtract(const Duration(microseconds: 1)),
+          partial:
+              currentEnd.isBefore(calendar.monthContaining(currentStart).end),
+        ),
+        metrics: {
+          'total': rows.fold<double>(0, (sum, txn) => sum + txn.amount),
+        },
+        evidenceRows: rows,
       );
     }
   }
@@ -219,16 +327,31 @@ class InsightsEngine {
   Iterable<_InsightSpec> _priceCreep(
     String period,
     List<RecurringSery> recurring,
+    List<Transaction> transactions,
+    FinancialCalendar calendar,
   ) sync* {
     for (final series in recurring) {
-      final diff = (series.lastAmount - series.expectedAmount).abs();
-      final relChange =
-          series.expectedAmount > 0 ? diff / series.expectedAmount : 0.0;
-      if (series.amountTrend == 'rising' || relChange > 0.05) {
+      final evidenceRows = _seriesEvidence(series, transactions)
+        ..sort((a, b) => a.ts.compareTo(b.ts));
+      if (evidenceRows.length > 1 && evidenceRows.first.amount > 0) {
+        final expected = evidenceRows.first.amount;
+        final last = evidenceRows.last.amount;
+        if ((last - expected).abs() <= expected * 0.05) continue;
         yield _InsightSpec(
           id: 'price_creep:$period:${series.id}',
           kind: 'price_creep',
           payload: _seriesPayload(series),
+          scope: {
+            'merchant_id': series.merchantId,
+            'currency_code': series.currencyCode,
+            'currency_symbol': series.currencySymbol,
+          },
+          window: _windowForRows(evidenceRows, partial: false),
+          metrics: {
+            'expected_amount': expected,
+            'last_amount': last,
+          },
+          evidenceRows: evidenceRows,
         );
       }
     }
@@ -246,6 +369,7 @@ class InsightsEngine {
     final current = <String, double>{};
     final previous = <String, double>{};
     final currencies = <String, SourceCurrency>{};
+    final groupedRows = <String, List<Transaction>>{};
     for (final txn in transactions) {
       final categoryId = txn.categoryId;
       if (categoryId == null) continue;
@@ -265,6 +389,7 @@ class InsightsEngine {
       final key = '$categoryId\u0000${currency.bucketKey}';
       currencies[key] = currency;
       target[key] = (target[key] ?? 0) + txn.amount;
+      groupedRows.putIfAbsent(key, () => []).add(txn);
     }
     final keys = {...current.keys, ...previous.keys}.toList()..sort();
     for (final key in keys) {
@@ -299,6 +424,36 @@ class InsightsEngine {
             previousPeriod.end.subtract(const Duration(microseconds: 1)),
           ),
         },
+        scope: {
+          'category_id': categoryId,
+          'currency_code': currency.code,
+          'currency_symbol': currency.symbol,
+        },
+        window: {
+          'current': [
+            _dateLabel(calendar, currentStart),
+            _dateLabel(
+              calendar,
+              currentEnd.subtract(const Duration(microseconds: 1)),
+            ),
+          ],
+          'previous': [
+            _dateLabel(calendar, previousPeriod.start),
+            _dateLabel(
+              calendar,
+              previousPeriod.end.subtract(const Duration(microseconds: 1)),
+            ),
+          ],
+          'partial': currentEnd.isBefore(
+            calendar.monthContaining(currentStart).end,
+          ),
+        },
+        metrics: {
+          'current_total': currentAmount,
+          'previous_total': previousAmount,
+          'delta_fraction': delta,
+        },
+        evidenceRows: groupedRows[key] ?? const [],
       );
     }
   }
@@ -306,16 +461,157 @@ class InsightsEngine {
   Iterable<_InsightSpec> _missedAutopay(
     String period,
     List<RecurringSery> recurring,
+    List<Transaction> transactions,
+    FinancialCalendar calendar,
   ) sync* {
     for (final series in recurring.where(
       (row) => row.status == 'missed' && row.kind != 'income',
     )) {
+      final evidenceRows = _seriesEvidence(series, transactions);
+      if (evidenceRows.isEmpty) continue;
+      final average = evidenceRows.fold<double>(
+            0,
+            (sum, row) => sum + row.amount,
+          ) /
+          evidenceRows.length;
       yield _InsightSpec(
         id: 'missed_autopay:$period:${series.id}',
         kind: 'missed_autopay',
         payload: _seriesPayload(series),
+        scope: {
+          'merchant_id': series.merchantId,
+          'currency_code': series.currencyCode,
+          'currency_symbol': series.currencySymbol,
+        },
+        window: _windowForRows(evidenceRows, partial: false),
+        metrics: {'expected_amount': average},
+        evidenceRows: evidenceRows,
       );
     }
+  }
+
+  Map<String, Object?> _coverage(
+    List<Transaction> rows,
+    Map<String, bool> categoryEligibility,
+  ) {
+    final excluded = <String, int>{
+      'not_settled': 0,
+      'owned_transfer': 0,
+      'analytics_excluded': 0,
+      'non_spending': 0,
+      'credit': 0,
+    };
+    var unreviewed = 0;
+    var unknownCurrency = 0;
+    for (final row in rows) {
+      if (row.status == 'needs_review' || row.status == 'asked') unreviewed++;
+      final eligible = FinancialEligibility.includesSpendingDebit(
+        row,
+        categoryIsSpending: row.categoryId == null ||
+            categoryEligibility[row.categoryId] != false,
+      );
+      String? reason;
+      if (!eligible &&
+          (row.isDeleted ||
+              row.isNotTransaction ||
+              row.duplicateOfTxnId != null ||
+              row.lifecycleState != 'settled')) {
+        reason = 'not_settled';
+      } else if (!eligible && row.ownedTransferId != null) {
+        reason = 'owned_transfer';
+      } else if (!eligible && row.isAnalyticsExcluded) {
+        reason = 'analytics_excluded';
+      } else if (!eligible &&
+          row.categoryId != null &&
+          categoryEligibility[row.categoryId] == false) {
+        reason = 'non_spending';
+      } else if (!eligible && row.direction != 'debit') {
+        reason = 'credit';
+      }
+      if (reason != null) {
+        excluded[reason] = excluded[reason]! + 1;
+      } else if (row.currencyCode == null) {
+        unknownCurrency++;
+      }
+    }
+    return {
+      'rows': rows.length,
+      'unreviewed': unreviewed,
+      'excluded': excluded,
+      'unknown_currency': unknownCurrency,
+    };
+  }
+
+  List<Transaction> _seriesEvidence(
+    RecurringSery series,
+    List<Transaction> transactions, {
+    bool matchAmount = true,
+  }) =>
+      transactions.where((row) {
+        final sameMerchant = row.merchantId == series.merchantId;
+        final sameCurrency = sourceCurrencyBucket(row) ==
+            SourceCurrency(
+              code: series.currencyCode,
+              symbol: series.currencySymbol,
+            ).bucketKey;
+        return sameMerchant && sameCurrency;
+      }).toList();
+
+  Map<String, Object?> _claimPayload(
+    _InsightSpec spec,
+    Map<String, Object?> coverage,
+    List<Transaction> evidenceRows,
+  ) {
+    final ids = evidenceRows.map((row) => row.id).toSet().toList()..sort();
+    final selectedIds = ids.take(50).toList();
+    const validator = ClaimValidator();
+    return {
+      ...spec.payload,
+      'claim': {
+        'v': 1,
+        'calc': '${spec.kind}@1',
+        'claim_id': spec.id,
+        'basis': 'observed',
+        'scope': spec.scope,
+        'window': spec.window,
+        'metrics': spec.metrics,
+        'evidence': {
+          'ids': selectedIds,
+          'total_count': ids.length,
+          'truncated': ids.length > selectedIds.length,
+        },
+        'coverage': coverage,
+        'input_hash': validator.inputHash(evidenceRows),
+      },
+    };
+  }
+
+  Map<String, Object?> _window(
+    DateTime? start,
+    DateTime? end, {
+    required bool partial,
+  }) =>
+      {
+        'current': start == null || end == null
+            ? null
+            : [
+                _dateLabel(_calendar ?? FinancialCalendar(), start),
+                _dateLabel(_calendar ?? FinancialCalendar(), end),
+              ],
+        'previous': null,
+        'partial': partial,
+      };
+
+  Map<String, Object?> _windowForRows(
+    List<Transaction> rows, {
+    required bool partial,
+  }) {
+    final timestamps = rows.map((row) => row.ts).toList()..sort();
+    return _window(
+      DateTime.fromMillisecondsSinceEpoch(timestamps.first, isUtc: true),
+      DateTime.fromMillisecondsSinceEpoch(timestamps.last, isUtc: true),
+      partial: partial,
+    );
   }
 
   Map<String, Object?> _seriesPayload(RecurringSery series) => {

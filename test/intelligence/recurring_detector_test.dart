@@ -441,39 +441,60 @@ void main() {
     );
   });
 
-  test('large single-merchant histories are clustered in bounded time',
+  test('large single-merchant histories scale near sorting complexity',
       () async {
     await merchant('large-history', 'Large History');
-    var amount = 1.0;
-    await database.batch((batch) {
-      for (var index = 0; index < 6000; index++) {
-        final date = DateTime.utc(2010).add(Duration(days: index));
-        batch.insert(
-          database.transactions,
-          TransactionsCompanion.insert(
-            id: 'large_$index',
-            ts: date.millisecondsSinceEpoch,
-            amount: amount,
-            direction: 'debit',
-            channel: 'card',
-            merchantId: const Value('large-history'),
-            parseSource: 'template',
-            confidenceJson: '{}',
-            status: 'auto',
-            createdAt: date,
-            updatedAt: date,
-          ),
-        );
-        amount *= 1.1;
-      }
-    });
+    Future<void> addRows(int start, int end) async {
+      var amount = 1.0 + start * 0.1;
+      await database.batch((batch) {
+        for (var index = start; index < end; index++) {
+          final date = DateTime.utc(2010).add(Duration(days: index));
+          batch.insert(
+            database.transactions,
+            TransactionsCompanion.insert(
+              id: 'large_$index',
+              ts: date.millisecondsSinceEpoch,
+              amount: amount,
+              direction: 'debit',
+              channel: 'card',
+              merchantId: const Value('large-history'),
+              parseSource: 'template',
+              confidenceJson: '{}',
+              status: 'auto',
+              createdAt: date,
+              updatedAt: date,
+            ),
+          );
+          amount += 0.1;
+        }
+      });
+    }
 
-    final stopwatch = Stopwatch()..start();
-    final detections = await RecurringDetector(database).run();
-    stopwatch.stop();
+    // Best of three runs after a warm-up, so JIT and first-query costs do not
+    // inflate the small baseline and hide quadratic growth.
+    Future<(int, List<RecurringDetection>)> bestRun() async {
+      var best = 1 << 62;
+      var detections = <RecurringDetection>[];
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final watch = Stopwatch()..start();
+        detections = await RecurringDetector(database).run();
+        watch.stop();
+        if (watch.elapsedMicroseconds < best) best = watch.elapsedMicroseconds;
+      }
+      return (best, detections);
+    }
+
+    await addRows(0, 1500);
+    await RecurringDetector(database).run();
+    final (small, detections) = await bestRun();
+    await addRows(1500, 6000);
+    final (large, largeDetections) = await bestRun();
 
     expect(detections, isEmpty);
-    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
+    expect(largeDetections, isEmpty);
+    // Sorting 4x as many points should take roughly 4.8x as long; quadratic
+    // growth would be 16x. The 12x ceiling tolerates suite load.
+    expect(large, lessThan(small * 12));
   });
 }
 

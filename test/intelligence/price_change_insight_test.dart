@@ -38,7 +38,42 @@ void main() {
           ),
         );
 
-    // Insert 1 series crossing 5% tolerance (Spotify ₹119 -> ₹149 = +25%)
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'spotify-previous',
+            ts: DateTime.utc(2026, 6, 2).millisecondsSinceEpoch,
+            amount: 119,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
+            direction: 'debit',
+            channel: 'test',
+            merchantId: const Value('m_spotify'),
+            parseSource: 'test',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'spotify-current',
+            ts: DateTime.utc(2026, 7, 2).millisecondsSinceEpoch,
+            amount: 149,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
+            direction: 'debit',
+            channel: 'test',
+            merchantId: const Value('m_spotify'),
+            parseSource: 'test',
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+    // Recorded occurrences, rather than recurring metadata, back the delta.
     await database.into(database.recurringSeries).insert(
           RecurringSeriesCompanion.insert(
             id: 'rec_spotify',
@@ -87,6 +122,10 @@ void main() {
     final priceCreep = insights.where((i) => i.kind == 'price_creep').toList();
 
     expect(priceCreep, hasLength(1));
-    expect(priceCreep.first.payloadJson, contains('Spotify ₹119.00 → ₹149.00'));
+    expect(priceCreep.first.payloadJson, contains('"calc":"price_creep@1"'));
+    expect(
+      priceCreep.first.payloadJson,
+      contains('"ids":["spotify-current","spotify-previous"]'),
+    );
   });
 }

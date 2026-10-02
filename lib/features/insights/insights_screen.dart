@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:async';
 import 'package:drift/drift.dart' show Expression, TableUpdateQuery;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/clock.dart';
+import '../../core/financial_calendar.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
@@ -13,22 +13,29 @@ import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/repositories/insights_repository.dart';
+import '../../intelligence/claim.dart';
+import '../../intelligence/derived_reads_service.dart';
 import '../dashboard/dashboard_providers.dart';
 import '../dashboard/period_selection_sheet.dart';
 import '../dashboard/source_currency_activity.dart';
 import '../recurring/recurring_screen.dart';
+import '../transactions/transactions_screen.dart';
 
 /// Stream of non-dismissed precomputed insights for the current period.
 final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
   final dbAsync = ref.watch(appDatabaseProvider);
   final period = ref.watch(dashboardPeriodProvider);
+  final calendar = ref.watch(financialCalendarProvider);
   final monthKey = insightMonthKeyForPeriod(period);
 
   return dbAsync.when(
     data: (db) => Stream.multi((controller) {
       var active = true;
+      var revision = 0;
+      Timer? debounce;
       Future<void> emitInsights() async {
-        final insights = await (db.select(db.insights)
+        final requestedRevision = ++revision;
+        final rows = await (db.select(db.insights)
               ..where(
                 (i) => Expression.and([
                   i.period.equals(monthKey),
@@ -36,10 +43,27 @@ final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
                 ]),
               ))
             .get();
-        if (active) controller.add(insights);
+        final insights = await freshClaims(
+          db,
+          rows,
+          calendar: calendar,
+        );
+        if (active && requestedRevision == revision) controller.add(insights);
       }
 
-      unawaited(emitInsights());
+      void scheduleInsights({bool immediate = false}) {
+        debounce?.cancel();
+        if (immediate) {
+          unawaited(emitInsights());
+        } else {
+          revision++;
+          debounce = Timer(derivedReadsDebounceDuration, () {
+            unawaited(emitInsights());
+          });
+        }
+      }
+
+      scheduleInsights(immediate: true);
       final updates = db
           .tableUpdates(
             TableUpdateQuery.onAllTables([
@@ -49,15 +73,22 @@ final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
               db.paymentSources,
             ]),
           )
-          .listen((_) => unawaited(emitInsights()));
+          .listen((_) => scheduleInsights());
       controller.onCancel = () {
         active = false;
+        debounce?.cancel();
         return updates.cancel();
       };
     }),
     loading: () => const Stream<List<Insight>>.empty(),
     error: (err, st) => Stream<List<Insight>>.error(err, st),
   );
+});
+
+final claimDisplayNamesProvider =
+    FutureProvider<ClaimDisplayNames>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return loadClaimDisplayNames(db);
 });
 
 String insightMonthKeyForPeriod(DashboardPeriod period) =>
@@ -74,6 +105,10 @@ class InsightsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final period = ref.watch(dashboardPeriodProvider);
     final aggregateAsync = ref.watch(dashboardAggregateProvider);
+    final Map<String, String> claimCategoryNames = {
+      for (final category in aggregateAsync.valueOrNull?.categories ?? const [])
+        if (category.categoryId != null) category.categoryId!: category.name,
+    };
     final sixMonthTrend = ref.watch(sixMonthTrendProvider);
     final mom = ref.watch(monthOverMonthSpendProvider);
     final totals = ref.watch(monthDirectionTotalsProvider);
@@ -247,10 +282,23 @@ class InsightsScreen extends ConsumerWidget {
                 _NarrativeInsightCard(
                   insight: insight,
                   isDark: isDark,
+                  categoryNames: claimCategoryNames,
                   onDismiss: () async {
                     final repo =
                         await ref.read(insightsRepositoryProvider.future);
                     await repo.dismiss(id: insight.id);
+                  },
+                  onWhy: () async {
+                    final claim = const ClaimValidator().parse(insight);
+                    if (claim == null || !context.mounted) return;
+                    await Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => TransactionsScreen(
+                          initialTransactionIds: claim.evidenceIds.toSet(),
+                          initialEvidenceTotalCount: claim.evidenceCount,
+                        ),
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 12),
@@ -395,12 +443,16 @@ class _NarrativeInsightCard extends StatelessWidget {
   const _NarrativeInsightCard({
     required this.insight,
     required this.isDark,
+    required this.categoryNames,
     required this.onDismiss,
+    required this.onWhy,
   });
 
   final Insight insight;
   final bool isDark;
+  final Map<String, String> categoryNames;
   final VoidCallback onDismiss;
+  final VoidCallback onWhy;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +463,14 @@ class _NarrativeInsightCard extends StatelessWidget {
         ? AppColorTokens.violetPrimary.withValues(alpha: 0.3)
         : const Color(0xFFE9D5FF);
 
-    final spec = _parseInsight(insight);
+    final claim = const ClaimValidator().parse(insight);
+    final display = claim == null
+        ? null
+        : const ClaimRenderer().render(
+            claim,
+            categoryNames: categoryNames,
+          );
+    if (display == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -424,7 +483,7 @@ class _NarrativeInsightCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            spec.icon,
+            Icons.auto_awesome,
             size: 20,
             color: isDark ? const Color(0xFFC084FC) : const Color(0xFF7E22CE),
           ),
@@ -434,7 +493,7 @@ class _NarrativeInsightCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  spec.title,
+                  display.title,
                   style: AppTheme.bloomDisplay(
                     13,
                     FontWeight.w600,
@@ -445,7 +504,7 @@ class _NarrativeInsightCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  spec.body,
+                  display.body,
                   style: AppTheme.bloomDisplay(
                     12,
                     FontWeight.w400,
@@ -458,111 +517,24 @@ class _NarrativeInsightCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onDismiss,
-            child: Icon(
-              Icons.close_rounded,
-              size: 18,
-              color: isDark
-                  ? AppColorTokens.bloomDarkTextTertiary
-                  : AppColorTokens.inkTertiary,
-            ),
+          Column(
+            children: [
+              IconButton(
+                tooltip: 'Why?',
+                onPressed: onWhy,
+                icon: const Icon(Icons.help_outline_rounded, size: 19),
+              ),
+              IconButton(
+                tooltip: 'Dismiss insight',
+                onPressed: onDismiss,
+                icon: const Icon(Icons.close_rounded, size: 18),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-
-  _InsightDisplaySpec _parseInsight(Insight insight) {
-    try {
-      final payload = jsonDecode(insight.payloadJson) as Map<String, dynamic>;
-      switch (insight.kind) {
-        case 'fees_total':
-          final total = (payload['total'] as num?)?.toDouble() ?? 0.0;
-          return _InsightDisplaySpec(
-            title: 'Fees & Charges Alert',
-            body:
-                'You spent ${formatSourceAmount(total, currencyCode: payload['currency_code'] as String?, currencySymbol: payload['currency_symbol'] as String?)} in fees this month. Check subscription renewal details.',
-            icon: Icons.account_balance_wallet_outlined,
-          );
-        case 'category_delta':
-          final category = payload['category_name'] ?? 'category';
-          final delta = (payload['delta_fraction'] as num?)?.toDouble() ?? 0.0;
-          final pct = (delta.abs() * 100).toStringAsFixed(0);
-          final direction = delta > 0 ? 'increased' : 'decreased';
-          final currentEnd =
-              DateTime.tryParse(payload['current_end'] as String? ?? '');
-          final previousEnd =
-              DateTime.tryParse(payload['previous_end'] as String? ?? '');
-          final previousMonthEnd = previousEnd == null
-              ? null
-              : DateTime(previousEnd.year, previousEnd.month + 1, 0);
-          final previousWindowIsTruncated = currentEnd != null &&
-              previousEnd != null &&
-              previousMonthEnd != null &&
-              previousEnd.day != previousMonthEnd.day;
-          final currency = _currencyDisclosure(
-            payload['currency_code'] as String?,
-            payload['currency_symbol'] as String?,
-          );
-          return _InsightDisplaySpec(
-            title: 'Category Shift',
-            body:
-                '$category spending $direction by $pct% in $currency ${previousWindowIsTruncated ? 'over the same days last month.' : 'compared to last month.'}',
-            icon: Icons.trending_up_rounded,
-          );
-        case 'duplicate_subscription':
-          final label = payload['label'] ?? 'Service';
-          final monthlyTotal = (payload['monthly_total'] as num?)?.toDouble();
-          final totalText = monthlyTotal == null
-              ? ''
-              : ' (${formatSourceAmount(monthlyTotal, currencyCode: payload['currency_code'] as String?, currencySymbol: payload['currency_symbol'] as String?)} per month)';
-          return _InsightDisplaySpec(
-            title: 'Duplicate Subscription',
-            body:
-                'Multiple active subscriptions detected for $label$totalText.',
-            icon: Icons.copy_rounded,
-          );
-        case 'price_creep':
-          final label = payload['label'] ?? 'Service';
-          final summary = payload['summary'] as String?;
-          return _InsightDisplaySpec(
-            title: 'Price Creep Detected',
-            body: summary ??
-                'Amount for $label has increased in recent billing cycles.',
-            icon: Icons.show_chart_rounded,
-          );
-        default:
-          return const _InsightDisplaySpec(
-            title: 'Smart Insight',
-            body: 'Pattern detected in your transaction history.',
-            icon: Icons.lightbulb_outline_rounded,
-          );
-      }
-    } catch (_) {
-      return const _InsightDisplaySpec(
-        title: 'Smart Insight',
-        body: 'Pattern detected in your transaction history.',
-        icon: Icons.lightbulb_outline_rounded,
-      );
-    }
-  }
-
-  String _currencyDisclosure(String? code, String? symbol) =>
-      code ??
-      (symbol == null ? 'currency unknown' : '$symbol (currency unknown)');
-}
-
-class _InsightDisplaySpec {
-  const _InsightDisplaySpec({
-    required this.title,
-    required this.body,
-    required this.icon,
-  });
-
-  final String title;
-  final String body;
-  final IconData icon;
 }
 
 class _SixMonthBarChartCard extends StatelessWidget {

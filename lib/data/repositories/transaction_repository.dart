@@ -225,6 +225,7 @@ class TransactionRepository {
     DateTime? start,
     DateTime? end,
     ActivityTransactionCursor? cursor,
+    Set<String>? transactionIds,
   }) {
     assert(limit > 0);
     final cursorPredicate = cursor == null
@@ -261,6 +262,9 @@ class TransactionRepository {
                 : _database.transactions.ts.isSmallerThanValue(
                     end.millisecondsSinceEpoch,
                   )) &
+            (transactionIds == null || transactionIds.isEmpty
+                ? const Constant(true)
+                : _database.transactions.id.isIn(transactionIds)) &
             cursorPredicate,
       )
       ..orderBy([

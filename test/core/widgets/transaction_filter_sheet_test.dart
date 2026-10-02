@@ -42,6 +42,55 @@ void main() {
     expect(filters.matchesSearch(item, 'salary'), isFalse);
   });
 
+  test('equal id sets produce equal provider family keys', () {
+    final first = TransactionFilters(
+      ids: {'txn_1', 'txn_2'},
+      dateRange: DateTimeRange(
+        start: DateTime(2026, 7, 1),
+        end: DateTime(2026, 7, 31),
+      ),
+    );
+    final second = TransactionFilters(
+      ids: {'txn_2', 'txn_1'},
+      dateRange: DateTimeRange(
+        start: DateTime(2026, 7, 1),
+        end: DateTime(2026, 7, 31),
+      ),
+    );
+    expect(first, second);
+    expect(first.hashCode, second.hashCode);
+  });
+
+  test('evidence id filters match only the cited rows', () {
+    const filters = TransactionFilters(ids: {'txn_1'});
+    final unrelated = TransactionListItem(
+      id: 'unrelated',
+      ts: item.ts,
+      amount: item.amount,
+      direction: item.direction,
+      displayName: item.displayName,
+      categoryName: item.categoryName,
+      categoryId: item.categoryId,
+      categoryIcon: item.categoryIcon,
+    );
+    expect(
+      filters.matches(
+        item,
+        recurringMerchantIds: const {},
+        anomalyTransactionIds: const {},
+      ),
+      isTrue,
+    );
+    expect(
+      filters.matches(
+        unrelated,
+        recurringMerchantIds: const {},
+        anomalyTransactionIds: const {},
+      ),
+      isFalse,
+    );
+  });
+
   test('complete filters combine with AND semantics', () {
     final filters = TransactionFilters(
       dateRange: DateTimeRange(

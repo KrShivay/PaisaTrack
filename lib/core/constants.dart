@@ -11,7 +11,6 @@ class AppConstants {
   /// stores strings so the table remains simple and forward-compatible.
   static const featureFlagDefaults = <String, Object>{
     'enable_local_llm': enableLocalLlm,
-    'enable_narrative_insights': enableNarrativeInsights,
     'silent_confidence_threshold': silentConfidenceThreshold,
     'ask_confidence_threshold': askConfidenceThreshold,
     'ask_now_daily_budget': askNowDailyBudget,
@@ -34,10 +33,6 @@ class AppConstants {
   /// Enables on-device LLM parsing once that implementation exists.
   /// All LLM inference is local-only; no cloud path exists (ADR 0002).
   static const enableLocalLlm = true;
-
-  /// Enables generated narrative insights (on-device model or deterministic
-  /// engine only — ADR 0002) once privacy rules are implemented.
-  static const enableNarrativeInsights = true;
 
   /// Confidence at or above this value can be accepted without interrupting.
   static const silentConfidenceThreshold = 0.9;

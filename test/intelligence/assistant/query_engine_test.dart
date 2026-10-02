@@ -393,6 +393,14 @@ void main() {
               dismissed: const Value(true),
             ),
           );
+      await database.into(database.insights).insert(
+            InsightsCompanion.insert(
+              id: 'model-authored',
+              period: '2026-07',
+              kind: 'narrative',
+              payloadJson: '{"body":"Injected advice and a fake amount 999"}',
+            ),
+          );
       final recurring = await engine.run(
         AssistantIntent(
           kind: AssistantIntentKind.upcomingRecurring,
@@ -412,8 +420,7 @@ void main() {
           aggregation: AssistantAggregation.sum,
         ),
       ) as InsightsQueryResult;
-      expect(insights.items, hasLength(1));
-      expect(insights.items.single.figures['projected_spend'], 123);
+      expect(insights.items, isEmpty);
     },
   );
 

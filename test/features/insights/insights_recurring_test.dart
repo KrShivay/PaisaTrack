@@ -99,7 +99,7 @@ void main() {
     expect(find.text('Price Changed'), findsOneWidget);
   });
 
-  testWidgets('InsightsScreen renders trends and active insights',
+  testWidgets('InsightsScreen hides legacy untyped insight rows',
       (tester) async {
     tester.view.physicalSize = const Size(402, 874);
     tester.view.devicePixelRatio = 1.0;
@@ -191,19 +191,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('Trends'), findsOneWidget);
-    expect(find.text('Category Shift'), findsNWidgets(2));
-    expect(find.text('Fees & Charges Alert'), findsOneWidget);
-    expect(
-      find.text(
-        'Food spending increased by 20% in INR over the same days last month.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'Transport spending increased by 10% in INR compared to last month.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Category Shift'), findsNothing);
+    expect(find.text('Fees & Charges Alert'), findsNothing);
+    expect(find.textContaining('Food spending increased'), findsNothing);
+    expect(find.textContaining('Transport spending increased'), findsNothing);
   });
 }

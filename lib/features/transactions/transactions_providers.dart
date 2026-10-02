@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../core/widgets/transaction_filter_sheet.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -27,6 +28,35 @@ final reviewQueueLimitProvider = StateProvider<int>((ref) => reviewPageSize);
 final activityTransactionPageProvider = AsyncNotifierProvider<
     ActivityTransactionPageController,
     ActivityTransactionPage>(ActivityTransactionPageController.new);
+
+final evidenceTransactionPageProvider = StreamProvider.autoDispose
+    .family<ActivityTransactionPage, TransactionFilters>(
+  (ref, filters) {
+    final databaseAsync = ref.watch(appDatabaseProvider);
+    return databaseAsync.when(
+      data: (database) {
+        final source = ref
+            .watch(transactionRepositoryProvider(database))
+            .watchTransactionPage(
+              limit: filters.ids.length.clamp(1, 50),
+              transactionIds: filters.ids,
+            );
+        return Stream.multi((controller) {
+          final subscription = source.listen(
+            controller.add,
+            onError: controller.addError,
+            onDone: controller.close,
+          );
+          controller.onCancel = () => unawaited(subscription.cancel());
+          ref.onDispose(() => unawaited(subscription.cancel()));
+        });
+      },
+      loading: () => const Stream<ActivityTransactionPage>.empty(),
+      error: (error, stackTrace) =>
+          Stream<ActivityTransactionPage>.error(error, stackTrace),
+    );
+  },
+);
 
 /// Retains only the pages the user has explicitly opened. Each page has a
 /// strict `(ts,id)` boundary, so inserts/deletes before that boundary do not

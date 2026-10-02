@@ -9,7 +9,7 @@ import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/features/insights/insights_screen.dart';
 
 void main() {
-  test('Trends shows last computed insights while the stamp is missing',
+  test('legacy insights remain hidden while the freshness stamp is missing',
       () async {
     final database = AppDatabase(NativeDatabase.memory());
     const calendar = FinancialCalendar.fixed(Duration.zero);
@@ -50,19 +50,14 @@ void main() {
     });
 
     final initial = Completer<void>();
-    final visible = Completer<void>();
     final subscription =
         container.listen(activeInsightsProvider, (previous, next) {
       if (next.valueOrNull != null && !initial.isCompleted) {
         initial.complete();
       }
-      if (next.valueOrNull?.length == 1 && !visible.isCompleted) {
-        visible.complete();
-      }
     });
     addTearDown(subscription.close);
     await initial.future.timeout(const Duration(seconds: 2));
-    expect(container.read(activeInsightsProvider).valueOrNull, hasLength(1));
-    await visible.future.timeout(const Duration(seconds: 2));
+    expect(container.read(activeInsightsProvider).valueOrNull, isEmpty);
   });
 }

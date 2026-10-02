@@ -8,46 +8,6 @@ later hardening.
 
 ## In Progress
 
-- [ ] T-178a [P1] Evidence-linked insights and fair comparisons
-      ([brief](docs/tasks/T-178.md)). Delivered in slices a1–a4.
-  - a1 fair comparison windows (done 2026-10-01): one
-    `FinancialCalendar.comparablePrior`/`throughToday`/`elapsedDays` contract
-    compares a partial current month with the same elapsed local days of the
-    prior month (clamped to shorter months) in insights `category_delta`
-    (payload records the window), the dashboard/Trends month-over-month card,
-    and assistant comparisons; completed months keep full windows. An
-    injectable `clockProvider` makes dashboard and card agree. Six-month trend
-    bounds use `FinancialCalendar` (fixes the `TZ=America/New_York` failure).
-    Owner phone (4012, pre-fix) showed "97% lower spend than last month" on
-    1 Oct. Product decision recorded in code: the assistant clips a prior full
-    month whenever the current month is partial.
-  - a2 eligibility parity (done 2026-10-02): `FinancialEligibility.base()`/
-    `spendingDebit()` Drift builders now drive insights, anomalies,
-    forecasts, recurring scans, assistant queries and dashboard exclusions;
-    a parity test checks SQL, Drift and the row helper. Recurring detection
-    counts settled rows only (pending/failed debits no longer create false
-    price-creep or count as paid autopay; refunds no longer feed income
-    series). Assistant net = eligible credits minus eligible spending debits;
-    mixed-currency answers keep every currency and drop the fake 0.0 scalar.
-    The anomaly floor stays INR-only (documented; no FX).
-  - a3 freshness (done 2026-10-02): one `DerivedReadsService` (debounced,
-    single-flight, one trailing run, run-start generation stamp) rebuilds
-    recurring series, anomaly baselines, forecasts and insights after any
-    transaction/category/source write, immediately after backup or
-    not-transaction restore, once after bulk SMS imports, and at startup
-    when the stamp is missing or stale; the nightly job reuses its stages.
-    Recurring series ids and user-paused status survive rebuilds. Anomaly
-    baselines are rebuilt from completed, zero-filled periods (current
-    partial period excluded; stale anomaly rows deleted).
-  - a4 provenance and coverage: typed claims with evidence ids, coverage and
-    calculation version; refunds/transfer links in eligibility (ADR first if
-    schema is needed).
-  - Follow-up noted in review: safe-today and projected-spend month math use
-    device-local `DateTime(now.year, now.month + 1, 0)` instead of
-    `FinancialCalendar`.
-
-## Ready
-
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -568,7 +528,11 @@ metrics are in `docs/tasks/T-172.md`.
 #### Grounded AI
 
 - [ ] T-178b [P1] Validate forecast ranges, data coverage, and backtesting.
+      Anomaly and forecast insights are hidden until they emit T-178a typed
+      claims (see docs/architecture.md insight claim contract).
 - [ ] T-178c [P2] Add typed Hinglish assistant intents over validated results.
+      Narrative insights were removed in T-178a; any model-written insight
+      text must be redesigned as selection of existing claim ids.
 - [ ] T-178d [P2] Add local evaluation, performance gates, and staged release.
 
 #### Transaction integrity, data model, and performance
