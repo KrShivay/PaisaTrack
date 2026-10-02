@@ -6,25 +6,11 @@ on-device. No cloud inference path exists.
 
 ## Android release
 
-Download the currently published [PaisaTrack 0.1.3+2011 ARM64 APK](https://raw.githubusercontent.com/KrShivay/PaisaTrack/apk-downloads/app-release-arm64.apk) (56.75 MB; 56,750,764 bytes). Its SHA-256 is `218308d98cd8b0105adfe74d5e49cae5183ddb964f889e419ed5199888be50c4`. The production signature was verified. This release is based on main `3b2fb6b`. Physical v2011 launch is unverified because the device is offline; the phone remains on `0.1.3+2010` (effective version code `4010`; `firstInstallTime` `2026-09-26 22:20:54`). T-193 synthetic backup/restore coverage is in place; physical acceptance of the currency-repair UI remains open, as do T-167c responsive-layout, T-176 screen-inset, and T-179a key-recovery acceptance. For 64-bit ARM Android devices.
+See [product status](docs/product-status.md) for the current artifact and open release gates, and [release signing](docs/release-signing.md) for the signing procedure.
 
 ## Current product
 
-- Live SMS capture, resumable page-batched history import, and bounded
-  open/resume catch-up with recent-gap recovery.
-- Template, generic, and optional local-LLM transaction extraction.
-- Encrypted SQLCipher storage with Android Keystore-backed keys.
-- Manual entry, transaction editing, rules, feedback, and duplicate suppression.
-- Categories, merchant resolution, recurring detection, forecasts, insights,
-  SQL-aggregated dashboard analytics, and a grounded local assistant.
-- User labels for merchant/VPA aliases and masked payment-source management,
-  including owned-transfer and analytics-exclusion rules.
-- Encrypted backup/import and database/key reset.
-
-The current Bloom worktree is not production-ready. Release blockers and the
-verified feature matrix are tracked in
-[Product status](docs/product-status.md); notably, native notification/model
-state is not yet covered by Delete everything.
+See [product status](docs/product-status.md) for verified behavior, the feature matrix, and limitations. Do not infer acceptance from this overview.
 
 ## Future development
 

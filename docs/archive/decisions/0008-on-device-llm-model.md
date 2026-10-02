@@ -3,7 +3,7 @@
 Status: superseded by ADR 0009 (2026-07-26)
 
 The implementation now uses LiteRT-LM and Qwen3 0.6B mixed INT4. See
-[ADR 0009](0009-litert-lm-runtime-and-qwen3.md) for the current contract.
+[ADR 0009](../../decisions/0009-litert-lm-runtime-and-qwen3.md) for the current contract.
 
 ## Context
 

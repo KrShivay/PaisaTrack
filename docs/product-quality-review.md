@@ -4,17 +4,16 @@ This is the recurring release-candidate procedure created by T-172g. It is
 local-first and analytics-free: the review produces files and test evidence,
 not event telemetry or uploaded financial data.
 
-Current gate status: **CLOSED WITH WAIVER** for LUNA-07/T-172e. On 2026-08-01,
-the product owner explicitly marked external participant and interactive TalkBack/
-accessibility evidence not required for this review; device smoke evidence
-remains an observation and no further T-172e pickup is planned.
+T-172e's review outcome and waiver are recorded in the [task brief](tasks/T-172.md).
+Check [product status](product-status.md) for current release gates; this file
+defines the recurring review procedure.
 
 ## Baseline package
 
 At each release candidate, copy the prior package and update:
 
 1. `test/fixtures/product_review/corpus.json` and its schema version.
-2. The execution register in `docs/product-value-review-2026-08.md`.
+2. The archived execution register in `docs/archive/reviews/product-value-review-2026-08.md`.
 3. The P0/P1/P2 scorecard and decision changes.
 4. The manual QA matrix below.
 5. `docs/product-status.md` with remaining release blockers.

@@ -28,7 +28,7 @@ remain open.
 ## Product-value review snapshot
 
 The 2026-08 review is documented in
-[`docs/product-value-review-2026-08.md`](product-value-review-2026-08.md), with
+[`docs/archive/reviews/product-value-review-2026-08.md`](archive/reviews/product-value-review-2026-08.md), with
 the synthetic local-only corpus at
 `test/fixtures/product_review/corpus.json` and the release cadence at
 [`docs/product-quality-review.md`](product-quality-review.md).

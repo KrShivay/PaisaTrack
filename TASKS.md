@@ -402,7 +402,7 @@ implementation task in progress at a time.
 
 #### Product-value research and review
 
-Historical review: `docs/product-value-review-2026-08.md` and
+Historical review: `docs/archive/reviews/product-value-review-2026-08.md` and
 `docs/product-quality-review.md`; T-172e's evidence boundary and waiver are in
 `docs/tasks/T-172.md`. Target-device screen-smoke is an observation, not a
 human-validation pass.

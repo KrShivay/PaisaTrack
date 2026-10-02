@@ -240,7 +240,7 @@ only after PV-01–05 pass their trust metrics.
 ## T-172g — release cadence
 
 The recurring operating procedure is in
-[`docs/product-quality-review.md`](product-quality-review.md). It defines the
+[`docs/product-quality-review.md`](../../product-quality-review.md). It defines the
 baseline artifact, corpus rerun, scorecard comparison, UI/manual QA matrix,
 release-candidate gates, ownership, and rollback evidence. A release candidate
 may claim product-value confidence for this review when the recorded
