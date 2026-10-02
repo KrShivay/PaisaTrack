@@ -27,6 +27,10 @@ class DashboardScreen extends ConsumerWidget {
     final subline = ref.watch(dashboardStatusSublineProvider);
     final streak = ref.watch(streakProvider);
     final period = ref.watch(dashboardPeriodProvider);
+    final size = MediaQuery.sizeOf(context);
+    final compactLandscape = size.width > size.height && size.height < 500;
+    final sectionGap = compactLandscape ? 8.0 : 16.0;
+    final ringSize = compactLandscape ? 116.0 : 230.0;
 
     return Scaffold(
       backgroundColor:
@@ -36,7 +40,7 @@ class DashboardScreen extends ConsumerWidget {
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             20,
-            16,
+            compactLandscape ? 8 : 16,
             20,
             BloomBottomInset.contentPadding(context),
           ),
@@ -166,7 +170,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: sectionGap),
 
             // Period Selector Chip Row
             Row(
@@ -245,11 +249,12 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: sectionGap),
 
-            // Hero Ring (230px)
-            const BloomHeroRing(),
-            const SizedBox(height: 16),
+            // Landscape gets a compact ring so its metric selector remains
+            // above the floating navigation pill in short viewports.
+            BloomHeroRing(size: ringSize),
+            SizedBox(height: sectionGap),
 
             // Metric Switcher Pills (Safe today, Net flow, Burn, Runway)
             const BloomMetricSwitcherPills(),

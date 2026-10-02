@@ -1292,8 +1292,11 @@ class _WhereThisCameFromSection extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    height: 24,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    key: const ValueKey('parser_provenance_badge'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0E7A56),
                       borderRadius: BorderRadius.circular(12),

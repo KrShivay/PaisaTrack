@@ -556,19 +556,25 @@ class _PromptCatalogueEmptyStateState
                 child: InkWell(
                   onTap: () => widget.onSelect(question),
                   borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 11,
-                    ),
-                    child: Text(
-                      question,
-                      style: AppTheme.bloomDisplay(
-                        13,
-                        FontWeight.w500,
-                        color: widget.isDark
-                            ? AppColorTokens.bloomDarkTextSecondary
-                            : AppColorTokens.inkSecondary,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 11,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          question,
+                          style: AppTheme.bloomDisplay(
+                            13,
+                            FontWeight.w500,
+                            color: widget.isDark
+                                ? AppColorTokens.bloomDarkTextSecondary
+                                : AppColorTokens.inkSecondary,
+                          ),
+                        ),
                       ),
                     ),
                   ),

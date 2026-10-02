@@ -25,9 +25,9 @@ Future<void> _pumpAskRoute(
   WidgetTester tester, {
   required AppDatabase database,
   required AssistantController controller,
+  Size viewport = const Size(320, 568),
   double textScale = 2,
 }) async {
-  const viewport = Size(320, 568);
   tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1;
   tester.view.viewPadding = const FakeViewPadding(bottom: 24);
@@ -121,6 +121,85 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'Ask prompt suggestions meet 48dp at 1x, 1.5x, and wrap at 2x',
+    (tester) async {
+      const question = 'How much did I spend on food this month?';
+      for (final scale in [1.0, 1.5, 2.0]) {
+        await _pumpAskRoute(
+          tester,
+          database: database,
+          controller: controller,
+          viewport: const Size(434, 964),
+          textScale: scale,
+        );
+
+        final suggestionText = find.text(question);
+        final suggestion = find.ancestor(
+          of: suggestionText,
+          matching: find.byType(InkWell),
+        );
+        expect(suggestion, findsOneWidget, reason: 'text scale $scale');
+        expect(
+          tester.getRect(suggestion).height,
+          greaterThanOrEqualTo(48),
+          reason: 'text scale $scale must retain a 48dp target',
+        );
+        if (scale == 2) {
+          expect(tester.getRect(suggestionText).height, greaterThan(48));
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+
+      await _pumpAskRoute(
+        tester,
+        database: database,
+        controller: controller,
+        viewport: const Size(964, 434),
+        textScale: 1,
+      );
+      final landscapeSuggestion = find.ancestor(
+        of: find.text(question),
+        matching: find.byType(InkWell),
+      );
+      expect(landscapeSuggestion, findsOneWidget);
+      expect(tester.getRect(landscapeSuggestion).height, greaterThanOrEqualTo(48));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Ask composer keeps a 48dp field at landscape 2x text',
+      (tester) async {
+    await _pumpAskRoute(
+      tester,
+      database: database,
+      controller: controller,
+      viewport: const Size(964, 434),
+      textScale: 2,
+    );
+
+    final composerField = find.descendant(
+      of: find.byKey(const ValueKey('assistant_composer')),
+      matching: find.byType(TextField),
+    );
+    expect(composerField, findsOneWidget);
+    expect(tester.getRect(composerField).height, greaterThanOrEqualTo(48));
+    final semantics = tester.ensureSemantics();
+    try {
+      final semanticField = find.bySemanticsLabel(
+        'Ask anything about your money…',
+      );
+      expect(semanticField, findsOneWidget);
+      expect(tester.getRect(semanticField).height, greaterThanOrEqualTo(48));
+    } finally {
+      semantics.dispose();
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Ask route keeps its header, suggestions, and composer above a full-window IME',

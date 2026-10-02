@@ -7,6 +7,7 @@ import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
+import 'package:paisatrack/features/home/home_shell.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
 import '../../support/fake_sms_permission_gate.dart';
@@ -44,12 +45,18 @@ void main() {
     double textScale = 1,
     DateTime? periodAnchor,
     String? subline,
+    bool floatingNavigation = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
+    tester.view.viewPadding = FakeViewPadding(
+      top: floatingNavigation ? 24 : 0,
+      bottom: floatingNavigation ? 24 : 0,
+    );
     addTearDown(() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
+      tester.view.resetViewPadding();
     });
 
     await tester.pumpWidget(
@@ -77,7 +84,50 @@ void main() {
             ),
             child: child!,
           ),
-          home: const DashboardScreen(),
+          home: floatingNavigation
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const DashboardScreen(),
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      bottom: 44,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: HomeFloatingNavPill(
+                          currentIndex: 0,
+                          destinations: const [
+                          HomeNavigationDestination(
+                            label: 'Home',
+                            icon: Icons.home_outlined,
+                            selectedIcon: Icons.home_rounded,
+                          ),
+                          HomeNavigationDestination(
+                            label: 'Activity',
+                            icon: Icons.receipt_long_outlined,
+                            selectedIcon: Icons.receipt_long_rounded,
+                          ),
+                          HomeNavigationDestination(
+                            label: 'Sort',
+                            icon: Icons.fact_check_outlined,
+                            selectedIcon: Icons.fact_check_rounded,
+                          ),
+                          HomeNavigationDestination(
+                            label: 'Trends',
+                            icon: Icons.insights_outlined,
+                            selectedIcon: Icons.insights_rounded,
+                          ),
+                          ],
+                          onTabSelected: (_) {},
+                          onAskTapped: () {},
+                          isDark: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : const DashboardScreen(),
         ),
       ),
     );
@@ -128,6 +178,37 @@ void main() {
     expect(find.text('Burn'), findsOneWidget);
     expect(find.text('Runway'), findsOneWidget);
   });
+
+  for (final textScale in [1.0, 1.5, 2.0]) {
+    testWidgets(
+      'landscape dashboard metric clears floating navigation at ${textScale}x text',
+      (tester) async {
+        await pumpDashboard(
+          tester,
+          const [],
+          size: const Size(964, 434),
+          textScale: textScale,
+          floatingNavigation: true,
+        );
+
+        final metric = find.text('Safe today');
+        final navigation = find.byType(HomeFloatingNavPill);
+        expect(metric, findsOneWidget);
+        expect(navigation, findsOneWidget);
+        expect(
+          tester.getRect(metric).bottom,
+          lessThanOrEqualTo(tester.getRect(navigation).top - 24),
+        );
+        final ringLabel = find.text('SAFE TODAY');
+        final ringSubline = find.text('Tap to set budget');
+        expect(ringLabel, findsOneWidget);
+        expect(ringSubline, findsOneWidget);
+        expect(tester.getRect(ringLabel).height, lessThan(24));
+        expect(tester.getRect(ringSubline).height, lessThan(24));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('dashboard header fits a 320px viewport at 2× text',
       (tester) async {

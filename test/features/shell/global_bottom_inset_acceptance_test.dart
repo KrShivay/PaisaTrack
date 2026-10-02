@@ -606,6 +606,12 @@ void main() {
     double textScale,
   })>[
     (
+      name: 'emulator landscape at 1x text with gesture navigation',
+      size: Size(964, 434),
+      inset: 24,
+      textScale: 1,
+    ),
+    (
       name: 'standard portrait',
       size: Size(402, 874),
       inset: 24,
@@ -675,6 +681,13 @@ void main() {
           );
           await tester.pump();
         }
+        final transactionTarget = find
+            .ancestor(
+              of: transactionName,
+              matching: find.byType(GestureDetector),
+            )
+            .first;
+        expect(tester.getSize(transactionTarget).height, greaterThanOrEqualTo(48));
         _expectAboveNavigation(tester, transactionName);
         await tester.tap(transactionName);
         await tester.pump();
@@ -712,10 +725,59 @@ void main() {
         await tester.tap(creditChoice);
         await tester.pump();
         expect(tester.widget<ChoiceChip>(creditChoice).selected, isTrue);
+        final saveCorrection =
+            find.widgetWithText(FilledButton, 'Save Correction');
+        expect(saveCorrection, findsOneWidget);
+        expect(
+          tester.getSize(saveCorrection).height,
+          greaterThanOrEqualTo(48),
+        );
         expect(tester.takeException(), isNull);
       },
     );
   }
+
+  testWidgets(
+    'Activity Load more control keeps a 48dp target at the emulator landscape viewport',
+    (tester) async {
+      await _pumpRoutes(
+        tester,
+        initialScreen: const TransactionsScreen(),
+        initialTab: 1,
+        size: const Size(964, 434),
+        systemBottomInset: 24,
+        textScale: 1,
+        providerOverrides: [
+          activityTransactionPageProvider.overrideWith(
+            () => FakeActivityTransactionPageController(
+              ActivityTransactionPage(
+                rows: [_detailRouteItem],
+                hasMore: true,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      final loadMore =
+          find.widgetWithText(OutlinedButton, 'Load more transactions');
+      expect(loadMore, findsOneWidget);
+      final semantics = tester.ensureSemantics();
+      final semanticTarget = find.bySemanticsLabel('Load more transactions');
+      try {
+        expect(semanticTarget, findsOneWidget);
+        await tester.ensureVisible(loadMore);
+        await tester.pump();
+
+        expect(tester.getSize(loadMore).height, greaterThanOrEqualTo(48));
+        expect(tester.getRect(semanticTarget).height, greaterThanOrEqualTo(48));
+        _expectAboveNavigation(tester, loadMore);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
 
   testWidgets(
     'compact landscape Trends final section clears navigation at 1.5x text',

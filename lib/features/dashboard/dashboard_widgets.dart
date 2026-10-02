@@ -75,7 +75,9 @@ class BloomHeroRingPainter extends CustomPainter {
 
 /// 230px Hero Ring widget displaying category mix ring and inner 180px metric content.
 class BloomHeroRing extends ConsumerWidget {
-  const BloomHeroRing({super.key});
+  const BloomHeroRing({super.key, this.size = 230});
+
+  final double size;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -150,25 +152,27 @@ class BloomHeroRing extends ConsumerWidget {
 
     final innerBg =
         isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase;
+    final compact = size < 200;
+    final innerSize = size * 0.78;
 
     return Center(
       child: SizedBox(
-        width: 230,
-        height: 230,
+        width: size,
+        height: size,
         child: Stack(
           alignment: Alignment.center,
           children: [
             CustomPaint(
-              size: const Size(230, 230),
+              size: Size.square(size),
               painter: BloomHeroRingPainter(
                 slices: slices,
                 isDark: isDark,
               ),
             ),
-            // Inner 180px circle
+            // Keep the inner circle proportional when the landscape ring shrinks.
             Container(
-              width: 180,
-              height: 180,
+              width: innerSize,
+              height: innerSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: innerBg,
@@ -178,7 +182,7 @@ class BloomHeroRing extends ConsumerWidget {
                 child: KeyedSubtree(
                   key: ValueKey('$selectedMetric-${contentAsync.runtimeType}'),
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(compact ? 3 : 12),
                     child: contentAsync.when(
                       data: (content) => _heroInner(
                         label: content.label,
@@ -186,6 +190,7 @@ class BloomHeroRing extends ConsumerWidget {
                         sub: content.sub,
                         amountColor: content.color,
                         isDark: isDark,
+                        compact: compact,
                       ),
                       loading: () => _heroInner(
                         label: _metricLabel(selectedMetric),
@@ -195,6 +200,7 @@ class BloomHeroRing extends ConsumerWidget {
                         ),
                         sub: 'Updating…',
                         isDark: isDark,
+                        compact: compact,
                       ),
                       error: (_, __) => _heroInner(
                         label: _metricLabel(selectedMetric),
@@ -202,6 +208,7 @@ class BloomHeroRing extends ConsumerWidget {
                         amountColor: secondaryColor,
                         sub: 'Unavailable',
                         isDark: isDark,
+                        compact: compact,
                       ),
                     ),
                   ),
@@ -225,6 +232,7 @@ class BloomHeroRing extends ConsumerWidget {
     required String label,
     required String sub,
     required bool isDark,
+    bool compact = false,
     String? amount,
     Widget? amountWidget,
     Color? amountColor,
@@ -232,15 +240,20 @@ class BloomHeroRing extends ConsumerWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          label,
-          style: AppTheme.bloomDisplay(
-            11,
-            FontWeight.w600,
-            letterSpacing: 0.1,
-            color: isDark
-                ? AppColorTokens.bloomDarkTextTertiary
-                : AppColorTokens.inkTertiary,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: AppTheme.bloomDisplay(
+              compact ? 10 : 11,
+              FontWeight.w600,
+              letterSpacing: 0.1,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextTertiary
+                  : AppColorTokens.inkTertiary,
+            ),
           ),
         ),
         const SizedBox(height: 4),
@@ -250,7 +263,7 @@ class BloomHeroRing extends ConsumerWidget {
               child: Text(
                 amount ?? '',
                 style: AppTheme.bloomMono(
-                  38,
+                  compact ? 34 : 38,
                   FontWeight.w600,
                   letterSpacing: -0.04,
                   color: amountColor,
@@ -258,18 +271,20 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             ),
         const SizedBox(height: 4),
-        Text(
-          sub,
-          style: AppTheme.bloomDisplay(
-            11,
-            FontWeight.w500,
-            color: isDark
-                ? AppColorTokens.bloomDarkTextSecondary
-                : AppColorTokens.inkSecondary,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            sub,
+            maxLines: 1,
+            softWrap: false,
+            style: AppTheme.bloomDisplay(
+              compact ? 10 : 11,
+              FontWeight.w500,
+              color: isDark
+                  ? AppColorTokens.bloomDarkTextSecondary
+                  : AppColorTokens.inkSecondary,
+            ),
           ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

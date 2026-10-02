@@ -20,9 +20,11 @@ void main() {
 
   Future<void> pumpDetail(
     WidgetTester tester,
-    TransactionDetail detail,
-  ) async {
-    tester.view.physicalSize = const Size(402, 874);
+    TransactionDetail detail, {
+    double textScale = 1,
+    Size viewport = const Size(402, 874),
+  }) async {
+    tester.view.physicalSize = viewport;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -39,9 +41,14 @@ void main() {
           sourceCurrencyRepairPreviewProvider(detail.txn.id)
               .overrideWith((ref) async => null),
         ],
-        child: MaterialApp(
-          home: BloomUndoToastHost(
-            child: TransactionDetailScreen(txnId: detail.txn.id),
+        child: MediaQuery(
+          data: MediaQueryData.fromView(tester.view).copyWith(
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: MaterialApp(
+            home: BloomUndoToastHost(
+              child: TransactionDetailScreen(txnId: detail.txn.id),
+            ),
           ),
         ),
       ),
@@ -460,6 +467,39 @@ void main() {
 
       expect(find.text('Parsed locally'), findsOneWidget);
       expect(find.text('Template match · 99%'), findsOneWidget);
+    });
+
+    testWidgets('T-167c provenance badge grows to fit 2x text', (tester) async {
+      final templateDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(
+          id: 'txn_tmpl_large_text',
+          smsId: const Value('sms_large_text'),
+          parseSource: 'template',
+        ),
+        merchantName: testDetail.merchantName,
+        categoryName: testDetail.categoryName,
+        parseConfidence: 0.99,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: testDetail.isLowTrustParse,
+        rawSmsBody: 'Paid Rs 449 to Swiggy on A/c XX1234',
+      );
+
+      await pumpDetail(
+        tester,
+        templateDetail,
+        textScale: 2,
+        viewport: const Size(434, 964),
+      );
+
+      final badge = find.byKey(const ValueKey('parser_provenance_badge'));
+      final label = find.text('Parsed locally');
+      expect(badge, findsOneWidget);
+      expect(
+        tester.getRect(badge).height,
+        greaterThanOrEqualTo(tester.getRect(label).height),
+      );
+      expect(find.text('Template match · 99%'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets(

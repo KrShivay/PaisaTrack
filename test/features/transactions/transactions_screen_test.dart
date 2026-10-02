@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/core/format.dart';
+import 'package:paisatrack/core/theme/app_theme.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
@@ -89,6 +90,7 @@ void main() {
           ),
         ],
         child: MaterialApp(
+          theme: AppTheme.dark(),
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: TextScaler.linear(textScale),
@@ -502,6 +504,34 @@ void main() {
 
     await pumpScreen(tester, [transaction], hasMore: true);
     expect(find.text('Load more transactions'), findsOneWidget);
+  });
+
+  testWidgets('keeps the continuation action at least 48dp in landscape',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    final now = DateTime.utc(2026, 7, 6, 9);
+    await pumpScreen(
+      tester,
+      [
+        item(
+          id: 'page-row',
+          ts: now,
+          amount: 100,
+          direction: TransactionDirection.debit,
+          displayName: 'Page row',
+        ),
+      ],
+      hasMore: true,
+      size: const Size(602, 271),
+    );
+
+    final button = find.ancestor(
+      of: find.text('Load more transactions'),
+      matching: find.byType(OutlinedButton),
+    );
+    final semanticHeight = tester.getSemantics(button).rect.height;
+    semantics.dispose();
+    expect(semanticHeight, greaterThanOrEqualTo(48));
   });
 
   testWidgets('search filters the list by merchant name', (tester) async {
