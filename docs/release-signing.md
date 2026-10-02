@@ -80,6 +80,28 @@ matched the verified size and SHA-256 above. Broader device acceptance remains
 open. Detailed evidence:
 [2026-10-01 owner-phone install check](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
+## Published APK (0.1.6+2015)
+
+Built from `dfb05e6` plus the version bump (main with the claim-copy fixes,
+emulator-matrix layout fixes, T-177 R4 Ask brand-word payees, T-176
+horizontal insets and short-height Activity, Trends claim titles and readable
+Ask answers) using the same split-per-ABI ARM64 command. 57,078,184 bytes,
+SHA-256 `3dc2fd90a67d7ac5703c677fd2f31aaa9ff73e941ab0b975ba7082d56282de3a`,
+package `com.paisatrack`, version `0.1.6`, code `4015`, production certificate
+`6a00ef7a…9163`; arm64-v8a only, `extractNativeLibs=false`, six stored native
+libraries, zipalign passed. Android Gradle unit tests app 31/31, keystore
+10/10; Flutter suite 1174/1174.
+
+On 2026-10-03 it replaced 4014 in place on the owner motorola edge 50 pro:
+`firstInstallTime` unchanged (`2026-09-26 22:20:54`), installed base APK hash
+matched. A cold launch (1040 ms) opened the encrypted database; Home showed
+the readable claim dates and the new recurring-bills caption, with no app
+fatal or Flutter error in logcat. The landscape/2.0x/three-button recheck was
+not repeated on this build because the phone had been returned to portrait
+1.0x. Published on `apk-downloads` in commit
+`5747e3c055ab1ffb7b20726cd1d5aeff8c348489`; the fetched public blob matched the
+SHA-256 above.
+
 ## Published APK (0.1.5+2014)
 
 Built from `21402a7` (main with T-177 R1–R3, schema v19 data migration and
