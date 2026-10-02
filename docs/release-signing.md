@@ -80,6 +80,32 @@ matched the verified size and SHA-256 above. Broader device acceptance remains
 open. Detailed evidence:
 [2026-10-01 owner-phone install check](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
+## Published APK (0.1.4+2013)
+
+The signed ARM64 release was built from commit `7c1d1d0` (main after T-178a,
+T-188, T-193, T-164e and UNDO-1) with Flutter 3.44.4 using
+`flutter build apk --release --split-per-abi --target-platform android-arm64`.
+It is 56,947,112 bytes with SHA-256
+`c22bac44bf7f454c306fd9682ede101aed07e2969442ded3dd67b9e6da998ac4`, package
+`com.paisatrack`, version `0.1.4`, effective ARM64 code `4013`, production
+certificate SHA-256
+`6a00ef7a3557533e091011d6166c0c45a3bc7a1e540dd2eed4640c88c1ed9163`. It contains
+only `arm64-v8a`, sets `extractNativeLibs=false`, stores all six native
+libraries uncompressed, and passes `zipalign -c -v 4`. Android Gradle unit
+tests: app 31/31, keystore 10/10. Flutter suite at the source commit:
+1083/1083.
+
+On 2026-10-02 it was installed with `adb install -r` on the owner motorola
+edge 50 pro: code 4013 / version 0.1.4 installed, `firstInstallTime` remained
+`2026-09-26 22:20:54`, and the pulled installed base APK matched the SHA-256
+above. A cold launch completed in 550 ms; the encrypted database opened and
+Home, the floating navigation and the Trends inbox badge rendered with no app
+fatal in logcat. No owner records were edited. Published on `apk-downloads`
+in commit `ad6bb488a4ef9824d0215d78729be747d4d60787`; the fetched public blob
+matched size and SHA-256. Known copy issue for the next build: the Home
+greeting still says "than last month" although it now compares the same
+elapsed days.
+
 ## Unpublished APK-size trial (T-194)
 
 A signed ARM64 trial setting `jniLibs.useLegacyPackaging=true` on the release

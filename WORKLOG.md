@@ -1,5 +1,16 @@
 # Current Handoff
 
+## 2026-10-02 — Release 0.1.4+2013 published
+
+- Signed ARM64 APK from `7c1d1d0`: 56,947,112 bytes, SHA-256 `c22bac44…8ac4`,
+  code 4013, production signer. Installed in place on the owner phone
+  (firstInstallTime unchanged, installed hash matched), cold launch 550 ms
+  with Home/Trends inbox rendering and no app fatal. Published on
+  `apk-downloads` as `ad6bb48` (remote blob verified). Details in
+  docs/release-signing.md. Next build: Home greeting copy should say "same
+  days last month"; physical UNDO-1 and T-176/T-167c landscape/2× rechecks.
+  The T-193 entry is in Git history (`385e056`).
+
 ## 2026-10-02 — T-188 Trends inbox (closed)
 
 - Trends now has an inbox built only from fresh T-178a claims, deduplicated
@@ -31,18 +42,3 @@
   test fails if the wiring is removed. Two review rounds (post-frame flag
   race, untested wiring). Physical recheck rides on the next release install.
   The T-178a a4 entry is in Git history (`bc870ec`).
-
-## 2026-10-02 — T-193 physical acceptance (closed)
-
-- On the owner phone, isolated QA package only: the synthetic `Rs.1,234.50`
-  row offered the source-backed repair; preview was non-mutating; Apply
-  showed `-₹1,234.50` and a fresh-process verifier confirmed `INR`/`₹`; on a
-  fresh fixture, Apply then Undo restored both currency fields to null
-  (fresh-process verified, preview available again). The launcher opened
-  straight to Home, confirming persisted onboarding completion. Owner app
-  untouched; QA package removed afterwards. `flutter test` cannot attach to
-  the VM service over wireless ADB, so targets ran as installed debug APKs
-  with logcat markers. Report: docs/reports/T-193-currency-repair-qa-2026-10-01.md.
-- Defect found and filed as UNDO-1: the undo toast is hosted only by
-  HomeShell and is hidden behind Transaction Detail. The T-164e
-  detail/export entry is in Git history (`07c8ece`).
