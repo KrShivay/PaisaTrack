@@ -80,6 +80,27 @@ matched the verified size and SHA-256 above. Broader device acceptance remains
 open. Detailed evidence:
 [2026-10-01 owner-phone install check](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
+## Published APK (0.1.5+2014)
+
+Built from `21402a7` (main with T-177 R1–R3, schema v19 data migration and
+the Home greeting copy fix) using the same split-per-ABI ARM64 command.
+56,947,112 bytes, SHA-256
+`9d9f14b20bb8ab817d19f295da93525fa25aa3292ab06c8d8b88794caa954c7f`, package
+`com.paisatrack`, version `0.1.5`, code `4014`, production certificate
+`6a00ef7a…9163`; arm64-v8a only, `extractNativeLibs=false`, six stored native
+libraries, zipalign passed. The size equals 0.1.4+2013 because of 16 KB
+alignment; `libapp.so` content differs and carries the new code. Android
+Gradle unit tests app 31/31, keystore 10/10; Flutter suite 1136/1136.
+
+On 2026-10-02 it replaced 4013 in place on the owner motorola edge 50 pro:
+`firstInstallTime` unchanged, installed base APK hash matched. After unlock,
+a cold launch (928 ms) opened the encrypted database (v19 migration applied
+without error), Home showed the new "same days last month" greeting, and
+Activity rows and the Trends inbox rendered with no app fatal or Flutter
+error in logcat. No owner records were edited. Published on `apk-downloads`
+in commit `738dd1ee8903a091c380e0b1846223396d93fb2e`; the fetched public blob
+matched the SHA-256 above.
+
 ## Published APK (0.1.4+2013)
 
 The signed ARM64 release was built from commit `7c1d1d0` (main after T-178a,
