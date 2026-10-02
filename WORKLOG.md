@@ -33,3 +33,14 @@
   America/New_York. Three review rounds. Follow-ups: undo should skip rows
   edited after the correction; revert a learned alias on undo. The T-188
   entry is in Git history (`7f3a58f`).
+
+## 2026-10-02 — Release 0.1.4+2013 published
+
+- Signed ARM64 APK from `7c1d1d0`: 56,947,112 bytes, SHA-256 `c22bac44…8ac4`,
+  code 4013, production signer. Installed in place on the owner phone
+  (firstInstallTime unchanged, installed hash matched), cold launch 550 ms
+  with Home/Trends inbox rendering and no app fatal. Published on
+  `apk-downloads` as `ad6bb48` (remote blob verified). Details in
+  docs/release-signing.md. Next build: Home greeting copy should say "same
+  days last month"; physical UNDO-1 and T-176/T-167c landscape/2× rechecks.
+  The T-193 entry is in Git history (`385e056`).
