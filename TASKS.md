@@ -383,6 +383,10 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
     explanation; inspect actual card and payment-source data first.
   - Privacy: synthetic scenarios only; no live statements or SMS.
   - Rollback: planning artifact only; no runtime behavior changes.
+  - Plan drafted and independently reviewed (proposed, owner decisions open):
+    [credit-card accounting](docs/plans/credit-card-accounting.md),
+    [ADR 0020 (Proposed)](docs/decisions/0020-credit-card-accounting.md),
+    phased briefs [T-190a1–h2](docs/tasks/T-190.md). No child is Ready.
 
 <!-- Groom future work here before promoting it to Ready. -->
 
