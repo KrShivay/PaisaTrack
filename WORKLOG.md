@@ -1,5 +1,26 @@
 # Current Handoff
 
+## 2026-10-03 — Owner-phone defects fixed; release 0.1.6+2015
+
+- Owner-phone QA (data exported by owner): UNDO-1 passed (category change,
+  toast over detail, Undo restored it). Found and fixed: ISO/INR claim copy
+  and a false "committed to rent" caption (`5dd0248`); Ask could not find
+  VPA-only payees such as `payzomato@hdfcbank` — R4 brand-word matching with
+  disclosed payees, plus a reviewer-found "ola"/multi-word regression fix
+  (`8e4eb65`); emulator-matrix fixes (48dp Ask rows, compact landscape ring,
+  provenance badge; `82ba900`); landscape nav/Ask orb under the right system
+  bar and Activity header eating the viewport at 2.0x (`9dac2c5`, DRY
+  refactor before merge; test fix `89a20c3` after main went red); Trends
+  claim titles and day-7 minimum for category deltas (`a09bd1c`); readable
+  Ask answers with a "How this was counted" disclosure (`dfb05e6`).
+- Release 0.1.6+2015 (`13dd4d5`): suite 1174/1174, Gradle 31/31 + 10/10,
+  installed in place (firstInstallTime unchanged, hash matched), cold launch
+  1040 ms, published `apk-downloads` `5747e3c`. Open: landscape/2.0x/3-button
+  recheck on this build (phone back in portrait), stale pre-day-7 category
+  card still visible right after install, VPA-only rows still display raw
+  VPAs, Top merchants shows several "Unknown" rows. R2 entry is in Git
+  history (`f730857`).
+
 ## 2026-10-03 — Roadmap planning and docs cleanup (no code)
 
 - Added proposed plans: [roadmap](docs/plans/roadmap.md) (graph, sub-slice
@@ -38,17 +59,3 @@
   analyzer clean, full suite 1136/1136, intelligence/data/enrichment/capture
   559/559 under America/New_York. Three review rounds. Release 2013 details
   stay in docs/release-signing.md.
-
-## 2026-10-02 — T-177 R2 one payee identity across capture paths
-
-- History import and catch-up never resolved merchants (user labels did not
-  apply to imported rows) and a ≥0.92 embedding match silently merged
-  payees. All three paths now share one resolver (user VPA alias → user name
-  alias → exact canonical name → deterministic merchant); similar names only
-  suggest. A shared `PayeeKey` strips a tested noise list for lookup while
-  stored evidence, rules and aliases keep the existing key contract (v20
-  re-key planned in docs/tasks/T-177.md). Phone-like UPI ids are never
-  auto-stored. Imports use one merchant snapshot per run, staged per SMS and
-  merged only after that SMS commits, and skip embeddings. Verified:
-  analyzer clean, full suite 1124/1124, enrichment/data/capture 408/408
-  under America/New_York; three review rounds. Commit `f730857`.
