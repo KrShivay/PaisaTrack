@@ -142,6 +142,9 @@ void main() {
               feesInsightRow,
             ]),
           ),
+          trendsInboxItemsProvider.overrideWith(
+            (ref) => Stream.value(const []),
+          ),
           dashboardAggregateProvider.overrideWith(
             (ref) async => const DashboardAggregateSnapshot(
               debitTotal: 0,

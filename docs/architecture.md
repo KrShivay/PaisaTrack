@@ -180,6 +180,22 @@ closed-set claim selection.
 Trends can be empty when no supported, fresh claim exists for the selected
 period; aggregate charts may still have data.
 
+The Trends inbox lifecycle is specified in
+[trends-inbox.md](specs/trends-inbox.md). When enabled, it derives items only
+from valid, fresh claims rendered by `ClaimRenderer`; identity combines kind,
+scope, and calendar period. Per-item `new`/`seen`/`moved`/`cleared` state and
+the last validated snapshot live in the existing `model_meta` key-value table
+under `trends_inbox_v1`, without a schema change. A claim that stops qualifying
+remains only for deduplication and Undo; it is not rendered or counted and has
+no stale drill-down. Items are retained for the current period and its previous
+three periods, including while a historical period is selected. New items
+become seen when the user leaves Trends or backgrounds the app, not during the
+first build. Claim-level `insights.dismissed` maps to `cleared`. Corrupt or
+unsupported-version metadata is backed up under
+`trends_inbox_v1_backup` before repair. The existing Trends claim feed remains
+available behind the `inboxEnabled` rollback switch. All state is local; inbox
+items contain no SMS text and do not trigger system notifications.
+
 Current boundaries that must be preserved while fixing the UI:
 
 - SQL aggregates are the only valid source for full-period totals. A loading or

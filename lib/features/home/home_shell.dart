@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/bloom/bloom.dart';
+import '../../data/repositories/trends_inbox_repository.dart';
 import '../assistant/assistant_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../insights/insights_screen.dart';
@@ -33,9 +36,13 @@ class HomeShell extends ConsumerStatefulWidget {
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends ConsumerState<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   late final PageController _pageController;
+  bool _trendsLeaveScheduled = false;
+
+  static const int _trendsTabIndex = 3;
 
   static const List<GlobalObjectKey<NavigatorState>> _navKeys = [
     GlobalObjectKey<NavigatorState>('home_tab_nav'),
@@ -75,12 +82,50 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    _markTrendsSeen();
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (switch (state) {
+      AppLifecycleState.hidden ||
+      AppLifecycleState.paused ||
+      AppLifecycleState.detached =>
+        true,
+      AppLifecycleState.resumed || AppLifecycleState.inactive => false,
+    }) {
+      _markTrendsSeen();
+    }
+  }
+
+  void _markTrendsSeen() {
+    if (_currentIndex != _trendsTabIndex || _trendsLeaveScheduled) return;
+    final items = ref.read(trendsInboxItemsProvider).valueOrNull ?? const [];
+    final keys = items
+        .where(
+          (item) => item.isCurrent && item.state == TrendsInboxState.newItem,
+        )
+        .map((item) => item.key)
+        .toList(growable: false);
+    if (keys.isEmpty) return;
+    _trendsLeaveScheduled = true;
+    final markSeen = ref.read(markTrendsInboxSeenProvider);
+    unawaited(() async {
+      try {
+        await markSeen(keys);
+        if (mounted) ref.invalidate(trendsInboxItemsProvider);
+      } on Object {
+        _trendsLeaveScheduled = false;
+      }
+    }());
   }
 
   void _onTabTapped(int index) {
@@ -89,6 +134,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _navKeys[index].currentState?.popUntil((route) => route.isFirst);
       return;
     }
+    if (_currentIndex == _trendsTabIndex) _markTrendsSeen();
+    if (index == _trendsTabIndex) _trendsLeaveScheduled = false;
     setState(() {
       _currentIndex = index;
     });
@@ -101,6 +148,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   void _onPageChanged(int index) {
     if (_currentIndex != index) {
+      if (_currentIndex == _trendsTabIndex) _markTrendsSeen();
+      if (index == _trendsTabIndex) _trendsLeaveScheduled = false;
       setState(() {
         _currentIndex = index;
       });
@@ -122,6 +171,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final inboxItems = ref.watch(trendsInboxEnabledProvider)
+        ? ref.watch(trendsInboxItemsProvider).valueOrNull ?? const []
+        : const [];
+    final newTrendsCount = inboxItems
+        .where(
+          (item) => item.isCurrent && item.state == TrendsInboxState.newItem,
+        )
+        .length;
 
     ref.listen<int>(homeTabControllerProvider, (previous, next) {
       if (next != _currentIndex && next >= 0 && next < _tabs.length) {
@@ -183,6 +240,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 onTabSelected: _onTabTapped,
                 onAskTapped: _openAskPaisaTrack,
                 isDark: isDark,
+                trendsNewCount: newTrendsCount,
               ),
             ),
           ],
@@ -226,6 +284,7 @@ class HomeFloatingNavPill extends StatelessWidget {
     required this.onTabSelected,
     required this.onAskTapped,
     required this.isDark,
+    this.trendsNewCount = 0,
   });
 
   final int currentIndex;
@@ -233,6 +292,7 @@ class HomeFloatingNavPill extends StatelessWidget {
   final ValueChanged<int> onTabSelected;
   final VoidCallback onAskTapped;
   final bool isDark;
+  final int trendsNewCount;
 
   @override
   Widget build(BuildContext context) {
@@ -268,6 +328,9 @@ class HomeFloatingNavPill extends StatelessWidget {
                         item: destinations[i],
                         isSelected: currentIndex == i,
                         showLabel: showLabels,
+                        newCount: destinations[i].label == 'Trends'
+                            ? trendsNewCount
+                            : 0,
                         onTap: () => onTabSelected(i),
                       ),
                   ],
@@ -289,12 +352,14 @@ class _NavTabItemButton extends StatelessWidget {
     required this.item,
     required this.isSelected,
     required this.showLabel,
+    required this.newCount,
     required this.onTap,
   });
 
   final HomeNavigationDestination item;
   final bool isSelected;
   final bool showLabel;
+  final int newCount;
   final VoidCallback onTap;
 
   @override
@@ -305,7 +370,8 @@ class _NavTabItemButton extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: item.label,
+      label:
+          newCount == 0 ? item.label : '${item.label}, $newCount new insights',
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
@@ -316,10 +382,23 @@ class _NavTabItemButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                isSelected ? item.selectedIcon : item.icon,
-                size: 19,
-                color: isSelected ? activeColor : inactiveColor,
+              ExcludeSemantics(
+                child: newCount == 0
+                    ? Icon(
+                        isSelected ? item.selectedIcon : item.icon,
+                        size: 19,
+                        color: isSelected ? activeColor : inactiveColor,
+                      )
+                    : Badge.count(
+                        count: newCount,
+                        backgroundColor: AppColorTokens.violetPrimary,
+                        textColor: Colors.white,
+                        child: Icon(
+                          isSelected ? item.selectedIcon : item.icon,
+                          size: 19,
+                          color: isSelected ? activeColor : inactiveColor,
+                        ),
+                      ),
               ),
               if (showLabel) ...[
                 const SizedBox(height: 2),

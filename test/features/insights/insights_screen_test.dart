@@ -96,6 +96,7 @@ void main() {
         overrides: [
           dashboardAggregateProvider
               .overrideWith((ref) async => _emptyDashboardAggregate),
+          trendsInboxEnabledProvider.overrideWith((ref) => false),
           activeInsightsProvider
               .overrideWith((ref) => Stream.value([injected])),
         ],
@@ -106,6 +107,78 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.textContaining('Injected LLM prose'), findsNothing);
+  });
+
+  testWidgets('rollback flag keeps the existing fresh insight feed',
+      (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    const claimId = 'fees_total:2026-10:phone:INR';
+    final claim = {
+      'v': 1,
+      'calc': 'fees_total@1',
+      'claim_id': claimId,
+      'basis': 'observed',
+      'scope': {
+        'category_ids': ['phone'],
+        'currency_code': 'INR',
+        'currency_symbol': '₹',
+      },
+      'window': {
+        'current': ['2026-10-01', '2026-10-15'],
+        'previous': null,
+        'partial': true,
+      },
+      'metrics': {'total': 12.0},
+      'evidence': {
+        'ids': ['txn-1'],
+        'total_count': 1,
+        'truncated': false,
+      },
+      'coverage': {
+        'rows': 1,
+        'unreviewed': 0,
+        'unknown_currency': 0,
+        'excluded': {
+          'not_settled': 0,
+          'owned_transfer': 0,
+          'analytics_excluded': 0,
+          'non_spending': 0,
+          'credit': 0,
+        },
+      },
+      'input_hash': '0123456789abcdef',
+    };
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
+          trendsInboxEnabledProvider.overrideWith((ref) => false),
+          activeInsightsProvider.overrideWith(
+            (ref) => Stream.value([
+              Insight(
+                id: claimId,
+                period: '2026-10',
+                kind: 'fees_total',
+                payloadJson: jsonEncode({'claim': claim}),
+                dismissed: false,
+              ),
+            ]),
+          ),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Recorded fees'), findsOneWidget);
+    expect(find.text('INSIGHTS'), findsNothing);
   });
 
   testWidgets('Why opens exactly claim evidence and labels truncation',
@@ -185,6 +258,7 @@ void main() {
           appDatabaseProvider.overrideWith((ref) async => database),
           dashboardAggregateProvider
               .overrideWith((ref) async => _emptyDashboardAggregate),
+          trendsInboxEnabledProvider.overrideWith((ref) => false),
           activeInsightsProvider
               .overrideWith((ref) => Stream.value([claimRow])),
           evidenceTransactionPageProvider.overrideWith((ref, filters) {

@@ -1,5 +1,25 @@
 # Current Handoff
 
+## 2026-10-02 — T-188 Trends inbox (closed)
+
+- Trends now has an inbox built only from fresh T-178a claims, deduplicated
+  by kind + scope + calendar period (a repeated crossing updates the item;
+  a new period creates one). States new/seen/moved/cleared persist in
+  `model_meta` (`trends_inbox_v1`, no schema change) through transactions on
+  a per-database serial queue; Clear all keeps `insights.dismissed` in step
+  with Undo via UndoController; items that stop qualifying are hidden (state
+  kept for dedupe/undo); items become seen when the user leaves Trends or
+  backgrounds the app; the nav pill shows a Material badge with one
+  announced count; retention is the current plus 3 previous periods;
+  corrupt state is backed up and logged. `trendsInboxEnabledProvider=false`
+  restores the plain feed. Spec: docs/specs/trends-inbox.md.
+- Impact: final scan CRITICAL (shared ModelMeta/insights paths). Verified:
+  analyzer clean, full suite 1083/1083, insights/intelligence/shell/data
+  305/305 under America/New_York. Two review rounds (lost updates, stale
+  numbers rendering, period-change flicker, badge scaling). Follow-up nit:
+  after background → resume on Trends, items that turn new are marked seen
+  only on the next leave. The T-164e closure entry is in Git history.
+
 ## 2026-10-02 — UNDO-1 undo toast above every route
 
 - Physical T-193 QA showed the 10-second undo toast was hosted only by
@@ -26,14 +46,3 @@
 - Defect found and filed as UNDO-1: the undo toast is hosted only by
   HomeShell and is hidden behind Transaction Detail. The T-164e
   detail/export entry is in Git history (`07c8ece`).
-
-## 2026-10-02 — T-164e closed (filter dates on FinancialCalendar)
-
-- `TransactionFilters.matches` compared device-local dates; it now uses the
-  injected `FinancialCalendar` with half-open day bounds (inclusive end day),
-  with 00:30/23:59 regressions under an offset that differs from the device.
-  With the earlier slices (SMS body dates, picker, insights month key,
-  detail/export/manual entry) every T-164e surface now follows one calendar
-  contract; there is no importer yet, so docs/architecture.md records the
-  contract a future importer must follow. Verified: analyzer clean, full
-  suite green. The a3 entry is in Git history (`5fe9f85`).

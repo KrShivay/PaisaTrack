@@ -371,17 +371,6 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
-- [ ] T-188 [P2] Define Trends notification inbox lifecycle.
-  - Acceptance: Specify when a threshold crossing creates an inbox item, how
-    repeated crossings deduplicate, how users move/return an item, and what
-    Clear all means. Reuse existing insight evidence and dismissal state where
-    possible; test period changes, recomputation, repeated thresholds, and
-    clear-all persistence before implementation.
-  - Dependencies: coordinate with T-178a insight claims; do not treat the
-    current `dismissed` bit as a notification inbox without defining states.
-  - Privacy: local-only aggregates and state; no notification body with raw SMS.
-  - Rollback: keep existing Trends insight feed available if inbox is disabled.
-
 - [ ] T-190 [P2] Plan credit-card purchase, bill, payment, refund, and failure
       accounting. **Do this last among the newly requested tasks.**
   - Acceptance: Produce a grounded scenario map for card purchases, statement

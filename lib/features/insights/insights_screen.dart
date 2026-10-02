@@ -6,13 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/clock.dart';
 import '../../core/financial_calendar.dart';
 import '../../core/format.dart';
+import '../../core/undo/undo_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/category_visuals.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
-import '../../data/repositories/insights_repository.dart';
+import '../../data/repositories/trends_inbox_repository.dart';
 import '../../intelligence/claim.dart';
 import '../../intelligence/derived_reads_service.dart';
 import '../dashboard/dashboard_providers.dart';
@@ -85,11 +86,48 @@ final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
   );
 });
 
+final trendsInboxItemsProvider = StreamProvider<List<TrendsInboxItem>>((ref) {
+  final claimsAsync = ref.watch(activeInsightsProvider);
+  if (!claimsAsync.hasValue || claimsAsync.isLoading) {
+    return Stream.value(const []);
+  }
+  final database = ref.watch(appDatabaseProvider.future);
+  final period = ref.watch(dashboardPeriodProvider);
+  final selectedPeriod = insightMonthKeyForPeriod(period);
+  if (claimsAsync.requireValue.any((claim) => claim.period != selectedPeriod)) {
+    return Stream.value(const []);
+  }
+  final claims = claimsAsync.requireValue
+      .where((claim) => claim.period == selectedPeriod)
+      .toList(growable: false);
+  return Stream.fromFuture(
+    database.then(
+      (db) => TrendsInboxRepository(db).reconcile(
+        period: selectedPeriod,
+        freshClaims: claims,
+      ),
+    ),
+  );
+});
+
+final markTrendsInboxSeenProvider =
+    Provider<Future<void> Function(Iterable<String>)>((ref) {
+  return (keys) async {
+    final database = await ref.read(appDatabaseProvider.future);
+    final repository = TrendsInboxRepository(database);
+    for (final key in keys) {
+      await repository.markSeen(key);
+    }
+  };
+});
+
 final claimDisplayNamesProvider =
     FutureProvider<ClaimDisplayNames>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return loadClaimDisplayNames(db);
 });
+
+final trendsInboxEnabledProvider = Provider<bool>((ref) => inboxEnabled);
 
 String insightMonthKeyForPeriod(DashboardPeriod period) =>
     period.calendar.monthKey(period.start);
@@ -116,6 +154,9 @@ class InsightsScreen extends ConsumerWidget {
     final merchants = ref.watch(topMerchantsProvider);
     final activeInsightsAsync = ref.watch(activeInsightsProvider);
     final insights = activeInsightsAsync.valueOrNull ?? const [];
+    final useInbox = ref.watch(trendsInboxEnabledProvider);
+    final inboxAsync = useInbox ? ref.watch(trendsInboxItemsProvider) : null;
+    final inboxItems = inboxAsync?.valueOrNull ?? const <TrendsInboxItem>[];
     final compactHeader = MediaQuery.sizeOf(context).width < 360 ||
         MediaQuery.textScalerOf(context).scale(1) >= 1.5;
 
@@ -276,17 +317,23 @@ class InsightsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // Narrative Insights Cards (if any non-dismissed)
-            if (insights.isNotEmpty) ...[
+            if (useInbox) ...[
+              _TrendsInboxSection(
+                items: inboxItems,
+                isDark: isDark,
+                categoryNames: claimCategoryNames,
+              ),
+              const SizedBox(height: 20),
+            ] else if (insights.isNotEmpty) ...[
+              // Existing fresh-claim feed is the inbox rollback path.
               for (final insight in insights) ...[
                 _NarrativeInsightCard(
                   insight: insight,
                   isDark: isDark,
                   categoryNames: claimCategoryNames,
                   onDismiss: () async {
-                    final repo =
-                        await ref.read(insightsRepositoryProvider.future);
-                    await repo.dismiss(id: insight.id);
+                    final db = await ref.read(appDatabaseProvider.future);
+                    await TrendsInboxRepository(db).clearClaim(insight.id);
                   },
                   onWhy: () async {
                     final claim = const ClaimValidator().parse(insight);
@@ -378,6 +425,223 @@ class InsightsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _TrendsInboxSection extends ConsumerStatefulWidget {
+  const _TrendsInboxSection({
+    required this.items,
+    required this.isDark,
+    required this.categoryNames,
+  });
+
+  final List<TrendsInboxItem> items;
+  final bool isDark;
+  final Map<String, String> categoryNames;
+
+  @override
+  ConsumerState<_TrendsInboxSection> createState() =>
+      _TrendsInboxSectionState();
+}
+
+class _TrendsInboxSectionState extends ConsumerState<_TrendsInboxSection> {
+  @override
+  Widget build(BuildContext context) {
+    final visible = widget.items
+        .where(
+          (item) => item.isCurrent && item.state != TrendsInboxState.cleared,
+        )
+        .toList(growable: false);
+    if (visible.isEmpty) return const SizedBox.shrink();
+    final repository = ref.read(appDatabaseProvider).valueOrNull == null
+        ? null
+        : TrendsInboxRepository(ref.read(appDatabaseProvider).requireValue);
+    final period = insightMonthKeyForPeriod(
+      ref.watch(dashboardPeriodProvider),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'INSIGHTS',
+                style: AppTheme.bloomDisplay(
+                  11,
+                  FontWeight.w600,
+                  letterSpacing: 0.12,
+                  color: widget.isDark
+                      ? AppColorTokens.bloomDarkTextSecondary
+                      : AppColorTokens.inkSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: repository == null
+                  ? null
+                  : () async {
+                      final undo = await repository.clearAll(period: period);
+                      ref.invalidate(trendsInboxItemsProvider);
+                      ref.read(undoControllerProvider.notifier).pushUndo(
+                            UndoToken(
+                              id: 'trends-inbox-clear-all',
+                              message: 'Cleared Trends inbox',
+                              undoAction: () async {
+                                await repository.undoClearAll(undo);
+                                ref.invalidate(trendsInboxItemsProvider);
+                              },
+                            ),
+                          );
+                    },
+              child: const Text('Clear all'),
+            ),
+          ],
+        ),
+        for (final item in visible)
+          Dismissible(
+            key: ValueKey(item.key),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              color: AppColorTokens.violetPrimary,
+              child: const Icon(Icons.delete_outline, color: Colors.white),
+            ),
+            onDismissed: (_) async {
+              if (repository == null) return;
+              await repository.clear(item.key);
+              ref.invalidate(trendsInboxItemsProvider);
+            },
+            child: _TrendsInboxCard(
+              item: item,
+              isDark: widget.isDark,
+              categoryNames: widget.categoryNames,
+              onOpen: repository == null
+                  ? null
+                  : () async {
+                      if (!context.mounted) return;
+                      await Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => TransactionsScreen(
+                            initialTransactionIds:
+                                item.claim.evidenceIds.toSet(),
+                            initialEvidenceTotalCount: item.claim.evidenceCount,
+                          ),
+                        ),
+                      );
+                    },
+              onMove: repository == null
+                  ? null
+                  : () async {
+                      if (item.state == TrendsInboxState.moved) {
+                        await repository.returnToSeen(item.key);
+                      } else {
+                        await repository.moveToLater(item.key);
+                      }
+                      ref.invalidate(trendsInboxItemsProvider);
+                    },
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _TrendsInboxCard extends StatelessWidget {
+  const _TrendsInboxCard({
+    required this.item,
+    required this.isDark,
+    required this.categoryNames,
+    required this.onOpen,
+    required this.onMove,
+  });
+
+  final TrendsInboxItem item;
+  final bool isDark;
+  final Map<String, String> categoryNames;
+  final VoidCallback? onOpen;
+  final VoidCallback? onMove;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = const ClaimRenderer().render(
+      item.claim,
+      categoryNames: categoryNames,
+    );
+    if (display == null) return const SizedBox.shrink();
+    final textColor =
+        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    final secondaryColor = isDark
+        ? AppColorTokens.bloomDarkTextSecondary
+        : AppColorTokens.inkSecondary;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: onOpen,
+                    style: TextButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      foregroundColor: textColor,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Text(
+                      display.title,
+                      style: AppTheme.bloomDisplay(13, FontWeight.w600),
+                    ),
+                  ),
+                ),
+                if (item.state == TrendsInboxState.newItem)
+                  const _InboxStateLabel('New'),
+                if (item.state == TrendsInboxState.moved)
+                  const _InboxStateLabel('Later'),
+              ],
+            ),
+            Text(
+              display.body,
+              style: AppTheme.bloomDisplay(
+                12,
+                FontWeight.w400,
+                color: secondaryColor,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onMove,
+                child: Text(
+                  item.state == TrendsInboxState.moved
+                      ? 'Return'
+                      : 'Move to later',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InboxStateLabel extends StatelessWidget {
+  const _InboxStateLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Chip(
+        label: Text(label),
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      );
 }
 
 /// Loading/error placeholder for the analytics sections. Keeps loading and
