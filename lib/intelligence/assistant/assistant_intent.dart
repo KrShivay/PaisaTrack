@@ -1,4 +1,5 @@
 import '../../core/financial_calendar.dart';
+import '../../core/format.dart';
 
 enum AssistantIntentKind {
   periodTotal('period_total'),
@@ -378,7 +379,7 @@ class IntentValidator {
       final period = calendar.month(year, month);
       start = period.start;
       end = period.end;
-      label = '${parts[0]}-${parts[1]}';
+      label = formatMonthYear(DateTime(year, month));
     } else if (kind == 'last_n_days') {
       final days = map['n_days'];
       if (days is! int || days < 1 || days > 3660) return null;
@@ -396,7 +397,11 @@ class IntentValidator {
       if (inclusiveEnd != null) {
         end = calendar.dayContaining(inclusiveEnd).end;
       }
-      label = '${map['start']} to ${map['end']}';
+      final startLabel = map['start'] as String?;
+      final endLabel = map['end'] as String?;
+      label = startLabel == null || endLabel == null
+          ? 'selected dates'
+          : formatIsoDateRange(startLabel, endLabel);
     } else if (kind == 'all_time') {
       start = calendar.day(1970, 1, 1).start;
       end = today.end;

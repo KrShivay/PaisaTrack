@@ -3,6 +3,16 @@ import 'package:paisatrack/core/format.dart';
 import 'package:paisatrack/features/transactions/detail/transaction_detail_formatting.dart';
 
 void main() {
+  test('formatMonthYear uses a full human-readable month label', () {
+    expect(formatMonthYear(DateTime(2026, 10)), 'October 2026');
+  });
+
+  test('formatPeriodLabel humanizes ISO month and date-range labels', () {
+    expect(formatPeriodLabel('2026-10'), 'October 2026');
+    expect(formatPeriodLabel('2026-10-02 to 2026-10-03'), 'Oct 2–3');
+    expect(formatPeriodLabel('this month to date'), 'this month to date');
+  });
+
   group('formatInr', () {
     test('formats amounts below one lakh with standard thousands grouping', () {
       expect(formatInr(0), '₹0.00');

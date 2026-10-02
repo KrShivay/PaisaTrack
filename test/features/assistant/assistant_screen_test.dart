@@ -40,6 +40,7 @@ void main() {
     Size size = const Size(402, 874),
     double textScale = 1,
     double bottomInset = 0,
+    bool showSheetHeader = true,
   }) {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -73,7 +74,7 @@ void main() {
             ),
           );
         },
-        home: const AssistantScreen(),
+        home: AssistantScreen(showSheetHeader: showSheetHeader),
       ),
     );
   }
@@ -216,11 +217,16 @@ void main() {
     }
   });
 
-  testWidgets('long prompt wraps completely at 320dp and 2x text', (
+  testWidgets('compact prompts scroll horizontally and expose full labels', (
     tester,
   ) async {
     await tester.pumpWidget(
-      createWidget(tester, size: const Size(320, 568), textScale: 2),
+      createWidget(
+        tester,
+        size: const Size(320, 348),
+        textScale: 2,
+        showSheetHeader: false,
+      ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
@@ -238,9 +244,10 @@ void main() {
     final button = find.byKey(ValueKey('assistant_prompt_list_item_$question'));
     expect(questionText, findsOneWidget);
     final text = tester.widget<Text>(questionText);
-    expect(text.maxLines, isNull);
-    expect(text.overflow, isNull);
-    expect(tester.getSize(button).height, greaterThan(48));
+    expect(text.maxLines, 1);
+    expect(text.overflow, TextOverflow.ellipsis);
+    expect(find.byTooltip(question), findsOneWidget);
+    expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
   });
 
@@ -248,7 +255,11 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      createWidget(tester, size: const Size(320, 348)),
+      createWidget(
+        tester,
+        size: const Size(320, 348),
+        showSheetHeader: false,
+      ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
@@ -270,13 +281,14 @@ void main() {
     await tester.dragUntilVisible(
       lastPrompt,
       promptList,
-      const Offset(0, -60),
+      const Offset(-60, 0),
     );
     final promptListScrollable = find.descendant(
       of: promptList,
       matching: find.byType(Scrollable),
     );
     final promptListState = tester.state<ScrollableState>(promptListScrollable);
+    expect(promptListState.position.axis, Axis.horizontal);
     expect(promptListState.position.maxScrollExtent, greaterThan(0));
     expect(lastPrompt, findsOneWidget);
     expect(tester.takeException(), isNull);

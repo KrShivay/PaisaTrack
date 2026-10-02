@@ -116,28 +116,27 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                         )
                       : LayoutBuilder(
                           builder: (context, bodyConstraints) {
-                            // The sheet gives this body less height when the
-                            // keyboard opens. Reserve a bounded, scrollable
-                            // prompt panel while leaving the conversation able
-                            // to shrink without overflowing.
-                            final promptListHeight = bodyConstraints.maxHeight <
-                                    96
-                                ? 0.0
-                                : bodyConstraints.maxHeight < 240
-                                    ? (bodyConstraints.maxHeight * 0.55).clamp(
-                                        72.0,
-                                        bodyConstraints.maxHeight - 24.0,
-                                      )
-                                    : (bodyConstraints.maxHeight * 0.55)
-                                        .clamp(96.0, 236.0);
+                            final compactPrompts =
+                                bodyConstraints.maxHeight < 320 ||
+                                    MediaQuery.sizeOf(context).width >
+                                        MediaQuery.sizeOf(context).height;
+                            final promptListHeight =
+                                bodyConstraints.maxHeight < 128
+                                    ? 0.0
+                                    : compactPrompts
+                                        ? 80.0
+                                        : (bodyConstraints.maxHeight * 0.35)
+                                            .clamp(120.0, 236.0);
                             return Column(
                               children: [
                                 Expanded(
                                   child: ListView.builder(
+                                    reverse: true,
                                     padding: const EdgeInsets.all(20),
                                     itemCount: _messages.length,
                                     itemBuilder: (context, index) {
-                                      final msg = _messages[index];
+                                      final msg = _messages[
+                                          _messages.length - index - 1];
                                       return _MessageBubble(
                                         msg: msg,
                                         isDark: isDark,
@@ -149,6 +148,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                                   SizedBox(
                                     height: promptListHeight.toDouble(),
                                     child: _ComposerPromptList(
+                                      compact: compactPrompts,
                                       questions: [
                                         for (var index = 0; index < 3; index++)
                                           assistantPromptQuestions[
@@ -252,43 +252,100 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
 class _ComposerPromptList extends StatelessWidget {
   const _ComposerPromptList({
+    required this.compact,
     required this.questions,
     required this.onSelect,
     required this.onRotate,
   });
 
+  final bool compact;
   final List<String> questions;
   final ValueChanged<String> onSelect;
   final VoidCallback onRotate;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Column(
+        key: const ValueKey('assistant_prompt_list'),
+        children: [
+          SizedBox(
+            height: 32,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 20, right: 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Try asking',
+                      style: TextStyle(
+                        color: AppColorTokens.bloomDarkTextSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    key: const ValueKey('assistant_prompt_chip_rotate'),
+                    tooltip: 'Rotate suggestions',
+                    icon: const Icon(Icons.refresh_rounded),
+                    color: AppColorTokens.bloomDarkTextSecondary,
+                    iconSize: 18,
+                    onPressed: onRotate,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 48,
+            child: ListView.separated(
+              key: const ValueKey('assistant_prompt_list_scroll'),
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: questions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) => SizedBox(
+                width: 220,
+                child: Tooltip(
+                  message: questions[index],
+                  child: _suggestionButton(questions[index], compact: true),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       key: const ValueKey('assistant_prompt_list'),
       children: [
         SizedBox(
           height: 48,
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Try asking',
-                  style: TextStyle(
-                    color: AppColorTokens.bloomDarkTextSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 20),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Try asking',
+                    style: TextStyle(
+                      color: AppColorTokens.bloomDarkTextSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                key: const ValueKey('assistant_prompt_chip_rotate'),
-                tooltip: 'Rotate suggestions',
-                icon: const Icon(Icons.refresh_rounded),
-                color: AppColorTokens.bloomDarkTextSecondary,
-                iconSize: 18,
-                onPressed: onRotate,
-              ),
-            ],
+                IconButton(
+                  key: const ValueKey('assistant_prompt_chip_rotate'),
+                  tooltip: 'Rotate suggestions',
+                  icon: const Icon(Icons.refresh_rounded),
+                  color: AppColorTokens.bloomDarkTextSecondary,
+                  iconSize: 18,
+                  onPressed: onRotate,
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -301,38 +358,7 @@ class _ComposerPromptList extends StatelessWidget {
               final question = questions[index];
               return SizedBox(
                 width: double.infinity,
-                child: TextButton(
-                  key: ValueKey('assistant_prompt_list_item_$question'),
-                  onPressed: () => onSelect(question),
-                  style: TextButton.styleFrom(
-                    alignment: Alignment.centerLeft,
-                    backgroundColor: AppColorTokens.bloomDarkCard,
-                    foregroundColor: AppColorTokens.bloomDarkTextSecondary,
-                    minimumSize: const Size.fromHeight(48),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                        color: AppColorTokens.bloomDarkOutline,
-                      ),
-                    ),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                    visualDensity: VisualDensity.standard,
-                  ),
-                  child: Text(
-                    question,
-                    softWrap: true,
-                    textAlign: TextAlign.start,
-                    style: const TextStyle(
-                      color: AppColorTokens.bloomDarkTextSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+                child: _suggestionButton(question),
               );
             },
           ),
@@ -340,6 +366,42 @@ class _ComposerPromptList extends StatelessWidget {
       ],
     );
   }
+
+  Widget _suggestionButton(String question, {bool compact = false}) =>
+      TextButton(
+        key: ValueKey('assistant_prompt_list_item_$question'),
+        onPressed: () => onSelect(question),
+        style: TextButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          backgroundColor: AppColorTokens.bloomDarkCard,
+          foregroundColor: AppColorTokens.bloomDarkTextSecondary,
+          minimumSize: const Size.fromHeight(48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(
+              color: AppColorTokens.bloomDarkOutline,
+            ),
+          ),
+          tapTargetSize: MaterialTapTargetSize.padded,
+          visualDensity: VisualDensity.standard,
+        ),
+        child: Text(
+          question,
+          maxLines: compact ? 1 : null,
+          overflow: compact ? TextOverflow.ellipsis : null,
+          softWrap: !compact,
+          textAlign: TextAlign.start,
+          style: const TextStyle(
+            color: AppColorTokens.bloomDarkTextSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
 }
 
 class _AssistantSheetHeader extends StatelessWidget {
@@ -642,19 +704,50 @@ class _MessageBubble extends StatelessWidget {
             const BloomMascot(size: 24, bob: false, pulseRing: false),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                msg.text,
-                style: AppTheme.bloomDisplay(
-                  14,
-                  FontWeight.w400,
-                  color: isDark
-                      ? AppColorTokens.bloomDarkTextPrimary
-                      : AppColorTokens.ink,
-                ),
-              ),
+              child: _assistantAnswerText(msg.text, isDark: isDark),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _assistantAnswerText(String text, {required bool isDark}) {
+    const marker = '\nHow this was counted: ';
+    final disclosureStart = text.indexOf(marker);
+    final primaryColor =
+        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    if (disclosureStart < 0) {
+      return Text(
+        text,
+        style: AppTheme.bloomDisplay(
+          14,
+          FontWeight.w400,
+          color: primaryColor,
+        ),
+      );
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: text.substring(0, disclosureStart),
+            style: AppTheme.bloomDisplay(
+              14,
+              FontWeight.w400,
+              color: primaryColor,
+            ),
+          ),
+          TextSpan(
+            text: text.substring(disclosureStart),
+            style: AppTheme.bloomDisplay(
+              11,
+              FontWeight.w400,
+              color: AppColorTokens.bloomDarkTextSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

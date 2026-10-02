@@ -13,11 +13,12 @@ class _StubAssistantController extends AssistantController {
   _StubAssistantController({required super.runtime, required super.database});
 
   final askedQuestions = <String>[];
+  String? response;
 
   @override
   Future<String> ask(String question) async {
     askedQuestions.add(question);
-    return 'Answer: $question';
+    return response ?? 'Answer: $question';
   }
 }
 
@@ -92,7 +93,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late AppDatabase database;
-  late AssistantController controller;
+  late _StubAssistantController controller;
 
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
@@ -165,12 +166,78 @@ void main() {
         matching: find.byType(InkWell),
       );
       expect(landscapeSuggestion, findsOneWidget);
-      expect(tester.getRect(landscapeSuggestion).height, greaterThanOrEqualTo(48));
+      expect(
+        tester.getRect(landscapeSuggestion).height,
+        greaterThanOrEqualTo(48),
+      );
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'latest answer stays visible before compact landscape suggestions',
+    (tester) async {
+      controller.response = [
+        'You spent ₹3,494.57 on Food & Dining in October 2026 across 14 transactions.',
+        'How this was counted: Spending · Food & Dining',
+        'Matched transactions are listed separately by currency.',
+      ].join('\n');
+      await _pumpAskRoute(
+        tester,
+        database: database,
+        controller: controller,
+        viewport: const Size(964, 434),
+        textScale: 2,
+      );
+
+      await tester.enterText(find.byType(TextField).last, 'October spending');
+      await tester.tap(find.byKey(const ValueKey('assistant_send_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+
+      final answer = find.text(controller.response!);
+      final suggestions = find.byKey(const ValueKey('assistant_prompt_list'));
+      expect(answer, findsOneWidget);
+      expect(suggestions, findsOneWidget);
+      expect(
+        tester.getRect(answer).bottom,
+        lessThanOrEqualTo(tester.getRect(suggestions).top),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Try asking heading aligns with the suggestion cards', (
+    tester,
+  ) async {
+    await _pumpAskRoute(
+      tester,
+      database: database,
+      controller: controller,
+      viewport: const Size(434, 964),
+      textScale: 1,
+    );
+
+    await tester.enterText(find.byType(TextField).last, 'Show my spending');
+    await tester.tap(find.byKey(const ValueKey('assistant_send_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+
+    final heading = tester.getRect(find.text('Try asking'));
+    final firstSuggestion = tester.getRect(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('assistant_prompt_list')),
+            matching: find.byType(TextButton),
+          )
+          .first,
+    );
+    expect(heading.left, firstSuggestion.left);
+  });
 
   testWidgets('Ask composer keeps a 48dp field at landscape 2x text',
       (tester) async {
@@ -269,7 +336,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
       expect(
-        (controller as _StubAssistantController).askedQuestions,
+        controller.askedQuestions,
         contains(question),
       );
 
@@ -279,7 +346,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
-      expect(find.text(question), findsOneWidget);
+      expect(find.text('Answer: $question'), findsOneWidget);
 
       final composer = find.byKey(const ValueKey('assistant_composer'));
       expect(composer, findsOneWidget);
@@ -300,12 +367,12 @@ void main() {
       );
 
       final messageList = find.ancestor(
-        of: find.text(question),
+        of: find.text('Answer: $question'),
         matching: find.byType(ListView),
       );
       expect(messageList, findsOneWidget);
       final transcriptScrollable = find.ancestor(
-        of: find.text(question),
+        of: find.text('Answer: $question'),
         matching: find.byType(Scrollable),
       );
       expect(transcriptScrollable, findsOneWidget);
@@ -321,7 +388,7 @@ void main() {
       transcriptState.position.jumpTo(transcriptState.position.maxScrollExtent);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-      expect(find.text('Answer: $question'), findsOneWidget);
+      expect(find.text(question), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

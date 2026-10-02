@@ -16,7 +16,7 @@ void main() {
     final range = (result as ValidIntent).intent.range!;
     expect(range.start, DateTime(2026, 7).toUtc());
     expect(range.end, DateTime(2026, 8).toUtc());
-    expect(range.label, '2026-07');
+    expect(range.label, 'July 2026');
   });
 
   test('all date range kinds use the injected financial calendar', () {
@@ -37,6 +37,7 @@ void main() {
     final month = range({'kind': 'month', 'month': '2026-10'});
     expect(month.start, DateTime.utc(2026, 10, 1, 5));
     expect(month.end, DateTime.utc(2026, 11, 1, 5));
+    expect(month.label, 'October 2026');
 
     final lastDays = range({'kind': 'last_n_days', 'n_days': 3});
     expect(lastDays.start, DateTime.utc(2026, 10, 1, 5));
@@ -49,6 +50,7 @@ void main() {
     });
     expect(custom.start, DateTime.utc(2026, 10, 2, 5));
     expect(custom.end, DateTime.utc(2026, 10, 4, 5));
+    expect(custom.label, 'Oct 2–3');
 
     final allTime = range({'kind': 'all_time'});
     expect(allTime.start, DateTime.utc(1970, 1, 1, 5));

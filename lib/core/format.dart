@@ -68,8 +68,47 @@ const _monthAbbrev = [
   'Dec',
 ];
 
+const _monthNames = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 /// Returns the compact English month label used by transaction dates.
 String formatMonthAbbreviation(int month) => _monthAbbrev[month - 1];
+
+/// Formats a calendar month for user-facing period labels, such as October 2026.
+String formatMonthYear(DateTime date) =>
+    '${_monthNames[date.month - 1]} ${date.year}';
+
+/// Converts legacy ISO period labels to the same concise labels used by range
+/// validation while preserving already-human relative labels.
+String formatPeriodLabel(String label) {
+  final month = RegExp(r'^(\d{4})-(\d{2})$').firstMatch(label);
+  if (month != null) {
+    final year = int.parse(month.group(1)!);
+    final monthNumber = int.parse(month.group(2)!);
+    if (monthNumber >= 1 && monthNumber <= 12) {
+      return formatMonthYear(DateTime(year, monthNumber));
+    }
+  }
+  final range = RegExp(
+    r'^(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})$',
+  ).firstMatch(label);
+  if (range != null) {
+    return formatIsoDateRange(range.group(1)!, range.group(2)!);
+  }
+  return label;
+}
 
 String _clock12h(DateTime t) {
   final hour24 = t.hour;
@@ -125,21 +164,7 @@ String formatDateGroup(DateTime ts, {DateTime? now}) {
   if (diff == 0) return 'Today';
   if (diff == 1) return 'Yesterday';
 
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  final base = '${local.day} ${months[local.month - 1]}';
+  final base = '${local.day} ${_monthNames[local.month - 1]}';
   return local.year == ref.year ? base : '$base ${local.year}';
 }
 

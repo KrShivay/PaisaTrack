@@ -118,7 +118,7 @@ void main() {
       clock: () => DateTime(2026, 7, 13),
     ).ask('How much did I spend this month?');
 
-    expect(answer, contains('No matching transactions'));
+    expect(answer, contains('No spending transactions matched'));
     expect(answer, isNot(contains('Download the model')));
   });
 
@@ -333,7 +333,7 @@ void main() {
     ).ask('How much did I spend this month?');
 
     expect(answer, contains('₹610.83'));
-    expect(answer, contains('2026-07'));
+    expect(answer, contains('in July 2026'));
     expect(answer, isNot(contains('No transactions')));
   });
 }

@@ -640,11 +640,17 @@ void main() {
     expect(comparison.currentLabel, 'this month to date');
     expect(comparison.previousLabel, 'the same elapsed days last month');
     final answer = const AnswerRenderer().render(intent, comparison);
-    expect(answer, contains('Current period (this month to date)'));
     expect(
       answer,
-      contains('Previous period (the same elapsed days last month)'),
+      contains('You spent 800.00 (currency unknown) in this month to date'),
     );
+    expect(
+      answer,
+      contains(
+        'compared with 1000.00 (currency unknown) in the same elapsed days last month',
+      ),
+    );
+    expect(answer, contains('(-20.0%)'));
   });
 
   test('completed month assistant comparison keeps full prior month', () async {
@@ -679,6 +685,10 @@ void main() {
     expect(comparison.previous, 1000);
     expect(comparison.currentLabel, '2026-09');
     expect(comparison.previousLabel, '2026-08');
+    final answer = const AnswerRenderer().render(intent, comparison);
+    expect(answer, contains('in September 2026, compared with'));
+    expect(answer, contains('in August 2026.'));
+    expect(answer, isNot(contains('2026-09')));
   });
 
   test('assistant totals keep explicit USD and bare dollar in separate buckets',

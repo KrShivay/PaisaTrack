@@ -1,6 +1,14 @@
 import '../../core/format.dart';
+import '../../data/models/source_currency.dart';
 import 'assistant_intent.dart';
 import 'query_engine.dart';
+
+typedef _ComparisonBucket = ({
+  double current,
+  double previous,
+  String? currencyCode,
+  String? currencySymbol,
+});
 
 class AnswerRenderer {
   const AnswerRenderer();
@@ -18,37 +26,29 @@ class AnswerRenderer {
           :final matchedByBrandToken,
           :final includedPayees
         ) =>
-          count == 0
-              ? 'Period: $label\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
-              : 'Period: $label\nResult: ${_metric(intent.metric)} ${_totalValue(intent.aggregation, currencyBuckets, count, value)} across $count transactions.${matchedByBrandToken == null ? '' : '\nIncluded payees: ${includedPayees.join(' and ')} — matched by the word \'$matchedByBrandToken\'.'}\nFilters: ${_filters(intent)}',
-        BreakdownQueryResult(:final items) => items.isEmpty
-            ? 'Period: ${intent.range!.label}\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
-            : 'Period: ${intent.range!.label}\nResult:\n${items.map((item) => '${item.label}: ${formatSourceAmount(item.total, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}').join('\n')}\nFilters: ${_filters(intent)}',
+          _totalAnswer(
+            intent,
+            value: value,
+            count: count,
+            label: label,
+            currencyBuckets: currencyBuckets,
+            matchedByBrandToken: matchedByBrandToken,
+            includedPayees: includedPayees,
+          ),
+        BreakdownQueryResult(:final items) => _breakdownAnswer(intent, items),
         ComparisonQueryResult(
           :final currencyBuckets,
           :final currentLabel,
           :final previousLabel,
         ) =>
-          currencyBuckets.isEmpty
-              ? 'No same-currency comparison is available.'
-              : currencyBuckets.map((bucket) {
-                  final change = bucket.current - bucket.previous;
-                  final ratio =
-                      bucket.previous == 0 ? null : change / bucket.previous;
-                  final currentValue = formatSourceAmount(
-                    bucket.current,
-                    currencyCode: bucket.currencyCode,
-                    currencySymbol: bucket.currencySymbol,
-                  );
-                  final previousValue = formatSourceAmount(
-                    bucket.previous,
-                    currencyCode: bucket.currencyCode,
-                    currencySymbol: bucket.currencySymbol,
-                  );
-                  return 'Current period (${currentLabel ?? intent.range!.label}): $currentValue. Previous period (${previousLabel ?? intent.compareRange!.label}): $previousValue. Difference: ${formatSourceAmount(change, currencyCode: bucket.currencyCode, currencySymbol: bucket.currencySymbol)}${ratio == null ? '' : ' (${(ratio * 100).toStringAsFixed(1)}%)'}.';
-                }).join('\n'),
+          _comparisonAnswer(
+            intent,
+            currencyBuckets,
+            currentLabel,
+            previousLabel,
+          ),
         RecurringQueryResult(:final items) => items.isEmpty
-            ? 'No recurring payments are due in ${intent.range!.label}.'
+            ? 'There are no recurring payments due in ${formatPeriodLabel(intent.range!.label)}.'
             : items
                 .map(
                   (item) =>
@@ -62,11 +62,160 @@ class AnswerRenderer {
           '${refusal.message}${refusal.suggestions.isEmpty ? '' : '\nChoose: ${refusal.suggestions.join(' · ')}'}',
       };
 
-  static String _metric(AssistantMetric metric) => switch (metric) {
-        AssistantMetric.spend => 'Spending',
-        AssistantMetric.income => 'Income',
-        AssistantMetric.net => 'Net amount',
+  static String _totalAnswer(
+    AssistantIntent intent, {
+    required double? value,
+    required int count,
+    required String label,
+    required List<AssistantCurrencyBucket> currencyBuckets,
+    required String? matchedByBrandToken,
+    required List<String> includedPayees,
+  }) {
+    final period = formatPeriodLabel(label);
+    if (count == 0) {
+      return _withDisclosure(
+        'No ${_metricNoun(intent.metric)} transactions matched${_target(intent)} in $period.',
+        _disclosure(intent),
+      );
+    }
+
+    final amount = _totalValue(
+      intent.aggregation,
+      currencyBuckets,
+      count,
+      value,
+    );
+    final hasMultipleCurrencies = currencyBuckets.length > 1;
+    final sentence = intent.aggregation == AssistantAggregation.count
+        ? 'You had $count ${_metricNoun(intent.metric)} transactions${_target(intent)} in $period.'
+        : hasMultipleCurrencies
+            ? 'Across $count transactions in $period, you ${_verb(intent.metric)} $amount${_target(intent)}.'
+            : '${_averagePrefix(intent)}$amount${_target(intent)} in $period across $count transactions.';
+    final extras = <String>[
+      if (hasMultipleCurrencies) 'Currency totals are kept separate.',
+      if (matchedByBrandToken != null && includedPayees.isNotEmpty)
+        'Included payees: ${includedPayees.join(' and ')} — matched by the word \'$matchedByBrandToken\'.',
+    ];
+    return _withDisclosure(sentence, _disclosure(intent, extras: extras));
+  }
+
+  static String _breakdownAnswer(
+    AssistantIntent intent,
+    List<BreakdownItem> items,
+  ) {
+    final period = formatPeriodLabel(intent.range!.label);
+    if (items.isEmpty) {
+      return _withDisclosure(
+        'No ${_metricNoun(intent.metric)} transactions matched${_target(intent)} in $period.',
+        _disclosure(intent),
+      );
+    }
+    final amounts = items
+        .map(
+          (item) =>
+              '${item.label}: ${formatSourceAmount(item.total, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}',
+        )
+        .join('\n');
+    final currencyKeys = {
+      for (final item in items)
+        SourceCurrency(code: item.currencyCode, symbol: item.currencySymbol)
+            .bucketKey,
+    };
+    return _withDisclosure(
+      'Here is your ${_metricNoun(intent.metric)} by category in $period:\n$amounts',
+      _disclosure(
+        intent,
+        extras: [
+          if (currencyKeys.length > 1) 'Currency totals are kept separate.',
+        ],
+      ),
+    );
+  }
+
+  static String _comparisonAnswer(
+    AssistantIntent intent,
+    List<_ComparisonBucket> buckets,
+    String? currentLabel,
+    String? previousLabel,
+  ) {
+    if (buckets.isEmpty) {
+      return _withDisclosure(
+        'A same-currency comparison is not available for these periods.',
+        _disclosure(intent),
+      );
+    }
+    final currentPeriod = formatPeriodLabel(
+      currentLabel ?? intent.range!.label,
+    );
+    final previousPeriod = formatPeriodLabel(
+      previousLabel ?? intent.compareRange!.label,
+    );
+    final sentences = buckets.map((bucket) {
+      final current = formatSourceAmount(
+        bucket.current,
+        currencyCode: bucket.currencyCode,
+        currencySymbol: bucket.currencySymbol,
+      );
+      final previous = formatSourceAmount(
+        bucket.previous,
+        currencyCode: bucket.currencyCode,
+        currencySymbol: bucket.currencySymbol,
+      );
+      final change = bucket.current - bucket.previous;
+      final ratio = bucket.previous == 0 ? null : change / bucket.previous;
+      final difference = formatSourceAmount(
+        change,
+        currencyCode: bucket.currencyCode,
+        currencySymbol: bucket.currencySymbol,
+      );
+      return 'You ${_verb(intent.metric)} $current in $currentPeriod, compared with $previous in $previousPeriod. The difference is $difference${ratio == null ? '' : ' (${(ratio * 100).toStringAsFixed(1)}%)'}.';
+    }).join('\n');
+    return _withDisclosure(
+      sentences,
+      _disclosure(
+        intent,
+        extras: [
+          if (buckets.length > 1) 'Currency totals are kept separate.',
+        ],
+      ),
+    );
+  }
+
+  static String _withDisclosure(String sentence, String disclosure) =>
+      '$sentence\n$disclosure';
+
+  static String _disclosure(
+    AssistantIntent intent, {
+    List<String> extras = const [],
+  }) =>
+      'How this was counted: ${_filters(intent)}${extras.isEmpty ? '' : ' · ${extras.join(' · ')}'}';
+
+  static String _target(AssistantIntent intent) {
+    final categories = intent.categoryNames.isNotEmpty
+        ? intent.categoryNames.join(' and ')
+        : intent.categoryName;
+    final category = categories == null ? '' : ' on $categories';
+    final merchant = intent.merchant == null ? '' : ' at ${intent.merchant}';
+    return '$category$merchant';
+  }
+
+  static String _metricNoun(AssistantMetric metric) => switch (metric) {
+        AssistantMetric.spend => 'spending',
+        AssistantMetric.income => 'income',
+        AssistantMetric.net => 'net amount',
       };
+
+  static String _verb(AssistantMetric metric) => switch (metric) {
+        AssistantMetric.spend => 'spent',
+        AssistantMetric.income => 'received',
+        AssistantMetric.net => 'had a net amount of',
+      };
+
+  static String _averagePrefix(AssistantIntent intent) =>
+      intent.aggregation == AssistantAggregation.average
+          ? 'Your average ${_metricNoun(intent.metric)} was '
+          : 'You ${_verb(intent.metric)} ';
+
   static String _totalValue(
     AssistantAggregation aggregation,
     List<AssistantCurrencyBucket> buckets,
@@ -85,7 +234,7 @@ class AnswerRenderer {
             currencySymbol: bucket.currencySymbol,
           ),
         )
-        .join(' · ');
+        .join(' and ');
   }
 
   static String _filters(AssistantIntent intent) {
@@ -100,6 +249,12 @@ class AnswerRenderer {
     ];
     return filters.join(' · ');
   }
+
+  static String _metric(AssistantMetric metric) => switch (metric) {
+        AssistantMetric.spend => 'Spending',
+        AssistantMetric.income => 'Income',
+        AssistantMetric.net => 'Net amount',
+      };
 
   static String _date(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}-${value.month.toString().padLeft(2, '0')}-${value.year}';

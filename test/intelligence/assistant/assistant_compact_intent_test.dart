@@ -108,10 +108,10 @@ void main() {
       'cmo': '2026-06',
     });
 
-    expect(answer, contains('Current period (this month to date):'));
+    expect(answer, contains('You spent ₹10.00 in this month to date'));
     expect(
       answer,
-      contains('Previous period (the same elapsed days last month):'),
+      contains('compared with ₹10.00 in the same elapsed days last month'),
     );
   });
 
@@ -120,7 +120,10 @@ void main() {
     () async {
       final answer = await askWith({'i': 'r'});
 
-      expect(answer, 'No recurring payments are due in the next 30 days.');
+      expect(
+        answer,
+        'There are no recurring payments due in the next 30 days.',
+      );
     },
   );
 
@@ -163,7 +166,7 @@ void main() {
 
       final properties = runtime.lastSchema!['properties']! as Map;
       expect((properties['cats'] as Map)['type'], 'array');
-      expect(answer, contains('No matching transactions'));
+      expect(answer, contains('No spending transactions matched'));
       expect(answer, contains('Food Delivery + Groceries'));
     },
   );
