@@ -6,6 +6,7 @@ import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/assistant/assistant_intent.dart';
 import 'package:paisatrack/intelligence/assistant/answer_renderer.dart';
 import 'package:paisatrack/intelligence/assistant/query_engine.dart';
+import 'package:paisatrack/enrichment/payee_identity_key.dart';
 
 import 'category_test_data.dart';
 
@@ -56,6 +57,9 @@ void main() {
     String lifecycleState = 'settled',
     String? currencyCode,
     String? currencySymbol,
+    String? merchantId = 'swiggy',
+    String? merchantRaw,
+    String? counterpartyVpa,
   }) =>
       database.into(database.transactions).insert(
             TransactionsCompanion.insert(
@@ -66,7 +70,9 @@ void main() {
               currencySymbol: Value(currencySymbol),
               direction: direction,
               channel: 'upi',
-              merchantId: const Value('swiggy'),
+              merchantId: Value(merchantId),
+              merchantRaw: Value(merchantRaw),
+              counterpartyVpa: Value(counterpartyVpa),
               categoryId: Value(categoryId),
               parseSource: 'test',
               confidenceJson: '{}',
@@ -105,9 +111,13 @@ void main() {
           as TotalQueryResult;
       expect((total.value, total.count), (150, 2));
       final merchant = await engine.run(
-        intent(AssistantIntentKind.merchantLookup, merchant: 'wigg'),
+        intent(AssistantIntentKind.merchantLookup, merchant: 'Swiggy'),
       ) as TotalQueryResult;
       expect(merchant.value, 150);
+      final partialWord = await engine.run(
+        intent(AssistantIntentKind.merchantLookup, merchant: 'wigg'),
+      );
+      expect(partialWord, isA<AssistantClarificationResult>());
       final breakdown =
           await engine.run(intent(AssistantIntentKind.categoryBreakdown))
               as BreakdownQueryResult;
@@ -125,6 +135,267 @@ void main() {
       expect(comparison.percent, 1);
     },
   );
+
+  test('merchant lookup resolves VPA, raw, aliases, and relabeled rows',
+      () async {
+    await (database.update(database.merchants)
+          ..where((row) => row.id.equals('swiggy')))
+        .write(const MerchantsCompanion(userLabel: Value('Food delivery')));
+    await database.into(database.merchantAliases).insert(
+          MerchantAliasesCompanion.insert(
+            alias: PayeeIdentityKey.normalize('Swiggy'),
+            merchantId: 'swiggy',
+            source: 'user',
+            confidence: 1,
+          ),
+        );
+    await database.into(database.merchantAliases).insert(
+          MerchantAliasesCompanion.insert(
+            alias: PayeeKey.keyFor('swiggy@ybl'),
+            merchantId: 'swiggy',
+            source: 'user',
+            confidence: 1,
+          ),
+        );
+    await txn(
+      'vpa_only',
+      DateTime.utc(2026, 7, 2),
+      100,
+      merchantId: null,
+      counterpartyVpa: 'swiggy@ybl',
+    );
+    await txn(
+      'raw',
+      DateTime.utc(2026, 7, 3),
+      50,
+      merchantId: null,
+      merchantRaw: 'UPI-SWIGGY',
+    );
+    await txn(
+      'labeled',
+      DateTime.utc(2026, 7, 4),
+      25,
+      merchantRaw: 'Food delivery',
+    );
+
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.merchantLookup,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+        merchant: 'Swiggy',
+      ),
+    ) as TotalQueryResult;
+
+    expect((result.value, result.count), (175, 3));
+  });
+
+  test('merchant phrase does not substring-match Coca Cola', () async {
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'coca',
+            canonicalName: 'Coca Cola',
+            firstSeen: DateTime.utc(2026),
+            lastSeen: DateTime.utc(2026),
+          ),
+        );
+    await txn(
+      'coca_cola',
+      DateTime.utc(2026, 7, 2),
+      400,
+      merchantId: 'coca',
+      merchantRaw: 'Coca Cola',
+    );
+
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.merchantLookup,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+        merchant: 'ola',
+      ),
+    );
+
+    expect(result, isA<AssistantClarificationResult>());
+  });
+
+  test('merchant phrase matching multiple payees asks for clarification',
+      () async {
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'swiggy_two',
+            canonicalName: 'Swiggy',
+            firstSeen: DateTime.utc(2026),
+            lastSeen: DateTime.utc(2026),
+          ),
+        );
+    await txn(
+      'swiggy_first',
+      DateTime.utc(2026, 7, 2),
+      100,
+      merchantId: 'swiggy',
+      merchantRaw: 'Swiggy',
+      counterpartyVpa: 'first@ybl',
+    );
+    await txn(
+      'swiggy_second',
+      DateTime.utc(2026, 7, 3),
+      100,
+      merchantId: 'swiggy_two',
+      merchantRaw: 'Swiggy',
+      counterpartyVpa: 'second@okaxis',
+    );
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.merchantLookup,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+        merchant: 'Swiggy',
+      ),
+    );
+
+    expect(result, isA<AssistantClarificationResult>());
+    expect(
+      const AnswerRenderer().render(
+        AssistantIntent(
+          kind: AssistantIntentKind.merchantLookup,
+          metric: AssistantMetric.spend,
+          aggregation: AssistantAggregation.sum,
+          range: july,
+          merchant: 'Swiggy',
+        ),
+        result,
+      ),
+      contains('more than one'),
+    );
+  });
+
+  test('merchant ambiguity ignores payees with no eligible rows', () async {
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'swiggy_unspent',
+            canonicalName: 'Swiggy',
+            firstSeen: DateTime.utc(2026),
+            lastSeen: DateTime.utc(2026),
+          ),
+        );
+    await txn(
+      'eligible_swiggy',
+      DateTime.utc(2026, 7, 2),
+      100,
+      merchantId: 'swiggy',
+      merchantRaw: 'Swiggy',
+    );
+
+    final result = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.merchantLookup,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+        merchant: 'Swiggy',
+      ),
+    );
+
+    expect(result, isA<TotalQueryResult>());
+    expect((result as TotalQueryResult).count, 1);
+  });
+
+  test('same-label suggestion resolves back to the payee with that VPA handle',
+      () async {
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'swiggy_alt',
+            canonicalName: 'Swiggy',
+            firstSeen: DateTime.utc(2026),
+            lastSeen: DateTime.utc(2026),
+          ),
+        );
+    await database.into(database.merchantAliases).insert(
+          MerchantAliasesCompanion.insert(
+            alias: PayeeIdentityKey.normalize('swiggy@ybl'),
+            merchantId: 'swiggy',
+            source: 'user',
+            confidence: 1,
+          ),
+        );
+    await database.into(database.merchantAliases).insert(
+          MerchantAliasesCompanion.insert(
+            alias: PayeeIdentityKey.normalize('swiggy@okaxis'),
+            merchantId: 'swiggy_alt',
+            source: 'user',
+            confidence: 1,
+          ),
+        );
+    await txn(
+      'swiggy_first',
+      DateTime.utc(2026, 7, 2),
+      100,
+      merchantId: 'swiggy',
+      merchantRaw: 'Swiggy',
+      counterpartyVpa: 'swiggy@ybl',
+    );
+    await txn(
+      'swiggy_second',
+      DateTime.utc(2026, 7, 3),
+      100,
+      merchantId: 'swiggy_alt',
+      merchantRaw: 'Swiggy',
+      counterpartyVpa: 'swiggy@okaxis',
+    );
+
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.merchantLookup,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: july,
+      merchant: 'Swiggy',
+    );
+    final result = await engine.run(intent);
+    final answer = const AnswerRenderer().render(intent, result);
+
+    expect(answer, contains('Swiggy'));
+    expect(answer, contains('ybl'));
+    expect(answer, contains('okaxis'));
+
+    final suggestion = (result as AssistantClarificationResult)
+        .refusal
+        .suggestions
+        .firstWhere((value) => value.endsWith('(ybl)'));
+    final reasked = await engine.run(
+      AssistantIntent(
+        kind: intent.kind,
+        metric: intent.metric,
+        aggregation: intent.aggregation,
+        range: intent.range,
+        merchant: suggestion,
+      ),
+    ) as TotalQueryResult;
+    expect((reasked.value, reasked.count), (100, 1));
+  });
+
+  test(
+      'unknown merchant phrase asks for clarification instead of reporting zero',
+      () async {
+    await txn('swiggy_only', DateTime.utc(2026, 7, 2), 100);
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.merchantLookup,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: july,
+      merchant: 'Definitely not a payee',
+    );
+
+    final result = await engine.run(intent);
+    final answer = const AnswerRenderer().render(intent, result);
+
+    expect(result, isA<AssistantClarificationResult>());
+    expect(answer, contains('matching payee'));
+    expect(answer, isNot(contains('₹0')));
+  });
 
   test('current month comparison uses matching elapsed days and labels them',
       () async {

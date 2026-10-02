@@ -36,17 +36,32 @@ records `category_source: rule`. Other rows record the categorizer source. The
 write guard may still downgrade a decision when required source evidence is
 missing.
 
-Rule matching uses exact counterparty VPA, exact normalized merchant identity,
-then a merchant word-boundary fallback for `merchant_legacy` rules only when no
-exact merchant rule matched. New rules use `merchant`; schema v19's data-only,
-idempotent migration tags existing `merchant` rows as `merchant_legacy`, with
-no new columns. Backups mark the rule-matching semantics they contain; restore
-tags unmarked older `merchant` rules as legacy and preserves exact rules from
-current backups. Newest wins within each tier. This keeps legacy rules such as
-`amzn` working while a corrected `Swiggy` rule cannot claim `Swiggy Instamart`.
-Existing-and-future corrections use exact normalized payee evidence through
-its existing index; replacing a legacy identity writes an exact `merchant`
-rule.
+Rule matching order is exact counterparty VPA, resolved merchant ID, exact
+normalized merchant identity, then a merchant word-boundary fallback for
+`merchant_legacy` rules. The VPA tier comes first because a per-VPA correction
+is narrower than a merchant-wide correction and must not be shadowed. R3
+stores the merchant ID in the existing rule `match_type`/`match_value` columns
+as `merchant_id` / the merchant ID. A row uses that tier only when persisted
+`confidence_json.merchant.src` identifies an exact resolution (`user`,
+`exact`, or `new`); missing provenance and fuzzy suggestion/similarity links
+fall back to the R1 exact VPA/name rule. ID sweeps include exact-source linked
+rows and unresolved rows whose VPA or evidence name exactly matches the
+corrected row. Fuzzy/legacy linked rows are excluded unless those exact
+identifiers match. This adds no column and does not reinterpret or rewrite
+rules created before R3. Undo keeps restoring the exact prior rule rows as
+before. Schema v19's data-only, idempotent migration tags existing `merchant`
+rows as `merchant_legacy`, with no new columns. Backups mark the rule-matching
+semantics they contain; restore tags unmarked older `merchant` rules as legacy
+and preserves exact rules from current backups. Newest wins within each tier.
+This keeps legacy rules such as `amzn` working while a corrected `Swiggy` rule
+cannot claim `Swiggy Instamart`. Unresolved existing-and-future corrections
+use exact normalized payee evidence through its existing index. The v20 re-key
+and unresolved-row backfill remain deferred as described in T-177.
+
+Rollback to a pre-R3 app leaves `merchant_id` rules inert because that app does
+not recognize the match type. If merchant merges or deletes are introduced,
+the v20 plan must define how to reassign or surface dangling `merchant_id`
+rules before enabling those operations.
 
 The version identifies the category and initial transaction-status decision
 contract, including its guards. Parser versions remain in `raw_sms.parser_version`;

@@ -33,10 +33,12 @@ class RuleRepository {
 
   /// Strongest, newest rule matching the transaction's identity, or null.
   ///
-  /// Exact counterparty identity wins, then exact normalized merchant
-  /// identity, then a word-boundary fallback for tagged legacy rules.
+  /// Exact VPA wins, then resolved merchant ID, exact normalized merchant
+  /// identity, then a word-boundary fallback for tagged legacy rules. This
+  /// keeps a user's per-VPA correction narrower than a merchant-wide rule.
   /// Unknown match_types never match.
   Future<Rule?> findMatch({
+    String? merchantId,
     String? merchantRaw,
     String? counterpartyVpa,
   }) async {
@@ -48,6 +50,14 @@ class RuleRepository {
       for (final rule in rules) {
         if (rule.matchType == 'counterparty' &&
             _normalize(rule.matchValue) == vpa) {
+          return rule;
+        }
+      }
+    }
+
+    if (merchantId != null && merchantId.isNotEmpty) {
+      for (final rule in rules) {
+        if (rule.matchType == 'merchant_id' && rule.matchValue == merchantId) {
           return rule;
         }
       }
@@ -68,7 +78,7 @@ class RuleRepository {
       }
       for (final rule in rules) {
         if (rule.matchType == 'merchant_legacy' &&
-            _matchesMerchantWordBoundary(merchantValue, rule.matchValue)) {
+            WholePhraseMatcher(rule.matchValue).matches(merchantValue)) {
           return rule;
         }
       }
@@ -186,16 +196,9 @@ class RuleRepository {
   static String normalizeMatchValue(String matchType, String value) =>
       matchType == 'merchant'
           ? PayeeIdentityKey.normalize(value)
-          : value.toLowerCase().trim();
-
-  static bool _matchesMerchantWordBoundary(String merchantRaw, String value) {
-    final phrase = value.trim();
-    if (phrase.isEmpty) return false;
-    final pattern = RegExp(
-      '(^|[^A-Z0-9])${RegExp.escape(phrase.toUpperCase())}(\$|[^A-Z0-9])',
-    );
-    return pattern.hasMatch(merchantRaw.toUpperCase());
-  }
+          : matchType == 'merchant_id'
+              ? value.trim()
+              : value.toLowerCase().trim();
 
   static int _newestFirst(Rule a, Rule b) {
     final byCreatedAt = b.createdAt.compareTo(a.createdAt);

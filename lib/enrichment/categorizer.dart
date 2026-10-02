@@ -106,9 +106,11 @@ class Categorizer {
   /// Runs the ladder for one parsed record. Rules always win.
   Future<CategorizationResult> categorize(
     NormalizedTransactionRecord record, {
+    String? merchantId,
     Float32List? merchantEmbedding,
   }) async {
     final rule = await _rules.findMatch(
+      merchantId: merchantId,
       merchantRaw: record.merchantRaw,
       counterpartyVpa: record.counterpartyVpa,
     );
@@ -126,7 +128,8 @@ class Categorizer {
         merchantRaw: record.merchantRaw,
         counterpartyVpa: record.counterpartyVpa,
       );
-      if (memoryHit != null && memoryHit.confidence >= AppConstants.llmCategorySuggestionCap) {
+      if (memoryHit != null &&
+          memoryHit.confidence >= AppConstants.llmCategorySuggestionCap) {
         return memoryHit;
       }
     }
@@ -160,7 +163,8 @@ class Categorizer {
       vpa: record.counterpartyVpa,
       merchantRaw: record.merchantRaw,
     );
-    if (counterparty.kind == CounterpartyKind.person || counterparty.kind == CounterpartyKind.self) {
+    if (counterparty.kind == CounterpartyKind.person ||
+        counterparty.kind == CounterpartyKind.self) {
       return const CategorizationResult(
         categoryId: 'transfers',
         confidence: 1.0,

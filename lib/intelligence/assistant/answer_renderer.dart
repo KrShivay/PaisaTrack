@@ -56,6 +56,8 @@ class AnswerRenderer {
         InsightsQueryResult(:final items) => items.isEmpty
             ? 'There are no active insights.'
             : items.map((item) => item.text).join('\n'),
+        AssistantClarificationResult(:final refusal) =>
+          '${refusal.message}${refusal.suggestions.isEmpty ? '' : '\nChoose: ${refusal.suggestions.join(' · ')}'}',
       };
 
   static String _metric(AssistantMetric metric) => switch (metric) {

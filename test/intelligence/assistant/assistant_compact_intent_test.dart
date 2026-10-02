@@ -73,7 +73,7 @@ void main() {
       'mer': 'Zomato',
     });
 
-    expect(answer, contains('No matching transactions'));
+    expect(answer, contains('matching payee'));
     expect(answer, contains('Zomato'));
   });
 

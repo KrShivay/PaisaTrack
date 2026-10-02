@@ -4,6 +4,7 @@ import '../../core/financial_calendar.dart';
 import '../../data/analytics/financial_eligibility.dart';
 import '../../data/db/database.dart';
 import '../../data/models/source_currency.dart';
+import '../../enrichment/payee_identity_key.dart';
 import '../claim.dart';
 import 'assistant_intent.dart';
 
@@ -114,6 +115,36 @@ class InsightsQueryResult extends AssistantQueryResult {
   final List<InsightQueryItem> items;
 }
 
+class AssistantClarificationResult extends AssistantQueryResult {
+  const AssistantClarificationResult(this.refusal);
+
+  final AssistantRefusal refusal;
+}
+
+class _MerchantAmbiguity implements Exception {
+  const _MerchantAmbiguity(this.refusal);
+
+  final AssistantRefusal refusal;
+}
+
+class _UnmatchedMerchant implements Exception {
+  const _UnmatchedMerchant(this.refusal);
+
+  final AssistantRefusal refusal;
+}
+
+class _MerchantIdentity {
+  const _MerchantIdentity({
+    required this.merchantIds,
+    required this.nameKeys,
+    required this.vpaKeys,
+  });
+
+  final Set<String> merchantIds;
+  final Set<String> nameKeys;
+  final Set<String> vpaKeys;
+}
+
 class AssistantQueryEngine {
   AssistantQueryEngine(
     this.database, {
@@ -126,8 +157,9 @@ class AssistantQueryEngine {
   final FinancialCalendar calendar;
   final DateTime Function() clock;
 
-  Future<AssistantQueryResult> run(AssistantIntent intent) =>
-      switch (intent.kind) {
+  Future<AssistantQueryResult> run(AssistantIntent intent) async {
+    try {
+      return await switch (intent.kind) {
         AssistantIntentKind.periodTotal ||
         AssistantIntentKind.merchantLookup =>
           _total(intent),
@@ -136,6 +168,12 @@ class AssistantQueryEngine {
         AssistantIntentKind.upcomingRecurring => _recurring(intent),
         AssistantIntentKind.activeInsights => _insights(intent),
       };
+    } on _MerchantAmbiguity catch (ambiguity) {
+      return AssistantClarificationResult(ambiguity.refusal);
+    } on _UnmatchedMerchant catch (unmatched) {
+      return AssistantClarificationResult(unmatched.refusal);
+    }
+  }
 
   Future<List<Transaction>> _transactions(
     AssistantIntent intent,
@@ -178,29 +216,274 @@ class AssistantQueryEngine {
     final rows = await query.get();
     if (intent.merchant == null) return rows;
 
-    final merchantIds = rows
-        .map((row) => row.merchantId)
-        .whereType<String>()
-        .toSet()
-        .toList(growable: false);
-    final merchants = <String, String>{};
-    if (merchantIds.isNotEmpty) {
-      final merchantQuery = database.select(database.merchants)
-        ..where((row) => row.id.isIn(merchantIds));
-      for (final row in await merchantQuery.get()) {
-        merchants[row.id] = row.userLabel ?? row.canonicalName;
-      }
+    final identity = await _resolveMerchantIdentity(intent.merchant!, rows);
+    if (identity == null) {
+      throw _UnmatchedMerchant(
+        AssistantRefusal(
+          "I couldn't find a matching payee for '${intent.merchant!.trim()}'. Check the payee name and try again.",
+        ),
+      );
     }
-    final literal = intent.merchant!.toLowerCase();
     return rows.where((row) {
-      if (intent.merchant != null) {
-        final stored =
-            (merchants[row.merchantId] ?? row.merchantRaw ?? '').toLowerCase();
-        if (!stored.contains(literal)) return false;
-      }
-      return true;
+      return (row.merchantId != null &&
+              identity.merchantIds.contains(row.merchantId)) ||
+          (row.counterpartyVpa != null &&
+              identity.vpaKeys
+                  .contains(PayeeKey.keyFor(row.counterpartyVpa!))) ||
+          (row.merchantRaw != null &&
+              _nameKeyForms(row.merchantRaw!).any(identity.nameKeys.contains));
     }).toList(growable: false);
   }
+
+  Future<_MerchantIdentity?> _resolveMerchantIdentity(
+    String phrase,
+    List<Transaction> eligibleRows,
+  ) async {
+    final phraseMatcher = WholePhraseMatcher(phrase);
+    final normalizedPhrase = PayeeKey.parse(name: phrase).nameKey;
+    if (normalizedPhrase.isEmpty) return null;
+    final eligibleIds = eligibleRows.map((row) => row.id).toSet();
+    if (eligibleIds.isEmpty) return null;
+    final eligibleMerchantIds = <String>{
+      ...eligibleRows.map((row) => row.merchantId).whereType<String>().toSet(),
+    };
+    final merchants = await database.select(database.merchants).get();
+    final merchantIds = merchants.map((row) => row.id).toSet();
+    final surfaces = <String, Set<String>>{
+      for (final id in merchantIds) id: <String>{},
+    };
+    final nameKeys = <String, Set<String>>{
+      for (final id in merchantIds) id: <String>{},
+    };
+    final vpaKeys = <String, Set<String>>{
+      for (final id in merchantIds) id: <String>{},
+    };
+    for (final merchant in merchants) {
+      surfaces[merchant.id]!
+        ..add(merchant.canonicalName)
+        ..add(merchant.userLabel ?? '');
+      nameKeys[merchant.id]!
+        ..add(PayeeKey.parse(name: merchant.canonicalName).nameKey)
+        ..add(PayeeKey.parse(name: merchant.userLabel).nameKey);
+    }
+
+    final aliases = await database.select(database.merchantAliases).get();
+    final aliasMerchantIds = <String, Set<String>>{};
+    for (final alias in aliases) {
+      final id = alias.merchantId;
+      final value = alias.alias;
+      aliasMerchantIds.putIfAbsent(value, () => <String>{}).add(id);
+      surfaces[id]!.add(value);
+      if (value.contains('@')) {
+        vpaKeys[id]!.add(PayeeKey.keyFor(value));
+      } else {
+        nameKeys[id]!
+          ..add(PayeeKey.keyFor(value))
+          ..add(PayeeKey.parse(name: value).nameKey);
+        // Stored R2 alias keys remove punctuation, including the VPA '@'.
+        vpaKeys[id]!.add(value);
+      }
+    }
+    for (final row in eligibleRows) {
+      final rowKeys = <String>{
+        if (row.counterpartyVpa != null) PayeeKey.keyFor(row.counterpartyVpa!),
+        if (row.merchantRaw != null) ..._nameKeyForms(row.merchantRaw!),
+      };
+      for (final key in rowKeys) {
+        eligibleMerchantIds.addAll(aliasMerchantIds[key] ?? const {});
+      }
+    }
+    final eligibleIdList = eligibleIds.toList(growable: false);
+    final evidence = <QueryRow>[];
+    for (var offset = 0; offset < eligibleIdList.length; offset += 900) {
+      final batchIds = eligibleIdList.skip(offset).take(900).toList();
+      final placeholders = List.filled(batchIds.length, '?').join(', ');
+      final batchEvidence = await database.customSelect(
+        '''
+SELECT t.merchant_id, e.evidence_type, e.normalized_key, e.display_value
+FROM payee_evidence AS e
+JOIN transactions AS t ON t.id = e.transaction_id
+WHERE t.id IN ($placeholders) AND t.merchant_id IS NOT NULL
+''',
+        variables: [
+          for (final id in batchIds) Variable<String>(id),
+        ],
+      ).get();
+      evidence.addAll(batchEvidence);
+    }
+    for (final row in evidence) {
+      final id = row.read<String>('merchant_id');
+      if (!merchantIds.contains(id)) continue;
+      final value = row.read<String>('display_value');
+      final key = row.read<String>('normalized_key');
+      surfaces[id]!.add(value);
+      if (row.read<String>('evidence_type') == 'counterparty_vpa') {
+        vpaKeys[id]!
+          ..add(key)
+          ..add(PayeeKey.keyFor(value));
+      } else {
+        nameKeys[id]!
+          ..add(key)
+          ..add(PayeeKey.parse(name: value).nameKey);
+      }
+    }
+
+    final suggestion = _disambiguatedPayee(phrase);
+    final matchedIds = <String>{};
+    if (suggestion != null) {
+      final labelKey = PayeeKey.parse(name: suggestion.label).nameKey;
+      final labelMatches = merchants.where((merchant) {
+        final id = merchant.id;
+        final label = merchant.userLabel ?? merchant.canonicalName;
+        return eligibleMerchantIds.contains(id) &&
+            PayeeKey.parse(name: label).nameKey == labelKey;
+      }).toList()
+        ..sort((left, right) => left.id.compareTo(right.id));
+      if (suggestion.ordinal != null) {
+        if (labelMatches.length == suggestion.total &&
+            suggestion.ordinal! <= labelMatches.length) {
+          matchedIds.add(labelMatches[suggestion.ordinal! - 1].id);
+        }
+      } else {
+        final handleMerchantIds = <String>{};
+        for (final row in eligibleRows) {
+          final vpa = row.counterpartyVpa;
+          if (vpa == null || _vpaHandleFor(vpa) != suggestion.handle) continue;
+          if (row.merchantId != null) handleMerchantIds.add(row.merchantId!);
+          handleMerchantIds
+              .addAll(aliasMerchantIds[PayeeKey.keyFor(vpa)] ?? const {});
+        }
+        for (final merchant in labelMatches) {
+          if (handleMerchantIds.contains(merchant.id)) {
+            matchedIds.add(merchant.id);
+          }
+        }
+      }
+    } else {
+      for (final id in eligibleMerchantIds) {
+        if (!merchantIds.contains(id)) continue;
+        if (surfaces[id]!.any(phraseMatcher.matches) ||
+            nameKeys[id]!.contains(normalizedPhrase)) {
+          matchedIds.add(id);
+        }
+      }
+    }
+    if (matchedIds.length > 1) {
+      final matchingMerchants = merchants
+          .where((merchant) => matchedIds.contains(merchant.id))
+          .toList()
+        ..sort((left, right) => left.id.compareTo(right.id));
+      final labels = matchingMerchants
+          .map((merchant) => merchant.userLabel ?? merchant.canonicalName)
+          .toList(growable: false);
+      final labelCounts = <String, int>{};
+      for (final label in labels) {
+        labelCounts.update(label, (count) => count + 1, ifAbsent: () => 1);
+      }
+      final occurrences = <String, int>{};
+      final suggestions = [
+        for (var index = 0; index < matchingMerchants.length; index++)
+          if (labelCounts[labels[index]]! > 1)
+            '${labels[index]} (${_vpaHandle(eligibleRows, matchingMerchants[index].id) ?? 'payee ${occurrences.update(labels[index], (count) => count + 1, ifAbsent: () => 1)} of ${labelCounts[labels[index]]}'})'
+          else
+            labels[index],
+      ];
+      throw _MerchantAmbiguity(
+        AssistantRefusal(
+          "I found more than one payee matching '${phrase.trim()}'. Which one did you mean?",
+          suggestions: suggestions,
+        ),
+      );
+    }
+    if (matchedIds.isNotEmpty) {
+      return _MerchantIdentity(
+        merchantIds: matchedIds,
+        nameKeys: suggestion == null
+            ? {for (final id in matchedIds) ...nameKeys[id]!}
+            : const {},
+        vpaKeys: {for (final id in matchedIds) ...vpaKeys[id]!},
+      );
+    }
+
+    final rawMatches = eligibleRows
+        .where(
+          (row) =>
+              row.merchantRaw != null &&
+              phraseMatcher.matches(row.merchantRaw!),
+        )
+        .toList(growable: false);
+    final rawIdentities = rawMatches
+        .map(
+          (row) =>
+              row.merchantId ?? PayeeKey.parse(name: row.merchantRaw).nameKey,
+        )
+        .toSet();
+    if (rawIdentities.length > 1) {
+      throw _MerchantAmbiguity(
+        AssistantRefusal(
+          "I found more than one payee matching '${phrase.trim()}'. Which one did you mean?",
+          suggestions: rawMatches
+              .map((row) => row.merchantRaw!)
+              .toSet()
+              .toList(growable: false),
+        ),
+      );
+    }
+    if (rawMatches.isEmpty) return null;
+    return _MerchantIdentity(
+      merchantIds:
+          rawMatches.map((row) => row.merchantId).whereType<String>().toSet(),
+      nameKeys: rawMatches
+          .expand(
+            (row) => [
+              PayeeKey.keyFor(row.merchantRaw!),
+              PayeeKey.parse(name: row.merchantRaw).nameKey,
+            ],
+          )
+          .toSet(),
+      vpaKeys: const {},
+    );
+  }
+
+  static String? _vpaHandle(List<Transaction> rows, String merchantId) {
+    String? vpa;
+    for (final row in rows) {
+      if (row.merchantId == merchantId && row.counterpartyVpa != null) {
+        vpa = row.counterpartyVpa;
+        break;
+      }
+    }
+    return vpa == null ? null : _vpaHandleFor(vpa);
+  }
+
+  static String? _vpaHandleFor(String vpa) {
+    final separator = vpa.lastIndexOf('@');
+    return separator < 0 ? null : vpa.substring(separator + 1).toLowerCase();
+  }
+
+  static ({String label, String? handle, int? ordinal, int? total})?
+      _disambiguatedPayee(String phrase) {
+    final match = RegExp(r'^(.+?)\s+\(([^()]+)\)$').firstMatch(phrase.trim());
+    if (match == null) return null;
+    final label = match.group(1)!.trim();
+    final handle = match.group(2)!.trim().toLowerCase();
+    final ordinalMatch = RegExp(r'^payee (\d+) of (\d+)$').firstMatch(handle);
+    if (ordinalMatch != null) {
+      return (
+        label: label,
+        handle: null,
+        ordinal: int.parse(ordinalMatch.group(1)!),
+        total: int.parse(ordinalMatch.group(2)!),
+      );
+    }
+    if (label.isEmpty || handle.isEmpty) return null;
+    return (label: label, handle: handle, ordinal: null, total: null);
+  }
+
+  static Set<String> _nameKeyForms(String value) => {
+        PayeeKey.keyFor(value),
+        PayeeKey.parse(name: value).nameKey,
+      }..remove('');
 
   Future<TotalQueryResult> _total(AssistantIntent intent) async {
     final rows = await _transactions(intent, intent.range!);

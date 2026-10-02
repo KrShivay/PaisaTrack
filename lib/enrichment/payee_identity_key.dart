@@ -58,3 +58,32 @@ class PayeeKey {
     return PayeeIdentityKey.normalize('$local@$psp');
   }
 }
+
+/// Matches a complete payee word or phrase without accepting substrings.
+/// Create once for a search phrase so its regular expression is reused for
+/// every candidate row and evidence value.
+class WholePhraseMatcher {
+  WholePhraseMatcher(String phrase)
+      : _phrase = phrase.trim(),
+        _nameKey = PayeeKey.parse(name: phrase.trim()).nameKey,
+        _pattern = RegExp(
+          '(^|[^A-Z0-9])${RegExp.escape(phrase.trim().toUpperCase())}'
+          '(\$|[^A-Z0-9])',
+        );
+
+  final String _phrase;
+  final String _nameKey;
+  final RegExp _pattern;
+
+  bool matches(String value) {
+    if (_phrase.isEmpty) return false;
+    if (_nameKey.isNotEmpty &&
+        {
+          PayeeKey.keyFor(value),
+          PayeeKey.parse(name: value).nameKey,
+        }.contains(_nameKey)) {
+      return true;
+    }
+    return _pattern.hasMatch(value.toUpperCase());
+  }
+}

@@ -1,5 +1,24 @@
 # Current Handoff
 
+## 2026-10-02 — T-177 R3 rules and Ask on resolved payee identity
+
+- A rule made on `swiggy@ybl` never fired for a text-only "SWIGGY" SMS even
+  after the user linked both, and Ask matched merchants by raw substring
+  ("ola" hit "Coca Cola"; relabeled payees vanished; VPA-only rows were
+  missed). Corrections on rows with an exact persisted merchant link
+  (`confidence_json.merchant.src` exact/new/user) now create `merchant_id`
+  rules; precedence is exact VPA → merchant_id → exact name → legacy. The
+  correction sweep covers both linked rows and exact VPA/name matches among
+  unlinked history. Ask resolves the phrase to an identity set (labels,
+  aliases, payee evidence) with whole-phrase matching, asks which payee when
+  several match (suggestions re-resolve), and answers "no matching payee"
+  instead of a ₹0 total. No schema change; rolling back leaves merchant_id
+  rules inert.
+- Impact: `RuleRepository`/`TransactionRepository` CRITICAL. Verified:
+  analyzer clean, full suite 1136/1136, intelligence/data/enrichment/capture
+  559/559 under America/New_York. Three review rounds. Release 2013 details
+  stay in docs/release-signing.md.
+
 ## 2026-10-02 — T-177 R2 one payee identity across capture paths
 
 - History import and catch-up never resolved merchants (user labels did not
@@ -33,14 +52,3 @@
   America/New_York. Three review rounds. Follow-ups: undo should skip rows
   edited after the correction; revert a learned alias on undo. The T-188
   entry is in Git history (`7f3a58f`).
-
-## 2026-10-02 — Release 0.1.4+2013 published
-
-- Signed ARM64 APK from `7c1d1d0`: 56,947,112 bytes, SHA-256 `c22bac44…8ac4`,
-  code 4013, production signer. Installed in place on the owner phone
-  (firstInstallTime unchanged, installed hash matched), cold launch 550 ms
-  with Home/Trends inbox rendering and no app fatal. Published on
-  `apk-downloads` as `ad6bb48` (remote blob verified). Details in
-  docs/release-signing.md. Next build: Home greeting copy should say "same
-  days last month"; physical UNDO-1 and T-176/T-167c landscape/2× rechecks.
-  The T-193 entry is in Git history (`385e056`).

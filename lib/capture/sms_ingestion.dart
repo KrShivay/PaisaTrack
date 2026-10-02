@@ -434,6 +434,7 @@ class SmsIngestor {
             );
             final categorization = await _categorizer?.categorize(
               value,
+              merchantId: merchant?.merchantId,
               merchantEmbedding: merchant?.embedding,
             );
             final decidedStatus = lifecycleState != 'settled'

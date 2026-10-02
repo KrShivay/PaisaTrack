@@ -937,8 +937,36 @@ WHERE t.status = 'needs_review'
               row.isNotTransaction.equals(false) &
               row.duplicateOfTxnId.isNull(),
         );
+      final exactIds = <String>{};
 
-      if (ruleInput.matchType == 'counterparty') {
+      if (ruleInput.matchType == 'merchant_id') {
+        final raw = current.merchantRaw?.trim();
+        if (raw != null && raw.isNotEmpty) {
+          final evidence = await (_database.select(_database.payeeEvidence)
+                ..where(
+                  (row) =>
+                      row.evidenceType.equals('merchant_raw') &
+                      row.normalizedKey.equals(PayeeIdentityKey.normalize(raw)),
+                ))
+              .get();
+          exactIds.addAll(evidence.map((row) => row.transactionId));
+        }
+        final vpa = current.counterpartyVpa?.trim();
+        if (vpa != null && vpa.isNotEmpty) {
+          final vpaRows = await (_database.select(_database.transactions)
+                ..where(
+                  (row) =>
+                      row.counterpartyVpa.lower().equals(vpa.toLowerCase()),
+                ))
+              .get();
+          exactIds.addAll(vpaRows.map((row) => row.id));
+        }
+        query.where(
+          (row) =>
+              row.merchantId.equals(ruleInput.matchValue) |
+              row.id.isIn(exactIds),
+        );
+      } else if (ruleInput.matchType == 'counterparty') {
         final expected = ruleInput.matchValue.trim().toLowerCase();
         // VPAs are exact identifiers: substring matching would sweep in
         // 'notabc@ybl' and 'abc@ybl.fraud' when correcting 'abc@ybl'.
@@ -957,7 +985,21 @@ WHERE t.status = 'needs_review'
         query.where((row) => row.id.isIn(ids));
       }
       final candidates = await query.get();
-      if (ruleInput.matchType == 'counterparty') return candidates;
+      if (ruleInput.matchType == 'counterparty') {
+        return candidates;
+      }
+      if (ruleInput.matchType == 'merchant_id') {
+        return candidates
+            .where(
+              (row) =>
+                  row.merchantId == null ||
+                  (row.merchantId == ruleInput.matchValue &&
+                      _hasExactMerchantLink(row.confidenceJson)) ||
+                  (exactIds.contains(row.id) &&
+                      !_hasExactMerchantLink(row.confidenceJson)),
+            )
+            .toList(growable: false);
+      }
       return candidates
           .where(
             (row) =>
@@ -1180,6 +1222,12 @@ class _RuleInput {
 }
 
 _RuleInput? _ruleInputFor(Transaction txn) {
+  final merchantId = txn.merchantId?.trim();
+  if (merchantId != null &&
+      merchantId.isNotEmpty &&
+      _hasExactMerchantLink(txn.confidenceJson)) {
+    return _RuleInput(matchType: 'merchant_id', matchValue: merchantId);
+  }
   final vpa = txn.counterpartyVpa?.trim();
   if (vpa != null && vpa.isNotEmpty) {
     return _RuleInput(matchType: 'counterparty', matchValue: vpa);
@@ -1192,6 +1240,18 @@ _RuleInput? _ruleInputFor(Transaction txn) {
     }
   }
   return null;
+}
+
+bool _hasExactMerchantLink(String confidenceJson) {
+  try {
+    final confidence = jsonDecode(confidenceJson) as Map<String, Object?>;
+    final merchant = confidence['merchant'] as Map<String, Object?>?;
+    return const {'exact', 'new', 'user'}.contains(merchant?['src']);
+  } on FormatException {
+    return false;
+  } on TypeError {
+    return false;
+  }
 }
 
 TransactionDirection _directionFromWireName(String wireName) {

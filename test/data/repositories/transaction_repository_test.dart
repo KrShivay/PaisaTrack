@@ -69,6 +69,7 @@ Future<void> _insertTxn(
   bool isDeleted = false,
   bool isNotTransaction = false,
   String? duplicateOfTxnId,
+  String confidenceJson = '{"parser":{"c":0.74,"src":"template"}}',
 }) async {
   final now = ts ?? DateTime.utc(2026, 7, 8, 9);
   await database.into(database.transactions).insert(
@@ -88,7 +89,7 @@ Future<void> _insertTxn(
           isNotTransaction: Value(isNotTransaction),
           duplicateOfTxnId: Value(duplicateOfTxnId),
           parseSource: 'template',
-          confidenceJson: '{"parser":{"c":0.74,"src":"template"}}',
+          confidenceJson: confidenceJson,
           status: status,
           createdAt: now,
           updatedAt: now,
@@ -1040,6 +1041,158 @@ void main() {
             ..where((row) => row.id.equals('broad_swiggy')))
           .getSingle();
       expect(broad.categoryId, 'other');
+    });
+
+    test(
+        'resolved merchant correction sweeps its indexed rows and undo restores rule',
+        () async {
+      final merchantId = await _seedMerchant(database, 'Swiggy');
+      await _insertTxn(
+        database,
+        id: 'resolved_current',
+        merchantId: merchantId,
+        merchantRaw: 'SWIGGY',
+        counterpartyVpa: 'swiggy@ybl',
+        confidenceJson: '{"merchant":{"src":"exact"}}',
+      );
+      await _insertTxn(
+        database,
+        id: 'resolved_other_name',
+        merchantId: merchantId,
+        merchantRaw: 'Swiggy Food',
+        confidenceJson: '{"merchant":{"src":"exact"}}',
+      );
+      final otherMerchantId = await _seedMerchant(database, 'Other Payee');
+      await _insertTxn(
+        database,
+        id: 'same_raw_other_merchant',
+        merchantId: otherMerchantId,
+        merchantRaw: 'SWIGGY',
+      );
+      await RuleRepository(database).insert(
+        matchType: 'merchant_id',
+        matchValue: merchantId,
+        setCategoryId: 'groceries',
+        clock: () => DateTime.utc(2026, 7, 7),
+      );
+
+      final repository = TransactionRepository(database);
+      final result = await repository.correctCategory(
+        txnId: 'resolved_current',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+
+      expect(result.affectedTransactionCount, 3);
+      final rule = (await database.select(database.rules).get()).single;
+      expect(
+        (rule.matchType, rule.matchValue, rule.setCategoryId),
+        ('merchant_id', merchantId, 'food_dining'),
+      );
+      expect(await repository.undoCategoryCorrection(result), isTrue);
+      final restoredRule = (await database.select(database.rules).get()).single;
+      expect(restoredRule.setCategoryId, 'groceries');
+      final rows = await database.select(database.transactions).get();
+      expect(
+        rows.singleWhere((row) => row.id == 'resolved_current').categoryId,
+        'other',
+      );
+      expect(
+        rows
+            .singleWhere((row) => row.id == 'same_raw_other_merchant')
+            .categoryId,
+        'other',
+      );
+    });
+
+    test('merchant id correction includes exact unresolved VPA and name rows',
+        () async {
+      final merchantId = await _seedMerchant(database, 'Swiggy');
+      await _insertTxn(
+        database,
+        id: 'exact_current',
+        merchantId: merchantId,
+        merchantRaw: 'Swiggy',
+        counterpartyVpa: 'swiggy@ybl',
+        confidenceJson: '{"merchant":{"src":"exact"}}',
+      );
+      await _insertTxn(
+        database,
+        id: 'unresolved_vpa',
+        merchantRaw: 'Old Store Label',
+        counterpartyVpa: 'swiggy@ybl',
+      );
+      await _insertTxn(
+        database,
+        id: 'unresolved_name',
+        merchantRaw: 'SWIGGY',
+      );
+      await _insertTxn(
+        database,
+        id: 'unresolved_other',
+        merchantRaw: 'Swiggy Instamart',
+      );
+
+      final result = await TransactionRepository(database).correctCategory(
+        txnId: 'exact_current',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+
+      expect(result.affectedTransactions.map((row) => row.id).toSet(), {
+        'exact_current',
+        'unresolved_vpa',
+        'unresolved_name',
+      });
+    });
+
+    test(
+        'fuzzy merchant links use exact R1 rules and are excluded from ID sweep',
+        () async {
+      final merchantId = await _seedMerchant(database, 'Swiggy');
+      await _insertTxn(
+        database,
+        id: 'fuzzy_current',
+        merchantId: merchantId,
+        merchantRaw: 'Swiggy Instamart',
+        counterpartyVpa: 'instamart@ybl',
+        confidenceJson: '{"merchant":{"src":"suggestion"}}',
+      );
+      await _insertTxn(
+        database,
+        id: 'fuzzy_linked_peer',
+        merchantId: merchantId,
+        merchantRaw: 'Instamart Express',
+        counterpartyVpa: 'other@ybl',
+        confidenceJson: '{"merchant":{"src":"similarity"}}',
+      );
+      await _insertTxn(
+        database,
+        id: 'fuzzy_linked_exact_vpa',
+        merchantId: merchantId,
+        merchantRaw: 'Different Store Surface',
+        counterpartyVpa: 'instamart@ybl',
+        confidenceJson: '{"merchant":{"src":"similarity"}}',
+      );
+
+      final result = await TransactionRepository(database).correctCategory(
+        txnId: 'fuzzy_current',
+        categoryId: 'groceries',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+
+      expect(result.affectedTransactions.map((row) => row.id).toSet(), {
+        'fuzzy_current',
+        'fuzzy_linked_exact_vpa',
+      });
+      final rule = (await database.select(database.rules).get()).single;
+      expect(
+        (rule.matchType, rule.matchValue),
+        ('counterparty', 'instamart@ybl'),
+      );
     });
 
     test(

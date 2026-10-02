@@ -209,6 +209,52 @@ void main() {
   });
 
   group('rule repository', () {
+    test('exact VPA rule outranks merchant id and raw merchant rules',
+        () async {
+      await rules.insert(
+        matchType: 'counterparty',
+        matchValue: 'swiggy@ybl',
+        setCategoryId: 'groceries',
+      );
+      await rules.insert(
+        matchType: 'merchant_id',
+        matchValue: 'merchant_swiggy',
+        setCategoryId: 'food_dining',
+      );
+
+      final result = await categorizer.categorize(
+        _record(merchantRaw: 'SWIGGY', counterpartyVpa: 'swiggy@ybl'),
+        merchantId: 'merchant_swiggy',
+      );
+
+      expect((result.source, result.categoryId), ('rule', 'groceries'));
+    });
+
+    test('merchant id rule outranks exact name and legacy fallback', () async {
+      await rules.insert(
+        matchType: 'merchant',
+        matchValue: 'SWIGGY',
+        setCategoryId: 'groceries',
+      );
+      await rules.insert(
+        matchType: 'merchant_legacy',
+        matchValue: 'swiggy',
+        setCategoryId: 'other',
+      );
+      await rules.insert(
+        matchType: 'merchant_id',
+        matchValue: 'merchant_swiggy',
+        setCategoryId: 'food_dining',
+      );
+
+      final result = await rules.findMatch(
+        merchantId: 'merchant_swiggy',
+        merchantRaw: 'Swiggy',
+      );
+
+      expect(result?.setCategoryId, 'food_dining');
+    });
+
     test('legacy merchant rules match on word boundaries after exact tier',
         () async {
       await rules.insert(

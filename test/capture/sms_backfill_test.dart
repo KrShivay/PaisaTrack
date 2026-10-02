@@ -20,6 +20,7 @@ import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
+import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/enrichment/decision_policy.dart';
 import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
@@ -162,6 +163,94 @@ void main() {
       rows.map((row) => row.merchantId),
       everyElement('merchant_SWIGGY'),
     );
+  });
+
+  test(
+      'merchant_id rule applies to resolved text-only payee in every capture path',
+      () async {
+    final resolver = MerchantResolver(database, const NoopEmbedder());
+    final seedRecord = NormalizedTransactionRecord(
+      amount: 449,
+      direction: TransactionDirection.debit,
+      channel: TransactionChannel.upi,
+      merchantRaw: 'UPI-SWIGGY',
+      counterpartyVpa: 'swiggy@ybl',
+      accountHint: null,
+      balanceAfter: null,
+      refId: null,
+      ts: DateTime.utc(2026, 5, 2, 9, 15),
+      parseSource: ParseSource.template,
+      parseConfidence: 0.97,
+    );
+    final categorizer = Categorizer(
+      rules: RuleRepository(database),
+      seedMap: SeedCategoryMap(const {}),
+    );
+    final seeded = SmsIngestor(
+      database: database,
+      parser: FakeParserCascade(seedRecord),
+      messageKindClassifier: _testMessageKindClassifier,
+      merchantResolver: resolver,
+      categorizer: categorizer,
+    );
+    await seeded.ingest(message('sms_resolved_rule_seed'));
+    await TransactionRepository(database).correctWithRule(
+      txnId: 'txn_sms_resolved_rule_seed',
+      categoryId: 'food_dining',
+      context: 'ask_now',
+    );
+
+    final textOnlyRecord = NormalizedTransactionRecord(
+      amount: 125,
+      direction: TransactionDirection.debit,
+      channel: TransactionChannel.upi,
+      merchantRaw: 'SWIGGY',
+      counterpartyVpa: null,
+      accountHint: null,
+      balanceAfter: null,
+      refId: null,
+      ts: DateTime.utc(2026, 5, 3, 9, 15),
+      parseSource: ParseSource.template,
+      parseConfidence: 0.97,
+    );
+    SmsIngestor ingestor(String _) => SmsIngestor(
+          database: database,
+          parser: FakeParserCascade(textOnlyRecord),
+          messageKindClassifier: _testMessageKindClassifier,
+          merchantResolver: resolver,
+          categorizer: categorizer,
+        );
+
+    await ingestor('live').ingest(
+      syntheticMessage('sms_resolved_rule_live', 'Spent Rs 125'),
+    );
+    await SmsBackfiller(
+      ingestor: ingestor('history'),
+      reader: FakeInboxReader.single([
+        syntheticMessage('sms_resolved_rule_history', 'Spent Rs 125'),
+      ]),
+    ).run();
+    await SmsIncrementalCatchUp(
+      database: database,
+      ingestor: ingestor('catchup'),
+      reader: FakeInboxReader.single([
+        syntheticMessage('sms_resolved_rule_catchup', 'Spent Rs 125'),
+      ]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    ).run();
+
+    final rows = await (database.select(database.transactions)
+          ..where(
+            (row) => row.smsId.isIn([
+              'sms_resolved_rule_live',
+              'sms_resolved_rule_history',
+              'sms_resolved_rule_catchup',
+            ]),
+          ))
+        .get();
+    expect(rows, hasLength(3));
+    expect(rows.map((row) => row.merchantId), everyElement('merchant_SWIGGY'));
+    expect(rows.map((row) => row.categoryId), everyElement('food_dining'));
   });
 
   test(

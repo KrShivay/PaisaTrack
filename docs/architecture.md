@@ -110,13 +110,16 @@ counterparties fail closed; seen counterparties rejoin the confidence policy
 and can become automatic. Generic VPA extraction rejects email-domain suffixes.
 Manual entries are confirmed. Category/description corrections write feedback,
 rules, learned aliases, and transaction state in one database transaction.
-Merchant rules match an exact `PayeeIdentityKey` identity, with the same shared
-matcher used for future capture and historical corrections. A correction
-replaces the rule for that normalized identity; legacy duplicate rules resolve
-to the newest row, and undo restores the prior rule state. Confirmed rule hits
-use the live decision policy during history import and catch-up. Other
-historical rows remain review-only. Capture-decision v2 records when a rule
-supplied the category.
+Rules match in this order: resolved `merchant_id`, exact counterparty VPA,
+exact normalized merchant identity, then the R1 word-boundary fallback for
+`merchant_legacy` rules. New corrections on a resolved row create or replace a
+`merchant_id` rule; its retroactive sweep selects rows by the indexed merchant
+ID. Unresolved rows continue to use exact VPA or exact merchant keys. Rules
+created before R3 keep their existing match types and behavior. A correction
+replaces the rule for that identity, and undo restores the prior rule state.
+Confirmed rule hits use the live decision policy during history import and
+catch-up. Other historical rows remain review-only. Capture-decision v2
+records when a rule supplied the category.
 `TransactionCorrectionController` owns the shared repository-action → undo-token
 sequencing used by transaction detail and Sort; each screen supplies only its
 optimistic presentation update and inverse callback.
@@ -199,6 +202,14 @@ it. “Why?” opens Activity filtered to the cited IDs and labels truncated
 evidence as “showing 50 of N”. Dismissal stays on the stable claim row ID across
 recomputation. Free-text narrative generation is removed; T-178c may add
 closed-set claim selection.
+
+Ask resolves a merchant phrase against canonical names, user labels, aliases,
+and captured payee evidence using whole-phrase token boundaries. A resolved
+payee filters eligible rows by merchant ID, its VPA keys, or its normalized
+name keys. Unresolved phrases fall back to whole-token matching against raw
+merchant text; multiple matching payees return a clarification instead of a
+combined or guessed total. Financial eligibility and currency buckets remain
+the same as other Ask totals.
 
 Trends can be empty when no supported, fresh claim exists for the selected
 period; aggregate charts may still have data.
