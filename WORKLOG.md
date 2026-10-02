@@ -1,5 +1,25 @@
 # Current Handoff
 
+## 2026-10-03 — Roadmap planning and docs cleanup (no code)
+
+- Added proposed plans: [roadmap](docs/plans/roadmap.md) (graph, sub-slice
+  ledger, next slice), [release gates](docs/plans/release-gates.md) (T-194,
+  T-177a holdout), [risk register](docs/plans/risk-register.md),
+  [backup import](docs/plans/backup-import.md) (deferred),
+  [credit-card accounting](docs/plans/credit-card-accounting.md) + ADR 0020
+  (Proposed) + briefs T-190a1–h2, and
+  [grounded-AI validation](docs/plans/grounded-ai-validation.md) (T-178b–d).
+  Groomed briefs T-100/101/102/098/130; board points to them; nothing Ready.
+- Docs: [index](docs/README.md), [ADR index](docs/decisions/README.md) (0013
+  unused, next 0021), `scripts/check_doc_links.py` (clean), archived the
+  2026-08 value review, restored the missing `## Ready` heading.
+- Reviews: T-190 and roadmap each passed independent Luna review after
+  revision (T-190 R2 approve-with-changes, applied; roadmap R3 accept).
+- Next code slice: T-165b (+ stale `transfer_leg` cleanup) as a parallel data
+  lane; T-177a holdout stays the product-priority gate. Owner decisions are
+  listed in the roadmap and T-190 plan. No app tests run (docs only).
+  The T-177 R1 entry is in Git history (`239c2d2`).
+
 ## 2026-10-02 — T-177 R3 rules and Ask on resolved payee identity
 
 - A rule made on `swiggy@ybl` never fired for a text-only "SWIGGY" SMS even
@@ -32,23 +52,3 @@
   merged only after that SMS commits, and skip embeddings. Verified:
   analyzer clean, full suite 1124/1124, enrichment/data/capture 408/408
   under America/New_York; three review rounds. Commit `f730857`.
-
-## 2026-10-02 — T-177 R1 corrections take effect; rules stay precise
-
-- A second category correction for the same payee never took effect for
-  future captures (each correction inserted a rule; matching returned the
-  oldest). Corrections now replace the rule for that identity; undo restores
-  the previous rule, swept rows and feedback in one transaction (all or
-  nothing). New merchant rules match the exact normalized payee key (a
-  `SWIGGY` rule no longer categorizes "Swiggy Instamart"); schema v19
-  (data-only) tags existing merchant rules `merchant_legacy`, which keep the
-  old word-boundary fallback only when no exact rule matches; pre-v19
-  backups are normalized on restore via an authenticated header marker.
-  History/catch-up rule hits get the live rule status, while their `asked`
-  decisions clamp to needs_review so old rows never flood the Ask queue.
-  Capture-decision provenance v2 records the category source (ADR 0018).
-- Impact: `findMatch` CRITICAL, `PayeeIdentityKey` HIGH. Verified: analyzer
-  clean, full suite 1106/1106, enrichment/data/capture 390/390 under
-  America/New_York. Three review rounds. Follow-ups: undo should skip rows
-  edited after the correction; revert a learned alias on undo. The T-188
-  entry is in Git history (`7f3a58f`).

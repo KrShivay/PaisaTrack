@@ -176,7 +176,7 @@ Parallelizable lanes after T-176's current release blocker is handled:
 
 | Node | Status | Evidence/reference |
 |---|---|---|
-| T-178a evidence and eligibility contract | Complete | Per the planning-run reference `origin/main:docs/plans/grounded-ai-validation.md`; definition: [T-178 brief](../tasks/T-178.md). |
+| T-178a evidence and eligibility contract | Complete | [Grounded AI plan](grounded-ai-validation.md) prerequisites; definition: [T-178 brief](../tasks/T-178.md). |
 | T-126 / PV-02 truthful-number presentation | Complete | Product status; see [T-100 scope note](../tasks/T-100.md#dependencies-and-readiness). |
 
 ## Complete implementation sub-slice sequence
