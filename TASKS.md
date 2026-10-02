@@ -439,6 +439,9 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Grounded AI
 
+Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
+[grounded-ai-validation](docs/plans/grounded-ai-validation.md).
+
 - [ ] T-178b [P1] Validate forecast ranges, data coverage, and backtesting.
       Anomaly and forecast insights are hidden until they emit T-178a typed
       claims (see docs/architecture.md insight claim contract).
