@@ -171,6 +171,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mediaQuery = MediaQuery.of(context);
+    final leftInset = mediaQuery.padding.left > mediaQuery.viewPadding.left
+        ? mediaQuery.padding.left
+        : mediaQuery.viewPadding.left;
+    final rightInset = mediaQuery.padding.right > mediaQuery.viewPadding.right
+        ? mediaQuery.padding.right
+        : mediaQuery.viewPadding.right;
     final inboxItems = ref.watch(trendsInboxEnabledProvider)
         ? ref.watch(trendsInboxItemsProvider).valueOrNull ?? const []
         : const [];
@@ -230,8 +237,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
 
             // Floating Nav Pill
             Positioned(
-              left: 20,
-              right: 20,
+              left: leftInset + 20,
+              right: rightInset + 20,
               bottom:
                   MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
               child: HomeFloatingNavPill(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/features/home/home_shell.dart';
@@ -11,11 +12,21 @@ void _setViewport(
   WidgetTester tester, {
   required Size size,
   required double bottomInset,
+  double leftInset = 0,
+  double rightInset = 0,
 }) {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
-  tester.view.padding = FakeViewPadding(bottom: bottomInset);
-  tester.view.viewPadding = FakeViewPadding(bottom: bottomInset);
+  tester.view.padding = FakeViewPadding(
+    left: leftInset,
+    right: rightInset,
+    bottom: bottomInset,
+  );
+  tester.view.viewPadding = FakeViewPadding(
+    left: leftInset,
+    right: rightInset,
+    bottom: bottomInset,
+  );
   tester.view.viewInsets = const FakeViewPadding();
   addTearDown(() {
     tester.view.resetPhysicalSize();
@@ -92,6 +103,42 @@ void main() {
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
+      },
+    );
+  }
+
+  for (final rotation in [
+    (name: 'right-side', leftInset: 0.0, rightInset: 40.0),
+    (name: 'left-side', leftInset: 40.0, rightInset: 0.0),
+    (name: 'both-side cutout', leftInset: 40.0, rightInset: 40.0),
+  ]) {
+    testWidgets(
+      'production pill and Ask orb clear ${rotation.name} landscape insets',
+      (tester) async {
+        const size = Size(964, 434);
+        _setViewport(
+          tester,
+          size: size,
+          bottomInset: 0,
+          leftInset: rotation.leftInset,
+          rightInset: rotation.rightInset,
+        );
+        await _pumpHomeShell(tester, textScale: 2);
+
+        final pill = find.byType(HomeFloatingNavPill);
+        final rect = tester.getRect(pill);
+        expect(rect.left, greaterThanOrEqualTo(rotation.leftInset));
+        expect(rect.right, lessThanOrEqualTo(size.width - rotation.rightInset));
+        expect(
+          tester.getRect(find.bySemanticsLabel('Ask PaisaTrack')).right,
+          lessThanOrEqualTo(size.width - rotation.rightInset),
+        );
+        final tabContent = BloomBottomInset.forTabContent(
+          MediaQuery.of(tester.element(pill)),
+        );
+        expect(tabContent.padding.left, rotation.leftInset);
+        expect(tabContent.padding.right, rotation.rightInset);
+        expect(tester.takeException(), isNull);
       },
     );
   }

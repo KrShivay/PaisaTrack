@@ -151,6 +151,14 @@ class _RouteShellState extends State<_RouteShell> {
   @override
   Widget build(BuildContext context) {
     final deviceMediaQuery = MediaQuery.of(context);
+    final leftInset =
+        deviceMediaQuery.padding.left > deviceMediaQuery.viewPadding.left
+            ? deviceMediaQuery.padding.left
+            : deviceMediaQuery.viewPadding.left;
+    final rightInset =
+        deviceMediaQuery.padding.right > deviceMediaQuery.viewPadding.right
+            ? deviceMediaQuery.padding.right
+            : deviceMediaQuery.viewPadding.right;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -164,8 +172,8 @@ class _RouteShellState extends State<_RouteShell> {
           ),
         ),
         Positioned(
-          left: 20,
-          right: 20,
+          left: leftInset + 20,
+          right: rightInset + 20,
           bottom: deviceMediaQuery.padding.bottom + kBottomNavBottomGap,
           child: Material(
             type: MaterialType.transparency,
@@ -190,12 +198,18 @@ Future<void> _pumpRoutes(
   int initialTab = 0,
   Size size = const Size(402, 874),
   double systemBottomInset = 24,
+  double leftInset = 0,
+  double rightInset = 0,
   double textScale = 1,
   List<Override> providerOverrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
-  tester.view.viewPadding = FakeViewPadding(bottom: systemBottomInset);
+  tester.view.viewPadding = FakeViewPadding(
+    left: leftInset,
+    right: rightInset,
+    bottom: systemBottomInset,
+  );
   tester.view.viewInsets = const FakeViewPadding();
   addTearDown(() {
     tester.view.resetPhysicalSize();
@@ -312,24 +326,40 @@ void main() {
     Size size,
     double inset,
     double textScale,
+    double leftInset,
+    double rightInset,
   })>[
     (
       name: 'standard portrait at default text',
       size: Size(402, 874),
       inset: 24,
       textScale: 1,
+      leftInset: 0,
+      rightInset: 0,
     ),
     (
       name: 'compact landscape at 1.5x text with gesture navigation',
       size: Size(568, 320),
       inset: 24,
       textScale: 1.5,
+      leftInset: 0,
+      rightInset: 0,
     ),
     (
       name: 'compact landscape at 2x text with three-button navigation',
       size: Size(568, 320),
       inset: 48,
       textScale: 2,
+      leftInset: 0,
+      rightInset: 0,
+    ),
+    (
+      name: '964x434 landscape with horizontal system insets at 2x text',
+      size: Size(964, 434),
+      inset: 0,
+      textScale: 2,
+      leftInset: 40,
+      rightInset: 40,
     ),
   ];
   for (final routeCase in sortRouteCases) {
@@ -343,6 +373,8 @@ void main() {
           ),
           size: routeCase.size,
           systemBottomInset: routeCase.inset,
+          leftInset: routeCase.leftInset,
+          rightInset: routeCase.rightInset,
           textScale: routeCase.textScale,
           providerOverrides: [
             reviewQueueProvider.overrideWith(
@@ -372,6 +404,11 @@ void main() {
         expect(firstItem, findsOneWidget);
         final nav = find.byType(HomeFloatingNavPill);
         final navRect = tester.getRect(nav);
+        expect(navRect.left, greaterThanOrEqualTo(routeCase.leftInset));
+        expect(
+          navRect.right,
+          lessThanOrEqualTo(routeCase.size.width - routeCase.rightInset),
+        );
         final cardScroll = find.descendant(
           of: find.byType(WeeklyReviewScreen),
           matching: find.byType(Scrollable),
@@ -599,6 +636,74 @@ void main() {
     );
   }
 
+  testWidgets(
+    'Home final content clears the pill and horizontal system insets in landscape',
+    (tester) async {
+      const size = Size(964, 434);
+      await _pumpRoutes(
+        tester,
+        initialScreen: Scaffold(
+          body: ListView(
+            children: [
+              for (var index = 0; index < 16; index++)
+                Text('Synthetic Home item $index'),
+            ],
+          ),
+        ),
+        size: size,
+        systemBottomInset: 0,
+        leftInset: 40,
+        rightInset: 40,
+        textScale: 2,
+      );
+
+      final homeScroll = find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          )
+          .first;
+      final position = tester.state<ScrollableState>(homeScroll).position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+
+      final finalItem = find.text('Synthetic Home item 15');
+      expect(finalItem, findsOneWidget);
+      _expectAboveNavigation(tester, finalItem);
+      final pill = tester.getRect(find.byType(HomeFloatingNavPill));
+      expect(pill.left, greaterThanOrEqualTo(40));
+      expect(pill.right, lessThanOrEqualTo(size.width - 40));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Trends final content clears horizontal system insets in short landscape',
+    (tester) async {
+      const size = Size(964, 434);
+      await _pumpRoutes(
+        tester,
+        initialScreen: const InsightsScreen(),
+        initialTab: 3,
+        size: size,
+        systemBottomInset: 0,
+        leftInset: 40,
+        rightInset: 40,
+        textScale: 2,
+      );
+
+      final finalSection = find.text('No merchant data for this period');
+      await _scrollToEnd(tester, InsightsScreen);
+      expect(finalSection, findsOneWidget);
+      _expectAboveNavigation(tester, finalSection);
+      final pill = tester.getRect(find.byType(HomeFloatingNavPill));
+      expect(pill.left, greaterThanOrEqualTo(40));
+      expect(pill.right, lessThanOrEqualTo(size.width - 40));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   const detailRouteCases = <({
     String name,
     Size size,
@@ -662,11 +767,29 @@ void main() {
         );
 
         final transactionName = find.text(_detailRouteItem.displayName);
-        final activityList = find
-            .ancestor(of: transactionName, matching: find.byType(Scrollable))
-            .first;
+        final activityList = routeCase.size.height < 560
+            ? find.descendant(
+                of: find.byType(TransactionsScreen),
+                matching: find.byWidgetPredicate(
+                  (widget) =>
+                      widget is Scrollable &&
+                      widget.axisDirection == AxisDirection.down,
+                ),
+              )
+            : find
+                .ancestor(
+                  of: transactionName,
+                  matching: find.byType(Scrollable),
+                )
+                .first;
         final activityPosition =
             tester.state<ScrollableState>(activityList).position;
+        await tester.scrollUntilVisible(
+          transactionName,
+          80,
+          scrollable: activityList,
+        );
+        await tester.pump();
         final transactionRect = tester.getRect(transactionName);
         final navigationTop =
             tester.getRect(find.byType(HomeFloatingNavPill)).top;

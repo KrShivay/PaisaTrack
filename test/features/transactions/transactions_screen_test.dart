@@ -68,12 +68,19 @@ void main() {
     ActivityTransactionPage? nextPage,
     Size size = const Size(402, 874),
     double textScale = 1,
+    double leftInset = 0,
+    double rightInset = 0,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
+    tester.view.padding = FakeViewPadding(left: leftInset, right: rightInset);
+    tester.view.viewPadding =
+        FakeViewPadding(left: leftInset, right: rightInset);
     addTearDown(() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
+      tester.view.resetPadding();
+      tester.view.resetViewPadding();
     });
 
     await tester.pumpWidget(
@@ -178,6 +185,60 @@ void main() {
 
     expect(find.text('Activity'), findsOneWidget);
     expect(find.text('Add'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'short landscape Activity scrolls its heading away and keeps search reachable',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      [for (var index = 0; index < 16; index++) _screenItem('compact-$index')],
+      size: const Size(964, 434),
+      textScale: 2,
+      leftInset: 40,
+      rightInset: 40,
+    );
+
+    final title = find.text('Activity');
+    expect(title, findsOneWidget);
+    final activityScroll = find.byType(CustomScrollView);
+    expect(activityScroll, findsOneWidget);
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(
+            of: activityScroll,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  widget.axisDirection == AxisDirection.down,
+            ),
+          ),
+        )
+        .position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pump();
+
+    expect(title, findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(tester.getRect(find.byType(TextField)).top, greaterThanOrEqualTo(0));
+    expect(tester.getRect(find.byType(TextField)).bottom, lessThan(434));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('portrait Activity keeps its standard header layout at 1× text',
+      (tester) async {
+    await pumpScreen(tester, [_screenItem('portrait')]);
+
+    final titleRect = tester.getRect(find.text('Activity'));
+    final statusRect = tester.getRect(find.text('SMS access is on'));
+    final searchRect = tester.getRect(find.byType(TextField));
+    final firstRowRect = tester.getRect(find.text('Portrait payment'));
+
+    expect(titleRect.top, closeTo(24.5, 1));
+    expect(titleRect.bottom, lessThan(statusRect.top));
+    expect(statusRect.bottom, lessThan(searchRect.top));
+    expect(searchRect.bottom, lessThan(firstRowRect.top));
     expect(tester.takeException(), isNull);
   });
 

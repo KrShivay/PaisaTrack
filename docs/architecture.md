@@ -18,15 +18,23 @@ The presentation layer is a four-tab Bloom shell (Home, Activity, Sort, Trends)
 with an Ask sheet and secondary task sheets/pages. `docs/product-status.md`
 records which Bloom paths are complete and which remain unsafe or partial.
 
-The shell reserves a shared bottom inset equal to the device's bottom system
-inset plus the floating navigation pill's height and gap. Its tab Navigators
-inherit that inset through `MediaQuery`, so scrollable content and `SafeArea`
-actions in primary tabs and pushed tab routes stay above the persistent pill.
+The shell reserves horizontal system insets (including display cutouts) around
+the floating navigation pill. Its tab Navigators inherit the larger of the
+system `padding` and `viewPadding` on each horizontal edge. They also reserve a
+shared bottom inset equal to the device's bottom system inset plus the pill's
+height and gap, so scrollable content and `SafeArea` actions stay clear of
+system bars and the persistent pill.
 Scrollables with explicit padding use `BloomBottomInset.contentPadding`;
 Scaffold FABs use the shared nav-aware location because their default location
 ignores overridden padding. The undo toast uses the same shell geometry. The
 full-screen Ask sheet is outside the tab Navigator and handles only its system
 safe area.
+
+Activity keeps its established portrait layout when the height available after
+system insets is at least 560dp. Below 560dp, its title, SMS status and filters
+scroll with the transactions; the search field remains pinned so it is always
+reachable. Keyset paging and row actions stay on the same Activity provider and
+list items.
 
 ## Transaction timestamps
 

@@ -19,13 +19,23 @@ abstract final class BloomBottomInset {
       MediaQuery.paddingOf(context).bottom;
 
   static MediaQueryData forTabContent(MediaQueryData mediaQuery) {
+    final left = mediaQuery.padding.left > mediaQuery.viewPadding.left
+        ? mediaQuery.padding.left
+        : mediaQuery.viewPadding.left;
+    final right = mediaQuery.padding.right > mediaQuery.viewPadding.right
+        ? mediaQuery.padding.right
+        : mediaQuery.viewPadding.right;
     final bottom = mediaQuery.viewInsets.bottom > 0
         ? mediaQuery.padding.bottom
         : mediaQuery.viewPadding.bottom +
             kBottomNavHeight +
             kBottomNavBottomGap;
     return mediaQuery.copyWith(
-      padding: mediaQuery.padding.copyWith(bottom: bottom),
+      padding: mediaQuery.padding.copyWith(
+        left: left,
+        right: right,
+        bottom: bottom,
+      ),
     );
   }
 }
