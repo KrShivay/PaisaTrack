@@ -305,7 +305,7 @@ class ClaimValidator {
     final categoryId = claim.scope['category_id'];
     final current = claim.window['current'];
     final previous = claim.window['previous'];
-    if (categoryId is! String ||
+    if ((categoryId is! String && categoryId != null) ||
         current is! List ||
         previous is! List ||
         current.length != 2 ||
@@ -416,7 +416,12 @@ abstract final class ClaimEvidenceScope {
           return false;
         }
         final categoryId = claim.scope['category_id'];
-        if (categoryId is String && row.categoryId != categoryId) return false;
+        if (claim.scope.containsKey('category_id')) {
+          if ((categoryId is! String && categoryId != null) ||
+              row.categoryId != categoryId) {
+            return false;
+          }
+        }
         final merchantId = claim.scope['merchant_id'];
         if (merchantId is String && row.merchantId != merchantId) return false;
         final merchantIds = claim.scope['merchant_ids'];
@@ -567,8 +572,10 @@ class ClaimRenderer {
     final metrics = claim.metrics;
     switch (claim.calculation) {
       case 'category_delta@1':
-        final category =
-            categoryNames[claim.scope['category_id']] ?? 'Category';
+        final categoryId = claim.scope['category_id'];
+        final categoryTitle = categoryId == null
+            ? 'Uncategorised spending'
+            : '${categoryNames[categoryId] ?? 'Category'} spending';
         final current = metrics['current_total'];
         final previous = metrics['previous_total'];
         final window = claim.window['current'];
@@ -586,7 +593,7 @@ class ClaimRenderer {
           return null;
         }
         return ClaimDisplay(
-          title: '$category spending',
+          title: categoryTitle,
           body: 'Spent ${_amount(current, claim.scope)} vs '
               '${_amount(previous, claim.scope)} in the same days last month '
               '(${formatIsoDateRange(window[0] as String, window[1] as String)} '

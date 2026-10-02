@@ -13,13 +13,15 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late AppDatabase database;
+  var databaseClosed = false;
 
   setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
+    databaseClosed = false;
   });
 
   tearDown(() async {
-    await database.close();
+    if (!databaseClosed) await database.close();
   });
 
   testWidgets('RecurringScreen renders commitments and statuses',
@@ -198,5 +200,9 @@ void main() {
     expect(find.text('Fees & Charges Alert'), findsNothing);
     expect(find.textContaining('Food spending increased'), findsNothing);
     expect(find.textContaining('Transport spending increased'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await database.close();
+    databaseClosed = true;
   });
 }

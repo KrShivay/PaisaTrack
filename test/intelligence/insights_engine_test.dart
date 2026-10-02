@@ -42,7 +42,7 @@ void main() {
     String id,
     DateTime date,
     double amount,
-    String categoryId, {
+    String? categoryId, {
     String? merchantId,
     String direction = 'debit',
     String? currencyCode,
@@ -226,10 +226,10 @@ void main() {
     await txn('sep_1', localDay(9, 1), 300, 'food');
     await txn('sep_2', localDay(9, 2), 300, 'food');
     await txn('sep_3', localDay(9, 3), 400, 'food');
-    await txn('sep_later', localDay(9, 4), 8000, 'food');
+    await txn('sep_later', localDay(9, 8), 8000, 'food');
 
     await InsightsEngine(database, calendar: calendar).run(
-      today: DateTime.utc(2026, 10, 3, 8),
+      today: DateTime.utc(2026, 10, 7, 8),
     );
 
     final rows = await (database.select(database.insights)
@@ -240,10 +240,43 @@ void main() {
     expect(payload['previous_total'], 1000);
     expect(payload['delta_fraction'], -0.2);
     expect(payload['current_start'], '2026-10-01');
-    expect(payload['current_end'], '2026-10-03');
+    expect(payload['current_end'], '2026-10-07');
     expect(payload['previous_start'], '2026-09-01');
-    expect(payload['previous_end'], '2026-09-03');
+    expect(payload['previous_end'], '2026-09-07');
     expect(const ClaimValidator().parse(rows.single), isA<TypedClaim>());
+  });
+
+  test('suppresses early zero deltas and names uncategorised claims honestly',
+      () async {
+    await txn('previous_uncategorised', DateTime.utc(2026, 9, 2), 37304, null);
+    final engine = InsightsEngine(
+      database,
+      calendar: const FinancialCalendar.fixed(Duration.zero),
+    );
+
+    await engine.run(today: DateTime.utc(2026, 10, 2));
+    var rows = await (database.select(database.insights)
+          ..where((row) => row.kind.equals('category_delta')))
+        .get();
+    expect(rows, isEmpty);
+
+    await engine.run(today: DateTime.utc(2026, 10, 7));
+    rows = await (database.select(database.insights)
+          ..where((row) => row.kind.equals('category_delta')))
+        .get();
+    expect(rows, hasLength(1));
+
+    const validator = ClaimValidator();
+    final claim = validator.parse(rows.single)!;
+    expect(claim.scope['category_id'], equals(null));
+    expect(claim.metrics['current_total'], 0);
+    expect(claim.metrics['previous_total'], 37304);
+    final evidence = await database.select(database.transactions).get();
+    expect(validator.isFresh(claim, evidence, calendar: utcCalendar), isTrue);
+    expect(
+      const ClaimRenderer().render(claim)!.title,
+      'Uncategorised spending',
+    );
   });
 
   test('category delta keeps skipping a zero previous denominator', () async {

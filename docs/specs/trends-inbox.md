@@ -5,6 +5,14 @@ It does not introduce new evidence, prose, or system notifications. Each item
 renders through `ClaimRenderer`; raw SMS content is never read or persisted by
 the inbox.
 
+Category delta claims compare the same elapsed local calendar days in each
+period and are emitted only after at least seven elapsed days in the current
+period. Seven days cover a full weekday cycle and keep early-month zero-versus-
+prior-period noise out of Trends. Claims may scope to an assigned spending
+category or to uncategorised spending; the latter renders as “Uncategorised
+spending”. Claim title maps come from the complete category table so every
+assigned category ID can be rendered, including custom and nested categories.
+
 ## Identity and creation
 
 An item is created only when `ClaimValidator` accepts a claim and

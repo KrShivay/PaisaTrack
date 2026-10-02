@@ -57,6 +57,7 @@ class InsightsEngine {
     'missed_autopay',
   };
   static const categoryDeltaThreshold = 0.10;
+  static const categoryDeltaMinimumElapsedDays = 7;
 
   final AppDatabase _database;
   final FinancialCalendar? _calendar;
@@ -72,6 +73,7 @@ class InsightsEngine {
     final currentPeriod = calendar.monthContaining(instant);
     final currentStart = currentPeriod.start;
     final currentEnd = calendar.throughToday(currentPeriod, instant).end;
+    final elapsedDays = calendar.elapsedDays(currentPeriod, instant);
     final fullPrevious = calendar.month(now.year, now.month - 1);
     final comparablePrevious = calendar.comparablePrior(
       current: currentPeriod,
@@ -131,6 +133,7 @@ class InsightsEngine {
           categories,
           period,
           calendar,
+          elapsedDays,
         ),
         ..._missedAutopay(period, recurring, transactions, calendar),
       ];
@@ -365,14 +368,14 @@ class InsightsEngine {
     Map<String, String> categories,
     String period,
     FinancialCalendar calendar,
+    int elapsedDays,
   ) sync* {
-    final current = <String, double>{};
-    final previous = <String, double>{};
-    final currencies = <String, SourceCurrency>{};
-    final groupedRows = <String, List<Transaction>>{};
+    final current = <(String?, String), double>{};
+    final previous = <(String?, String), double>{};
+    final currencies = <(String?, String), SourceCurrency>{};
+    final groupedRows = <(String?, String), List<Transaction>>{};
     for (final txn in transactions) {
       final categoryId = txn.categoryId;
-      if (categoryId == null) continue;
       final instant = _date(txn);
       final target =
           !instant.isBefore(currentStart) && instant.isBefore(currentEnd)
@@ -386,26 +389,35 @@ class InsightsEngine {
         code: txn.currencyCode,
         symbol: txn.currencySymbol,
       );
-      final key = '$categoryId\u0000${currency.bucketKey}';
+      final key = (categoryId, currency.bucketKey);
       currencies[key] = currency;
       target[key] = (target[key] ?? 0) + txn.amount;
       groupedRows.putIfAbsent(key, () => []).add(txn);
     }
-    final keys = {...current.keys, ...previous.keys}.toList()..sort();
+    final keys = {...current.keys, ...previous.keys}.toList()
+      ..sort((a, b) {
+        final categoryOrder = (a.$1 ?? '').compareTo(b.$1 ?? '');
+        return categoryOrder != 0 ? categoryOrder : a.$2.compareTo(b.$2);
+      });
     for (final key in keys) {
-      final categoryId = key.split('\u0000').first;
+      final categoryId = key.$1;
       final currency = currencies[key]!;
       final currentAmount = current[key] ?? 0;
       final previousAmount = previous[key] ?? 0;
-      if (previousAmount == 0) continue;
+      if (elapsedDays < categoryDeltaMinimumElapsedDays ||
+          previousAmount == 0) {
+        continue;
+      }
       final delta = (currentAmount - previousAmount) / previousAmount;
       if (delta.abs() <= categoryDeltaThreshold) continue;
       yield _InsightSpec(
-        id: 'category_delta:$period:${key.replaceAll('\u0000', ':')}',
+        id: 'category_delta:$period:${categoryId ?? 'uncategorised'}:${key.$2}',
         kind: 'category_delta',
         payload: {
           'category_id': categoryId,
-          'category_name': categories[categoryId] ?? categoryId,
+          'category_name': categoryId == null
+              ? 'Uncategorised spending'
+              : categories[categoryId] ?? categoryId,
           'currency_code': currency.code,
           'currency_symbol': currency.symbol,
           'current_total': currentAmount,

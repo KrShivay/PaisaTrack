@@ -143,10 +143,9 @@ class InsightsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final period = ref.watch(dashboardPeriodProvider);
     final aggregateAsync = ref.watch(dashboardAggregateProvider);
-    final Map<String, String> claimCategoryNames = {
-      for (final category in aggregateAsync.valueOrNull?.categories ?? const [])
-        if (category.categoryId != null) category.categoryId!: category.name,
-    };
+    final claimCategoryNames =
+        ref.watch(claimDisplayNamesProvider).valueOrNull?.categories ??
+            const <String, String>{};
     final sixMonthTrend = ref.watch(sixMonthTrendProvider);
     final mom = ref.watch(monthOverMonthSpendProvider);
     final totals = ref.watch(monthDirectionTotalsProvider);

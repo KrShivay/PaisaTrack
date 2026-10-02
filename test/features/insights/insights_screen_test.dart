@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -181,6 +182,110 @@ void main() {
     expect(find.text('INSIGHTS'), findsNothing);
   });
 
+  testWidgets(
+      'claim title names include nested categories outside the spend mix',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'parent_food',
+            name: 'Food',
+            icon: 'food',
+            isSpending: true,
+            sortOrder: 1,
+            isUserCreated: true,
+          ),
+        );
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            id: 'custom_child',
+            name: 'Child Food',
+            parentId: const Value('parent_food'),
+            icon: 'category',
+            isSpending: true,
+            sortOrder: 2,
+            isUserCreated: true,
+          ),
+        );
+    final period = insightMonthKeyForPeriod(
+      DashboardPeriod.month(DateTime.now()),
+    );
+    final periodParts = period.split('-').map(int.parse).toList();
+    final previousDate = DateTime(periodParts[0], periodParts[1] - 1);
+    final previousPeriod = '${previousDate.year.toString().padLeft(4, '0')}-'
+        '${previousDate.month.toString().padLeft(2, '0')}';
+    final claimId = 'category_delta:$period:custom_child:INR';
+    final claim = {
+      'v': 1,
+      'calc': 'category_delta@1',
+      'claim_id': claimId,
+      'basis': 'observed',
+      'scope': {
+        'category_id': 'custom_child',
+        'currency_code': 'INR',
+        'currency_symbol': '₹',
+      },
+      'window': {
+        'current': ['$period-01', '$period-10'],
+        'previous': ['$previousPeriod-01', '$previousPeriod-10'],
+        'partial': true,
+      },
+      'metrics': {
+        'current_total': 0.0,
+        'previous_total': 12345.0,
+        'delta_fraction': -1.0,
+      },
+      'evidence': {
+        'ids': ['previous_row'],
+        'total_count': 1,
+        'truncated': false,
+      },
+      'coverage': {
+        'rows': 1,
+        'unreviewed': 0,
+        'unknown_currency': 0,
+        'excluded': {
+          'not_settled': 0,
+          'owned_transfer': 0,
+          'analytics_excluded': 0,
+          'non_spending': 0,
+          'credit': 0,
+        },
+      },
+      'input_hash': '0123456789abcdef',
+    };
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
+          trendsInboxEnabledProvider.overrideWith((ref) => false),
+          activeInsightsProvider.overrideWith(
+            (ref) => Stream.value([
+              Insight(
+                id: claimId,
+                period: period,
+                kind: 'category_delta',
+                payloadJson: jsonEncode({'claim': claim}),
+                dismissed: false,
+              ),
+            ]),
+          ),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Child Food spending'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await database.close();
+  });
+
   testWidgets('Why opens exactly claim evidence and labels truncation',
       (tester) async {
     tester.view.physicalSize = const Size(402, 874);
@@ -190,7 +295,6 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
     final database = AppDatabase(NativeDatabase.memory());
-    addTearDown(database.close);
     Set<String>? requestedIds;
     TransactionListItem evidenceRow(String id, String name, double amount) =>
         TransactionListItem(
@@ -291,6 +395,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1));
+    await database.close();
   });
 
   testWidgets('offers retry when analytics fail and recovers on retry',
