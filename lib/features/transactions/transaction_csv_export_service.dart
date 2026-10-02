@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../core/financial_calendar.dart';
+import '../../core/transaction_timestamp.dart';
 import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/transaction_repository.dart';
 
@@ -11,14 +13,17 @@ import '../../data/repositories/transaction_repository.dart';
 ///     tab, or carriage return are prefixed with a single-quote.
 ///   - Exported file uses `.csv` extension with `text/csv` MIME type.
 class TransactionCsvExportService {
-  const TransactionCsvExportService();
+  TransactionCsvExportService({FinancialCalendar? calendar})
+      : _calendar = calendar ?? FinancialCalendar();
+
+  final FinancialCalendar _calendar;
 
   /// Serializes [items] to a CSV byte list suitable for sharing via
   /// `share_plus` or writing to a file.
   ///
-  /// Column order matches the design addendum export contract:
+  /// Existing column order is preserved, with UTC Offset appended:
   /// Date, Time, Merchant, Category, Amount, Direction, Channel, Account,
-  /// Status, Note, Reference.
+  /// Status, Note, Reference, UTC Offset.
   List<int> exportToCsv(List<TransactionListItem> items) {
     final buffer = StringBuffer();
 
@@ -28,19 +33,19 @@ class TransactionCsvExportService {
     // Header row.
     buffer.writeln(
       'Date,Time,Merchant,Category,Amount,Currency Code,Currency Symbol,Direction,'
-      'Channel,Account,Status,Note,Reference',
+      'Channel,Account,Status,Note,Reference,UTC Offset',
     );
 
     for (final item in items) {
-      final date = item.ts.toLocal();
-      final dateStr = '${date.year}-${_pad(date.month)}-${_pad(date.day)}';
-      final timeStr =
-          '${_pad(date.hour)}:${_pad(date.minute)}:${_pad(date.second)}';
+      final timestamp = formatTransactionTimestamp(
+        item.ts,
+        calendar: _calendar,
+      );
 
       buffer.writeln(
         [
-          _escape(dateStr),
-          _escape(timeStr),
+          _escape(timestamp.date),
+          _escape(timestamp.time),
           _escape(item.displayName),
           _escape(item.categoryName ?? ''),
           _escape(item.amount.toStringAsFixed(2)),
@@ -54,6 +59,7 @@ class TransactionCsvExportService {
           _escape(item.status),
           _escape(item.note ?? ''),
           _escape(item.reference ?? ''),
+          _escape(timestamp.utcOffset),
         ].join(','),
       );
     }
@@ -86,6 +92,4 @@ class TransactionCsvExportService {
 
     return safe;
   }
-
-  static String _pad(int n) => n.toString().padLeft(2, '0');
 }

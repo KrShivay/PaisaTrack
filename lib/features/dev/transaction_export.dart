@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/financial_calendar.dart';
 import '../../core/platform/system_document_gateway.dart';
+import '../../core/transaction_timestamp.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 
@@ -86,7 +88,10 @@ final transactionJsonExportProvider =
 final transactionCsvExportProvider =
     FutureProvider.autoDispose<bool>((ref) async {
   final database = await ref.watch(appDatabaseProvider.future);
-  final bytes = await TransactionCsvExporter(database).exportCsvBytes();
+  final bytes = await TransactionCsvExporter(
+    database,
+    calendar: ref.read(financialCalendarProvider),
+  ).exportCsvBytes();
   return ref.read(systemDocumentGatewayProvider).saveDocument(
         suggestedName: TransactionCsvExporter.fileName,
         mimeType: 'text/csv',
@@ -101,11 +106,13 @@ final transactionCsvExportProvider =
 /// MUST stay behind the kDebugMode guard on the dev screen and MUST warn
 /// before writing. This is NOT the user-facing encrypted export (T-043).
 class TransactionCsvExporter {
-  const TransactionCsvExporter(this._database);
+  TransactionCsvExporter(this._database, {FinancialCalendar? calendar})
+      : _calendar = calendar ?? FinancialCalendar();
 
   static const fileName = 'transactions_export.csv';
 
   final AppDatabase _database;
+  final FinancialCalendar _calendar;
 
   Future<String> serializeCsv() async {
     final rows = await (_database.select(_database.transactions)
@@ -117,17 +124,15 @@ class TransactionCsvExporter {
 
     final buffer = StringBuffer();
     buffer.write(
-      'Date,Merchant,Amount,Currency Code,Currency Symbol,Direction,Channel,Category,Account,Reference,Status\r\n',
+      'Date,Merchant,Amount,Currency Code,Currency Symbol,Direction,Channel,Category,Account,Reference,Status,UTC Offset\r\n',
     );
 
     for (final row in rows) {
-      final local =
-          DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true).toLocal();
-      final date = _escapeCsv(
-        '${local.year.toString().padLeft(4, '0')}-'
-        '${local.month.toString().padLeft(2, '0')}-'
-        '${local.day.toString().padLeft(2, '0')}',
+      final timestamp = formatTransactionTimestamp(
+        DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true),
+        calendar: _calendar,
       );
+      final date = _escapeCsv(timestamp.date);
       final merchant = _escapeCsv(row.merchantRaw ?? '');
       final amount = _escapeCsv(row.amount.toStringAsFixed(2));
       final currencyCode = _escapeCsv(row.currencyCode ?? '');
@@ -138,9 +143,10 @@ class TransactionCsvExporter {
       final account = _escapeCsv(row.accountHint ?? '');
       final ref = _escapeCsv(row.refId ?? '');
       final status = _escapeCsv(row.status);
+      final utcOffset = _escapeCsv(timestamp.utcOffset);
 
       buffer.write(
-        '$date,$merchant,$amount,$currencyCode,$currencySymbol,$direction,$channel,$category,$account,$ref,$status\r\n',
+        '$date,$merchant,$amount,$currencyCode,$currencySymbol,$direction,$channel,$category,$account,$ref,$status,$utcOffset\r\n',
       );
     }
     return buffer.toString();

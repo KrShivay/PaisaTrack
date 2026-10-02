@@ -1,5 +1,19 @@
 # Current Handoff
 
+## 2026-10-02 — T-164e detail/export/manual-entry slice
+
+- Transaction detail re-implemented the clock/month formatting; it now reuses
+  `format.dart` (output unchanged, pinned by tests). The release and debug
+  CSV exporters split dates by hand twice; one calendar-aware formatter now
+  serves both and appends a `UTC Offset` column written as `UTC+05:30` so
+  spreadsheets do not read it as a formula or time. Manual entry dropped the
+  time of day when a date was picked; it now keeps it and converts local
+  fields through `FinancialCalendar` with an injected clock in tests.
+- Verified: analyzer clean, full suite 1038/1038; transactions/core/dev
+  suites green under TZ=UTC and America/New_York. One review round (CSV
+  offset formula bug, dev exporter calendar injection, clock flake in test).
+  The a2 entry is in Git history (`99c1397`).
+
 ## 2026-10-02 — T-178a a3 derived-read freshness
 
 - Insights, anomalies, forecasts and recurring series were refreshed only
@@ -36,21 +50,3 @@
   QA targets compile to `com.paisatrack.recoveryqa`. Three review rounds.
   Physical preview/apply/undo remains pending. The T-179a closure entry is in
   Git history (`10092b0`).
-
-## 2026-10-02 — T-178a a2 eligibility parity
-
-- The settled-spending rule was restated by hand in five engines. One Drift
-  builder on `FinancialEligibility` now serves insights, anomalies, burn-rate,
-  recurring, assistant and dashboard exclusions, with a SQL/Drift/row parity
-  test. Recurring detection is settled-only (a pending ₹649 event previously
-  produced a false price-creep insight). Assistant net matches the dashboard
-  contract (old: ₹270, contract: ₹350) and mixed-currency answers keep every
-  currency.
-- Impact: RecurringDetector/AnomalyDetector/InsightsEngine/BurnRateForecaster/
-  DashboardRepository HIGH. Verified: analyzer clean, full suite 991/991,
-  intelligence/data/dashboard 258/258 under TZ=UTC and America/New_York.
-  Independent review approved; its follow-ups (same-currency guard on
-  comparison scalars, shared `_loadTotals` fragment) are folded into a3. The
-  6,000-row recurring timing test is flaky under machine load (failed once at
-  5.39s, passed in isolation runs).
-- The 2026-10-01 T-164e date-slice entry is in Git history.

@@ -1,3 +1,5 @@
+import '../../../core/format.dart'
+    show formatClockTime12h, formatMonthAbbreviation;
 import '../../../data/db/database.dart' show Category, Transaction;
 
 /// Returns up to 3 chips: [currentCat] first, then filled from [suggestedIds],
@@ -48,17 +50,9 @@ String? exclusionReasonFor(Transaction txn) {
 /// Formats [date] as "Jan 5, 2024 · 3:42 pm".
 String formatDetailDate(DateTime date) {
   final local = date.toLocal();
-  final h =
-      local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
-  final m = local.minute.toString().padLeft(2, '0');
-  final ampm = local.hour >= 12 ? 'pm' : 'am';
-  return '${_shortMonth(local.month)} ${local.day}, ${local.year} · $h:$m $ampm';
+  return '${formatMonthAbbreviation(local.month)} ${local.day}, ${local.year} · '
+      '${formatClockTime12h(local)}';
 }
-
-String _shortMonth(int month) => const [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ][month - 1];
 
 /// Returns the combined parser label + optional confidence percentage,
 /// e.g. "Template match · 91%".

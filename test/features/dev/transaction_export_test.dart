@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/features/dev/transaction_export.dart';
 
@@ -22,6 +23,7 @@ void main() {
     required String id,
     required double amount,
     required String direction,
+    DateTime? ts,
     String? refId,
     double? balanceAfter,
     bool isDeleted = false,
@@ -30,7 +32,7 @@ void main() {
     return database.into(database.transactions).insert(
           TransactionsCompanion.insert(
             id: id,
-            ts: now.millisecondsSinceEpoch,
+            ts: (ts ?? now).millisecondsSinceEpoch,
             amount: amount,
             direction: direction,
             channel: 'upi',
@@ -113,11 +115,33 @@ void main() {
     expect(
       csvStr,
       contains(
-        'Date,Merchant,Amount,Currency Code,Currency Symbol,Direction,Channel,Category,Account,Reference,Status',
+        'Date,Merchant,Amount,Currency Code,Currency Symbol,Direction,Channel,Category,Account,Reference,Status,UTC Offset',
       ),
     );
     expect(csvStr, contains('499.00,,,debit,upi'));
     expect(csvStr, contains('223047328116'));
+  });
+
+  test('CSV export appends the UTC offset and uses the local calendar day',
+      () async {
+    await insertTxn(
+      id: 'txn_ist',
+      amount: 100,
+      direction: 'debit',
+      ts: DateTime.utc(2026, 7, 25, 19),
+    );
+
+    final csvStr = await TransactionCsvExporter(
+      database,
+      calendar: const FinancialCalendar.fixed(
+        Duration(hours: 5, minutes: 30),
+      ),
+    ).serializeCsv();
+
+    expect(csvStr, startsWith('Date,Merchant,Amount'));
+    expect(csvStr.split('\r\n').first, endsWith('Status,UTC Offset'));
+    expect(csvStr, contains('2026-07-26,'));
+    expect(csvStr, contains(',UTC+05:30\r\n'));
   });
 
   test('TransactionCsvExporter neutralizes spreadsheet formula characters',

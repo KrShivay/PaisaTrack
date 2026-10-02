@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
+import 'package:paisatrack/core/clock.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
@@ -77,6 +79,8 @@ void main() {
     WidgetTester tester, {
     Size size = const Size(402, 874),
     double textScale = 1,
+    FinancialCalendar? calendar,
+    DateTime Function()? clock,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -88,6 +92,9 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
+          if (calendar != null)
+            financialCalendarProvider.overrideWithValue(calendar),
+          if (clock != null) clockProvider.overrideWithValue(clock),
         ],
         child: MaterialApp(
           builder: (context, child) => MediaQuery(
@@ -181,6 +188,49 @@ void main() {
     expect(row.status, 'confirmed');
     expect(row.categoryId, 'food_dining');
     expect(row.description, 'Auto rickshaw');
+
+    await unmount(tester);
+  });
+
+  testWidgets('date selection keeps the initial clock and stores its instant',
+      (tester) async {
+    const calendar = FinancialCalendar.fixed(
+      Duration(hours: 5, minutes: 30),
+    );
+    final initialTime = DateTime(2026, 7, 26, 14, 37);
+    final previousDay = DateTime(
+      initialTime.year,
+      initialTime.month,
+      initialTime.day - 1,
+    );
+    await pumpEntryScreen(
+      tester,
+      calendar: calendar,
+      clock: () => initialTime,
+    );
+
+    await tester.tap(find.text('Date'));
+    await tester.pumpAndSettle();
+    if (previousDay.month != initialTime.month) {
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text(previousDay.day.toString()).last);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Amount'), '50');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final row = await database.select(database.transactions).getSingle();
+    final local = calendar.localDate(
+      DateTime.fromMillisecondsSinceEpoch(row.ts, isUtc: true),
+    );
+    expect(local.year, previousDay.year);
+    expect(local.month, previousDay.month);
+    expect(local.day, previousDay.day);
+    expect(local.hour, initialTime.hour);
+    expect(local.minute, initialTime.minute);
 
     await unmount(tester);
   });

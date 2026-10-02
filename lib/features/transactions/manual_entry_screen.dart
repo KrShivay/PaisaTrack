@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/clock.dart';
+import '../../core/financial_calendar.dart';
 import '../../core/theme/app_tokens.dart';
+import '../../core/transaction_timestamp.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
@@ -28,8 +31,14 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
   final _descriptionController = TextEditingController();
   TransactionDirection _direction = TransactionDirection.debit;
   String? _categoryId;
-  DateTime _date = DateTime.now();
+  late DateTime _date;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _date = ref.read(clockProvider)();
+  }
 
   @override
   void dispose() {
@@ -39,7 +48,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
   }
 
   Future<void> _pickDate() async {
-    final now = DateTime.now();
+    final now = ref.read(clockProvider)();
     final picked = await showDatePicker(
       context: context,
       initialDate: _date,
@@ -47,7 +56,9 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
       lastDate: now,
     );
     if (picked != null) {
-      setState(() => _date = picked);
+      setState(() {
+        _date = replaceLocalDatePreservingTime(picked, _date);
+      });
     }
   }
 
@@ -57,12 +68,13 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     try {
       final database = await ref.read(appDatabaseProvider.future);
       final repository = ref.read(transactionRepositoryProvider(database));
+      final calendar = ref.read(financialCalendarProvider);
       final description = _descriptionController.text.trim();
       await repository.insertManual(
         ManualTransactionDraft(
           amount: double.parse(_amountController.text.trim()),
           direction: _direction,
-          ts: _date,
+          ts: financialInstantFromLocalDateTime(_date, calendar),
           categoryId: _categoryId,
           description: description.isEmpty ? null : description,
         ),

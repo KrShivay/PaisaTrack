@@ -347,7 +347,8 @@ class _TransactionDetailScreenState
                 _categoryName ?? detail.categoryName ?? 'Uncategorised';
             final displayName =
                 detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
-            final date = DateTime.fromMillisecondsSinceEpoch(txn.ts);
+            final date =
+                DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true);
 
             final allCategories = ref.watch(categoryListProvider).valueOrNull ??
                 const <Category>[];

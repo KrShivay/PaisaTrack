@@ -186,13 +186,16 @@ later hardening.
     not reinterpreted. Dedup consequence, covered by tests: identical body
     dates are no longer identity evidence, so body-dated SMS >10 minutes apart
     do not auto-pair. Independent review approved.
-  - Still open: detail/export DRY (`formatDetailDate` and two export date
-    splitters re-implement `format.dart` helpers), export has no offset/zone
-    column, `TransactionFilterSheet` has no production caller, manual-entry
-    date pick drops time of day, no statement/CSV importer exists to verify,
-    and `dashboard_providers.dart` six-month trend uses device-local month
-    bounds outside `FinancialCalendar` (fails under `TZ=America/New_York`
-    on unmodified main; tracked with T-178a period fairness).
+  - Completed detail/export/manual-entry slice (2026-10-02): detail reuses
+    `format.dart` clock/month helpers; both CSV exporters share one
+    calendar-aware formatter and append a `UTC Offset` column (`UTC+05:30`,
+    spreadsheet-safe); manual entry keeps the time of day when the date
+    changes. Six-month trend bounds moved onto `FinancialCalendar` in T-178a
+    a1.
+  - Still open: `TransactionFilters.matches` compares device-local dates via
+    `toLocal()` instead of the injected `FinancialCalendar`; there is no
+    statement/CSV importer yet, so import date semantics remain to be
+    specified when one is built.
 
 - [ ] T-194 [P1] Measure installed storage and cold-start for the compressed
       ARM64 APK-size trial.

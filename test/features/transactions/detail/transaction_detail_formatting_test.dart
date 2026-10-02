@@ -152,24 +152,24 @@ void main() {
       // Use UTC and force local interpretation
       final date = DateTime(2024, 1, 5, 0, 0).toUtc();
       final result = formatDetailDate(date);
-      // Month, day, year, and am/pm must be present
-      expect(result, contains('12:00 am'));
-      expect(result, contains('2024'));
+      expect(result, 'Jan 5, 2024 · 12:00 am');
     });
 
     test('formats noon as 12:00 pm', () {
       final date = DateTime(2024, 6, 15, 12, 0);
       final result = formatDetailDate(date);
-      expect(result, contains('12:00 pm'));
-      expect(result, contains('Jun'));
-      expect(result, contains('15'));
+      expect(result, 'Jun 15, 2024 · 12:00 pm');
     });
 
     test('formats 1 pm correctly', () {
       final date = DateTime(2024, 12, 31, 13, 5);
       final result = formatDetailDate(date);
-      expect(result, contains('1:05 pm'));
-      expect(result, contains('Dec'));
+      expect(result, 'Dec 31, 2024 · 1:05 pm');
+    });
+
+    test('formats single-digit morning hour without a leading zero', () {
+      final date = DateTime(2024, 3, 7, 9, 5);
+      expect(formatDetailDate(date), 'Mar 7, 2024 · 9:05 am');
     });
 
     test('pads minutes to two digits', () {

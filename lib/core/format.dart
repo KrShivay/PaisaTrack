@@ -68,6 +68,9 @@ const _monthAbbrev = [
   'Dec',
 ];
 
+/// Returns the compact English month label used by transaction dates.
+String formatMonthAbbreviation(int month) => _monthAbbrev[month - 1];
+
 String _clock12h(DateTime t) {
   final hour24 = t.hour;
   final period = hour24 < 12 ? 'AM' : 'PM';
@@ -76,6 +79,10 @@ String _clock12h(DateTime t) {
   final minute = t.minute.toString().padLeft(2, '0');
   return '$hour:$minute $period';
 }
+
+/// Formats a local date's clock in the lowercase 12-hour style used by detail.
+String formatClockTime12h(DateTime date) =>
+    _clock12h(date.toLocal()).toLowerCase();
 
 /// Formats a transaction instant as a local 12-hour clock, such as "12:00 am".
 /// [localize] is injectable so timezone-boundary behavior can be tested without

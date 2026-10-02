@@ -28,6 +28,17 @@ ignores overridden padding. The undo toast uses the same shell geometry. The
 full-screen Ask sheet is outside the tab Navigator and handles only its system
 safe area.
 
+## Transaction timestamps
+
+Transaction `ts` values are UTC epoch milliseconds. Detail formatting converts
+the UTC instant to device-local time and reuses the shared clock and month
+formatters. Detail uses device local time while exports use the fixed `FinancialCalendar` offset (identical in India; may differ by an hour in daylight-saving zones). CSV files derive date, time, and offset from
+`FinancialCalendar`; they keep existing columns in order and append `UTC Offset`
+(`UTC+05:30`, for example) so a spreadsheet can interpret the local date and
+time. Manual entry starts with the current local date and time; choosing a
+different date preserves the selected time of day, then `FinancialCalendar`
+converts those local date and clock fields into the stored UTC instant.
+
 ## Capture
 
 - `SmsReceiver` handles live messages.
