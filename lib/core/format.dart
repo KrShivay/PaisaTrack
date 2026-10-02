@@ -163,3 +163,32 @@ int _localCalendarDayDifference(DateTime localFrom, DateTime localTo) {
   final toDate = DateTime.utc(localTo.year, localTo.month, localTo.day);
   return toDate.difference(fromDate).inDays;
 }
+
+/// Formats ISO calendar-date ranges for short insight copy.
+/// Same-day ranges collapse to one date; years appear only when they differ.
+String formatIsoDateRange(String startIso, String endIso) {
+  DateTime? parseDate(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null || parsed.toIso8601String().substring(0, 10) != value) {
+      return null;
+    }
+    return parsed;
+  }
+
+  final start = parseDate(startIso);
+  final end = parseDate(endIso);
+  if (start == null || end == null) return '$startIso–$endIso';
+
+  String shortDate(DateTime date, {bool includeYear = false}) {
+    final label = '${formatMonthAbbreviation(date.month)} ${date.day}';
+    return includeYear ? '$label, ${date.year}' : label;
+  }
+
+  if (start == end) return shortDate(start);
+  if (start.year == end.year && start.month == end.month) {
+    return '${formatMonthAbbreviation(start.month)} ${start.day}–${end.day}';
+  }
+  final includeYear = start.year != end.year;
+  return '${shortDate(start, includeYear: includeYear)}–'
+      '${shortDate(end, includeYear: includeYear)}';
+}

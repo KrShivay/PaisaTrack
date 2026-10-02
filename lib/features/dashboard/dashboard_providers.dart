@@ -323,12 +323,14 @@ final commitmentsTotalProvider = Provider<double>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
   final now = ref.watch(clockProvider)();
   if (!period.isCurrentMonth(now)) return 0;
+  final calendar = ref.watch(financialCalendarProvider);
+  final currentMonth = calendar.monthContaining(now);
   final upcoming = ref.watch(upcomingRecurringProvider);
   var sum = 0.0;
   for (final series in upcoming) {
     if (series.currencyCode == 'INR' &&
-        series.nextExpectedDate.year == now.year &&
-        series.nextExpectedDate.month == now.month) {
+        calendar.monthContaining(series.nextExpectedDate).start ==
+            currentMonth.start) {
       sum += series.expectedAmount;
     }
   }

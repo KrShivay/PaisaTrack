@@ -701,7 +701,9 @@ class BloomBudgetCard extends ConsumerWidget {
                 Text(
                   isError
                       ? 'Spending total is unavailable right now.'
-                      : '${formatInr(commitments)} of that is already committed to rent and EMIs — the gold slice.',
+                      : commitments > 0
+                          ? '${formatInr(commitments)} more expected this month for recurring bills (gold slice).'
+                          : 'No more recurring bills expected this month.',
                   style: AppTheme.bloomDisplay(
                     12,
                     FontWeight.w400,

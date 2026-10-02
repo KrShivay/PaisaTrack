@@ -22,6 +22,21 @@ void main() {
     });
   });
 
+  group('formatIsoDateRange', () {
+    test('collapses one day and shortens same-month ranges', () {
+      expect(formatIsoDateRange('2026-10-01', '2026-10-01'), 'Oct 1');
+      expect(formatIsoDateRange('2026-10-01', '2026-10-02'), 'Oct 1–2');
+    });
+
+    test('keeps both month names and adds years across years', () {
+      expect(formatIsoDateRange('2026-09-01', '2026-10-02'), 'Sep 1–Oct 2');
+      expect(
+        formatIsoDateRange('2025-12-30', '2026-01-02'),
+        'Dec 30, 2025–Jan 2, 2026',
+      );
+    });
+  });
+
   group('formatTxnTime', () {
     final now = DateTime(2026, 7, 11, 15, 30);
 

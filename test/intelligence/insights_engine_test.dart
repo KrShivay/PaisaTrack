@@ -606,9 +606,102 @@ void main() {
       claim,
       categoryNames: {'food': 'Food'},
     )!;
-    expect(display.body, contains('same days last month'));
+    expect(
+      display.body,
+      'Spent ₹800.00 vs ₹1,000.00 in the same days last month '
+      '(Oct 1–3 vs Sep 1–3).',
+    );
     expect(display.body.toLowerCase(), isNot(contains('should')));
     expect(display.body.toLowerCase(), isNot(contains('recommend')));
+  });
+
+  test('claim renderer formats every claim amount as a source amount', () {
+    const renderer = ClaimRenderer();
+    TypedClaim claim({
+      required String calculation,
+      required Map<String, num> metrics,
+      Map<String, Object?> scope = const {
+        'currency_code': 'INR',
+        'currency_symbol': '₹',
+      },
+      Map<String, Object?> window = const {},
+    }) =>
+        TypedClaim(
+          version: 1,
+          calculation: calculation,
+          id: calculation,
+          scope: scope,
+          window: window,
+          metrics: metrics,
+          evidenceIds: const ['one'],
+          evidenceCount: 1,
+          truncated: false,
+          inputHash: 'hash',
+          raw: const {},
+        );
+
+    final displays = [
+      renderer.render(
+        claim(
+          calculation: 'category_delta@1',
+          metrics: const {
+            'current_total': 123456.7,
+            'previous_total': 40,
+          },
+          scope: const {
+            'category_id': 'food',
+            'currency_code': 'INR',
+            'currency_symbol': '₹',
+          },
+          window: const {
+            'current': ['2026-10-01', '2026-10-01'],
+            'previous': ['2026-09-01', '2026-09-02'],
+          },
+        ),
+      )!,
+      renderer.render(
+        claim(
+          calculation: 'fees_total@1',
+          metrics: const {'total': 123456.7},
+        ),
+      )!,
+      renderer.render(
+        claim(
+          calculation: 'price_creep@1',
+          metrics: const {'expected_amount': 123456.7, 'last_amount': 40},
+          scope: const {
+            'merchant_id': 'm',
+            'currency_code': 'USD',
+            'currency_symbol': r'$',
+          },
+        ),
+      )!,
+      renderer.render(
+        claim(
+          calculation: 'duplicate_subscription@1',
+          metrics: const {'monthly_total': 123456.7, 'series_count': 2},
+          scope: const {'currency_symbol': r'$'},
+        ),
+      )!,
+      renderer.render(
+        claim(
+          calculation: 'missed_autopay@1',
+          metrics: const {'expected_amount': 123456.7},
+          scope: const {
+            'currency_code': 'INR',
+            'currency_symbol': '₹',
+            'merchant_id': 'm',
+          },
+        ),
+      )!,
+    ];
+
+    expect(displays[0].body, contains('₹1,23,456.70 vs ₹40.00'));
+    expect(displays[0].body, contains('(Oct 1 vs Sep 1–2).'));
+    expect(displays[1].body, contains('₹1,23,456.70 in fees'));
+    expect(displays[2].body, contains(r'$123456.70 USD to $40.00 USD'));
+    expect(displays[3].body, contains(r'$123456.70 (currency unknown)'));
+    expect(displays[4].body, contains('₹1,23,456.70 across'));
   });
 
   test('rerun is idempotent, preserves dismissal, and clears stale rows',

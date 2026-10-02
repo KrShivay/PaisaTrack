@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../core/format.dart';
 import '../core/financial_calendar.dart';
 import '../data/analytics/financial_eligibility.dart';
 import '../data/db/database.dart';
@@ -564,7 +565,6 @@ class ClaimRenderer {
     Map<String, String> merchantNames = const {},
   }) {
     final metrics = claim.metrics;
-    final currency = _currency(claim.scope);
     switch (claim.calculation) {
       case 'category_delta@1':
         final category =
@@ -578,22 +578,26 @@ class ClaimRenderer {
             window is! List ||
             previousWindow is! List ||
             window.length != 2 ||
-            previousWindow.length != 2) {
+            previousWindow.length != 2 ||
+            window[0] is! String ||
+            window[1] is! String ||
+            previousWindow[0] is! String ||
+            previousWindow[1] is! String) {
           return null;
         }
         return ClaimDisplay(
           title: '$category spending',
-          body: 'Spent ${_amount(current, currency)} vs '
-              '${_amount(previous, currency)} in the same days last month '
-              '(${window[0]}–${window[1]} vs '
-              '${previousWindow[0]}–${previousWindow[1]}).',
+          body: 'Spent ${_amount(current, claim.scope)} vs '
+              '${_amount(previous, claim.scope)} in the same days last month '
+              '(${formatIsoDateRange(window[0] as String, window[1] as String)} '
+              'vs ${formatIsoDateRange(previousWindow[0] as String, previousWindow[1] as String)}).',
         );
       case 'fees_total@1':
         final total = metrics['total'];
         if (total == null) return null;
         return ClaimDisplay(
           title: 'Recorded fees',
-          body: 'Recorded ${_amount(total, currency)} in fees across '
+          body: 'Recorded ${_amount(total, claim.scope)} in fees across '
               '${claim.evidenceCount} transactions this period.',
         );
       case 'price_creep@1':
@@ -605,7 +609,7 @@ class ClaimRenderer {
         return ClaimDisplay(
           title: 'Recurring amount changed',
           body: '$label: recorded amount changed from '
-              '${_amount(expected, currency)} to ${_amount(last, currency)} '
+              '${_amount(expected, claim.scope)} to ${_amount(last, claim.scope)} '
               'across ${claim.evidenceCount} recorded payments.',
         );
       case 'duplicate_subscription@1':
@@ -615,7 +619,7 @@ class ClaimRenderer {
         return ClaimDisplay(
           title: 'Matching subscriptions',
           body: '$seriesCount recorded payment occurrences total '
-              '${_amount(total, currency)} in the evidence window.',
+              '${_amount(total, claim.scope)} in the evidence window.',
         );
       case 'missed_autopay@1':
         final label =
@@ -624,22 +628,18 @@ class ClaimRenderer {
         if (expected == null) return null;
         return ClaimDisplay(
           title: 'Recorded recurring payment history',
-          body: '$label averaged ${_amount(expected, currency)} across '
+          body: '$label averaged ${_amount(expected, claim.scope)} across '
               '${claim.evidenceCount} recorded payments.',
         );
     }
     return null;
   }
 
-  String _currency(Map<String, Object?> scope) {
-    final code = scope['currency_code'] as String?;
-    if (code != null && code.isNotEmpty) return code;
-    final symbol = scope['currency_symbol'] as String?;
-    return symbol == null ? 'currency unknown' : '$symbol (currency unknown)';
-  }
-
-  String _amount(num amount, String currency) =>
-      '$currency ${amount.toStringAsFixed(2)}';
+  String _amount(num amount, Map<String, Object?> scope) => formatSourceAmount(
+        amount.toDouble(),
+        currencyCode: scope['currency_code'] as String?,
+        currencySymbol: scope['currency_symbol'] as String?,
+      );
 }
 
 String sourceCurrencyBucket(Transaction row) => SourceCurrency(
