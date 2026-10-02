@@ -1,5 +1,20 @@
 # Current Handoff
 
+## 2026-10-02 — T-193 physical acceptance (closed)
+
+- On the owner phone, isolated QA package only: the synthetic `Rs.1,234.50`
+  row offered the source-backed repair; preview was non-mutating; Apply
+  showed `-₹1,234.50` and a fresh-process verifier confirmed `INR`/`₹`; on a
+  fresh fixture, Apply then Undo restored both currency fields to null
+  (fresh-process verified, preview available again). The launcher opened
+  straight to Home, confirming persisted onboarding completion. Owner app
+  untouched; QA package removed afterwards. `flutter test` cannot attach to
+  the VM service over wireless ADB, so targets ran as installed debug APKs
+  with logcat markers. Report: docs/reports/T-193-currency-repair-qa-2026-10-01.md.
+- Defect found and filed as UNDO-1: the undo toast is hosted only by
+  HomeShell and is hidden behind Transaction Detail. The T-164e
+  detail/export entry is in Git history (`07c8ece`).
+
 ## 2026-10-02 — T-164e closed (filter dates on FinancialCalendar)
 
 - `TransactionFilters.matches` compared device-local dates; it now uses the
@@ -31,17 +46,3 @@
   mismatch). The recurring scaling test now uses warm-up + best-of-3.
 - T-193 physical preview/apply/undo is staged on the phone's QA package and
   waits for the phone to be unlocked; see TASKS.
-
-## 2026-10-02 — T-164e detail/export/manual-entry slice
-
-- Transaction detail re-implemented the clock/month formatting; it now reuses
-  `format.dart` (output unchanged, pinned by tests). The release and debug
-  CSV exporters split dates by hand twice; one calendar-aware formatter now
-  serves both and appends a `UTC Offset` column written as `UTC+05:30` so
-  spreadsheets do not read it as a formula or time. Manual entry dropped the
-  time of day when a date was picked; it now keeps it and converts local
-  fields through `FinancialCalendar` with an injected clock in tests.
-- Verified: analyzer clean, full suite 1038/1038; transactions/core/dev
-  suites green under TZ=UTC and America/New_York. One review round (CSV
-  offset formula bug, dev exporter calendar injection, clock flake in test).
-  The a2 entry is in Git history (`99c1397`).

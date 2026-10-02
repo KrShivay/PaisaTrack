@@ -8,6 +8,13 @@ later hardening.
 
 ## In Progress
 
+- [ ] UNDO-1 [P1] Show the undo toast above every route.
+  - Found in T-193 physical QA (2026-10-02): `BloomUndoToastHost` lives only in
+    `HomeShell`, so undo toasts pushed from Transaction Detail and other
+    routes above it are hidden; undo is reachable only by leaving the route
+    within 10 seconds. Fix: one root-level host; tests from a route above
+    HomeShell. Physical recheck on the next release.
+
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -227,58 +234,6 @@ later hardening.
     approved the updated diff. Physical-device QA remains pending.
 
 ## In Review
-
-- [ ] T-193 [P1] Repair legacy currency only from retained source evidence.
-  - Context: rows captured by v0.1.2+2006 predate T-187. Current parsing maps
-    `Rs.` to INR, but the v18 migration leaves older null-currency rows
-    unchanged and `ingestBatch` skips already-known SMS IDs.
-  - Acceptance: transaction detail offers a non-mutating preview and explicit
-    reversible apply only when both currency fields are null, linked SMS is
-    still within retention, amount span evidence matches the body and stored
-    paise value, and one adjacent INR token is unambiguous. Revalidate on apply;
-    alter only currency code/symbol. USD, bare `$`, manual/imported/unknown,
-    deleted/duplicate, stale, mismatched, or expired source stays unchanged.
-  - Scope: user-triggered per-row repair, no schema or migration change; works
-    against restored data only when linked source/evidence survived. No auto
-    action during migration, restore, or startup. All backup/restore tests use
-    synthetic data; physical repair UI confirmation remains pending.
-  - Verification: repair service/detail tests 22/22; focused backup and repair
-    service suites 40/40; full Flutter suite 915/915; `flutter analyze --no-pub`,
-    changed-file formatting, and diff check clean. New encrypted chunked-backup
-    test proves retained SMS and amount evidence survive restore for
-    preview/apply/undo, while an expired source is detached and remains
-    ineligible. GitNexus detect-changes: 9 documentation section symbols in
-    TASKS, WORKLOG, and T-193 notes, LOW risk, no affected processes; the test
-    file has no indexed symbols. The added compatibility test changes no
-    production code, schema, migration, or release artifact. Source-backed repair
-    received independent review with no blocker; the encrypted restore
-    compatibility-test commit also passed independent review. No physical
-    repair UI confirmation has been performed.
-  - Release follow-up: the current public release is signed ARM64
-    `0.1.3+2012`, effective code `4012`, published on `apk-downloads` in commit
-    `79614386e4f5271c5ccefc67eca66368642fb7ae`. Its source release commit is
-    `9f966992f8665c4f7fea72882af1270cb34b3c3b`; APK size is 56,750,764 bytes
-    and SHA-256 is
-    `d028507574978ede386a5c3a1560415f8551f502887ad87f89ed20f2da0bd403`.
-    The 2026-10-01 in-place install and bounded portrait Ask checks are recorded
-    in [the owner-phone report](docs/reports/release-v2012-owner-phone-install-2026-10-01.md).
-    `firstInstallTime` remained `2026-09-26 22:20:54`; this is not a stored-data
-    integrity check. The previous signed 4011 install is retained as historical
-    evidence in `docs/release-signing.md`. T-193 physical preview/apply/undo
-    acceptance remains open.
-  - Owner-phone check (2026-10-01): every currency-unknown row is from 2023,
-    beyond the 30-day raw-SMS retention, so no row is eligible; the detail
-    correctly offers no repair (expired-source negative case observed). A
-    synthetic QA fixture for `com.paisatrack.recoveryqa` now provides an
-    eligible row; procedure in
-    [the T-193 QA report](docs/reports/T-193-currency-repair-qa-2026-10-01.md).
-  - Fixes found while building it (reviewed): amounts directly after a dotted
-    token (`Rs.500`, `INR.500`) were never repairable; a currency token that
-    precedes another number (`A/c no.1234 Rs 500`) no longer counts as a
-    suffix. "I'll add things myself" now persists as `onboardingCompleted`
-    (single source of truth), so no-SMS users no longer see onboarding on
-    every cold start; permission refreshes keep Home mounted and load errors
-    fall through to onboarding instead of spinning.
 
 <!-- P1 tasks ready for next phase -->
 

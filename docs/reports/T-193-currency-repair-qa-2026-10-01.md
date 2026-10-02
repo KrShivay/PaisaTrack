@@ -1,6 +1,6 @@
 # T-193 source-currency repair QA — 2026-10-01
 
-## Procedure; physical run pending
+## Procedure
 
 This procedure creates only synthetic records inside the isolated
 `com.paisatrack.recoveryqa` package. It uses the production encrypted database
@@ -84,3 +84,33 @@ fact, whether retained source evidence still reconstructs a preview, and the
 undo state visible to a fresh process. Supporting the exact verify(applied) →
 UI undo order needs a separately designed durable undo affordance. Physical UI
 acceptance has not yet been performed.
+
+## Physical run — 2026-10-02
+
+Device: owner Motorola edge 50 pro (`ro.serialno` `ZD222KTYNC`, Android 16)
+over wireless ADB, isolated package `com.paisatrack.recoveryqa` only (version
+code 2012, debug signer `f43ef54d…774d`, no SMS permission requested or
+granted; identity checked with `aapt2` before every install). Built from main
+`5fe9f85`.
+
+`flutter test` could not attach to the app's VM service over wireless ADB
+(port forwarding worked for a plain socket, but the VM service never
+answered), so the fixture and verifier targets were built as debug APKs,
+installed with `adb install -r`, launched with `am start`, and read from
+their logcat markers. Each still runs the QA identity guard first.
+
+| Step | Observation |
+|---|---|
+| Prepare | `CURRENCY_REPAIR_QA_PREPARED`, `eligiblePreview: true`, `smsPermissionsRequested: false` |
+| Launcher | Cold launch opened directly to Home (persisted onboarding completion; no SMS prompt) with the synthetic row shown as "currency unknown" |
+| Detail | "Currency evidence found … `Rs.` beside the matching amount" and "Review INR from SMS" shown for the `Rs.1,234.50` body |
+| Preview | Non-mutating dialog "Use INR from the original SMS?" with Cancel / Apply INR |
+| Apply → fresh verify | Detail showed `-₹1,234.50`; verifier: `INR`, `₹`, amount 1234.5, `sourcePreviewAvailable: false` |
+| Re-prepare, apply, Undo → fresh verify | Undo toast "Currency set to INR" was only visible after leaving detail (see defect); tapping Undo restored "currency unknown"; verifier: both currency fields null, `sourcePreviewAvailable: true` |
+
+Defect found: the undo toast is hosted only by `HomeShell`, so it renders
+behind Transaction Detail and other routes opened above it; users can undo
+only by leaving the route within 10 seconds. A fix is in progress
+separately. Owner package `com.paisatrack` stayed at code 4012 with
+unchanged install timestamps; font scale and rotation were never changed.
+The QA package was uninstalled afterwards.
