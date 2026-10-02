@@ -142,7 +142,16 @@ class DashboardPeriod {
     );
   }
 
-  String comparisonLabelAt(DateTime now) {
+  String comparisonLabelAt(DateTime now) => 'vs ${_comparisonTargetAt(now)}';
+
+  String comparisonSublineAt(DateTime now) {
+    final target = _comparisonTargetAt(now);
+    final sublineTarget =
+        target == 'previous month' ? 'last month' : 'the $target';
+    return 'than $sublineTarget';
+  }
+
+  String _comparisonTargetAt(DateTime now) {
     if (isCalendarMonth && isCurrentMonth(now)) {
       final current = FinancialPeriod(start: start, end: end);
       final localStart = calendar.localDate(start);
@@ -156,10 +165,10 @@ class DashboardPeriod {
         now: now,
       );
       if (comparable.end != fullPrevious.end) {
-        return 'vs same days last month';
+        return 'same days last month';
       }
     }
-    return isCalendarMonth ? 'vs previous month' : 'vs previous period';
+    return isCalendarMonth ? 'previous month' : 'previous period';
   }
 
   bool isPartialMonthAt(DateTime now) =>
@@ -583,10 +592,13 @@ final dashboardStatusSublineProvider = Provider<String>((ref) {
   final mom = ref.watch(monthOverMonthSpendProvider).valueOrNull;
   if (mom != null && mom.pctChange != null) {
     final pct = (mom.pctChange! * 100).abs().toStringAsFixed(0);
+    final period = ref.watch(dashboardPeriodProvider);
+    final now = ref.watch(clockProvider)();
+    final comparison = period.comparisonSublineAt(now);
     if (mom.pctChange! < 0) {
-      return '$pct% lower spend than last month';
+      return '$pct% lower spend $comparison';
     } else if (mom.pctChange! > 0) {
-      return '$pct% higher spend than last month';
+      return '$pct% higher spend $comparison';
     }
   }
   final safeToday = ref.watch(safeTodayValueProvider).valueOrNull;

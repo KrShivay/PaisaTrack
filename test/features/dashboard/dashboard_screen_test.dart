@@ -43,6 +43,7 @@ void main() {
     Size size = const Size(402, 874),
     double textScale = 1,
     DateTime? periodAnchor,
+    String? subline,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -57,6 +58,8 @@ void main() {
           dashboardPeriodProvider.overrideWith(
             (ref) => DashboardPeriod.month(periodAnchor ?? DateTime.now()),
           ),
+          if (subline != null)
+            dashboardStatusSublineProvider.overrideWith((ref) => subline),
           transactionListProvider.overrideWith((ref) => Stream.value(list)),
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(
@@ -140,6 +143,22 @@ void main() {
       tester.getSize(find.byTooltip('Settings & Streak')).height,
       greaterThanOrEqualTo(48),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long comparison subline wraps in a 320px viewport at 2× text',
+      (tester) async {
+    const subline = '21% lower spend than the same days last month';
+    await pumpDashboard(
+      tester,
+      const [],
+      size: const Size(320, 568),
+      textScale: 2,
+      subline: subline,
+    );
+
+    expect(find.text(subline), findsOneWidget);
+    expect(tester.getSize(find.text(subline)).height, greaterThan(22));
     expect(tester.takeException(), isNull);
   });
 

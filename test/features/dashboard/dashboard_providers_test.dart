@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/clock.dart';
 import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
@@ -53,11 +54,13 @@ TransactionListItem _item({
 Future<ProviderContainer> _ready(
   DashboardAggregateSnapshot snapshot, {
   DashboardPeriod? period,
+  DateTime? now,
 }) async {
   final container = ProviderContainer(
     overrides: [
       dashboardAggregateProvider.overrideWith((ref) async => snapshot),
       if (period != null) dashboardPeriodProvider.overrideWith((ref) => period),
+      if (now != null) clockProvider.overrideWith((ref) => () => now),
     ],
   );
   addTearDown(container.dispose);
@@ -105,6 +108,97 @@ void main() {
   test('monthOverMonthSpend pctChange is null with no prior spend', () async {
     final c = await _ready(_snapshot(debitTotal: 150));
     expect(c.read(monthOverMonthSpendProvider).value!.pctChange, isNull);
+  });
+
+  test('dashboard status uses the partial-month comparison window', () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    final now = DateTime.utc(2026, 10, 3, 12);
+    final c = await _ready(
+      _snapshot(debitTotal: 790, previousSpend: 1000),
+      period: DashboardPeriod.month(now, calendar: calendar),
+      now: now,
+    );
+
+    expect(
+      c.read(dashboardStatusSublineProvider),
+      '21% lower spend than the same days last month',
+    );
+  });
+
+  test('dashboard status uses last month for a completed month', () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    final now = DateTime.utc(2026, 10, 3, 12);
+    final c = await _ready(
+      _snapshot(debitTotal: 790, previousSpend: 1000),
+      period: DashboardPeriod.month(
+        DateTime.utc(2026, 9, 15),
+        calendar: calendar,
+      ),
+      now: now,
+    );
+
+    expect(
+      c.read(dashboardStatusSublineProvider),
+      '21% lower spend than last month',
+    );
+  });
+
+  test('dashboard status handles March 31 clamped to February', () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    final now = DateTime.utc(2026, 3, 31, 12);
+    final c = await _ready(
+      _snapshot(debitTotal: 790, previousSpend: 1000),
+      period: DashboardPeriod.month(now, calendar: calendar),
+      now: now,
+    );
+
+    expect(
+      c.read(dashboardStatusSublineProvider),
+      '21% lower spend than last month',
+    );
+  });
+
+  test('dashboard status uses previous period for last-days ranges', () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    final now = DateTime.utc(2026, 10, 3, 12);
+    final c = await _ready(
+      _snapshot(debitTotal: 121, previousSpend: 100),
+      period: DashboardPeriod.lastDays(7, now: now, calendar: calendar),
+      now: now,
+    );
+
+    expect(
+      c.read(dashboardStatusSublineProvider),
+      '21% higher spend than the previous period',
+    );
+  });
+
+  test('dashboard status falls back when previous spend is zero', () async {
+    const calendar = FinancialCalendar.fixed(Duration.zero);
+    final now = DateTime.utc(2026, 10, 3, 12);
+    final c = await _ready(
+      _snapshot(debitTotal: 121),
+      period: DashboardPeriod.month(now, calendar: calendar),
+      now: now,
+    );
+
+    expect(c.read(dashboardStatusSublineProvider), 'Track your daily activity');
+  });
+
+  test('dashboard status falls back when aggregate is absent', () {
+    final container = ProviderContainer(
+      overrides: [
+        dashboardAggregateProvider.overrideWith(
+          (ref) async => throw StateError('unavailable'),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(
+      container.read(dashboardStatusSublineProvider),
+      'Track your daily activity',
+    );
   });
 
   test('categoryBreakdown computes share preserving aggregate order', () async {
