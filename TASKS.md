@@ -8,13 +8,6 @@ later hardening.
 
 ## In Progress
 
-- [ ] UNDO-1 [P1] Show the undo toast above every route.
-  - Found in T-193 physical QA (2026-10-02): `BloomUndoToastHost` lives only in
-    `HomeShell`, so undo toasts pushed from Transaction Detail and other
-    routes above it are hidden; undo is reachable only by leaving the route
-    within 10 seconds. Fix: one root-level host; tests from a route above
-    HomeShell. Physical recheck on the next release.
-
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real

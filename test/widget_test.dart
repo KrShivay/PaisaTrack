@@ -8,6 +8,7 @@ import 'package:paisatrack/app.dart';
 import 'package:paisatrack/capture/captured_sms_source.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
+import 'package:paisatrack/core/undo/undo_controller.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/features/home/home_shell.dart';
@@ -142,6 +143,60 @@ void main() {
     expect(find.text('Activity'), findsWidgets);
     expect(find.text('Sort'), findsOneWidget);
     expect(find.text('Trends'), findsOneWidget);
+
+    await database.close();
+  });
+
+  testWidgets('PaisaTrackApp shows a tappable undo above a root route',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          appSettingsControllerProvider.overrideWith(
+            () => _StaticSettingsController(const AppSettings()),
+          ),
+          smsPermissionGateProvider.overrideWithValue(
+            FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
+          ),
+          capturedSmsSourceProvider
+              .overrideWithValue(const FakeCapturedSmsSource()),
+        ],
+        child: const PaisaTrackApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final homeContext = tester.element(find.byType(HomeShell));
+    Navigator.of(homeContext, rootNavigator: true).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('Root detail route')),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    var didUndo = false;
+    final routeContext = tester.element(find.text('Root detail route'));
+    ProviderScope.containerOf(routeContext)
+        .read(undoControllerProvider.notifier)
+        .pushUndo(
+          UndoToken(
+            id: 'app-root-route-action',
+            message: 'Root route action',
+            undoAction: () async => didUndo = true,
+          ),
+        );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Root route action'), findsOneWidget);
+    expect(find.text('Undo'), findsOneWidget);
+    await tester.tap(find.text('Undo'));
+    await tester.pump();
+    expect(didUndo, isTrue);
 
     await database.close();
   });

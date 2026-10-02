@@ -8,6 +8,7 @@ import 'capture/sms_backfill.dart';
 import 'capture/sms_ingestion.dart';
 import 'core/crypto/database_cipher.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/bloom/bloom_undo_toast.dart';
 import 'data/db/database_provider.dart';
 import 'features/home/home_shell.dart';
 import 'features/notifications/ask_now_notifications.dart';
@@ -18,6 +19,9 @@ import 'features/settings/app_settings.dart';
 import 'intelligence/derived_reads_service.dart';
 
 enum AppStartupDestination { loading, home, onboarding }
+
+final BloomUndoToastRouteObserver _undoToastRouteObserver =
+    BloomUndoToastRouteObserver();
 
 AppStartupDestination appStartupDestination({
   required AsyncValue<SmsPermissionStatus> permission,
@@ -79,6 +83,13 @@ class PaisaTrackApp extends ConsumerWidget {
         darkTheme: AppTheme.dark(),
         themeMode:
             settings.valueOrNull?.themeChoice.themeMode ?? ThemeMode.dark,
+        navigatorObservers: [_undoToastRouteObserver],
+        builder: (context, child) => buildBloomUndoToastAppBuilder(
+          context,
+          child,
+          routeObserver: _undoToastRouteObserver,
+          homeNavigationVisible: homeWidget is HomeShell,
+        ),
         home: homeWidget,
       ),
     );

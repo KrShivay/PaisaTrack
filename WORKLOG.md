@@ -1,5 +1,17 @@
 # Current Handoff
 
+## 2026-10-02 — UNDO-1 undo toast above every route
+
+- Physical T-193 QA showed the 10-second undo toast was hosted only by
+  HomeShell and hidden behind Transaction Detail. One shared root builder
+  now hosts it in `MaterialApp.builder` with a route observer: Home keeps
+  pill clearance; other routes sit above the safe area/keyboard; dialogs
+  hide it (like SnackBars) and it returns if still live; bottom sheets keep
+  it visible. Verified: analyzer clean, full suite 1060/1060; an app-level
+  test fails if the wiring is removed. Two review rounds (post-frame flag
+  race, untested wiring). Physical recheck rides on the next release install.
+  The T-178a a4 entry is in Git history (`bc870ec`).
+
 ## 2026-10-02 — T-193 physical acceptance (closed)
 
 - On the owner phone, isolated QA package only: the synthetic `Rs.1,234.50`
@@ -25,24 +37,3 @@
   contract; there is no importer yet, so docs/architecture.md records the
   contract a future importer must follow. Verified: analyzer clean, full
   suite green. The a3 entry is in Git history (`5fe9f85`).
-
-## 2026-10-02 — T-178a a4 typed evidence-linked claims (T-178a closed)
-
-- Insights now carry a typed claim in the existing payload (window,
-  metrics, evidence ids with a digest over all evidence and eligibility
-  fields, per-claim coverage by exclusion reason). Only claims that pass the
-  validator and a read-time freshness recompute on the same
-  `FinancialCalendar` render, through a fixed observed-only renderer; "Why?"
-  opens Activity filtered to the evidence rows. Free-text narrative,
-  generic default text and advice copy were removed; anomaly and forecast
-  cards stay hidden until T-178b gives them claims. Refunds remain gross
-  (no production refund linking; T-100). Trends can be empty when no claim
-  qualifies; this is documented.
-- Impact: `InsightsEngine`/`TransactionRepository` CRITICAL,
-  `TransactionsScreen` HIGH. Verified: analyzer clean, full suite 1051/1051
-  (twice), intelligence/insights/dashboard/transactions 326/326 under UTC,
-  New York and Kolkata. Three review rounds (>50-row claims never rendering,
-  hash missing eligibility fields, leaked drift watches, write/read calendar
-  mismatch). The recurring scaling test now uses warm-up + best-of-3.
-- T-193 physical preview/apply/undo is staged on the phone's QA package and
-  waits for the phone to be unlocked; see TASKS.

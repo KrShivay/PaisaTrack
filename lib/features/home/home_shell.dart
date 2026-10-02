@@ -25,7 +25,7 @@ import '../dashboard/dashboard_providers.dart';
 /// - 48px Ask orb triggering Ask PaisaTrack root sheet.
 /// - PageView swipe navigation with 250ms transition.
 /// - Independent Navigator stack per tab; back pops active tab stack before exiting.
-/// - Integrated 10-second undo toast host.
+/// - The root app overlay hosts the shared 10-second undo toast.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -148,50 +148,44 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        body: BloomUndoToastHost(
-          bottomOffset: MediaQuery.paddingOf(context).bottom +
-              kBottomNavHeight +
-              kBottomNavBottomGap +
-              8,
-          child: Stack(
-            children: [
-              // Swipeable PageView with independent tab navigators
-              MediaQuery(
-                data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _tabs.length,
-                  itemBuilder: (context, index) {
-                    return Navigator(
-                      key: _navKeys[index],
-                      onGenerateRoute: (settings) {
-                        return MaterialPageRoute<void>(
-                          builder: (_) => _tabs[index].screen,
-                          settings: settings,
-                        );
-                      },
-                    );
-                  },
-                ),
+        body: Stack(
+          children: [
+            // Swipeable PageView with independent tab navigators
+            MediaQuery(
+              data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemCount: _tabs.length,
+                itemBuilder: (context, index) {
+                  return Navigator(
+                    key: _navKeys[index],
+                    onGenerateRoute: (settings) {
+                      return MaterialPageRoute<void>(
+                        builder: (_) => _tabs[index].screen,
+                        settings: settings,
+                      );
+                    },
+                  );
+                },
               ),
+            ),
 
-              // Floating Nav Pill
-              Positioned(
-                left: 20,
-                right: 20,
-                bottom:
-                    MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
-                child: HomeFloatingNavPill(
-                  currentIndex: _currentIndex,
-                  destinations: _tabs,
-                  onTabSelected: _onTabTapped,
-                  onAskTapped: _openAskPaisaTrack,
-                  isDark: isDark,
-                ),
+            // Floating Nav Pill
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom:
+                  MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
+              child: HomeFloatingNavPill(
+                currentIndex: _currentIndex,
+                destinations: _tabs,
+                onTabSelected: _onTabTapped,
+                onAskTapped: _openAskPaisaTrack,
+                isDark: isDark,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
