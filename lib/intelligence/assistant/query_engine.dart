@@ -18,11 +18,15 @@ class TotalQueryResult extends AssistantQueryResult {
     required this.count,
     required this.label,
     this.currencyBuckets = const [],
+    this.matchedByBrandToken,
+    this.includedPayees = const [],
   });
   final double? value;
   final int count;
   final String label;
   final List<AssistantCurrencyBucket> currencyBuckets;
+  final String? matchedByBrandToken;
+  final List<String> includedPayees;
 }
 
 class AssistantCurrencyBucket {
@@ -138,11 +142,27 @@ class _MerchantIdentity {
     required this.merchantIds,
     required this.nameKeys,
     required this.vpaKeys,
+    this.brandToken,
+    this.includedPayees = const [],
   });
 
   final Set<String> merchantIds;
   final Set<String> nameKeys;
   final Set<String> vpaKeys;
+  final String? brandToken;
+  final List<String> includedPayees;
+}
+
+class _TransactionSelection {
+  const _TransactionSelection({
+    required this.rows,
+    this.brandToken,
+    this.includedPayees = const [],
+  });
+
+  final List<Transaction> rows;
+  final String? brandToken;
+  final List<String> includedPayees;
 }
 
 class AssistantQueryEngine {
@@ -175,7 +195,7 @@ class AssistantQueryEngine {
     }
   }
 
-  Future<List<Transaction>> _transactions(
+  Future<_TransactionSelection> _transactions(
     AssistantIntent intent,
     AssistantTimeRange range,
   ) async {
@@ -214,7 +234,7 @@ class AssistantQueryEngine {
         return predicate;
       });
     final rows = await query.get();
-    if (intent.merchant == null) return rows;
+    if (intent.merchant == null) return _TransactionSelection(rows: rows);
 
     final identity = await _resolveMerchantIdentity(intent.merchant!, rows);
     if (identity == null) {
@@ -224,7 +244,17 @@ class AssistantQueryEngine {
         ),
       );
     }
-    return rows.where((row) {
+    final matchedRows = rows.where((row) {
+      if (identity.brandToken != null) {
+        return (row.counterpartyVpa != null &&
+                identity.vpaKeys
+                    .contains(PayeeKey.keyFor(row.counterpartyVpa!)) &&
+                PayeeKey.brandTokens(row.counterpartyVpa!)
+                    .contains(identity.brandToken)) ||
+            (row.merchantRaw != null &&
+                PayeeKey.brandTokens(row.merchantRaw!)
+                    .contains(identity.brandToken));
+      }
       return (row.merchantId != null &&
               identity.merchantIds.contains(row.merchantId)) ||
           (row.counterpartyVpa != null &&
@@ -233,6 +263,22 @@ class AssistantQueryEngine {
           (row.merchantRaw != null &&
               _nameKeyForms(row.merchantRaw!).any(identity.nameKeys.contains));
     }).toList(growable: false);
+    if (identity.brandToken != null &&
+        identity.includedPayees.length > 1 &&
+        intent.kind != AssistantIntentKind.merchantLookup &&
+        intent.kind != AssistantIntentKind.periodTotal) {
+      throw _MerchantAmbiguity(
+        AssistantRefusal(
+          "The word '${identity.brandToken}' matches multiple payees. Which one should I use?",
+          suggestions: identity.includedPayees,
+        ),
+      );
+    }
+    return _TransactionSelection(
+      rows: matchedRows,
+      brandToken: identity.brandToken,
+      includedPayees: identity.includedPayees,
+    );
   }
 
   Future<_MerchantIdentity?> _resolveMerchantIdentity(
@@ -405,14 +451,30 @@ WHERE t.id IN ($placeholders) AND t.merchant_id IS NOT NULL
       );
     }
 
-    final rawMatches = eligibleRows
+    final requestedVpaKey = PayeeKey.keyFor(phrase);
+    final exactVpaRows = eligibleRows
+        .where(
+          (row) =>
+              row.counterpartyVpa != null &&
+              PayeeKey.keyFor(row.counterpartyVpa!) == requestedVpaKey,
+        )
+        .toList(growable: false);
+    if (requestedVpaKey.isNotEmpty && exactVpaRows.isNotEmpty) {
+      return _MerchantIdentity(
+        merchantIds: const {},
+        nameKeys: const {},
+        vpaKeys: {requestedVpaKey},
+      );
+    }
+
+    final exactRawMatches = eligibleRows
         .where(
           (row) =>
               row.merchantRaw != null &&
-              phraseMatcher.matches(row.merchantRaw!),
+              _nameKeyForms(row.merchantRaw!).contains(normalizedPhrase),
         )
         .toList(growable: false);
-    final rawIdentities = rawMatches
+    final rawIdentities = exactRawMatches
         .map(
           (row) =>
               row.merchantId ?? PayeeKey.parse(name: row.merchantRaw).nameKey,
@@ -422,26 +484,115 @@ WHERE t.id IN ($placeholders) AND t.merchant_id IS NOT NULL
       throw _MerchantAmbiguity(
         AssistantRefusal(
           "I found more than one payee matching '${phrase.trim()}'. Which one did you mean?",
-          suggestions: rawMatches
+          suggestions: exactRawMatches
               .map((row) => row.merchantRaw!)
               .toSet()
               .toList(growable: false),
         ),
       );
     }
-    if (rawMatches.isEmpty) return null;
-    return _MerchantIdentity(
-      merchantIds:
-          rawMatches.map((row) => row.merchantId).whereType<String>().toSet(),
-      nameKeys: rawMatches
-          .expand(
-            (row) => [
-              PayeeKey.keyFor(row.merchantRaw!),
-              PayeeKey.parse(name: row.merchantRaw).nameKey,
-            ],
+    if (exactRawMatches.isNotEmpty) {
+      return _MerchantIdentity(
+        merchantIds: exactRawMatches
+            .map((row) => row.merchantId)
+            .whereType<String>()
+            .toSet(),
+        nameKeys: exactRawMatches
+            .expand(
+              (row) => [
+                PayeeKey.keyFor(row.merchantRaw!),
+                PayeeKey.parse(name: row.merchantRaw).nameKey,
+              ],
+            )
+            .toSet(),
+        vpaKeys: const {},
+      );
+    }
+
+    final requestedBrandToken = phrase.trim().toLowerCase();
+    final brandRows = !RegExp(r'^[a-z]{4,}$').hasMatch(requestedBrandToken)
+        ? const <Transaction>[]
+        : eligibleRows.where((row) {
+            final vpaMatches = row.counterpartyVpa != null &&
+                PayeeKey.brandTokens(row.counterpartyVpa!).contains(
+                  requestedBrandToken,
+                );
+            final rawMatchesBrand = row.merchantRaw != null &&
+                PayeeKey.brandTokens(row.merchantRaw!).contains(
+                  requestedBrandToken,
+                );
+            return vpaMatches || rawMatchesBrand;
+          }).toList(growable: false);
+    if (brandRows.isEmpty) {
+      final rawWordMatches = eligibleRows
+          .where(
+            (row) =>
+                row.merchantRaw != null &&
+                phraseMatcher.matches(row.merchantRaw!),
           )
-          .toSet(),
-      vpaKeys: const {},
+          .toList(growable: false);
+      final rawWordIdentities = rawWordMatches
+          .map(
+            (row) =>
+                row.merchantId ?? PayeeKey.parse(name: row.merchantRaw).nameKey,
+          )
+          .toSet();
+      if (rawWordIdentities.length > 1) {
+        throw _MerchantAmbiguity(
+          AssistantRefusal(
+            "I found more than one payee matching '${phrase.trim()}'. Which one did you mean?",
+            suggestions: rawWordMatches
+                .map((row) => row.merchantRaw!)
+                .toSet()
+                .toList(growable: false),
+          ),
+        );
+      }
+      if (rawWordMatches.isEmpty) return null;
+      return _MerchantIdentity(
+        merchantIds: rawWordMatches
+            .map((row) => row.merchantId)
+            .whereType<String>()
+            .toSet(),
+        nameKeys: rawWordMatches
+            .expand(
+              (row) => [
+                PayeeKey.keyFor(row.merchantRaw!),
+                PayeeKey.parse(name: row.merchantRaw).nameKey,
+              ],
+            )
+            .toSet(),
+        vpaKeys: const {},
+      );
+    }
+
+    final brandVpaKeys = <String>{};
+    final brandNameKeys = <String>{};
+    final includedVpas = <String, String>{};
+    final includedRawNames = <String>{};
+    for (final row in brandRows) {
+      final vpa = row.counterpartyVpa;
+      if (vpa != null &&
+          PayeeKey.brandTokens(vpa).contains(requestedBrandToken)) {
+        final key = PayeeKey.keyFor(vpa);
+        brandVpaKeys.add(key);
+        includedVpas.putIfAbsent(key, () => vpa);
+      } else if (row.merchantRaw != null &&
+          PayeeKey.brandTokens(row.merchantRaw!).contains(
+            requestedBrandToken,
+          )) {
+        brandNameKeys.addAll(_nameKeyForms(row.merchantRaw!));
+        includedRawNames.add(row.merchantRaw!);
+      }
+    }
+    final includedPayees = [...includedVpas.values, ...includedRawNames]
+      ..sort();
+    return _MerchantIdentity(
+      merchantIds: const {},
+      nameKeys: brandNameKeys,
+      vpaKeys: brandVpaKeys,
+      brandToken: requestedBrandToken,
+      includedPayees: includedPayees,
     );
   }
 
@@ -486,7 +637,8 @@ WHERE t.id IN ($placeholders) AND t.merchant_id IS NOT NULL
       }..remove('');
 
   Future<TotalQueryResult> _total(AssistantIntent intent) async {
-    final rows = await _transactions(intent, intent.range!);
+    final selection = await _transactions(intent, intent.range!);
+    final rows = selection.rows;
     final selected =
         rows.where((row) => _included(row, intent.metric)).toList();
     final grouped = <String, List<Transaction>>{};
@@ -528,11 +680,13 @@ WHERE t.id IN ($placeholders) AND t.merchant_id IS NOT NULL
       count: selected.length,
       label: intent.range!.label,
       currencyBuckets: buckets,
+      matchedByBrandToken: selection.brandToken,
+      includedPayees: selection.includedPayees,
     );
   }
 
   Future<BreakdownQueryResult> _breakdown(AssistantIntent intent) async {
-    final rows = await _transactions(intent, intent.range!);
+    final rows = (await _transactions(intent, intent.range!)).rows;
     final categories = {
       for (final row in await database.select(database.categories).get())
         row.id: row.name,

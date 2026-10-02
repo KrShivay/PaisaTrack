@@ -14,11 +14,13 @@ class AnswerRenderer {
           :final value,
           :final count,
           :final label,
-          :final currencyBuckets
+          :final currencyBuckets,
+          :final matchedByBrandToken,
+          :final includedPayees
         ) =>
           count == 0
               ? 'Period: $label\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
-              : 'Period: $label\nResult: ${_metric(intent.metric)} ${_totalValue(intent.aggregation, currencyBuckets, count, value)} across $count transactions.\nFilters: ${_filters(intent)}',
+              : 'Period: $label\nResult: ${_metric(intent.metric)} ${_totalValue(intent.aggregation, currencyBuckets, count, value)} across $count transactions.${matchedByBrandToken == null ? '' : '\nIncluded payees: ${includedPayees.join(' and ')} — matched by the word \'$matchedByBrandToken\'.'}\nFilters: ${_filters(intent)}',
         BreakdownQueryResult(:final items) => items.isEmpty
             ? 'Period: ${intent.range!.label}\nNo matching transactions were found.\nFilters: ${_filters(intent)}'
             : 'Period: ${intent.range!.label}\nResult:\n${items.map((item) => '${item.label}: ${formatSourceAmount(item.total, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}').join('\n')}\nFilters: ${_filters(intent)}',

@@ -134,6 +134,18 @@ user name aliases, exact canonical names, then exact legacy aliases. New
 merchant IDs use the normalized name key (or full VPA key when no name exists),
 and named payments also record their VPA alias for later VPA-only rows.
 
+Ask can also use conservative brand tokens as a read-only fallback after exact
+identity resolution fails. It reads only a VPA local part (never the PSP
+handle). VPA local parts split on `.`, `_`, and `-`; raw merchant names also
+split on whitespace. Brand tokens must contain at least four letters. Numeric,
+phone-like, and mixed letter-digit gateway IDs are discarded; a local part
+containing an opaque mixed token is excluded entirely. The only stripped
+prefix is `pay`, backed by the `payzomato` fixture. `payu` appears as its own
+gateway token in fixtures and is not stripped from words. A brand-only total
+names every included VPA/raw payee and the matched word in
+its answer. Non-total queries ask for clarification when brand tokens would
+span payees. This path does not create merchant IDs or aliases.
+
 Embedding similarity is review-only: it stores a suggestion in capture
 provenance, leaves `merchant_id` unset, and writes no alias. Phone-number VPAs
 can resolve existing user aliases but never create a merchant automatically.

@@ -191,6 +191,213 @@ void main() {
     expect((result.value, result.count), (175, 3));
   });
 
+  test('brand word lists and totals distinct VPA-only payees', () async {
+    await txn(
+      'payzomato',
+      DateTime.utc(2026, 7, 2),
+      689.69,
+      merchantId: null,
+      counterpartyVpa: 'payzomato@hdfcbank',
+    );
+    await txn(
+      'zomato_payu',
+      DateTime.utc(2026, 7, 3),
+      372.45,
+      merchantId: null,
+      counterpartyVpa: 'zomato.eternaltsp.payu@hdfcbank',
+    );
+    await txn(
+      'paytm_gateway',
+      DateTime.utc(2026, 7, 4),
+      50,
+      merchantId: null,
+      counterpartyVpa: 'paytm.s22rtcb@pty',
+    );
+    await txn(
+      'upi_id',
+      DateTime.utc(2026, 7, 5),
+      20,
+      merchantId: null,
+      counterpartyVpa: 'Q273622071@ybl',
+    );
+    await txn(
+      'phone_vpa',
+      DateTime.utc(2026, 7, 6),
+      10,
+      merchantId: null,
+      counterpartyVpa: '7355386567@ybl',
+    );
+
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.merchantLookup,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: july,
+      merchant: 'zomato',
+    );
+    final result = await engine.run(intent) as TotalQueryResult;
+    final answer = const AnswerRenderer().render(intent, result);
+
+    expect((result.value, result.count), (1062.14, 2));
+    expect(answer, contains('payzomato@hdfcbank'));
+    expect(answer, contains('zomato.eternaltsp.payu@hdfcbank'));
+    expect(answer, contains("matched by the word 'zomato'"));
+    expect(answer, isNot(contains('paytm.s22rtcb@pty')));
+    expect(answer, isNot(contains('7355386567@ybl')));
+    expect(await database.select(database.merchantAliases).get(), isEmpty);
+    expect(
+      (await database.select(database.merchants).get())
+          .map((merchant) => merchant.id)
+          .toList(),
+      ['swiggy'],
+    );
+
+    final exactVpa = await engine.run(
+      AssistantIntent(
+        kind: AssistantIntentKind.merchantLookup,
+        metric: AssistantMetric.spend,
+        aggregation: AssistantAggregation.sum,
+        range: july,
+        merchant: 'zomato.eternaltsp.payu@hdfcbank',
+      ),
+    ) as TotalQueryResult;
+    expect((exactVpa.value, exactVpa.count), (372.45, 1));
+    expect(exactVpa.matchedByBrandToken == null, isTrue);
+  });
+
+  test('brand token can match an eligible raw payee by whole token', () async {
+    await txn(
+      'raw_zomato',
+      DateTime.utc(2026, 7, 2),
+      15,
+      merchantId: null,
+      merchantRaw: 'zomato-order',
+    );
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.merchantLookup,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: july,
+      merchant: 'zomato',
+    );
+    final result = await engine.run(intent) as TotalQueryResult;
+    final answer = const AnswerRenderer().render(intent, result);
+
+    expect((result.value, result.count), (15, 1));
+    expect(answer, contains('zomato-order'));
+    expect(answer, contains("matched by the word 'zomato'"));
+  });
+
+  test('brand words do not match substrings in raw names or opaque IDs',
+      () async {
+    await txn(
+      'coca_cola',
+      DateTime.utc(2026, 7, 2),
+      400,
+      merchantId: null,
+      merchantRaw: 'Coca Cola',
+    );
+    await txn(
+      'payola',
+      DateTime.utc(2026, 7, 3),
+      300,
+      merchantId: null,
+      counterpartyVpa: 'payola@hdfcbank',
+    );
+    await txn(
+      'paytm_gateway',
+      DateTime.utc(2026, 7, 4),
+      50,
+      merchantId: null,
+      counterpartyVpa: 'paytm.s22rtcb@pty',
+    );
+
+    for (final phrase in ['ola', 'paytm']) {
+      final result = await engine.run(
+        AssistantIntent(
+          kind: AssistantIntentKind.merchantLookup,
+          metric: AssistantMetric.spend,
+          aggregation: AssistantAggregation.sum,
+          range: july,
+          merchant: phrase,
+        ),
+      );
+      expect(result, isA<AssistantClarificationResult>(), reason: phrase);
+    }
+  });
+
+  test('short and multi-word phrases keep whole-word raw payee matching',
+      () async {
+    await txn(
+      'ola_cabs',
+      DateTime.utc(2026, 7, 2),
+      120,
+      merchantId: null,
+      merchantRaw: 'OLA CABS',
+    );
+    await txn(
+      'amazon_pay',
+      DateTime.utc(2026, 7, 3),
+      80,
+      merchantId: null,
+      merchantRaw: 'AMAZON PAY INDIA',
+    );
+
+    for (final (phrase, expected) in [('ola', 120.0), ('amazon pay', 80.0)]) {
+      final result = await engine.run(
+        AssistantIntent(
+          kind: AssistantIntentKind.merchantLookup,
+          metric: AssistantMetric.spend,
+          aggregation: AssistantAggregation.sum,
+          range: july,
+          merchant: phrase,
+        ),
+      );
+      expect(result, isA<TotalQueryResult>(), reason: phrase);
+      expect((result as TotalQueryResult).value, expected, reason: phrase);
+    }
+  });
+
+  test('exact labeled merchant wins before VPA brand candidates', () async {
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'zomato_labeled',
+            canonicalName: 'Zomato',
+            firstSeen: DateTime.utc(2026),
+            lastSeen: DateTime.utc(2026),
+          ),
+        );
+    await txn(
+      'labeled_zomato',
+      DateTime.utc(2026, 7, 2),
+      90,
+      merchantId: 'zomato_labeled',
+      merchantRaw: 'Zomato',
+      counterpartyVpa: 'payzomato@hdfcbank',
+    );
+    await txn(
+      'unlabeled_zomato',
+      DateTime.utc(2026, 7, 3),
+      60,
+      merchantId: null,
+      counterpartyVpa: 'zomato.eternaltsp.payu@hdfcbank',
+    );
+
+    final intent = AssistantIntent(
+      kind: AssistantIntentKind.merchantLookup,
+      metric: AssistantMetric.spend,
+      aggregation: AssistantAggregation.sum,
+      range: july,
+      merchant: 'Zomato',
+    );
+    final result = await engine.run(intent) as TotalQueryResult;
+    final answer = const AnswerRenderer().render(intent, result);
+
+    expect((result.value, result.count), (90, 1));
+    expect(answer, isNot(contains('matched by the word')));
+    expect(answer, isNot(contains('zomato.eternaltsp.payu@hdfcbank')));
+  });
+
   test('merchant phrase does not substring-match Coca Cola', () async {
     await database.into(database.merchants).insert(
           MerchantsCompanion.insert(

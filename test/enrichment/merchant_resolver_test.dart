@@ -486,6 +486,23 @@ void main() {
         'RAVIOKAXIS',
       );
     });
+
+    test('extracts VPA brand tokens without PSP or opaque gateway fragments',
+        () {
+      expect(
+        PayeeKey.brandTokens('payzomato@hdfcbank'),
+        {'payzomato', 'zomato'},
+      );
+      expect(
+        PayeeKey.brandTokens('zomato.eternaltsp.payu@hdfcbank'),
+        {'zomato', 'eternaltsp', 'payu'},
+      );
+      expect(PayeeKey.brandTokens('paytm.s22rtcb@pty'), isEmpty);
+      expect(PayeeKey.brandTokens('7355386567@ybl'), isEmpty);
+      expect(PayeeKey.brandTokens('Q273622071@ybl'), isEmpty);
+      expect(PayeeKey.brandTokens('Coca Cola'), {'coca', 'cola'});
+      expect(PayeeKey.brandTokens('payola'), {'payola'});
+    });
   });
 
   test('PayeeKey.keyFor chooses VPA keys and stored-contract name keys', () {
