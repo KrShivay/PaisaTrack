@@ -1,3 +1,5 @@
+import 'rule_repository.dart';
+
 enum CorrectionScope {
   thisTransaction,
   futureMatching,
@@ -48,9 +50,27 @@ class CategoryCorrectionResult {
     required this.feedbackCount,
     required this.affectedTransactionCount,
     required this.ruleCreated,
+    this.ruleMutation,
+    this.affectedTransactions = const [],
   });
 
   final int feedbackCount;
   final int affectedTransactionCount;
   final bool ruleCreated;
+  final RuleMutation? ruleMutation;
+  final List<CorrectedTransactionSnapshot> affectedTransactions;
+}
+
+class CorrectedTransactionSnapshot {
+  const CorrectedTransactionSnapshot({
+    required this.id,
+    required this.categoryId,
+    required this.status,
+    required this.feedbackIds,
+  });
+
+  final String id;
+  final String? categoryId;
+  final String status;
+  final List<String> feedbackIds;
 }

@@ -24,9 +24,11 @@ import 'package:paisatrack/data/models/raw_sms.dart';
 import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/data/repositories/sms_disposition_repository.dart';
 import 'package:paisatrack/enrichment/categorizer.dart';
+import 'package:paisatrack/enrichment/merchant_resolver.dart';
 import 'package:paisatrack/enrichment/seed_category_map.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/intelligence/llm/llm_runtime.dart';
+import 'package:paisatrack/intelligence/models/embedder.dart';
 
 import '../support/fake_sms_permission_gate.dart';
 
@@ -393,7 +395,7 @@ void main() {
     await database.into(database.rules).insert(
           RulesCompanion.insert(
             id: 'rule_amzn',
-            matchType: 'merchant',
+            matchType: 'merchant_legacy',
             matchValue: 'amzn',
             setCategoryId: const Value('shopping'),
             createdAt: DateTime.utc(2026, 7, 5),
@@ -413,12 +415,50 @@ void main() {
     expect(txn.status, 'auto');
   });
 
+  test('similarity merchant alias keeps rule hit in review', () async {
+    final now = DateTime.utc(2026, 7, 5);
+    await database.into(database.merchants).insert(
+          MerchantsCompanion.insert(
+            id: 'merchant_swiggy',
+            canonicalName: 'Swiggy',
+            firstSeen: now,
+            lastSeen: now,
+          ),
+        );
+    await database.into(database.merchantAliases).insert(
+          MerchantAliasesCompanion.insert(
+            alias: 'SWIGGYX',
+            merchantId: 'merchant_swiggy',
+            source: 'similarity',
+            confidence: 0.8,
+          ),
+        );
+    await RuleRepository(database).insert(
+      matchType: 'merchant',
+      matchValue: 'SwiggyX',
+      setCategoryId: 'shopping',
+      clock: () => now,
+    );
+
+    await _ingestorFor(
+      database,
+      _sampleRecord(merchantRaw: 'SwiggyX'),
+      merchantResolver: MerchantResolver(database, const NoopEmbedder()),
+      now: () => now,
+    ).ingest(_message('sms_similarity_rule'));
+
+    final txn = await (database.select(database.transactions)
+          ..where((row) => row.smsId.equals('sms_similarity_rule')))
+        .getSingle();
+    expect(txn.status, 'needs_review');
+  });
+
   test('decision policy asks once then auto-classifies a seen counterparty',
       () async {
     await database.into(database.rules).insert(
           RulesCompanion.insert(
             id: 'rule_friend',
-            matchType: 'merchant',
+            matchType: 'merchant_legacy',
             matchValue: 'amzn',
             setCategoryId: const Value('shopping'),
             createdAt: DateTime.utc(2026, 7, 5),
@@ -1294,6 +1334,7 @@ SmsIngestor _ingestorFor(
   Map<String, NormalizedTransactionRecord>? recordsById,
   DateTime Function()? now,
   FinancialCalendar? financialCalendar,
+  MerchantResolver? merchantResolver,
 }) {
   return SmsIngestor(
     database: database,
@@ -1305,6 +1346,7 @@ SmsIngestor _ingestorFor(
       rules: RuleRepository(database),
       seedMap: SeedCategoryMap.fromJson('{"amzn":"shopping"}'),
     ),
+    merchantResolver: merchantResolver,
     now: now,
     financialCalendar: financialCalendar,
   );

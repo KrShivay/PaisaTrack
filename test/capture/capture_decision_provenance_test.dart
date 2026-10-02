@@ -16,6 +16,7 @@ void main() {
       CaptureDecisionProvenance.writeCurrent(
         payload,
         statusMode: CaptureDecisionStatusMode.policy,
+        categorySource: 'rule',
       );
 
       final encoded = jsonEncode(payload);
@@ -25,6 +26,7 @@ void main() {
         CaptureDecisionProvenance.currentVersion,
       );
       expect(provenance?.statusMode, CaptureDecisionStatusMode.policy);
+      expect(provenance?.categorySource, 'rule');
       expect(parseConfidenceFromJson(encoded), 0.91);
       expect(
         TransactionConfidenceTrail.fromJson(encoded).category?.source,
@@ -49,6 +51,12 @@ void main() {
         );
       },
     );
+
+    test('well-formed v1 decision metadata remains unversioned', () {
+      const legacyV1 = '{"capture_decision":{"version":"capture-decision-v1",'
+          '"status_mode":"policy","category_source":"rule"}}';
+      expect(CaptureDecisionProvenance.fromConfidenceJson(legacyV1), isNull);
+    });
 
     test('malformed and unsupported decision blocks remain unknown', () {
       expect(CaptureDecisionProvenance.versionFromConfidenceJson('{'), isNull);

@@ -240,6 +240,52 @@ void main() {
     expect(await database.select(database.smsDispositions).get(), isEmpty);
   });
 
+  test('restore tags merchant rules from an older backup as legacy', () async {
+    await database.into(database.rules).insert(
+          RulesCompanion.insert(
+            id: 'backup_old_merchant',
+            matchType: 'merchant',
+            matchValue: 'swiggy',
+            createdAt: DateTime.utc(2026, 7, 16),
+          ),
+        );
+    const passphrase = 'legacy-merchant-rule-passphrase';
+    final current = await service().exportBytes(passphrase: passphrase);
+    final oldArchive = await _legacyArchiveWithOldMerchantRule(
+      current,
+      passphrase,
+    );
+
+    await database.delete(database.rules).go();
+    await service().importBytes(bytes: oldArchive, passphrase: passphrase);
+
+    expect(
+      (await database.select(database.rules).getSingle()).matchType,
+      'merchant_legacy',
+    );
+  });
+
+  test('restore preserves exact merchant rules from current backups', () async {
+    await database.into(database.rules).insert(
+          RulesCompanion.insert(
+            id: 'backup_exact_merchant',
+            matchType: 'merchant',
+            matchValue: 'swiggy',
+            createdAt: DateTime.utc(2026, 7, 16),
+          ),
+        );
+    const passphrase = 'current-merchant-rule-passphrase';
+    final bytes = await service().exportBytes(passphrase: passphrase);
+
+    await database.delete(database.rules).go();
+    await service().importBytes(bytes: bytes, passphrase: passphrase);
+
+    expect(
+      (await database.select(database.rules).getSingle()).matchType,
+      'merchant',
+    );
+  });
+
   test('chunked v3 archive accepts missing optional table and footer count',
       () async {
     final now = DateTime.utc(2026, 7, 16);
@@ -1812,10 +1858,59 @@ Future<Uint8List> _legacyArchiveWithoutDispositionTable(
     secretKey: key,
   );
   final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+  archive.remove('rule_match_semantics');
   final tables = archive['tables'] as Map<String, dynamic>;
   tables.remove('sms_dispositions');
   for (final row in (tables['transactions'] as List<dynamic>)) {
     (row as Map<String, dynamic>).remove('isNotTransaction');
+  }
+
+  final nonce = List<int>.generate(12, (index) => index + 1);
+  final box = await aes.encrypt(
+    utf8.encode(jsonEncode(archive)),
+    secretKey: key,
+    nonce: nonce,
+  );
+  envelope['cipher'] = {
+    'name': 'aes-256-gcm',
+    'nonce': base64Encode(box.nonce),
+    'mac': base64Encode(box.mac.bytes),
+    'ciphertext': base64Encode(box.cipherText),
+  };
+  return Uint8List.fromList(utf8.encode(jsonEncode(envelope)));
+}
+
+Future<Uint8List> _legacyArchiveWithOldMerchantRule(
+  Uint8List encrypted,
+  String passphrase,
+) async {
+  final envelope = jsonDecode(utf8.decode(encrypted)) as Map<String, dynamic>;
+  final kdf = envelope['kdf'] as Map<String, dynamic>;
+  final cipher = envelope['cipher'] as Map<String, dynamic>;
+  final salt = base64Decode(kdf['salt'] as String);
+  final key = await Argon2id(
+    memory: kdf['memory'] as int,
+    parallelism: kdf['parallelism'] as int,
+    iterations: kdf['iterations'] as int,
+    hashLength: kdf['hash_length'] as int,
+  ).deriveKey(
+    secretKey: SecretKey(utf8.encode(passphrase)),
+    nonce: salt,
+  );
+  final aes = AesGcm.with256bits();
+  final plaintext = await aes.decrypt(
+    SecretBox(
+      base64Decode(cipher['ciphertext'] as String),
+      nonce: base64Decode(cipher['nonce'] as String),
+      mac: Mac(base64Decode(cipher['mac'] as String)),
+    ),
+    secretKey: key,
+  );
+  final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+  archive.remove('rule_match_semantics');
+  final tables = archive['tables'] as Map<String, dynamic>;
+  for (final row in tables['rules'] as List<dynamic>) {
+    (row as Map<String, dynamic>)['matchType'] = 'merchant';
   }
 
   final nonce = List<int>.generate(12, (index) => index + 1);
@@ -1841,6 +1936,7 @@ Future<Uint8List> _chunkedArchiveWithoutDispositionTable(
   final originalHeaderBytes = encrypted.sublist(9, 9 + headerLength);
   final header =
       jsonDecode(utf8.decode(originalHeaderBytes)) as Map<String, dynamic>;
+  header.remove('rule_match_semantics');
   final kdf = header['kdf'] as Map<String, dynamic>;
   final salt = base64Decode(kdf['salt'] as String);
   final key = await Argon2id(

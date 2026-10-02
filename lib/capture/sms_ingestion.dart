@@ -426,17 +426,27 @@ class SmsIngestor {
               value,
               merchantEmbedding: merchant?.embedding,
             );
-            final initialStatus = lifecycleState != 'settled'
+            final decidedStatus = lifecycleState != 'settled'
                 ? DecisionStatus.needsReview
                 : duplicateOfTxnId != null
                     ? DecisionStatus.auto
-                    : _fixedStatus ??
-                        (merchant?.needsReview == true
-                            ? DecisionStatus.needsReview
-                            : await _decideStatus(
+                    : merchant?.needsReview == true
+                        ? DecisionStatus.needsReview
+                        : categorization?.ruleId != null
+                            ? await _decideStatus(
                                 value,
                                 categorization: categorization,
-                              ));
+                              )
+                            : _fixedStatus ??
+                                await _decideStatus(
+                                  value,
+                                  categorization: categorization,
+                                );
+            final initialStatus = _captureDecisionStatusMode ==
+                        CaptureDecisionStatusMode.fixedReview &&
+                    decidedStatus == DecisionStatus.asked
+                ? DecisionStatus.needsReview
+                : decidedStatus;
             final status = SpanVerifier.enforceWriteGuard(
               body: sms.body,
               record: value,
@@ -791,6 +801,7 @@ class SmsIngestor {
     CaptureDecisionProvenance.writeCurrent(
       confidence,
       statusMode: _captureDecisionStatusMode,
+      categorySource: categorization?.source,
     );
     return TransactionsCompanion.insert(
       id: 'txn_$smsId',

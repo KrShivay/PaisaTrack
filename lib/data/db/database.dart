@@ -109,7 +109,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -244,6 +244,21 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 18) {
           await _ensureSourceCurrencyColumns(migrator);
+        }
+        if (from < 19) {
+          final ruleTables = await customSelect(
+            'SELECT name FROM sqlite_master WHERE type = ? AND name = ?',
+            variables: [
+              Variable.withString('table'),
+              Variable.withString('rules'),
+            ],
+          ).get();
+          if (ruleTables.isNotEmpty) {
+            await customStatement(
+              "UPDATE rules SET match_type = 'merchant_legacy' "
+              "WHERE match_type = 'merchant'",
+            );
+          }
         }
         if (from < 15) await _backfillPayeeEvidence();
         // Generated row mapping expects the latest non-null/defaulted columns,

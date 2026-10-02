@@ -3,6 +3,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/repositories/category_correction.dart';
+import 'package:paisatrack/data/repositories/payee_evidence_repository.dart';
+import 'package:paisatrack/data/repositories/rule_repository.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 
@@ -14,6 +16,16 @@ Future<void> _seedCategories(AppDatabase database) async {
           icon: 'category',
           isSpending: true,
           sortOrder: 1,
+          isUserCreated: false,
+        ),
+      );
+  await database.into(database.categories).insert(
+        CategoriesCompanion.insert(
+          id: 'groceries',
+          name: 'Groceries',
+          icon: 'shopping_cart',
+          isSpending: true,
+          sortOrder: 3,
           isUserCreated: false,
         ),
       );
@@ -57,9 +69,9 @@ Future<void> _insertTxn(
   bool isDeleted = false,
   bool isNotTransaction = false,
   String? duplicateOfTxnId,
-}) {
+}) async {
   final now = ts ?? DateTime.utc(2026, 7, 8, 9);
-  return database.into(database.transactions).insert(
+  await database.into(database.transactions).insert(
         TransactionsCompanion.insert(
           id: id,
           ts: now.millisecondsSinceEpoch,
@@ -82,6 +94,11 @@ Future<void> _insertTxn(
           updatedAt: now,
         ),
       );
+  await PayeeEvidenceRepository(database).replaceForTransaction(
+    transactionId: id,
+    merchantRaw: merchantRaw,
+    counterpartyVpa: counterpartyVpa,
+  );
 }
 
 Future<void> _insertParseConfirmationCandidate(
@@ -732,6 +749,43 @@ void main() {
       expect(history.categoryId, 'other');
     });
 
+    test('a second correction replaces the rule for the same payee key',
+        () async {
+      await _insertTxn(database, id: 'first', merchantRaw: 'Swiggy');
+      await _insertTxn(
+        database,
+        id: 'second',
+        merchantRaw: 'SWIGGY!',
+        status: 'asked',
+      );
+
+      final repository = TransactionRepository(database);
+      await repository.correctCategory(
+        txnId: 'first',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.futureMatching,
+        context: 'new_merchant',
+      );
+      final secondCorrection = await repository.correctCategory(
+        txnId: 'second',
+        categoryId: 'groceries',
+        scope: CorrectionScope.futureMatching,
+        context: 'new_merchant',
+      );
+
+      final rules = await database.select(database.rules).get();
+      expect(rules, hasLength(1));
+      expect(rules.single.setCategoryId, 'groceries');
+
+      expect(
+        await repository.undoRuleMutation(secondCorrection.ruleMutation!),
+        isTrue,
+      );
+      final restored = await database.select(database.rules).get();
+      expect(restored, hasLength(1));
+      expect(restored.single.setCategoryId, 'food_dining');
+    });
+
     test('existing and future scope updates normalized matching history',
         () async {
       await _insertTxn(
@@ -772,6 +826,112 @@ void main() {
       );
     });
 
+    test('existing and future correction undo restores rows and feedback',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'undo_current',
+        merchantRaw: 'Bookstore',
+        categoryId: 'other',
+        status: 'asked',
+      );
+      await _insertTxn(
+        database,
+        id: 'undo_history_1',
+        merchantRaw: 'BOOKSTORE!',
+        categoryId: 'groceries',
+        status: 'needs_review',
+      );
+      await _insertTxn(
+        database,
+        id: 'undo_history_2',
+        merchantRaw: 'Bookstore',
+        categoryId: 'food_dining',
+        status: 'auto',
+      );
+
+      final repository = TransactionRepository(database);
+      final result = await repository.correctCategory(
+        txnId: 'undo_current',
+        categoryId: 'groceries',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+        clock: () => DateTime.utc(2026, 7, 8, 10),
+      );
+      expect(result.affectedTransactionCount, 3);
+      expect(result.ruleMutation!.previousRules, isEmpty);
+      expect(
+        result.affectedTransactions.map((snapshot) => snapshot.id).toSet(),
+        {'undo_current', 'undo_history_1', 'undo_history_2'},
+      );
+      expect(
+        {
+          for (final snapshot in result.affectedTransactions)
+            snapshot.id: snapshot.feedbackIds.length,
+        },
+        {
+          'undo_current': 2,
+          'undo_history_1': 1,
+          'undo_history_2': 2,
+        },
+      );
+
+      expect(await repository.undoCategoryCorrection(result), isTrue);
+
+      final rows = {
+        for (final row in await database.select(database.transactions).get())
+          row.id: row,
+      };
+      expect(rows['undo_current']!.categoryId, 'other');
+      expect(rows['undo_current']!.status, 'asked');
+      expect(rows['undo_history_1']!.categoryId, 'groceries');
+      expect(rows['undo_history_1']!.status, 'needs_review');
+      expect(rows['undo_history_2']!.categoryId, 'food_dining');
+      expect(rows['undo_history_2']!.status, 'auto');
+      expect(await database.select(database.rules).get(), isEmpty);
+      expect(await database.select(database.feedback).get(), isEmpty);
+    });
+
+    test('refused rule restore aborts row and feedback undo atomically',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'undo_refused',
+        merchantRaw: 'Bookstore',
+        categoryId: 'other',
+      );
+      final repository = TransactionRepository(database);
+      final result = await repository.correctCategory(
+        txnId: 'undo_refused',
+        categoryId: 'groceries',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+        clock: () => DateTime.utc(2026, 7, 8, 10),
+      );
+      await _insertTxn(database, id: 'another_correction');
+      await (database.update(database.rules)
+            ..where((row) => row.matchValue.equals('BOOKSTORE')))
+          .write(
+        const RulesCompanion(
+          setCategoryId: Value('food_dining'),
+          createdFromTxnId: Value('another_correction'),
+        ),
+      );
+
+      expect(await repository.undoCategoryCorrection(result), isFalse);
+
+      final row = await (database.select(database.transactions)
+            ..where((txn) => txn.id.equals('undo_refused')))
+          .getSingle();
+      expect(row.categoryId, 'groceries');
+      expect(row.status, 'confirmed');
+      expect(await database.select(database.feedback).get(), isNotEmpty);
+      expect(
+        (await database.select(database.rules).get()).single.setCategoryId,
+        'food_dining',
+      );
+    });
+
     test('matching group updates only explicit ids and creates no rule',
         () async {
       for (final id in ['one', 'two', 'three']) {
@@ -793,23 +953,22 @@ void main() {
       expect(await database.select(database.rules).get(), isEmpty);
     });
 
-    test(
-        'existing and future scope matches exact or prefix merchant names, refusing over-matches',
+    test('existing and future scope uses exact normalized merchant identity',
         () async {
       await _insertTxn(
         database,
         id: 'txn_exact',
-        merchantRaw: 'Amazon',
+        merchantRaw: 'Swiggy',
       );
       await _insertTxn(
         database,
-        id: 'txn_prefix',
-        merchantRaw: 'Amazon Fresh',
+        id: 'txn_normalized',
+        merchantRaw: 'SWIGGY!',
       );
       await _insertTxn(
         database,
-        id: 'txn_overmatch',
-        merchantRaw: 'AmazonPayLater',
+        id: 'txn_instamart',
+        merchantRaw: 'Swiggy Instamart',
       );
 
       final result = await TransactionRepository(database).correctCategory(
@@ -826,13 +985,61 @@ void main() {
         'food_dining',
       );
       expect(
-        rows.singleWhere((row) => row.id == 'txn_prefix').categoryId,
+        rows.singleWhere((row) => row.id == 'txn_normalized').categoryId,
         'food_dining',
       );
       expect(
-        rows.singleWhere((row) => row.id == 'txn_overmatch').categoryId,
+        rows.singleWhere((row) => row.id == 'txn_instamart').categoryId,
         'other',
       );
+    });
+
+    test('specific retroactive correction outranks broad legacy rule',
+        () async {
+      await RuleRepository(database).insert(
+        matchType: 'merchant',
+        matchValue: 'swiggy',
+        setCategoryId: 'food_dining',
+        clock: () => DateTime.utc(2026, 7, 7, 10),
+      );
+      await _insertTxn(
+        database,
+        id: 'broad_swiggy',
+        merchantRaw: 'Swiggy',
+      );
+      await _insertTxn(
+        database,
+        id: 'specific_instamart',
+        merchantRaw: 'Swiggy Instamart',
+      );
+      await _insertTxn(
+        database,
+        id: 'specific_instamart_alt',
+        merchantRaw: 'SWIGGY-INSTAMART!',
+      );
+
+      final result = await TransactionRepository(database).correctCategory(
+        txnId: 'specific_instamart',
+        categoryId: 'groceries',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+
+      expect(result.affectedTransactionCount, 2);
+      expect(
+        result.affectedTransactions.map((snapshot) => snapshot.id).toSet(),
+        {'specific_instamart', 'specific_instamart_alt'},
+      );
+      final rules = await database.select(database.rules).get();
+      expect(rules, hasLength(2));
+      final decision = await RuleRepository(database).findMatch(
+        merchantRaw: 'Swiggy Instamart',
+      );
+      expect(decision?.setCategoryId, 'groceries');
+      final broad = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('broad_swiggy')))
+          .getSingle();
+      expect(broad.categoryId, 'other');
     });
 
     test(

@@ -2,6 +2,27 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../db/database.dart';
+import '../../enrichment/payee_identity_key.dart';
+
+class RuleMutation {
+  const RuleMutation({
+    required this.matchType,
+    required this.matchValue,
+    required this.previousRules,
+    required this.writtenAt,
+    required this.categoryId,
+    required this.description,
+    required this.createdFromTxnId,
+  });
+
+  final String matchType;
+  final String matchValue;
+  final List<Rule> previousRules;
+  final DateTime writtenAt;
+  final String? categoryId;
+  final String? description;
+  final String createdFromTxnId;
+}
 
 /// User-taught deterministic rules — step 1 of the categorizer ladder
 /// (PLAN §7.4). Rules always win over probabilistic enrichment.
@@ -10,16 +31,17 @@ class RuleRepository {
 
   final AppDatabase _database;
 
-  /// First rule matching the transaction's signals, or null.
+  /// Strongest, newest rule matching the transaction's identity, or null.
   ///
-  /// `counterparty` rules (exact VPA identity) are checked before `merchant`
-  /// rules (normalized substring of the merchant text), since an exact
-  /// identity is the stronger signal. Unknown match_types never match.
+  /// Exact counterparty identity wins, then exact normalized merchant
+  /// identity, then a word-boundary fallback for tagged legacy rules.
+  /// Unknown match_types never match.
   Future<Rule?> findMatch({
     String? merchantRaw,
     String? counterpartyVpa,
   }) async {
-    final rules = await _database.select(_database.rules).get();
+    final rules = await _database.select(_database.rules).get()
+      ..sort(_newestFirst);
 
     final vpa = _normalize(counterpartyVpa);
     if (vpa != null) {
@@ -31,23 +53,153 @@ class RuleRepository {
       }
     }
 
-    final merchant = _normalize(merchantRaw);
-    if (merchant != null) {
+    final merchantKey = merchantRaw == null
+        ? null
+        : normalizeMatchValue('merchant', merchantRaw);
+    final merchantValue = merchantRaw;
+    if (merchantKey != null &&
+        merchantKey.isNotEmpty &&
+        merchantValue != null) {
       for (final rule in rules) {
-        final value = _normalize(rule.matchValue);
-        if (rule.matchType == 'merchant' && value != null) {
-          final pattern = RegExp(
-            r'\b' + RegExp.escape(value) + r'\b',
-            caseSensitive: false,
-          );
-          if (pattern.hasMatch(merchant)) {
-            return rule;
-          }
+        if (rule.matchType == 'merchant' &&
+            merchantKey == normalizeMatchValue('merchant', rule.matchValue)) {
+          return rule;
+        }
+      }
+      for (final rule in rules) {
+        if (rule.matchType == 'merchant_legacy' &&
+            _matchesMerchantWordBoundary(merchantValue, rule.matchValue)) {
+          return rule;
         }
       }
     }
 
     return null;
+  }
+
+  /// Replaces all legacy duplicates for one identity in the correction's
+  /// transaction and keeps their prior values available for undo.
+  Future<RuleMutation> replaceForIdentity({
+    required String matchType,
+    required String matchValue,
+    String? setCategoryId,
+    String? setDescription,
+    required String createdFromTxnId,
+    required DateTime now,
+  }) async {
+    final normalized = normalizeMatchValue(matchType, matchValue);
+    final existing = await _database.select(_database.rules).get();
+    final previous = existing
+        .where(
+          (rule) =>
+              (rule.matchType == matchType ||
+                  (matchType == 'merchant' &&
+                      rule.matchType == 'merchant_legacy')) &&
+              normalizeMatchValue(matchType, rule.matchValue) == normalized,
+        )
+        .toList()
+      ..sort(_newestFirst);
+
+    if (previous.isEmpty) {
+      await insert(
+        matchType: matchType,
+        matchValue: normalized,
+        setCategoryId: setCategoryId,
+        setDescription: setDescription,
+        createdFromTxnId: createdFromTxnId,
+        clock: () => now,
+      );
+    } else {
+      for (final rule in previous) {
+        await (_database.update(_database.rules)
+              ..where((row) => row.id.equals(rule.id)))
+            .write(
+          RulesCompanion(
+            matchType: Value(matchType),
+            matchValue: Value(normalized),
+            setCategoryId: Value(setCategoryId),
+            setDescription: Value(setDescription),
+            createdFromTxnId: Value(createdFromTxnId),
+            hitCount: const Value(0),
+            createdAt: Value(now),
+          ),
+        );
+      }
+    }
+
+    return RuleMutation(
+      matchType: matchType,
+      matchValue: normalized,
+      previousRules: previous,
+      writtenAt: now,
+      categoryId: setCategoryId,
+      description: setDescription,
+      createdFromTxnId: createdFromTxnId,
+    );
+  }
+
+  /// Restores the prior identity mapping only if this correction still owns it.
+  Future<bool> restoreMutation(RuleMutation mutation) async {
+    final current = await _database.select(_database.rules).get();
+    final matching = current
+        .where(
+          (rule) =>
+              rule.matchType == mutation.matchType &&
+              normalizeMatchValue(mutation.matchType, rule.matchValue) ==
+                  mutation.matchValue,
+        )
+        .toList();
+    if (matching.isEmpty ||
+        matching.any(
+          (rule) =>
+              rule.setCategoryId != mutation.categoryId ||
+              rule.setDescription != mutation.description ||
+              rule.createdFromTxnId != mutation.createdFromTxnId ||
+              rule.createdAt.difference(mutation.writtenAt).abs() >=
+                  const Duration(seconds: 1),
+        )) {
+      return false;
+    }
+
+    if (mutation.previousRules.isEmpty) {
+      await (_database.delete(_database.rules)
+            ..where((rule) => rule.id.isIn(matching.map((row) => row.id))))
+          .go();
+    } else {
+      final oldIds = mutation.previousRules.map((rule) => rule.id).toSet();
+      await (_database.delete(_database.rules)
+            ..where(
+              (rule) =>
+                  rule.id.isIn(matching.map((row) => row.id)) &
+                  rule.id.isNotIn(oldIds),
+            ))
+          .go();
+      for (final rule in mutation.previousRules) {
+        await _database.into(_database.rules).insertOnConflictUpdate(
+              rule.toCompanion(true),
+            );
+      }
+    }
+    return true;
+  }
+
+  static String normalizeMatchValue(String matchType, String value) =>
+      matchType == 'merchant'
+          ? PayeeIdentityKey.normalize(value)
+          : value.toLowerCase().trim();
+
+  static bool _matchesMerchantWordBoundary(String merchantRaw, String value) {
+    final phrase = value.trim();
+    if (phrase.isEmpty) return false;
+    final pattern = RegExp(
+      '(^|[^A-Z0-9])${RegExp.escape(phrase.toUpperCase())}(\$|[^A-Z0-9])',
+    );
+    return pattern.hasMatch(merchantRaw.toUpperCase());
+  }
+
+  static int _newestFirst(Rule a, Rule b) {
+    final byCreatedAt = b.createdAt.compareTo(a.createdAt);
+    return byCreatedAt != 0 ? byCreatedAt : b.id.compareTo(a.id);
   }
 
   /// Records one application of [ruleId] (PLAN §6: rules carry hit counts).
@@ -85,7 +237,8 @@ class RuleRepository {
   }
 
   static String? _normalize(String? value) {
-    final normalized = value?.toLowerCase().trim();
+    final normalized =
+        value == null ? null : normalizeMatchValue('counterparty', value);
     return (normalized == null || normalized.isEmpty) ? null : normalized;
   }
 }

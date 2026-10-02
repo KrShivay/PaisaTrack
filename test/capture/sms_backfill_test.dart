@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:paisatrack/capture/message_kind_classifier.dart';
+import 'package:paisatrack/capture/capture_decision_provenance.dart';
 import 'package:paisatrack/capture/parser_cascade.dart';
 import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_backfill.dart';
@@ -18,6 +19,10 @@ import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/models/raw_sms.dart';
+import 'package:paisatrack/enrichment/decision_policy.dart';
+import 'package:paisatrack/data/repositories/rule_repository.dart';
+import 'package:paisatrack/enrichment/categorizer.dart';
+import 'package:paisatrack/enrichment/seed_category_map.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -144,6 +149,105 @@ void main() {
           ),
       isTrue,
     );
+  });
+
+  test('history rule hit clamps asked to review with fixed-review provenance',
+      () async {
+    await RuleRepository(database).insert(
+      matchType: 'merchant',
+      matchValue: 'swiggy',
+      setCategoryId: 'groceries',
+    );
+    final record = NormalizedTransactionRecord(
+      amount: 449,
+      direction: TransactionDirection.debit,
+      channel: TransactionChannel.upi,
+      merchantRaw: 'SWIGGY',
+      counterpartyVpa: 'first-time@upi',
+      accountHint: null,
+      balanceAfter: null,
+      refId: null,
+      ts: DateTime.utc(2026, 5, 2, 9, 15),
+      parseSource: ParseSource.template,
+      parseConfidence: 0.97,
+    );
+    final result = await SmsBackfiller(
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(record),
+        categorizer: Categorizer(
+          rules: RuleRepository(database),
+          seedMap: SeedCategoryMap(const {}),
+        ),
+        fixedStatus: DecisionStatus.needsReview,
+        captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader.single([message('sms_rule_history')]),
+    ).run();
+
+    expect(result.parsed, 1);
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.smsId.equals('sms_rule_history')))
+        .getSingle();
+    expect(transaction.categoryId, 'groceries');
+    expect(transaction.status, 'needs_review');
+    final confidence =
+        jsonDecode(transaction.confidenceJson) as Map<String, Object?>;
+    final decision = confidence['capture_decision']! as Map<String, Object?>;
+    expect(decision['status_mode'], 'fixed_review');
+    expect(decision['category_source'], 'rule');
+  });
+
+  test('resume rule hit clamps asked to review with fixed-review provenance',
+      () async {
+    await RuleRepository(database).insert(
+      matchType: 'merchant_legacy',
+      matchValue: 'amzn',
+      setCategoryId: 'groceries',
+    );
+    final record = NormalizedTransactionRecord(
+      amount: 449,
+      direction: TransactionDirection.debit,
+      channel: TransactionChannel.upi,
+      merchantRaw: 'AMZN*MKTPLC',
+      counterpartyVpa: 'first-time@upi',
+      accountHint: null,
+      balanceAfter: null,
+      refId: null,
+      ts: DateTime.utc(2026, 5, 2, 9, 15),
+      parseSource: ParseSource.template,
+      parseConfidence: 0.97,
+    );
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(record),
+        categorizer: Categorizer(
+          rules: RuleRepository(database),
+          seedMap: SeedCategoryMap(const {}),
+        ),
+        fixedStatus: DecisionStatus.needsReview,
+        captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader.single([message('sms_rule_resume')]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    await catchUp.run();
+
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.smsId.equals('sms_rule_resume')))
+        .getSingle();
+    expect(transaction.categoryId, 'groceries');
+    expect(transaction.status, 'needs_review');
+    final confidence =
+        jsonDecode(transaction.confidenceJson) as Map<String, Object?>;
+    final decision = confidence['capture_decision']! as Map<String, Object?>;
+    expect(decision['status_mode'], 'fixed_review');
+    expect(decision['category_source'], 'rule');
   });
 
   test('aggregates privacy-safe outcome counts across pages', () async {

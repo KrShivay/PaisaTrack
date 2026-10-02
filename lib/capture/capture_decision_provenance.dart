@@ -24,24 +24,29 @@ class CaptureDecisionProvenance {
   const CaptureDecisionProvenance({
     required this.version,
     required this.statusMode,
+    required this.categorySource,
   });
 
-  static const currentVersion = 'capture-decision-v1';
+  static const currentVersion = 'capture-decision-v2';
   static const _blockKey = 'capture_decision';
   static const _versionKey = 'version';
   static const _statusModeKey = 'status_mode';
+  static const _categorySourceKey = 'category_source';
 
   final String version;
   final CaptureDecisionStatusMode statusMode;
+  final String? categorySource;
 
   /// Adds the current contract version to a transaction confidence payload.
   static void writeCurrent(
     Map<String, Object?> payload, {
     required CaptureDecisionStatusMode statusMode,
+    String? categorySource,
   }) {
     payload[_blockKey] = {
       _versionKey: currentVersion,
       _statusModeKey: statusMode.wireName,
+      if (categorySource != null) _categorySourceKey: categorySource,
     };
   }
 
@@ -61,6 +66,7 @@ class CaptureDecisionProvenance {
       return CaptureDecisionProvenance(
         version: currentVersion,
         statusMode: statusMode,
+        categorySource: block[_categorySourceKey] as String?,
       );
     } on FormatException {
       return null;

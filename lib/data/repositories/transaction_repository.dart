@@ -7,6 +7,7 @@ import '../confidence_payload.dart';
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
 import '../models/transaction_confidence_trail.dart';
+import '../../enrichment/payee_identity_key.dart';
 import 'category_correction.dart';
 import 'payee_evidence_repository.dart';
 import 'rule_repository.dart';
@@ -744,15 +745,16 @@ WHERE t.status = 'needs_review'
       final now = clock().toUtc();
       final ruleInput = _ruleInputFor(row);
       final willCreateRule = scope.createsRule && ruleInput != null;
+      RuleMutation? ruleMutation;
 
       if (willCreateRule) {
-        await RuleRepository(_database).insert(
+        ruleMutation = await RuleRepository(_database).replaceForIdentity(
           matchType: ruleInput.matchType,
           matchValue: ruleInput.matchValue,
           setCategoryId: categoryId,
           setDescription: description.present ? description.value : null,
           createdFromTxnId: txnId,
-          clock: () => now,
+          now: now,
         );
       }
 
@@ -763,6 +765,7 @@ WHERE t.status = 'needs_review'
         matchingTxnIds: matchingTxnIds,
       );
       final feedbackRows = <FeedbackCompanion>[];
+      final feedbackIdsByTransaction = <String, List<String>>{};
 
       void stageFeedback({
         required Transaction target,
@@ -773,10 +776,14 @@ WHERE t.status = 'needs_review'
         if (oldValue == newValue) return;
         final customId =
             target.id == txnId ? feedbackIdFactory?.call(field) : null;
+        final feedbackId = customId ??
+            'fb_${target.id}_${field}_${now.microsecondsSinceEpoch}';
+        feedbackIdsByTransaction
+            .putIfAbsent(target.id, () => <String>[])
+            .add(feedbackId);
         feedbackRows.add(
           FeedbackCompanion.insert(
-            id: customId ??
-                'fb_${target.id}_${field}_${now.microsecondsSinceEpoch}',
+            id: feedbackId,
             txnId: target.id,
             field: field,
             oldValue: Value(oldValue),
@@ -846,7 +853,61 @@ WHERE t.status = 'needs_review'
         feedbackCount: feedbackRows.length,
         affectedTransactionCount: targets.length,
         ruleCreated: willCreateRule,
+        ruleMutation: ruleMutation,
+        affectedTransactions: [
+          for (final target in targets)
+            CorrectedTransactionSnapshot(
+              id: target.id,
+              categoryId: target.categoryId,
+              status: target.status,
+              feedbackIds:
+                  List.unmodifiable(feedbackIdsByTransaction[target.id] ?? []),
+            ),
+        ],
       );
+    });
+  }
+
+  /// Reverses a correction's future-rule replacement when no newer correction
+  /// has taken ownership of that identity.
+  Future<bool> undoRuleMutation(RuleMutation mutation) {
+    return _database.transaction(
+      () => RuleRepository(_database).restoreMutation(mutation),
+    );
+  }
+
+  /// Reverses a correction and its rule, transaction rows, and feedback as one
+  /// atomic operation. A rule ownership conflict leaves the whole correction
+  /// intact so the visible state cannot diverge from the database.
+  Future<bool> undoCategoryCorrection(CategoryCorrectionResult correction) {
+    return _database.transaction(() async {
+      final mutation = correction.ruleMutation;
+      if (mutation != null &&
+          !await RuleRepository(_database).restoreMutation(mutation)) {
+        return false;
+      }
+
+      final feedbackIds = correction.affectedTransactions
+          .expand((snapshot) => snapshot.feedbackIds)
+          .toSet();
+      if (feedbackIds.isNotEmpty) {
+        await (_database.delete(_database.feedback)
+              ..where((row) => row.id.isIn(feedbackIds)))
+            .go();
+      }
+      final now = DateTime.now().toUtc();
+      for (final snapshot in correction.affectedTransactions) {
+        await (_database.update(_database.transactions)
+              ..where((row) => row.id.equals(snapshot.id)))
+            .write(
+          TransactionsCompanion(
+            categoryId: Value(snapshot.categoryId),
+            status: Value(snapshot.status),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+      return true;
     });
   }
 
@@ -869,7 +930,6 @@ WHERE t.status = 'needs_review'
           .get();
     }
     if (scope == CorrectionScope.existingAndFuture && ruleInput != null) {
-      final expected = ruleInput.matchValue.trim().toLowerCase();
       final query = _database.select(_database.transactions)
         ..where(
           (row) =>
@@ -879,33 +939,35 @@ WHERE t.status = 'needs_review'
         );
 
       if (ruleInput.matchType == 'counterparty') {
+        final expected = ruleInput.matchValue.trim().toLowerCase();
         // VPAs are exact identifiers: substring matching would sweep in
         // 'notabc@ybl' and 'abc@ybl.fraud' when correcting 'abc@ybl'.
         query.where((row) => row.counterpartyVpa.lower().equals(expected));
       } else {
-        const boundaries = [' ', '*', '-', '/', '.', ':', '|', ',', '#'];
-        query.where((row) {
-          var expr = row.merchantRaw.lower().equals(expected);
-          for (final l in boundaries) {
-            expr = expr |
-                row.merchantRaw.lower().likeExp(
-                      Variable.withString('%$l$expected'),
-                    );
-            expr = expr |
-                row.merchantRaw.lower().likeExp(
-                      Variable.withString('$expected$l%'),
-                    );
-            for (final r in boundaries) {
-              expr = expr |
-                  row.merchantRaw.lower().likeExp(
-                        Variable.withString('%$l$expected$r%'),
-                      );
-            }
-          }
-          return expr;
-        });
+        final normalizedKey = PayeeIdentityKey.normalize(ruleInput.matchValue);
+        final indexedRows = await (_database.select(_database.payeeEvidence)
+              ..where(
+                (evidence) =>
+                    evidence.evidenceType.equals('merchant_raw') &
+                    evidence.normalizedKey.equals(normalizedKey),
+              ))
+            .get();
+        final indexedIds = indexedRows.map((row) => row.transactionId).toSet();
+        final ids = {...indexedIds, current.id};
+        query.where((row) => row.id.isIn(ids));
       }
-      return query.get();
+      final candidates = await query.get();
+      if (ruleInput.matchType == 'counterparty') return candidates;
+      return candidates
+          .where(
+            (row) =>
+                row.merchantRaw != null &&
+                PayeeIdentityKey.matches(
+                  row.merchantRaw!,
+                  ruleInput.matchValue,
+                ),
+          )
+          .toList();
     }
     return [current];
   }
@@ -1124,7 +1186,10 @@ _RuleInput? _ruleInputFor(Transaction txn) {
   }
   final merchant = txn.merchantRaw?.trim();
   if (merchant != null && merchant.isNotEmpty) {
-    return _RuleInput(matchType: 'merchant', matchValue: merchant);
+    final normalized = PayeeIdentityKey.normalize(merchant);
+    if (normalized.isNotEmpty) {
+      return _RuleInput(matchType: 'merchant', matchValue: normalized);
+    }
   }
   return null;
 }

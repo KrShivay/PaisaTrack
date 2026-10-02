@@ -224,6 +224,7 @@ class _TransactionDetailScreenState
     if (scope == null || !mounted) return;
 
     final prevCategory = _categoryId;
+    CategoryCorrectionResult? correction;
 
     setState(() {
       _categoryId = chosen.id;
@@ -234,7 +235,7 @@ class _TransactionDetailScreenState
       id: 'cat_detail_${widget.txnId}',
       message: 'Category updated to ${chosen.name}',
       action: (repo) async {
-        await repo!.correctCategory(
+        correction = await repo!.correctCategory(
           txnId: widget.txnId,
           categoryId: chosen.id,
           scope: scope,
@@ -242,11 +243,19 @@ class _TransactionDetailScreenState
         );
       },
       undo: (repo) async {
-        await repo!.updateWithFeedback(
-          txnId: widget.txnId,
-          categoryId: Value(prevCategory),
-          context: 'undo_detail',
-        );
+        final result = correction;
+        if (result != null && !await repo!.undoCategoryCorrection(result)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Could not undo: a newer rule now owns this category.',
+                ),
+              ),
+            );
+          }
+          throw StateError('Category correction is no longer reversible');
+        }
         if (mounted) {
           setState(() => _categoryId = prevCategory);
         }

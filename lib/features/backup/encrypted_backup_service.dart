@@ -36,6 +36,7 @@ const _aesGcmMacLength = 16;
 const _chunkedBackupMagic = <int>[0x50, 0x54, 0x52, 0x4b]; // PTRK
 const _chunkedBackupVersion = 2;
 const _chunkedHeaderMaxBytes = 64 * 1024;
+const _ruleMatchSemantics = 'exact_v1';
 const _archiveRowPageSize = 256;
 const _optionalArchiveTables = {
   'sms_dispositions',
@@ -450,6 +451,7 @@ class EncryptedBackupService {
       'version': _chunkedBackupVersion,
       'archive_version': 3,
       'archive_encoding': 'ndjson',
+      'rule_match_semantics': _ruleMatchSemantics,
       'chunk_size': encryptedBackupChunkSize,
       'kdf': kdf,
       'base_nonce': base64Encode(baseNonce),
@@ -545,6 +547,7 @@ class EncryptedBackupService {
       'version': _chunkedBackupVersion,
       'archive_version': 3,
       'archive_encoding': 'ndjson',
+      'rule_match_semantics': _ruleMatchSemantics,
       'chunk_size': encryptedBackupChunkSize,
       'kdf': {
         'name': 'argon2id',
@@ -685,6 +688,8 @@ class EncryptedBackupService {
       restorer = _ChunkedArchiveRestorer(
         database: _database,
         now: _clock().toUtc(),
+        legacyMerchantRules:
+            header['rule_match_semantics'] != _ruleMatchSemantics,
         maxRowsPerTable: _limits.maxRowsPerTable,
         maxRowsTotal: _limits.maxRowsTotal,
         onRows: (count) {
@@ -1091,6 +1096,7 @@ class EncryptedBackupService {
   Future<Map<String, Object?>> _readArchive() async {
     final archive = {
       'version': 3,
+      'rule_match_semantics': _ruleMatchSemantics,
       'tables': {
         'categories':
             await _rows(_database.categories, tableName: 'categories'),
@@ -1173,6 +1179,8 @@ class EncryptedBackupService {
   }) async {
     final tables = archive['tables']! as Map<String, Object?>;
     final database = _database;
+    final legacyMerchantRules =
+        archive['rule_match_semantics'] != _ruleMatchSemantics;
     final retainedRawSmsIds = <String>{};
 
     await database.transaction(() async {
@@ -1272,7 +1280,9 @@ class EncryptedBackupService {
             .insert(Counterparty.fromJson(row));
       }
       for (final row in _tableRows(tables, 'rules')) {
-        await database.into(database.rules).insert(Rule.fromJson(row));
+        await database
+            .into(database.rules)
+            .insert(_ruleFromBackupRow(row, legacyMerchantRules));
       }
       for (final row in _tableRows(tables, 'feedback')) {
         await database
@@ -1690,6 +1700,7 @@ class _ChunkedArchiveRestorer {
   _ChunkedArchiveRestorer({
     required this.database,
     required this.now,
+    required this.legacyMerchantRules,
     required this.maxRowsPerTable,
     required this.maxRowsTotal,
     required this.onRows,
@@ -1697,6 +1708,7 @@ class _ChunkedArchiveRestorer {
 
   final AppDatabase database;
   final DateTime now;
+  final bool legacyMerchantRules;
   final int maxRowsPerTable;
   final int maxRowsTotal;
   final void Function(int processedRows) onRows;
@@ -1886,7 +1898,9 @@ class _ChunkedArchiveRestorer {
             .into(database.counterparties)
             .insert(Counterparty.fromJson(row));
       case 'rules':
-        await database.into(database.rules).insert(Rule.fromJson(row));
+        await database
+            .into(database.rules)
+            .insert(_ruleFromBackupRow(row, legacyMerchantRules));
       case 'feedback':
         await database
             .into(database.feedback)
@@ -2135,6 +2149,17 @@ List<int> _uint64BytesFor(int value) {
     remaining >>= 8;
   }
   return bytes;
+}
+
+Rule _ruleFromBackupRow(
+  Map<String, dynamic> row,
+  bool legacyMerchantRules,
+) {
+  final normalized = Map<String, dynamic>.from(row);
+  if (legacyMerchantRules && normalized['matchType'] == 'merchant') {
+    normalized['matchType'] = 'merchant_legacy';
+  }
+  return Rule.fromJson(normalized);
 }
 
 int _readUint32(List<int> bytes) =>

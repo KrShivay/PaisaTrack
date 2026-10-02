@@ -1,6 +1,6 @@
 # ADR 0018 — Version capture decisions in existing provenance
 
-Status: accepted for the bounded T-177a milestone, 2026-09-30.
+Status: accepted; v2 decision contract, 2026-10-02.
 
 ## Context
 
@@ -10,8 +10,12 @@ provenance in `transactions.confidence_json`, but the final category/status
 decision has no version. A replay therefore cannot distinguish a versioned
 capture decision from a legacy row. The three providers intentionally differ:
 live may use the optional parser field locator and merchant resolver, while
-history and resume use template+generic parsing, omit merchant resolution, and
-force review status.
+history and resume use template+generic parsing and omit merchant resolution.
+History and resume keep non-rule decisions in review. Rule hits still run the
+status policy so confirmed `auto` decisions are preserved, while `asked` is
+clamped to `needs_review` to keep fixed-review imports out of the Ask queue and
+daily ask budget. Live capture also honors a merchant resolver's
+`needsReview` similarity-alias signal before accepting a rule-backed status.
 
 ## Decision
 
@@ -20,15 +24,29 @@ existing `confidence_json` object:
 
 ```json
 "capture_decision": {
-  "version": "capture-decision-v1",
-  "status_mode": "policy"
+  "version": "capture-decision-v2",
+  "status_mode": "policy",
+  "category_source": "rule"
 }
 ```
 
-The persisted block records `status_mode` as `policy` for live capture or
-`fixed_review` for initial history/resume import. This makes the intentional
-path difference explicit even when the version of the shared decision contract
-is the same.
+The persisted block records the provider's status mode: `policy` for live and
+`fixed_review` for history/resume, including rule hits. A confirmed rule hit
+records `category_source: rule`. Other rows record the categorizer source. The
+write guard may still downgrade a decision when required source evidence is
+missing.
+
+Rule matching uses exact counterparty VPA, exact normalized merchant identity,
+then a merchant word-boundary fallback for `merchant_legacy` rules only when no
+exact merchant rule matched. New rules use `merchant`; schema v19's data-only,
+idempotent migration tags existing `merchant` rows as `merchant_legacy`, with
+no new columns. Backups mark the rule-matching semantics they contain; restore
+tags unmarked older `merchant` rules as legacy and preserves exact rules from
+current backups. Newest wins within each tier. This keeps legacy rules such as
+`amzn` working while a corrected `Swiggy` rule cannot claim `Swiggy Instamart`.
+Existing-and-future corrections use exact normalized payee evidence through
+its existing index; replacing a legacy identity writes an exact `merchant`
+rule.
 
 The version identifies the category and initial transaction-status decision
 contract, including its guards. Parser versions remain in `raw_sms.parser_version`;
@@ -41,8 +59,10 @@ reader returns no version for absent, malformed, or unsupported metadata. Old
 rows are not backfilled or treated as if they used the current version. A
 future behavior change to category/status decision semantics must use a new
 version string; changing parser-only behavior continues to use the parser
-version. The reader accepts only the supported version and status modes; absent,
-malformed, or unknown values remain unversioned.
+version. The reader accepts only v2 and supported status modes; absent,
+malformed, or unknown values remain unversioned. v1 rows remain readable through
+their existing parser, merchant, and category fields but are not treated as v2
+decision evidence.
 
 This is an additive JSON key in an existing text column. It needs no database
 migration or generated code. Existing confidence readers continue to read
@@ -55,7 +75,7 @@ not change.
 
 The version is evidence of which decision contract produced a row, not a
 measurement of accuracy. Replay remains synthetic and selected explicit
-feedback remains non-holdout evidence. This ADR does not change parser,
-merchant-resolution, categorizer, history/resume status, inference, or rollout
-behavior; the existing path differences remain documented and tested. Real
-holdout, physical capture, and rollout decisions remain open under T-177a/f.
+feedback remains non-holdout evidence. v2 changes fixed-review status handling
+for rule hits and restores the live similarity-alias review guard. Parser,
+inference, and rollout behavior remain unchanged. Real holdout, physical
+capture, and rollout decisions remain open under T-177a/f.

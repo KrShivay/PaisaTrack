@@ -109,6 +109,13 @@ counterparties fail closed; seen counterparties rejoin the confidence policy
 and can become automatic. Generic VPA extraction rejects email-domain suffixes.
 Manual entries are confirmed. Category/description corrections write feedback,
 rules, learned aliases, and transaction state in one database transaction.
+Merchant rules match an exact `PayeeIdentityKey` identity, with the same shared
+matcher used for future capture and historical corrections. A correction
+replaces the rule for that normalized identity; legacy duplicate rules resolve
+to the newest row, and undo restores the prior rule state. Confirmed rule hits
+use the live decision policy during history import and catch-up. Other
+historical rows remain review-only. Capture-decision v2 records when a rule
+supplied the category.
 `TransactionCorrectionController` owns the shared repository-action → undo-token
 sequencing used by transaction detail and Sort; each screen supplies only its
 optimistic presentation update and inverse callback.

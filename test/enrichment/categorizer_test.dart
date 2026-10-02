@@ -76,7 +76,7 @@ void main() {
   });
 
   group('ladder (table-driven)', () {
-    test('rules always win over the seed map', () async {
+    test('an exact identity rule wins over the seed map', () async {
       // Seed map says food_dining for swiggy; a user rule overrides it.
       await rules.insert(
         matchType: 'merchant',
@@ -84,8 +84,8 @@ void main() {
         setCategoryId: 'entertainment',
       );
 
-      final result = await categorizer
-          .categorize(_record(merchantRaw: 'Swiggy Instamart'));
+      final result =
+          await categorizer.categorize(_record(merchantRaw: 'Swiggy!'));
       expect(result.categoryId, 'entertainment');
       expect(result.confidence, 1.0);
       expect(result.source, 'rule');
@@ -209,18 +209,142 @@ void main() {
   });
 
   group('rule repository', () {
-    test('merchant match is a normalized substring check', () async {
+    test('legacy merchant rules match on word boundaries after exact tier',
+        () async {
       await rules.insert(
-        matchType: 'merchant',
+        matchType: 'merchant_legacy',
         matchValue: '  SWIGGY ',
         setCategoryId: 'food_dining',
       );
 
-      final match = await rules.findMatch(merchantRaw: 'swiggy instamart');
-      expect(match, isNotNull);
-      expect(match!.setCategoryId, 'food_dining');
+      final match = await rules.findMatch(merchantRaw: 'swiggy!');
+      expect(match?.setCategoryId, 'food_dining');
 
+      expect(
+        (await rules.findMatch(merchantRaw: 'Swiggy Instamart'))?.setCategoryId,
+        'food_dining',
+      );
+      expect(await rules.findMatch(merchantRaw: 'NotSwiggy'), isNull);
       expect(await rules.findMatch(merchantRaw: 'zomato'), isNull);
+    });
+
+    test('new merchant rules are exact and never use legacy fallback',
+        () async {
+      await rules.insert(
+        matchType: 'merchant',
+        matchValue: 'SWIGGY',
+        setCategoryId: 'food_dining',
+      );
+
+      expect(
+        (await rules.findMatch(merchantRaw: 'Swiggy Instamart')),
+        isNull,
+      );
+      expect(
+        (await categorizer.categorize(
+          _record(merchantRaw: 'Swiggy Instamart'),
+        ))
+            .source,
+        'seed',
+      );
+    });
+
+    test('replacing a legacy merchant rule makes it exact', () async {
+      final now = DateTime.utc(2026, 7, 7, 10);
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: 'corrected_txn',
+              ts: now.millisecondsSinceEpoch,
+              amount: 449,
+              direction: 'debit',
+              channel: 'upi',
+              parseSource: 'template',
+              confidenceJson: '{}',
+              status: 'confirmed',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await rules.insert(
+        matchType: 'merchant_legacy',
+        matchValue: 'SWIGGY',
+        setCategoryId: 'food_dining',
+      );
+
+      await rules.replaceForIdentity(
+        matchType: 'merchant',
+        matchValue: 'SWIGGY',
+        setCategoryId: 'groceries',
+        createdFromTxnId: 'corrected_txn',
+        now: now,
+      );
+
+      final stored = await database.select(database.rules).getSingle();
+      expect(stored.matchType, 'merchant');
+      expect(
+        (await rules.findMatch(merchantRaw: 'Swiggy Instamart')),
+        isNull,
+      );
+      expect(
+        (await rules.findMatch(merchantRaw: 'Swiggy'))?.setCategoryId,
+        'groceries',
+      );
+    });
+
+    test('exact normalized merchant tier beats a newer broad fallback',
+        () async {
+      await rules.insert(
+        matchType: 'merchant',
+        matchValue: 'swiggy',
+        setCategoryId: 'food_dining',
+        clock: () => DateTime.utc(2026, 7, 7, 10),
+      );
+      await rules.insert(
+        matchType: 'merchant',
+        matchValue: 'swiggy instamart',
+        setCategoryId: 'groceries',
+        clock: () => DateTime.utc(2026, 7, 7, 9),
+      );
+
+      final match = await rules.findMatch(merchantRaw: 'Swiggy Instamart');
+      expect(match?.setCategoryId, 'groceries');
+    });
+
+    test('newest word-boundary fallback wins within its tier', () async {
+      await rules.insert(
+        matchType: 'merchant_legacy',
+        matchValue: 'swiggy',
+        setCategoryId: 'food_dining',
+        clock: () => DateTime.utc(2026, 7, 7, 9),
+      );
+      await rules.insert(
+        matchType: 'merchant_legacy',
+        matchValue: 'swiggy instamart',
+        setCategoryId: 'groceries',
+        clock: () => DateTime.utc(2026, 7, 7, 10),
+      );
+
+      final match =
+          await rules.findMatch(merchantRaw: 'Swiggy Instamart Express');
+      expect(match?.setCategoryId, 'groceries');
+    });
+
+    test('legacy duplicate identities resolve to the newest rule', () async {
+      await rules.insert(
+        matchType: 'merchant',
+        matchValue: 'SWIGGY',
+        setCategoryId: 'food_dining',
+        clock: () => DateTime.utc(2026, 7, 7, 10),
+      );
+      await rules.insert(
+        matchType: 'merchant',
+        matchValue: 'swiggy',
+        setCategoryId: 'groceries',
+        clock: () => DateTime.utc(2026, 7, 7, 11),
+      );
+
+      final match = await rules.findMatch(merchantRaw: 'Swiggy');
+      expect(match?.setCategoryId, 'groceries');
     });
 
     test('incrementHitCount increments only the applied rule', () async {

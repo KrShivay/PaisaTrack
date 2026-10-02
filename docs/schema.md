@@ -86,6 +86,13 @@ with no inferred ISO code. Currency groups are never implicitly converted or
 summed together. Reminder reconciliation requires the same source-currency
 bucket, including unknown-to-unknown matches for legacy rows.
 
+Schema v19 is data-only (T-177 R1): existing `rules` rows with
+`match_type = 'merchant'` become `'merchant_legacy'`. New and replaced merchant
+rules match the exact normalized payee key; only legacy rules keep the older
+word-boundary fallback, and only when no exact rule matches. Restored archives
+from before v19 are normalized the same way. Regression fixture:
+`test/data/db/app_database_v19_rule_legacy_migration_test.dart`.
+
 Schema v15 adds `payee_evidence` for T-117. It stores one derived row per
 non-empty merchant/VPA evidence field and indexes transaction and normalized
 identity lookups. Existing transactions are backfilled without changing their

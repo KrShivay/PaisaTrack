@@ -58,6 +58,12 @@ void main() {
       () async {
         final database = AppDatabase(NativeDatabase.memory());
         await database.seedDefaultCategories();
+        await RuleRepository(database).insert(
+          matchType: 'merchant',
+          matchValue: 'ALPHA MART',
+          setCategoryId: 'groceries',
+          clock: () => DateTime.utc(2025, 12, 31),
+        );
         final liveEvents = StreamController<Object?>();
         final reader = _FixtureInboxReader(fixture.messages.reversed.toList());
         final marker = _FixtureBackfillMarker(
@@ -201,12 +207,27 @@ void main() {
             isTrue,
           );
 
-          // Historical and resume providers deliberately force review status;
-          // live capture uses the normal decision policy.
+          final ruleHit = transactions.singleWhere(
+            (row) => row.smsId == 't177a_001',
+          );
+          expect(ruleHit.categoryId, 'groceries');
+          expect(ruleHit.status, 'needs_review');
+          final ruleHitConfidence =
+              jsonDecode(ruleHit.confidenceJson) as Map<String, Object?>;
+          expect(
+            (ruleHitConfidence['capture_decision']!
+                as Map<String, Object?>)['category_source'],
+            'rule',
+          );
+
+          // Fixed-review providers keep non-rule decisions in review, preserve
+          // rule auto decisions, and clamp rule asks out of the Ask queue.
           if (mode != _CaptureMode.live) {
             expect(transactions, isNotEmpty);
             expect(
-              transactions.every((row) => row.status == 'needs_review'),
+              transactions
+                  .where((row) => row.smsId != 't177a_001')
+                  .every((row) => row.status == 'needs_review'),
               isTrue,
             );
           }

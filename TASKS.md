@@ -423,6 +423,12 @@ metrics are in `docs/tasks/T-172.md`.
 
 #### Smart transaction assistance — `docs/plans/smart-transaction-assistance.md`
 
+- R1 done 2026-10-02 (rule replacement, exact matching with legacy tier,
+  history rule status). Next: R2 one payee identity across live/history/
+  catch-up (no silent embedding merges); R3 rules and Ask on resolved
+  identity. Audit notes: merchant memory and LLM steps are not wired in
+  `categorizerProvider`.
+
 - [ ] T-177b [P1] Integrate confirmed payee memory with a P2P eligibility guard.
 - [ ] T-177c [P1] Complete correction scopes, rule conflicts, and undo.
 - [ ] T-177d [P1] Add paged grouped review and persistent deferral.
