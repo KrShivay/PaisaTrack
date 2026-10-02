@@ -60,6 +60,7 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [decisions/0017-source-currency-fidelity.md](decisions/0017-source-currency-fidelity.md) | Source currency fidelity | current ADR | T-187 |
 | [decisions/0018-capture-decision-version.md](decisions/0018-capture-decision-version.md) | Capture-decision provenance version | current ADR | T-177a |
 | [decisions/0019-isolated-recovery-qa-identity.md](decisions/0019-isolated-recovery-qa-identity.md) | Isolated identity for physical recovery QA | current ADR | T-179a |
+| [decisions/0020-credit-card-accounting.md](decisions/0020-credit-card-accounting.md) | Credit-card accounting boundaries | proposed ADR | T-190 |
 
 ## Plans
 
@@ -71,9 +72,16 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [sms-intelligence-design.md](sms-intelligence-design.md) | Capture/intelligence design still referenced by open board tasks | current proposal/reference | T-133, T-143 |
 | [ui-gaps-and-redesign.md](ui-gaps-and-redesign.md) | UI conformance design still referenced by open task briefs | current proposal/reference | T-149, T-150, T-151, T-154 |
 
-### Planned (being written)
+### Roadmap and planning (2026-10, proposed)
 
-Concurrent workstreams are creating: `plans/credit-card-accounting.md`, `plans/grounded-ai-validation.md`, `plans/roadmap.md`, `plans/backup-import.md`, `plans/release-gates.md`, `plans/risk-register.md`, `decisions/0020-credit-card-accounting.md`, and task briefs `T-190`, `T-100`, `T-101`, `T-102`, `T-098`, `T-130`. Add these to the inventory after those files land.
+| File | Purpose | Status | Owner task |
+|---|---|---|---|
+| [plans/roadmap.md](plans/roadmap.md) | Sequenced roadmap: dependency graph, critical path, sub-slice ledger, next slice | current proposal; independently reviewed | planning |
+| [plans/release-gates.md](plans/release-gates.md) | Exact T-194 APK trial and T-177a holdout gates | current proposal; gates open | T-194, T-177a |
+| [plans/risk-register.md](plans/risk-register.md) | Consolidated roadmap risk register | current | planning |
+| [plans/backup-import.md](plans/backup-import.md) | Deferred backup import/restore acceptance (isolated QA identity only) | current proposal; deferred | T-170b, PV-05 |
+| [plans/credit-card-accounting.md](plans/credit-card-accounting.md) | Credit-card accounting scenario map and model | current proposal; independently reviewed | T-190 |
+| [plans/grounded-ai-validation.md](plans/grounded-ai-validation.md) | Forecast ranges, Hinglish intents, evaluation gates | current proposal | T-178b–d |
 
 ## Specs
 
@@ -121,6 +129,12 @@ Concurrent workstreams are creating: `plans/credit-card-accounting.md`, `plans/g
 | [tasks/T-172.md](tasks/T-172.md) | Product-value review evidence boundary and waiver | historical; closed with waiver | T-172 |
 | [tasks/T-177.md](tasks/T-177.md) | Smart transaction assistance | current; active | T-177 |
 | [tasks/T-178.md](tasks/T-178.md) | Grounded analysis, forecasts, and assistant | current proposal; Backlog | T-178 |
+| [tasks/T-098.md](tasks/T-098.md) | Category budgets brief | current; Backlog, not Ready | T-098 |
+| [tasks/T-100.md](tasks/T-100.md) | Refund/reversal accounting brief | current; Backlog, not Ready | T-100 |
+| [tasks/T-101.md](tasks/T-101.md) | Expected-payment calendar brief | current; Backlog, not Ready | T-101 |
+| [tasks/T-102.md](tasks/T-102.md) | Statement import brief | current; Backlog, not Ready | T-102 |
+| [tasks/T-130.md](tasks/T-130.md) | Residual coupling brief | current; narrowed | T-130 |
+| [tasks/T-190.md](tasks/T-190.md) | Credit-card accounting phased briefs | current; Backlog, not Ready | T-190 |
 | [tasks/T-189.md](tasks/T-189.md) | Readable Ask prompt list | historical; completed/reviewed brief retained | T-189 |
 | [tasks/T-193.md](tasks/T-193.md) | Legacy currency repair | historical; physical acceptance recorded in `385e056`, UNDO-1 fixed in `58af0a4` | T-193 |
 | [tasks/T-194.md](tasks/T-194.md) | Compressed ARM64 packaging trial | current; In Progress | T-194 |

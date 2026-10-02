@@ -23,7 +23,8 @@ ADRs record durable technical decisions. Status wording below follows each file;
 | [0017](0017-source-currency-fidelity.md) | Source currency fidelity | accepted for T-187 |
 | [0018](0018-capture-decision-version.md) | Capture decision version | accepted; v2 contract |
 | [0019](0019-isolated-recovery-qa-identity.md) | Isolated recovery QA identity | accepted for T-179a harness |
+| [0020](0020-credit-card-accounting.md) | Credit-card accounting boundaries | Proposed; no schema approved |
 
 ADR 0013 was present only in snapshot commit `8800ddd`; its accepted backup decision is represented by ADR 0016. It was never part of the current ADR sequence. The duplicate number 0008 is deliberate in the surviving archive: [archived on-device LLM model pin](../archive/decisions/0008-on-device-llm-model.md) was superseded by ADR 0009, while the current [ADR 0008](0008-bounded-encrypted-backups.md) covers encrypted backups. Do not renumber either file.
 
-The next ADR number, 0020, is allocated to the concurrent credit-card-accounting draft; see the [documentation index](../README.md#planned-being-written).
+ADR 0020 is the Proposed credit-card-accounting draft. The next free ADR number is 0021.

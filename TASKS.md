@@ -226,6 +226,11 @@ later hardening.
     568×320/2×/48dp with the real floating pill. Independent review
     approved the updated diff. Physical-device QA remains pending.
 
+## Ready
+
+<!-- Groomed tasks awaiting an implementer. Empty: nothing is promoted yet;
+     see docs/plans/roadmap.md for the proposed order. -->
+
 ## In Review
 
 <!-- P1 tasks ready for next phase -->
@@ -242,13 +247,12 @@ later hardening.
       Depends: structured eligibility reason model.
       Next: show per-merchant progress, cadence/amount gaps, and fragmented
       identity warnings rather than a bare empty state.
-- [ ] T-130 (@codex) [P2] Reduce architectural coupling and numeric risk.
-      Module: data/domain architecture.
-      Depends: staged migrations.
-      Gap: database↔duplicate-rule import cycle, oversized repository/screens,
-      O(n²) owned-transfer reconciliation, and monetary `double`/SQLite REAL.
-      Next: introduce domain DTOs, split reads/commands/corrections, replace
-      transfer scan with indexed SQL, and plan integer-paise migration.
+- [ ] T-130 (@codex) [P2] Reduce residual architectural coupling.
+      Module: data/domain architecture. Brief: [T-130](docs/tasks/T-130.md).
+      Depends: T-165d interface inventory. T-165b/c/d own the transfer query,
+      integer-paise migration and repository split.
+      Next: map the database↔duplicate-rule import cycle and decompose only
+      confirmed residual seams.
 
 ### Accessibility, security, and release
 - [ ] T-128 (@codex) [P1] Complete accessibility and failure-state coverage.
@@ -278,28 +282,29 @@ later hardening.
 ### Planned product outcomes
 
 - [ ] T-102 (@codex) [P2] Local statement import and reconciliation.
-      Module: new statement import/reconciliation module.
-      Depends: source fingerprint and reconciliation schema.
+      Module: new statement import/reconciliation module. Brief: [T-102](docs/tasks/T-102.md).
+      Depends: T-102a source/fingerprint contract first; T-100a relationship
+      semantics; accepted ADR only if durable schema is needed. Coordinates T-190h.
       Next: specify CSV preview, account mapping, idempotency, guarded matching,
       ambiguity review, and transactional rollback.
 - [ ] T-100 (@codex) [P2] Reimbursement, refund, and reversal tracking.
-      Module: transaction relationships and analytics.
-      Depends: shared net-spending contract from T-126.
-      Next: design additive full/partial/many-link schema and explained net
-      totals without mutating source transactions.
+      Module: transaction relationships and analytics. Brief: [T-100](docs/tasks/T-100.md).
+      Depends: T-100a audit and accepted accounting contract; PV-04
+      explanations; T-165c only if amount representation is touched.
+      T-126/PV-02 is presentation evidence, not a net-spending contract.
+      Next: define canonical net totals and reversible source-preserving links.
 - [ ] T-101 (@codex) [P3] Recurring calendar and future-message detection.
-      Module: capture and expected-event/recurring domain.
-      Depends: expected events stored separately from settled transactions.
-      Next: design reminder deduplication, debit settlement matching, snooze,
-      cancel, missed, and price-change states.
+      Module: existing expected-event store/matcher and review UI. Brief: [T-101](docs/tasks/T-101.md).
+      Depends: T-101a gap audit; reuse the existing T-138 expected-event pipeline.
+      Next: snooze, cancel, missed and price-change states with guarded
+      settlement matching; expected events never enter settled totals.
 - [ ] T-098 (@codex) [P3] Monthly category budgets.
-      Module: dedicated budget schema/repository/UI.
-      Depends: T-100 and T-126.
+      Module: dedicated budget schema/repository/UI. Brief: [T-098](docs/tasks/T-098.md).
+      Depends: T-100 canonical net contract and an accepted budget ADR.
       Gap: the current overall monthly budget/merchant-cap prototype is not this
       feature and uses `baselines`.
-      Next: design per-category/per-month limits, net refund/reimbursement
-      semantics, remaining/threshold/projection state, and migration away from
-      prototype storage.
+      Next: per-category/per-month limits, currency, eligibility and safe
+      migration away from prototype storage.
 - [ ] T-096 (@codex) [P3] Tolerant free-text category resolution.
       Module: assistant/category identity.
       Depends: stable category aliases.
@@ -390,6 +395,9 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 <!-- Groom future work here before promoting it to Ready. -->
 
+Sequenced roadmap (proposed): [docs/plans/roadmap.md](docs/plans/roadmap.md);
+release/holdout gates: [release-gates.md](docs/plans/release-gates.md).
+
 Before promoting an item to `Ready`, keep its brief actionable and include
 acceptance evidence, dependencies, privacy impact, and rollback path. Keep one
 implementation task in progress at a time.
@@ -460,7 +468,7 @@ Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
 - [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.
 - [ ] T-164d [P2] Add “show excluded” Activity filter and detail explanation without letting excluded rows alter spending/budget totals.
 - [ ] T-165a [P1] Profile 10k/50k transaction Activity rendering and query latency on release hardware; record thresholds and baseline evidence.
-- [ ] T-165b [P1] Replace O(n²) owned-transfer reconciliation with an indexed SQL candidate query and adversarial same-amount/date tests.
+- [ ] T-165b [P1] Replace O(n²) owned-transfer reconciliation with an indexed SQL candidate query and adversarial same-amount/date tests; transactionally rebuild `ownedTransferId` and generated `transfer_leg` edges (stale edges are never deleted today), preserve user-authored links, leave ambiguous pairs unlinked, and record the query plan. Next code slice per [roadmap](docs/plans/roadmap.md#next-implementation-slice); absorbs T-190b1.
 - [ ] T-165c [P2] Plan and ADR an integer-paise migration, including lossless conversion, compatibility, rollback, and migration tests.
 - [ ] T-165d [P2] Split `TransactionRepository` reads/commands/corrections behind domain DTOs; prove existing provider and migration behavior.
 - [ ] T-166a [P1] Implement explicit salary income analytics card and period totals that include credits but never treat transfers/refunds as salary.

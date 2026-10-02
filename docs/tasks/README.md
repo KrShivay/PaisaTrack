@@ -18,7 +18,13 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 | T-161 | SMS capture outcome counts | [T-161.md](T-161.md) | Future children remain on board |
 | T-162 | Salary-credit ingestion coverage | [T-162.md](T-162.md) | Future children remain on board |
 | T-177 | Smart transaction assistance | [T-177.md](T-177.md) | Active; T-177a gates remain open |
-| T-178 | Grounded analysis, forecasts, assistant | [T-178.md](T-178.md) | Proposed / Backlog |
+| T-178 | Grounded analysis, forecasts, assistant | [T-178.md](T-178.md) | Backlog; b–d plan in [grounded-ai-validation](../plans/grounded-ai-validation.md) |
+| T-098 | Monthly category budgets | [T-098.md](T-098.md) | Backlog; groomed, not Ready |
+| T-100 | Refund/reversal accounting | [T-100.md](T-100.md) | Backlog; groomed, not Ready |
+| T-101 | Expected-payment calendar | [T-101.md](T-101.md) | Backlog; groomed, not Ready |
+| T-102 | Statement import | [T-102.md](T-102.md) | Backlog; groomed, not Ready |
+| T-130 | Residual coupling | [T-130.md](T-130.md) | Open; narrowed to residual seams |
+| T-190 | Credit-card accounting | [T-190.md](T-190.md) | Backlog; phased a1–h2, not Ready |
 | T-193 | Legacy currency repair | [T-193.md](T-193.md) | Complete: physical acceptance `385e056`; UNDO-1 follow-up fixed in `58af0a4` |
 | T-194 | Compressed ARM64 packaging trial | [T-194.md](T-194.md) | In Progress |
 
