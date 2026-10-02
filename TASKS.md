@@ -425,8 +425,9 @@ metrics are in `docs/tasks/T-172.md`.
 
 - R1 done 2026-10-02 (rule replacement, exact matching with legacy tier,
   history rule status). Next: R2 one payee identity across live/history/
-  catch-up (no silent embedding merges); R3 rules and Ask on resolved
-  identity. Audit notes: merchant memory and LLM steps are not wired in
+  catch-up — done 2026-10-02; R3 rules and Ask on resolved identity
+  (next). Deferred: v20 re-key of stored payee keys + reversible backfill of
+  unresolved imported rows. Audit notes: merchant memory and LLM steps are not wired in
   `categorizerProvider`.
 
 - [ ] T-177b [P1] Integrate confirmed payee memory with a P2P eligibility guard.
