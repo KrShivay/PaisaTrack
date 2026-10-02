@@ -585,11 +585,20 @@ void main() {
       hasMore: true,
       size: const Size(602, 271),
     );
+    // Short viewports scroll the header with the list, so the trailing
+    // action is built lazily; bring it on screen before measuring.
+    await tester.scrollUntilVisible(
+      find.text('Load more transactions'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     final button = find.ancestor(
       of: find.text('Load more transactions'),
       matching: find.byType(OutlinedButton),
     );
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
     final semanticHeight = tester.getSemantics(button).rect.height;
     semantics.dispose();
     expect(semanticHeight, greaterThanOrEqualTo(48));
