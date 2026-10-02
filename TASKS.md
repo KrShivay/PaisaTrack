@@ -125,38 +125,6 @@ later hardening.
     SMS/DB data, phone mutation, or APK change.
 
 
-- [ ] T-164e [P0] Complete transaction timestamp-display parity across Activity
-      grouping, detail, export, search/date filters, imports, and SMS capture.
-  - Completed bounded Activity slice: group keys and currency totals use the
-    full local calendar date, prior-year headings include the year, and
-    Today/Yesterday labels use DST-safe calendar-day arithmetic. Row order and
-    stored instants are preserved; independent review approved this slice.
-  - Full acceptance remains open across Activity grouping, detail, export,
-    search/date filters, imports, and SMS capture. Verify date semantics
-    without changing stored instants or treating date-only SMS values as UTC
-    instants. The Activity/Dashboard row-clock slice is also complete; see
-    WORKLOG.md for verification evidence.
-  - Completed SMS body-date/picker/insights-key slice (2026-10-01): date-only
-    SMS body values resolve through `FinancialCalendar.resolveDateOnly`
-    (same/future local day keeps `receivedAt`; earlier day uses local midnight)
-    for template and generic parsing; live, history import and catch-up share
-    `financialCalendarProvider`. Dashboard range-picker seeds use local dates
-    clamped to today; Trends/Dashboard insight queries use the period
-    calendar's month key (IST previously read the prior month). Stored rows are
-    not reinterpreted. Dedup consequence, covered by tests: identical body
-    dates are no longer identity evidence, so body-dated SMS >10 minutes apart
-    do not auto-pair. Independent review approved.
-  - Completed detail/export/manual-entry slice (2026-10-02): detail reuses
-    `format.dart` clock/month helpers; both CSV exporters share one
-    calendar-aware formatter and append a `UTC Offset` column (`UTC+05:30`,
-    spreadsheet-safe); manual entry keeps the time of day when the date
-    changes. Six-month trend bounds moved onto `FinancialCalendar` in T-178a
-    a1.
-  - Still open: `TransactionFilters.matches` compares device-local dates via
-    `toLocal()` instead of the injected `FinancialCalendar`; there is no
-    statement/CSV importer yet, so import date semantics remain to be
-    specified when one is built.
-
 - [ ] T-194 [P1] Measure installed storage and cold-start for the compressed
       ARM64 APK-size trial.
   - The signed v2011 candidate is on branch `codex/apk-size-trial` at commit

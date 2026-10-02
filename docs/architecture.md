@@ -250,3 +250,10 @@ separates source facts, user-confirmed labels, suggestions, and forecast estimat
 requires scoped correction/undo; and limits model output to supported claims.
 Current SQL arithmetic, evidence preservation and offline fallback remain the
 boundaries. No new tables, model, runtime or dependency are introduced here.
+
+### Future importers (T-164e contract)
+
+There is no statement or CSV importer yet. Any importer must parse date-only
+values as local calendar days through `FinancialCalendar` (never as UTC
+midnight instants), keep source clock times when present, and store UTC
+epoch milliseconds like SMS capture and manual entry.

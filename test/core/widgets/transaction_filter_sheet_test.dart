@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/core/widgets/transaction_filter_sheet.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 
 void main() {
+  const calendar = FinancialCalendar.fixed(Duration(hours: -5));
   final item = TransactionListItem(
     id: 'txn_1',
     ts: DateTime.utc(2026, 7, 6, 9),
@@ -76,6 +78,7 @@ void main() {
     expect(
       filters.matches(
         item,
+        calendar: calendar,
         recurringMerchantIds: const {},
         anomalyTransactionIds: const {},
       ),
@@ -84,10 +87,58 @@ void main() {
     expect(
       filters.matches(
         unrelated,
+        calendar: calendar,
         recurringMerchantIds: const {},
         anomalyTransactionIds: const {},
       ),
       isFalse,
+    );
+  });
+
+  test('date range includes the selected start and end calendar days', () {
+    final range = DateTimeRange(
+      start: DateTime(2026, 7, 2),
+      end: DateTime(2026, 7, 2),
+    );
+    final filters = TransactionFilters(dateRange: range);
+    final startOfDay = TransactionListItem(
+      id: 'start',
+      ts: DateTime.utc(2026, 7, 2, 5, 30), // 00:30 at UTC−05:00
+      amount: item.amount,
+      direction: item.direction,
+      displayName: item.displayName,
+      categoryName: item.categoryName,
+      categoryId: item.categoryId,
+      categoryIcon: item.categoryIcon,
+    );
+    final endOfDay = TransactionListItem(
+      id: 'end',
+      ts: DateTime.utc(2026, 7, 3, 4, 59), // 23:59 at UTC−05:00
+      amount: item.amount,
+      direction: item.direction,
+      displayName: item.displayName,
+      categoryName: item.categoryName,
+      categoryId: item.categoryId,
+      categoryIcon: item.categoryIcon,
+    );
+
+    expect(
+      filters.matches(
+        startOfDay,
+        calendar: calendar,
+        recurringMerchantIds: const {},
+        anomalyTransactionIds: const {},
+      ),
+      isTrue,
+    );
+    expect(
+      filters.matches(
+        endOfDay,
+        calendar: calendar,
+        recurringMerchantIds: const {},
+        anomalyTransactionIds: const {},
+      ),
+      isTrue,
     );
   });
 
@@ -112,6 +163,7 @@ void main() {
     expect(
       filters.matches(
         item,
+        calendar: calendar,
         recurringMerchantIds: const {'merchant_zomato'},
         anomalyTransactionIds: const {'txn_1'},
       ),
@@ -120,6 +172,7 @@ void main() {
     expect(
       filters.matches(
         item,
+        calendar: calendar,
         recurringMerchantIds: const {'merchant_zomato'},
         anomalyTransactionIds: const {},
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../financial_calendar.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../theme/app_tokens.dart';
 import 'bloom/bloom_sheet_scaffold.dart';
@@ -149,21 +150,20 @@ class TransactionFilters {
 
   bool matches(
     TransactionListItem item, {
+    required FinancialCalendar calendar,
     required Set<String> recurringMerchantIds,
     required Set<String> anomalyTransactionIds,
   }) {
     if (ids.isNotEmpty && !ids.contains(item.id)) return false;
     final range = dateRange;
     if (range != null) {
-      final local = item.ts.toLocal();
-      final day = DateTime(local.year, local.month, local.day);
-      final start = DateTime(
-        range.start.year,
-        range.start.month,
-        range.start.day,
-      );
-      final end = DateTime(range.end.year, range.end.month, range.end.day);
-      if (day.isBefore(start) || day.isAfter(end)) return false;
+      final start = calendar
+          .day(range.start.year, range.start.month, range.start.day)
+          .start;
+      final end =
+          calendar.day(range.end.year, range.end.month, range.end.day).end;
+      final timestamp = item.ts.toUtc();
+      if (timestamp.isBefore(start) || !timestamp.isBefore(end)) return false;
     }
     if (categoryId != null && item.categoryId != categoryId) return false;
     if (merchant != null && item.displayName != merchant) return false;

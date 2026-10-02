@@ -1,5 +1,16 @@
 # Current Handoff
 
+## 2026-10-02 — T-164e closed (filter dates on FinancialCalendar)
+
+- `TransactionFilters.matches` compared device-local dates; it now uses the
+  injected `FinancialCalendar` with half-open day bounds (inclusive end day),
+  with 00:30/23:59 regressions under an offset that differs from the device.
+  With the earlier slices (SMS body dates, picker, insights month key,
+  detail/export/manual entry) every T-164e surface now follows one calendar
+  contract; there is no importer yet, so docs/architecture.md records the
+  contract a future importer must follow. Verified: analyzer clean, full
+  suite green. The a3 entry is in Git history (`5fe9f85`).
+
 ## 2026-10-02 — T-178a a4 typed evidence-linked claims (T-178a closed)
 
 - Insights now carry a typed claim in the existing payload (window,
@@ -34,22 +45,3 @@
   suites green under TZ=UTC and America/New_York. One review round (CSV
   offset formula bug, dev exporter calendar injection, clock flake in test).
   The a2 entry is in Git history (`99c1397`).
-
-## 2026-10-02 — T-178a a3 derived-read freshness
-
-- Insights, anomalies, forecasts and recurring series were refreshed only
-  nightly or after not-transaction changes, so edits left Trends stale for up
-  to a day, and anomaly baselines froze partial periods and ignored zero-spend
-  periods. `DerivedReadsService` now rebuilds them after every relevant write
-  (debounced, single-flight, startup reconciliation, backfill suspension)
-  and the nightly job shares its stages. Anomaly baselines are rebuilt from
-  completed zero-filled periods. User-paused recurring series keep their
-  status across rebuilds and amount drift.
-- Impact: `SmsIngestor`/`AppDatabase` CRITICAL; detectors, insights engine,
-  `SmsDispositionRepository` HIGH. Verified: analyzer clean, full suite
-  1031/1031, intelligence/data 231/231 under TZ=UTC and America/New_York.
-  Three review rounds (startup blanking, double trailing runs, freshness
-  race, lost wakeup across suspension, same-merchant series collision all
-  fixed with fail-before tests). Also restores the AGENTS.md/CLAUDE.md
-  GitNexus block that `f6bdc6c` overwrote with a worktree index name.
-- The a1 entry is in Git history (`0e6d8c4`).
