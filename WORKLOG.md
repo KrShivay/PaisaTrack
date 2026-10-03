@@ -1,6 +1,19 @@
 # Current Handoff
 
-## 2026-10-03 — Cloud session: T-195 source SMS provenance
+## 2026-10-03 — @claude review: T-195 PASS
+
+- T-195 (`126f7d4`) review PASS: ADR 0021 matches code; one `RawSmsRetention`
+  predicate drives nightly purge, backup export/restore and the unreadable
+  count; the relinker links only exact evidence matches, atomically, and never
+  edits transactions; no schema change; regression tests read and
+  non-vacuous (match/skip/ambiguous/paused/conflict/idempotent, nightly,
+  backup). Tests were not re-run in this session (shell approval
+  unavailable); relied on the recorded 1185/1185 evidence.
+- Removed T-195 from the board. Its only open item, the owner-phone re-link
+  check, moved into T-170b. Nothing else In Review; T-196–T-198 are Ready
+  for @codex.
+
+## 2026-10-03 — Cloud session: T-195 provenance, T-196 details card
 
 - T-195 (ADR 0021): SMS behind a transaction or "Not a transaction" are kept;
   unlinked SMS expire after 7 days (flag `raw_sms_retention_days` retired);
@@ -9,7 +22,11 @@
   Shared `readInboxPages` now drives history import, catch-up and re-link.
   Backup +~340 B per kept SMS (16 MiB cap ≈ 12k SMS-backed transactions).
 - Evidence: suite 1185/1185, NY-TZ touched dirs 642/642, analyze 0.
-  Owner phone still needs the re-link check. The T-177 R3 entry is in Git
+  Owner phone still needs the re-link check.
+- T-196: "TRANSACTION DETAILS" card on the detail screen (stored fields only,
+  48dp copy buttons); suite 1192/1192. In Review; owner-phone check open.
+- Push from the cloud failed (403, Claude GitHub App has no repo access);
+  commits are local until access is fixed. The T-177 R3 entry is in Git
   history (`c381756`).
 
 ## 2026-10-03 — Owner-phone defects fixed; release 0.1.6+2015
@@ -36,23 +53,5 @@
   fix `37beb17`): suite 1176/1176, installed in place, published
   `apk-downloads` `0e151f2`.
 
-## 2026-10-03 — Roadmap planning and docs cleanup (no code)
-
-- Added proposed plans: [roadmap](docs/plans/roadmap.md) (graph, sub-slice
-  ledger, next slice), [release gates](docs/plans/release-gates.md) (T-194,
-  T-177a holdout), [risk register](docs/plans/risk-register.md),
-  [backup import](docs/plans/backup-import.md) (deferred),
-  [credit-card accounting](docs/plans/credit-card-accounting.md) + ADR 0020
-  (Proposed) + briefs T-190a1–h2, and
-  [grounded-AI validation](docs/plans/grounded-ai-validation.md) (T-178b–d).
-  Groomed briefs T-100/101/102/098/130; the board had nothing Ready at that
-  handoff. The later owner requests T-195–T-198 are Ready.
-- Docs: [index](docs/README.md), [ADR index](docs/decisions/README.md) (0013
-  unused, next 0021), `scripts/check_doc_links.py` (clean), archived the
-  2026-08 value review, restored the missing `## Ready` heading.
-- Reviews: T-190 and roadmap each passed independent Luna review after
-  revision (T-190 R2 approve-with-changes, applied; roadmap R3 accept).
-- Next code slice: T-165b (+ stale `transfer_leg` cleanup) as a parallel data
-  lane; T-177a holdout stays the product-priority gate. Owner decisions are
-  listed in the roadmap and T-190 plan. No app tests run (docs only).
-  The T-177 R1 entry is in Git history (`239c2d2`).
+The roadmap-planning entry (plans, ADR 0020, T-190 briefs) is in Git history
+(`c381756` and earlier).

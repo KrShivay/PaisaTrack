@@ -30,13 +30,32 @@ class PaymentSourceSummary {
   final int transferCount;
 
   String get displayName =>
-      nickname?.trim().isNotEmpty == true ? nickname!.trim() : maskedIdentifier;
+      paymentSourceDisplayName(nickname, maskedIdentifier);
 }
+
+/// The user's nickname for a payment source, else its stored masked id.
+String paymentSourceDisplayName(String? nickname, String maskedIdentifier) =>
+    nickname?.trim().isNotEmpty == true ? nickname!.trim() : maskedIdentifier;
 
 class PaymentSourceRepository {
   const PaymentSourceRepository(this._database);
 
   final AppDatabase _database;
+
+  /// Watches the display name of one source; null when it does not exist.
+  Stream<String?> watchDisplayName(String id) {
+    return (_database.select(_database.paymentSources)
+          ..where((row) => row.id.equals(id)))
+        .watchSingleOrNull()
+        .map(
+          (source) => source == null
+              ? null
+              : paymentSourceDisplayName(
+                  source.nickname,
+                  source.maskedIdentifier,
+                ),
+        );
+  }
 
   Stream<List<PaymentSourceSummary>> watchSources() {
     final query = _database.select(_database.paymentSources).join([

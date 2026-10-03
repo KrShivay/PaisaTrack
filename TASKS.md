@@ -231,9 +231,6 @@ later hardening.
 <!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
      proposed order of the remaining backlog. -->
 
-- [ ] T-196 [P1] Transaction details card on the detail screen: UPI ID/VPA,
-      reference/RRN, channel, account, balance, copyable.
-      Details: [T-196](docs/tasks/T-196.md).
 - [ ] T-197 [P1] Activity keeps its scroll position and loaded pages after an
       edit (owner bug). Details: [T-197](docs/tasks/T-197.md).
 - [ ] T-198 [P1] Readable payee names for VPA-only rows; no repeated
@@ -243,16 +240,16 @@ later hardening.
 
 <!-- P1 tasks ready for next phase -->
 
-- [ ] T-195 [P0] Keep source SMS provenance (ADR 0021). Code merged: linked
-      SMS are never purged, unlinked SMS go after 7 days, backups carry linked
-      SMS, Settings → "Restore SMS sources" re-links exact inbox matches.
-      Evidence (cloud): regression tests failed first (nightly, backup x3,
-      currency repair, unreadable copy); full suite 1185/1185; touched dirs
-      642/642 under `TZ=America/New_York`; analyze 0, format, diff check,
-      doc links clean; backup +340 B per kept SMS recorded in ADR 0021.
-      Open: owner-phone check — run "Restore SMS sources", confirm a
-      transaction older than 30 days shows its SMS. Details:
-      [T-195](docs/tasks/T-195.md).
+- [ ] T-196 [P1] Transaction details card on the detail screen. Code
+      merged: "TRANSACTION DETAILS" lists only stored fields (UPI ID/VPA,
+      payee in SMS, reference/RRN, channel, account hint, payment source,
+      direction, date, balance, currency, non-settled status, parser), each
+      with a 48dp copy button and "Label: value" semantics; the technical
+      disclosure no longer repeats them. Evidence (cloud): card/screen tests
+      red before the card existed; 2.0x landscape 964x434 without overflow;
+      full suite 1192/1192; NY-TZ transactions + repositories 225/225.
+      Open: independent review; owner-phone check.
+      Details: [T-196](docs/tasks/T-196.md).
 
 ### Scale, privacy, and maintainability
 
@@ -513,7 +510,7 @@ Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
 #### Reliability, privacy, and release readiness
 
 - [ ] T-170a [P0] Add fault-injection tests for database-write, parser, channel, lifecycle, and native inbox query failures; prove retries are bounded and idempotent.
-- [ ] T-170b [P1] Verify ADR 0021 retention on a device: linked SMS survive the nightly purge, unlinked SMS go after 7 days, backups include linked SMS, deletion and recovery behave. Host tests landed with T-195; device-backed evidence is still required.
+- [ ] T-170b [P1] Verify ADR 0021 retention on a device: linked SMS survive the nightly purge, unlinked SMS go after 7 days, backups include linked SMS, deletion and recovery behave. Host tests landed with T-195 (review PASS 2026-10-03); device-backed evidence is still required, including the owner-phone check from T-195: run Settings → "Restore SMS sources" and confirm a transaction older than 30 days shows its SMS.
 - [ ] T-170c [P1] Add release-build smoke tests for permission recovery, first import, resume catch-up, 10k history paging, and salary credit visibility.
 - [ ] T-170d [P2] Create a manual QA matrix for supported senders/templates, unsupported-sender telemetry, and false-positive privacy checks.
 - [ ] T-171a [P1] Add CI shards for Flutter unit/widget, Android unit, migration, and fixture-contract tests with deterministic failure artifacts.

@@ -96,6 +96,29 @@ void main() {
       expect(find.byType(BloomAmount), findsOneWidget);
     });
 
+    testWidgets('T-196 shows a copyable transaction details card',
+        (tester) async {
+      final detail = TransactionDetail(
+        txn: testDetail.txn.copyWith(
+          counterpartyVpa: const Value('payzomato@hdfcbank'),
+          refId: const Value('624512345678'),
+        ),
+        merchantName: 'Zomato',
+        categoryName: 'Food & Dining',
+        parseConfidence: 0.98,
+        confidenceTrail: TransactionConfidenceTrail.fromJson('{}'),
+        isLowTrustParse: false,
+      );
+      await pumpDetail(tester, detail);
+
+      final card = find.text('TRANSACTION DETAILS');
+      expect(card, findsOneWidget);
+      await tester.ensureVisible(card);
+      expect(find.text('payzomato@hdfcbank'), findsOneWidget);
+      expect(find.text('624512345678'), findsOneWidget);
+      expect(find.byTooltip('Copy UPI ID / VPA'), findsOneWidget);
+    });
+
     testWidgets(
         'T-177a confirms parsed SMS from detail and updates template trust only',
         (tester) async {
@@ -357,7 +380,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.textContaining('Channel: upi'), findsOneWidget);
+      expect(find.textContaining('Review status: confirmed'), findsOneWidget);
       expect(find.textContaining('CONFIDENCE: 98%'), findsOneWidget);
     });
 
@@ -407,7 +430,7 @@ void main() {
       expect(find.text('Paid Rs 449 to Swiggy on A/c XX1234'), findsOneWidget);
     });
 
-    testWidgets('T-147a: renders retention degradation copy for purged SMS row',
+    testWidgets('T-147a: renders missing-source copy without a retention claim',
         (tester) async {
       final purgedDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(smsId: const Value('sms_002')),
@@ -423,7 +446,7 @@ void main() {
 
       expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
       expect(
-        find.text('Original message no longer stored — kept for 30 days'),
+        find.text('Original message is not stored on this phone'),
         findsOneWidget,
       );
     });

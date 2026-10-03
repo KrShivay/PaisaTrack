@@ -89,7 +89,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.textContaining('Channel: upi'), findsOneWidget);
+      expect(find.textContaining('Review status: confirmed'), findsOneWidget);
       expect(find.textContaining('CONFIDENCE: 98%'), findsOneWidget);
     });
   });

@@ -21,6 +21,7 @@ import '../../data/repositories/transaction_repository.dart';
 import '../../enrichment/source_currency_repair_service.dart';
 import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
+import 'detail/transaction_details_card.dart';
 import 'currency_repair_providers.dart';
 import 'transaction_correction_controller.dart';
 import 'transaction_correction_sheet.dart';
@@ -781,6 +782,20 @@ class _TransactionDetailScreenState
                       },
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  // Stored transaction fields, each copyable (T-196)
+                  TransactionDetailsCard(
+                    transaction: txn,
+                    title: displayName,
+                    paymentSourceName: txn.paymentSourceId == null
+                        ? null
+                        : ref
+                            .watch(
+                              paymentSourceNameProvider(txn.paymentSourceId!),
+                            )
+                            .valueOrNull,
+                  ),
+                  const SizedBox(height: 20),
                   // WHERE THIS CAME FROM (T-147a & T-147b) - First-class source message section
                   if (txn.smsId != null) ...[
                     _WhereThisCameFromSection(
@@ -955,7 +970,7 @@ class _TransactionDetailScreenState
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Channel: ${txn.channel} · Status: ${txn.status}',
+                            'Review status: ${txn.status}',
                             style: AppTheme.bloomMono(
                               12,
                               FontWeight.w400,
@@ -964,28 +979,6 @@ class _TransactionDetailScreenState
                                   : AppColorTokens.inkSecondary,
                             ),
                           ),
-                          if (txn.refId != null && txn.refId!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Ref ID: ${txn.refId}',
-                              style: AppTheme.bloomMono(12, FontWeight.w400),
-                            ),
-                          ],
-                          if (txn.counterpartyVpa != null &&
-                              txn.counterpartyVpa!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'VPA: ${txn.counterpartyVpa}',
-                              style: AppTheme.bloomMono(12, FontWeight.w400),
-                            ),
-                          ],
-                          if (txn.balanceAfter != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Balance After: ₹${txn.balanceAfter!.toStringAsFixed(2)}',
-                              style: AppTheme.bloomMono(12, FontWeight.w400),
-                            ),
-                          ],
                           if (detail.parseConfidence != null) ...[
                             const SizedBox(height: 10),
                             Text(
@@ -1234,7 +1227,7 @@ class _WhereThisCameFromSection extends StatelessWidget {
         : const Color(0xFF4E7A69);
 
     final displayBody =
-        rawSmsBody ?? 'Original message no longer stored — kept for 30 days';
+        rawSmsBody ?? 'Original message is not stored on this phone';
 
     final infoLine = parserSourceLabel(parseSource, parseConfidence);
 

@@ -119,4 +119,30 @@ void main() {
     expect(visible.single.paymentSourceName, 'Daily card');
     expect(visible.single.includeInAnalytics, isFalse);
   });
+
+  test('watchDisplayName follows nickname edits and falls back to the mask',
+      () async {
+    final now = DateTime.utc(2026, 9, 1);
+    await database.into(database.paymentSources).insert(
+          PaymentSourcesCompanion.insert(
+            id: 'src_1',
+            kind: 'bank',
+            maskedIdentifier: 'XX1234',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    final names = <String?>[];
+    final sub = repository.watchDisplayName('src_1').listen(names.add);
+    addTearDown(sub.cancel);
+    await pumpEventQueue();
+
+    await (database.update(database.paymentSources)
+          ..where((row) => row.id.equals('src_1')))
+        .write(const PaymentSourcesCompanion(nickname: Value('HDFC savings')));
+    await pumpEventQueue();
+
+    expect(names, ['XX1234', 'HDFC savings']);
+    expect(await repository.watchDisplayName('missing').first, isNull);
+  });
 }
