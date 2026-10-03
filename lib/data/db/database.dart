@@ -104,6 +104,10 @@ class AppDatabase extends _$AppDatabase {
             .toList(growable: false),
         mode: InsertMode.insertOrIgnore,
       );
+      batch.deleteWhere(
+        featureFlags,
+        (row) => row.key.isIn(AppConstants.retiredFeatureFlagKeys),
+      );
     });
   }
 

@@ -11,30 +11,33 @@ PaisaTrack is local-first:
 - After the versioned initial import, open/resume catch-up reads only messages
   newer than the first known SMS. Live receiver and catch-up paths share the
   same on-device parser and encrypted store.
-- On-device `raw_sms` retention is capped by
-  `AppConstants.rawSmsRetentionDays`. Encrypted backups now include only raw
-  SMS rows whose `purge_after` is still in the future; expired rows are also
-  skipped if encountered during restore. Backup files are capped at 32 MiB,
-  decoded ciphertext/plaintext at 16 MiB, and rows at 50,000 per table and
-  200,000 per archive. Settings transfers bounded authenticated chunks through
-  the Android document picker; Drift rows are paged on export and restored
-  transactionally on import. No plaintext archive temp file is created, and a
-  cancelled or incomplete destination is never reported as a completed backup.
-- The current retention default is 30 days. Ready task
-  [T-195](tasks/T-195.md) records the owner's decision to retain source SMS
-  linked to transactions or durable dispositions indefinitely and re-link
-  already-purged provenance. Until that work ships, the current 30-day expiry
-  and backup filtering remain in effect; the policy for unlinked SMS is still
-  to be decided.
+- Source SMS provenance is kept ([ADR 0021](decisions/0021-retain-source-sms-provenance.md)):
+  the SMS behind a transaction or a "Not a transaction" disposition stays in
+  the encrypted local database for as long as that record exists. Any other
+  raw SMS (unparsed, unreadable, never linked) is deleted 7 days after receipt
+  (`AppConstants.rawSmsRetentionDays`).
+- Encrypted backups include every linked source SMS plus unlinked SMS whose
+  `purge_after` is still in the future; restore removes expired unlinked rows.
+  Each kept SMS adds roughly 340 bytes to a backup. Backup files are capped at
+  32 MiB, decoded ciphertext/plaintext at 16 MiB, and rows at 50,000 per table
+  and 200,000 per archive. Settings transfers bounded authenticated chunks
+  through the Android document picker; Drift rows are paged on export and
+  restored transactionally on import. No plaintext archive temp file is
+  created, and a cancelled or incomplete destination is never reported as a
+  completed backup.
+- Settings → "Restore SMS sources" re-reads the inbox on the device, through
+  the same reader and permission as history import, to re-link source SMS
+  that the earlier 30-day purge removed. It links only exact matches, never
+  edits transactions, skips paused senders, and reports only counts.
 - A user's “Not a transaction” correction persists the provider SMS ID,
   transaction ID, disposition, and correction time in the encrypted local
-  database and backup. It stores no message body, sender, or receipt time, and
-  does not extend raw-SMS retention. The correction remains reversible in
-  Settings after the original message expires.
+  database and backup. The disposition itself stores no message body, sender,
+  or receipt time; the source SMS it refers to is kept as provenance
+  (ADR 0021). The correction remains reversible in Settings.
 - The user-facing "Messages we couldn't read" surface reads only allowlisted
   failure reasons and expiry metadata. It reports retained counts without
   loading bodies, senders, or identifiers, and excludes rows past their expiry
-  even before nightly cleanup runs.
+  even before nightly cleanup runs. These unlinked rows expire after 7 days.
 - There is no cloud inference path (ADR 0002). No network call ever carries user
   data; the only permitted network use is the optional one-time download of
   open-weight model files. All intelligence — parsing, classification,

@@ -24,7 +24,10 @@ user-facing document exports use an additive binary streaming envelope
 - only the shipped production Argon2id profile is accepted:
   19,456 KiB memory, parallelism 1, iterations 2, and 32-byte output;
 - export retains a raw SMS row only while `purge_after` is strictly after the
-  captured export time; restore also skips expired rows.
+  captured export time; restore also skips expired rows. Amended by
+  [ADR 0021](0021-retain-source-sms-provenance.md): this applies only to
+  unlinked SMS; the source SMS of a transaction or disposition is always
+  exported and restored.
 
 File length is checked before `readAsBytes`, and ciphertext/row counts are
 checked before Argon2 derivation or database mutation. Limits fail with stable,

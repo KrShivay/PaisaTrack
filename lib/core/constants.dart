@@ -16,7 +16,6 @@ class AppConstants {
     'ask_now_daily_budget': askNowDailyBudget,
     'ask_amount_threshold': askAmountThreshold,
     'ask_merchant_txn_count': askMerchantTxnCount,
-    'raw_sms_retention_days': rawSmsRetentionDays,
     'sms_history_import_page_size': smsHistoryImportPageSize,
     'duplicate_pair_window_minutes': duplicatePairWindowMinutes,
     'merchant_auto_link_threshold': merchantAutoLinkThreshold,
@@ -51,8 +50,15 @@ class AppConstants {
   /// worthwhile (the merchant is familiar enough to teach a rule, PLAN §7.5).
   static const askMerchantTxnCount = 3;
 
-  /// Number of days raw SMS bodies may remain before purge.
-  static const rawSmsRetentionDays = 30;
+  /// Days an unlinked raw SMS (unparsed, unreadable, rejected) is kept so a
+  /// parser update can retry it. The SMS behind a transaction or a
+  /// disposition is provenance and is never purged (ADR 0021).
+  static const rawSmsRetentionDays = 7;
+
+  /// Retired feature-flag keys; their stored rows are removed on seeding.
+  static const retiredFeatureFlagKeys = <String>[
+    'raw_sms_retention_days',
+  ];
 
   /// Raw inbox rows requested per page during full-history SMS import.
   ///

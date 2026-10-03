@@ -13,7 +13,7 @@ void main() {
 
   setUp(() async {
     database = AppDatabase(NativeDatabase.memory());
-    service = SourceCurrencyRepairService(database, clock: () => now);
+    service = SourceCurrencyRepairService(database);
   });
 
   tearDown(() async => database.close());
@@ -306,21 +306,13 @@ void main() {
     expect(txn.currencySymbol, '\$');
   });
 
-  test('rejects unsafe provenance, missing/expired source, and pre-set fields',
+  test('rejects unsafe provenance, missing source, and pre-set fields',
       () async {
     const body = 'Paid INR 500 to Cafe';
     final candidates = [
       ('manual', 'manual', null, null, null, null),
       ('imported', 'unknown', null, null, null, null),
       ('missing_sms', 'template', null, null, null, null),
-      (
-        'expired',
-        'template',
-        null,
-        null,
-        null,
-        now.subtract(const Duration(seconds: 1)),
-      ),
       ('known_code', 'template', 'INR', null, null, null),
       ('known_symbol', 'template', null, '₹', null, null),
       ('deleted', 'template', null, null, true, null),
@@ -347,6 +339,19 @@ void main() {
       }
       expect(await service.preview(id), isNull, reason: id);
     }
+  });
+
+  test('previews a linked source SMS past its old expiry (ADR 0021)', () async {
+    const body = 'Paid INR 500 to Cafe';
+    await insertCandidate(
+      id: 'txn_old_source',
+      body: body,
+      amount: 500,
+      purgeAfter: now.subtract(const Duration(days: 365)),
+      evidenceVerbatim: '500',
+      evidenceStart: body.indexOf('500'),
+    );
+    expect(await service.preview('txn_old_source'), isNot(null));
   });
 
   test('rejects duplicate SMS links, suppressed rows, and not-transactions',

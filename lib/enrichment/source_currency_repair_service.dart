@@ -56,16 +56,12 @@ class SourceCurrencyRepairPreview {
 
 /// Explicit, per-transaction repair for legacy null currency values.
 ///
-/// The source SMS and persisted amount evidence must still be retained and
-/// agree exactly. No database scan, migration, ingest, or startup hook runs.
+/// The linked source SMS (kept as provenance, ADR 0021) and persisted amount
+/// evidence must agree exactly. No database scan, migration, ingest, or startup hook runs.
 class SourceCurrencyRepairService {
-  SourceCurrencyRepairService(
-    this._database, {
-    DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  SourceCurrencyRepairService(this._database);
 
   final AppDatabase _database;
-  final DateTime Function() _clock;
   static const _normalizer = FieldNormalizer();
   static final _amountPattern =
       RegExp(r'(?<![\d,])\d[\d,]*(?:\.\d{1,2})?(?![\d.,])');
@@ -152,7 +148,7 @@ class SourceCurrencyRepairService {
     final sms = await (_database.select(_database.rawSms)
           ..where((row) => row.id.equals(smsId)))
         .getSingleOrNull();
-    if (sms == null || !sms.purgeAfter.isAfter(_clock())) return null;
+    if (sms == null) return null;
 
     final duplicateSmsRows = await (_database.select(_database.transactions)
           ..where((row) => row.smsId.equals(smsId)))

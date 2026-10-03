@@ -51,11 +51,89 @@ void main() {
 
     expect(result.completed, isTrue);
     expect(result.stagesRun, NightlyStage.values);
-    expect(await database.select(database.rawSms).get(), isEmpty);
+    // ADR 0021: the source SMS of a transaction is provenance, kept forever.
+    expect(
+      (await database.select(database.rawSms).get()).map((row) => row.id),
+      ['expired'],
+    );
     final transaction =
         await database.select(database.transactions).getSingle();
     expect(transaction.id, 'txn_expired');
-    expect(transaction.smsId, isNull);
+    expect(transaction.smsId, 'expired');
+  });
+
+  test('purge keeps linked SMS and removes unlinked SMS after 7 days',
+      () async {
+    final now = DateTime.utc(2026, 10, 3, 12);
+    Future<void> insertSms(
+      String id, {
+      required DateTime receivedAt,
+      required DateTime purgeAfter,
+    }) =>
+        database.into(database.rawSms).insert(
+              RawSmsCompanion.insert(
+                id: id,
+                sender: 'VK-HDFCBK',
+                body: 'Synthetic body $id',
+                receivedAt: receivedAt,
+                purgeAfter: purgeAfter,
+              ),
+            );
+    final old = now.subtract(const Duration(days: 400));
+    await insertSms('txn_sms', receivedAt: old, purgeAfter: old);
+    await insertSms('disposition_sms', receivedAt: old, purgeAfter: old);
+    // Captured before ADR 0021 with the old 30-day deadline still ahead.
+    await insertSms(
+      'legacy_unlinked',
+      receivedAt: now.subtract(const Duration(days: 8)),
+      purgeAfter: now.add(const Duration(days: 22)),
+    );
+    await insertSms(
+      'fresh_unlinked',
+      receivedAt: now.subtract(const Duration(days: 6)),
+      purgeAfter: now.add(const Duration(days: 1)),
+    );
+    await insertSms(
+      'expired_unlinked',
+      receivedAt: now.subtract(const Duration(days: 7)),
+      purgeAfter: now,
+    );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn',
+            ts: old.millisecondsSinceEpoch,
+            amount: 100,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            smsId: const Value('txn_sms'),
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: old,
+            updatedAt: old,
+          ),
+        );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'disposition_sms',
+            transactionId: 'txn_deleted',
+            disposition: 'not_transaction',
+            createdAt: old,
+          ),
+        );
+
+    await NightlyPipeline.production(database).runStages(
+      only: {NightlyStage.purgeExpiredRawSms},
+      now: now,
+    );
+
+    final kept = (await database.select(database.rawSms).get())
+        .map((row) => row.id)
+        .toSet();
+    expect(kept, {'txn_sms', 'disposition_sms', 'fresh_unlinked'});
+    final transaction =
+        await database.select(database.transactions).getSingle();
+    expect(transaction.smsId, 'txn_sms');
   });
 
   test('failed run resumes after the last completed stage', () async {

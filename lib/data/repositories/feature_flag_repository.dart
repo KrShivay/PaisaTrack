@@ -14,7 +14,6 @@ abstract class FeatureFlagKeys {
   static const askNowDailyBudget = 'ask_now_daily_budget';
   static const askAmountThreshold = 'ask_amount_threshold';
   static const askMerchantTxnCount = 'ask_merchant_txn_count';
-  static const rawSmsRetentionDays = 'raw_sms_retention_days';
   static const smsHistoryImportPageSize = 'sms_history_import_page_size';
   static const duplicatePairWindowMinutes = 'duplicate_pair_window_minutes';
   static const merchantAutoLinkThreshold = 'merchant_auto_link_threshold';
@@ -93,13 +92,6 @@ const featureFlagDefinitions = <FeatureFlagDefinition>[
     description: 'Prior merchant count that makes asking worthwhile.',
     type: FeatureFlagValueType.integer,
     defaultValue: AppConstants.askMerchantTxnCount,
-  ),
-  FeatureFlagDefinition(
-    key: FeatureFlagKeys.rawSmsRetentionDays,
-    label: 'Raw SMS retention',
-    description: 'Days raw SMS bodies may remain before purge.',
-    type: FeatureFlagValueType.integer,
-    defaultValue: AppConstants.rawSmsRetentionDays,
   ),
   FeatureFlagDefinition(
     key: FeatureFlagKeys.smsHistoryImportPageSize,
@@ -242,11 +234,6 @@ class FeatureFlagsState {
   int get askMerchantTxnCount => getInt(
         FeatureFlagKeys.askMerchantTxnCount,
         defaultValue: AppConstants.askMerchantTxnCount,
-      );
-
-  int get rawSmsRetentionDays => getInt(
-        FeatureFlagKeys.rawSmsRetentionDays,
-        defaultValue: AppConstants.rawSmsRetentionDays,
       );
 
   int get smsHistoryImportPageSize => getInt(

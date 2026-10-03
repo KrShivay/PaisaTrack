@@ -231,11 +231,6 @@ later hardening.
 <!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
      proposed order of the remaining backlog. -->
 
-- [ ] T-195 [P0] Keep source SMS provenance (owner decision 2026-10-03): stop
-      the 30-day raw-SMS purge for transaction/disposition SMS (unlinked SMS
-      are removed after 7 days, owner decision), ADR 0021,
-      re-link already purged provenance from the device inbox. Supersedes the
-      expiry parts of T-169b/T-170b. Details: [T-195](docs/tasks/T-195.md).
 - [ ] T-196 [P1] Transaction details card on the detail screen: UPI ID/VPA,
       reference/RRN, channel, account, balance, copyable.
       Details: [T-196](docs/tasks/T-196.md).
@@ -247,6 +242,17 @@ later hardening.
 ## In Review
 
 <!-- P1 tasks ready for next phase -->
+
+- [ ] T-195 [P0] Keep source SMS provenance (ADR 0021). Code merged: linked
+      SMS are never purged, unlinked SMS go after 7 days, backups carry linked
+      SMS, Settings → "Restore SMS sources" re-links exact inbox matches.
+      Evidence (cloud): regression tests failed first (nightly, backup x3,
+      currency repair, unreadable copy); full suite 1185/1185; touched dirs
+      642/642 under `TZ=America/New_York`; analyze 0, format, diff check,
+      doc links clean; backup +340 B per kept SMS recorded in ADR 0021.
+      Open: owner-phone check — run "Restore SMS sources", confirm a
+      transaction older than 30 days shows its SMS. Details:
+      [T-195](docs/tasks/T-195.md).
 
 ### Scale, privacy, and maintainability
 
@@ -502,12 +508,12 @@ Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
 - [ ] T-168c [P2] Route remaining bespoke sheets/dialogs through Bloom helpers and add API-level presentation tests.
 - [ ] T-168d [P2] Establish a visual-regression golden suite for Activity, SMS scan, salary income, errors, and dark/light themes.
 - [ ] T-169a [P1] Add a dedicated transaction-import progress model shared by onboarding, Settings, and Activity; remove duplicated display counters.
-- [ ] T-169b [P2] Add a privacy/data-footprint screen explaining local SMS retention under current code and the linked-source policy defined by T-195, parse status, backup inclusion, and safe deletion.
+- [ ] T-169b [P2] Add a privacy/data-footprint screen explaining local SMS retention (ADR 0021: linked source SMS kept, unlinked SMS removed after 7 days), parse status, backup inclusion, and safe deletion.
 
 #### Reliability, privacy, and release readiness
 
 - [ ] T-170a [P0] Add fault-injection tests for database-write, parser, channel, lifecycle, and native inbox query failures; prove retries are bounded and idempotent.
-- [ ] T-170b [P1] Verify raw-SMS retention after T-195, backup inclusion/exclusion, deletion, and recovery behavior with device-backed acceptance evidence.
+- [ ] T-170b [P1] Verify ADR 0021 retention on a device: linked SMS survive the nightly purge, unlinked SMS go after 7 days, backups include linked SMS, deletion and recovery behave. Host tests landed with T-195; device-backed evidence is still required.
 - [ ] T-170c [P1] Add release-build smoke tests for permission recovery, first import, resume catch-up, 10k history paging, and salary credit visibility.
 - [ ] T-170d [P2] Create a manual QA matrix for supported senders/templates, unsupported-sender telemetry, and false-positive privacy checks.
 - [ ] T-171a [P1] Add CI shards for Flutter unit/widget, Android unit, migration, and fixture-contract tests with deterministic failure artifacts.

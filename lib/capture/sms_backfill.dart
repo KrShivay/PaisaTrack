@@ -145,6 +145,26 @@ class PlatformSmsInboxReader implements SmsInboxReader {
   }
 }
 
+/// Reads every inbox page, newest first, from [before] to the end.
+///
+/// Shared by history import, resume catch-up, and provenance re-link so the
+/// cursor and termination rules live in one place. Callers may stop early.
+Stream<SmsInboxPage> readInboxPages(
+  SmsInboxReader reader, {
+  SmsInboxCursor? before,
+  required int pageSize,
+}) async* {
+  var cursor = before;
+  do {
+    final page = await reader.readPage(before: cursor, limit: pageSize);
+    if (page.nextCursor != null && page.nextCursor == cursor) {
+      throw StateError('SMS inbox pagination did not advance');
+    }
+    yield page;
+    cursor = page.nextCursor;
+  } while (cursor != null);
+}
+
 /// Injectable inbox reader for production backfill and fake-reader tests.
 final smsInboxReaderProvider = Provider<SmsInboxReader>((ref) {
   return const PlatformSmsInboxReader();
@@ -232,9 +252,11 @@ class SmsBackfiller {
     var accepted = 0;
     var parsed = 0;
     var unparsed = 0;
-    var cursor = initialCursor;
-    do {
-      final page = await _reader.readPage(before: cursor, limit: _pageSize);
+    await for (final page in readInboxPages(
+      _reader,
+      before: initialCursor,
+      pageSize: _pageSize,
+    )) {
       final batch = await _ingestor.ingestBatch(
         page.messages,
         merchantResolutionRun: merchantResolutionRun,
@@ -263,15 +285,11 @@ class SmsBackfiller {
           unparsed: unparsed,
         ),
       );
-      if (page.nextCursor != null && page.nextCursor == cursor) {
-        throw StateError('SMS inbox pagination did not advance');
-      }
       if (page.nextCursor != null) {
         await onPageCompleted?.call(page.nextCursor!);
       }
-      cursor = page.nextCursor;
       await Future<void>.delayed(Duration.zero);
-    } while (cursor != null);
+    }
     return SmsImportResult(
       processed: processed,
       failed: failed,
@@ -323,13 +341,11 @@ class SmsIncrementalCatchUp {
       return const SmsImportResult(processed: 0, failed: 0, skipped: true);
     }
     final merchantResolutionRun = await _ingestor.beginMerchantResolutionRun();
-    var cursor = null as SmsInboxCursor?;
     var processed = 0;
     var failed = 0;
     var recoveryPagesLeft = 1;
     var foundKnownBoundary = false;
-    do {
-      final page = await _reader.readPage(before: cursor, limit: _pageSize);
+    await for (final page in readInboxPages(_reader, pageSize: _pageSize)) {
       final pageIds = page.messages.map((sms) => sms.id).toList();
       final knownIds = <String>{};
       if (pageIds.isNotEmpty) {
@@ -376,9 +392,6 @@ class SmsIncrementalCatchUp {
       );
       failed += batch.failed;
       processed += pending.length;
-      if (page.nextCursor != null && page.nextCursor == cursor) {
-        throw StateError('SMS inbox pagination did not advance');
-      }
       // Finish the boundary page and one older page. This bounded overlap
       // recovers an isolated live-ingest failure hidden behind a newer known
       // SMS without turning every resume into a full-history rescan.
@@ -388,8 +401,7 @@ class SmsIncrementalCatchUp {
         }
         recoveryPagesLeft--;
       }
-      cursor = page.nextCursor;
-    } while (cursor != null);
+    }
     return SmsImportResult(processed: processed, failed: failed);
   }
 }

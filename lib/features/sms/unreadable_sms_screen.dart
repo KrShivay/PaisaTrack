@@ -89,7 +89,8 @@ class _FailureSummaryBody extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'For privacy, message details are kept on this phone for up to '
+              'For privacy, messages that could not be read are kept on this '
+              'phone for up to '
               '${AppConstants.rawSmsRetentionDays} days so a parser update can '
               'retry them. After that, the details are deleted and are not '
               'shown here.',

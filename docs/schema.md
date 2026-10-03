@@ -15,7 +15,8 @@ current Drift tables are `transactions`, `raw_sms`, `merchants`,
 - `transactions`: normalized rows, source-currency code/symbol evidence, status, soft deletion,
   duplicate links, payment-source links, owned-transfer links, and analytics
   exclusion state.
-- `raw_sms`: retained source messages and processing state.
+- `raw_sms`: source messages and processing state; linked rows are kept as
+  provenance, unlinked rows expire after 7 days (ADR 0021).
 - `merchants` / `merchant_aliases`: canonical identity, user labels, and aliases.
 - `counterparties`: structured identity registry for merchants, people,
   institutions, self, and unknown counterparties.

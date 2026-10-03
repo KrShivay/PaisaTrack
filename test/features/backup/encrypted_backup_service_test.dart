@@ -802,7 +802,7 @@ void main() {
             id: 'sms_large_chunked',
             sender: 'VK-HDFCBK',
             body: 'Sensitive body ' * 10000,
-            receivedAt: DateTime.utc(2026, 7, 16),
+            receivedAt: DateTime.utc(2026, 7, 30),
             purgeAfter: DateTime.utc(2026, 8, 15),
           ),
         );
@@ -931,7 +931,7 @@ void main() {
             id: 'sms_failed',
             sender: 'VK-HDFCBK',
             body: 'Sensitive body retained only for the retention window',
-            receivedAt: DateTime.utc(2026, 7, 16),
+            receivedAt: DateTime.utc(2026, 7, 30),
             processed: const Value(false),
             parserVersion: const Value(smsParserVersion),
             failureReason: const Value(SmsFailureReason.unparsed),
@@ -970,7 +970,7 @@ void main() {
             id: 'sms_legacy_archive',
             sender: 'VK-HDFCBK',
             body: 'Legacy body',
-            receivedAt: DateTime.utc(2026, 7, 16),
+            receivedAt: DateTime.utc(2026, 7, 30),
             purgeAfter: DateTime.utc(2026, 8, 15),
           ),
         );
@@ -1064,17 +1064,20 @@ void main() {
           ..where((row) => row.id.equals('txn_currency_restore_expired')))
         .getSingle();
     expect(restoredRetained.smsId, 'sms_currency_restore_retained');
-    expect(restoredExpired.smsId, isNull);
+    // ADR 0021: a transaction's source SMS survives its old expiry date.
+    expect(restoredExpired.smsId, 'sms_currency_restore_expired');
     expect(
-      (await database.select(database.rawSms).get()).map((row) => row.id),
-      ['sms_currency_restore_retained'],
+      (await database.select(database.rawSms).get())
+          .map((row) => row.id)
+          .toSet(),
+      {'sms_currency_restore_retained', 'sms_currency_restore_expired'},
     );
 
-    final repair = SourceCurrencyRepairService(database, clock: () => now);
+    final repair = SourceCurrencyRepairService(database);
     final preview = await repair.preview('txn_currency_restore_retained');
     expect(preview, isNot(null));
     expect(restoredRetained.evidenceJson, contains('"verbatim":"500"'));
-    expect(await repair.preview('txn_currency_restore_expired'), isNull);
+    expect(await repair.preview('txn_currency_restore_expired'), isNot(null));
     expect(await repair.apply(preview!), isTrue);
     var repaired = await (database.select(database.transactions)
           ..where((row) => row.id.equals('txn_currency_restore_retained')))
@@ -1089,13 +1092,14 @@ void main() {
     expect(repaired.currencySymbol, isNull);
   });
 
-  test('export excludes expired raw SMS while retaining active rows', () async {
+  test('export excludes expired unlinked raw SMS while retaining active rows',
+      () async {
     await database.into(database.rawSms).insert(
           RawSmsCompanion.insert(
             id: 'sms_active',
             sender: 'VK-HDFCBK',
             body: 'Active body',
-            receivedAt: DateTime.utc(2026, 7, 16),
+            receivedAt: DateTime.utc(2026, 7, 30),
             purgeAfter: DateTime.utc(2026, 8, 3),
           ),
         );
@@ -1108,21 +1112,69 @@ void main() {
             purgeAfter: DateTime.utc(2026, 8, 2),
           ),
         );
+    // Captured under the old 30-day rule: deadline ahead, but older than the
+    // 7-day unlinked window (ADR 0021).
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_old_window',
+            sender: 'VK-HDFCBK',
+            body: 'Old window body',
+            receivedAt: DateTime.utc(2026, 7, 20),
+            purgeAfter: DateTime.utc(2026, 8, 19),
+          ),
+        );
+    await database.into(database.expectedEvents).insert(
+          ExpectedEventsCompanion.insert(
+            id: 'expected_from_expired_sms',
+            source: 'sms',
+            label: 'Mandate notice',
+            expectedAmountPaise: 25000,
+            expectedDate: DateTime.utc(2026, 8, 20),
+            state: 'pending',
+            confidence: 1,
+            dedupKey: 'expected:expired_sms',
+            originSmsId: const Value('sms_expired'),
+          ),
+        );
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_not_transaction',
+            sender: 'VK-HDFCBK',
+            body: 'Disposition body',
+            receivedAt: DateTime.utc(2026, 7, 1),
+            purgeAfter: DateTime.utc(2026, 8, 2),
+          ),
+        );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'sms_not_transaction',
+            transactionId: 'txn_gone',
+            disposition: 'not_transaction',
+            createdAt: DateTime.utc(2026, 7, 1),
+          ),
+        );
 
     final bytes = await service().exportBytes(
       passphrase: 'retention-boundary-passphrase',
     );
     await database.delete(database.rawSms).go();
+    await database.delete(database.smsDispositions).go();
+    await database.delete(database.expectedEvents).go();
     await service().importBytes(
       bytes: bytes,
       passphrase: 'retention-boundary-passphrase',
     );
 
     final restored = await database.select(database.rawSms).get();
-    expect(restored.map((row) => row.id), ['sms_active']);
+    expect(
+      restored.map((row) => row.id).toSet(),
+      {'sms_active', 'sms_not_transaction'},
+    );
+    final event = await database.select(database.expectedEvents).getSingle();
+    expect(event.originSmsId, isNull);
   });
 
-  test('restore detaches transactions from expired raw SMS in both formats',
+  test('backup keeps expired source SMS of transactions in both formats',
       () async {
     for (final format in ['legacy', 'chunked']) {
       final smsId = 'sms_expired_$format';
@@ -1178,8 +1230,13 @@ void main() {
             ..where((row) => row.id.equals(transactionId)))
           .getSingle();
       expect(restored.id, transactionId);
-      expect(restored.smsId, isNull);
-      expect(await database.select(database.rawSms).get(), isEmpty);
+      expect(restored.smsId, smsId);
+      expect(
+        (await database.select(database.rawSms).get()).map((row) => row.id),
+        [smsId],
+      );
+      await database.delete(database.transactions).go();
+      await database.delete(database.rawSms).go();
     }
   });
 
@@ -1190,7 +1247,7 @@ void main() {
             id: 'sms_invalid_reason',
             sender: 'VK-HDFCBK',
             body: 'Synthetic test body',
-            receivedAt: DateTime.utc(2026, 7, 16),
+            receivedAt: DateTime.utc(2026, 7, 30),
             failureReason: const Value('private parser detail'),
             purgeAfter: DateTime.utc(2026, 8, 15),
           ),

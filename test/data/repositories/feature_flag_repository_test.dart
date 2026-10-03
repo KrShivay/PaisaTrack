@@ -19,6 +19,21 @@ void main() {
     await db.close();
   });
 
+  test('seeding removes the retired 30-day raw SMS retention row', () async {
+    await db.into(db.featureFlags).insert(
+          FeatureFlagsCompanion.insert(
+            key: 'raw_sms_retention_days',
+            value: '30',
+          ),
+        );
+
+    await db.seedDefaultFeatureFlags();
+
+    final keys = (await db.select(db.featureFlags).get()).map((r) => r.key);
+    expect(keys, isNot(contains('raw_sms_retention_days')));
+    expect(keys, contains(FeatureFlagKeys.smsHistoryImportPageSize));
+  });
+
   group('FeatureFlagRepository Fallbacks & Overrides', () {
     test('missing DB rows fall back to AppConstants defaults', () async {
       final flags = await repository.getFlags();
@@ -32,7 +47,6 @@ void main() {
       expect(flags.askNowDailyBudget, AppConstants.askNowDailyBudget);
       expect(flags.askAmountThreshold, AppConstants.askAmountThreshold);
       expect(flags.askMerchantTxnCount, AppConstants.askMerchantTxnCount);
-      expect(flags.rawSmsRetentionDays, AppConstants.rawSmsRetentionDays);
       expect(
         flags.smsHistoryImportPageSize,
         AppConstants.smsHistoryImportPageSize,

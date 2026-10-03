@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../capture/permissions/sms_permission.dart';
+import '../../capture/permissions/sms_permission_provider.dart';
+import '../../capture/sms_provenance_relinker.dart';
 import '../../core/format.dart';
 import '../../core/platform/system_document_gateway.dart';
 import '../../core/theme/app_theme.dart';
@@ -338,6 +341,15 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1),
                   _TileRow(
+                    icon: Icons.link,
+                    title: 'Restore SMS sources',
+                    subtitle:
+                        'Re-read the inbox to show the SMS behind older entries',
+                    isDark: isDark,
+                    onTap: () => _relinkSmsSources(context, ref),
+                  ),
+                  const Divider(height: 1),
+                  _TileRow(
                     icon: Icons.sms_failed_outlined,
                     title: "Messages we couldn't read",
                     subtitle:
@@ -554,6 +566,40 @@ class SettingsScreen extends ConsumerWidget {
         );
       }
     }
+  }
+
+  /// Re-links source SMS removed by the old 30-day purge (ADR 0021).
+  static Future<void> _relinkSmsSources(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final permission = ref.read(smsPermissionControllerProvider).valueOrNull;
+    if (permission != SmsPermissionStatus.granted) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Allow SMS access to restore sources')),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Restoring SMS sources…'),
+        duration: Duration(minutes: 10),
+      ),
+    );
+    String message;
+    try {
+      final relinker = await ref.read(smsProvenanceRelinkerProvider.future);
+      final result = await relinker.run();
+      message = 'Restored ${result.relinked} · '
+          'skipped ${result.skippedAmbiguous} unclear · '
+          '${result.notFound} no longer in inbox';
+    } catch (_) {
+      message = 'Could not restore SMS sources. Please try again.';
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   static Future<void> _importBackup(BuildContext context, WidgetRef ref) async {

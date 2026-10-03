@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../capture/parser_version.dart';
+import '../../core/constants.dart';
 import '../db/database.dart';
 
 /// A raw SMS that has not yet produced a transaction (parse failure or not
@@ -32,6 +33,57 @@ class RetainedSmsFailureSummary {
   int get total => reasonCounts.values.fold(0, (sum, count) => sum + count);
 
   int countFor(String reason) => reasonCounts[reason] ?? 0;
+}
+
+/// Source-SMS retention (ADR 0021).
+///
+/// The SMS behind a transaction or a "not a transaction" disposition is
+/// provenance and is kept for as long as that record exists. Every other raw
+/// SMS (unparsed, unreadable, never linked) expires when its `purge_after`
+/// passes or it is [AppConstants.rawSmsRetentionDays] old, whichever is
+/// first; the age cap also covers rows captured under the old 30-day rule.
+abstract final class RawSmsRetention {
+  /// Whether a raw SMS row backs a transaction or a disposition.
+  static Expression<bool> isLinked(AppDatabase database) {
+    final transactionSmsIds = database.selectOnly(database.transactions)
+      ..addColumns([database.transactions.smsId])
+      ..where(database.transactions.smsId.isNotNull());
+    final dispositionSmsIds = database.selectOnly(database.smsDispositions)
+      ..addColumns([database.smsDispositions.smsId]);
+    return database.rawSms.id.isInQuery(transactionSmsIds) |
+        database.rawSms.id.isInQuery(dispositionSmsIds);
+  }
+
+  static Expression<bool> _isExpired(AppDatabase database, DateTime now) =>
+      database.rawSms.purgeAfter.isSmallerOrEqualValue(now) |
+      database.rawSms.receivedAt.isSmallerOrEqualValue(
+        now.subtract(const Duration(days: AppConstants.rawSmsRetentionDays)),
+      );
+
+  /// Rows that survive retention: linked provenance plus unexpired SMS.
+  static Expression<bool> isRetained(AppDatabase database, DateTime now) =>
+      isLinked(database) | _isExpired(database, now).not();
+
+  /// Deletes expired unlinked raw SMS and clears expected-event origins that
+  /// pointed at them (no foreign key guards that column). Linked rows are
+  /// never touched.
+  static Future<void> purgeExpiredUnlinked(
+    AppDatabase database, {
+    required DateTime now,
+  }) async {
+    await (database.delete(database.rawSms)
+          ..where((_) => isRetained(database, now).not()))
+        .go();
+    final rawIds = database.selectOnly(database.rawSms)
+      ..addColumns([database.rawSms.id]);
+    await (database.update(database.expectedEvents)
+          ..where(
+            (row) =>
+                row.originSmsId.isNotNull() &
+                row.originSmsId.isNotInQuery(rawIds),
+          ))
+        .write(const ExpectedEventsCompanion(originSmsId: Value(null)));
+  }
 }
 
 /// Reads raw SMS rows that failed to parse into a transaction.
@@ -72,8 +124,7 @@ class RawSmsRepository {
               SmsFailureReason.unparsed,
               SmsFailureReason.processingError,
             ]) &
-            _database.rawSms.purgeAfter
-                .isBiggerThanValue(now ?? DateTime.now()),
+            RawSmsRetention.isRetained(_database, now ?? DateTime.now()),
       );
 
     return query.watch().map((rows) {

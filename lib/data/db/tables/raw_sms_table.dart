@@ -1,9 +1,10 @@
 import 'package:drift/drift.dart';
 
-/// Temporary storage for captured SMS bodies before purge.
+/// Captured SMS bodies.
 ///
-/// Rows in this table can contain sensitive raw financial SMS text and must
-/// obey the retention window documented in `AppConstants.rawSmsRetentionDays`.
+/// Rows contain sensitive raw financial SMS text. The SMS behind a transaction
+/// or disposition is kept as provenance; unlinked rows expire after
+/// `AppConstants.rawSmsRetentionDays` (ADR 0021, `RawSmsRetention`).
 class RawSms extends Table {
   TextColumn get id => text()();
   TextColumn get sender => text()();

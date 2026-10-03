@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Temporary processing issue'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
-    expect(find.textContaining('up to 30 days'), findsOneWidget);
+    expect(find.textContaining('up to 7 days'), findsOneWidget);
     expect(find.textContaining('message text'), findsOneWidget);
     expect(find.textContaining('synthetic body'), findsNothing);
   });

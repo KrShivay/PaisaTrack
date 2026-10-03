@@ -295,7 +295,7 @@ class SmsIngestor {
                 parserVersion: Value(_parserVersion),
                 failureReason: const Value<String?>(null),
                 purgeAfter: sms.receivedAt.add(
-                  Duration(days: flagsState.rawSmsRetentionDays),
+                  const Duration(days: AppConstants.rawSmsRetentionDays),
                 ),
               ),
             );
@@ -944,7 +944,7 @@ class SmsIngestor {
             parserVersion: Value(_parserVersion),
             failureReason: const Value(SmsFailureReason.processingError),
             purgeAfter: sms.receivedAt.add(
-              Duration(days: flagsState.rawSmsRetentionDays),
+              const Duration(days: AppConstants.rawSmsRetentionDays),
             ),
           ),
         );

@@ -14,6 +14,7 @@ import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../../intelligence/derived_reads_service.dart';
 import '../../data/repositories/payee_evidence_repository.dart';
+import '../../data/repositories/raw_sms_repository.dart';
 import '../../capture/parser_version.dart';
 import '../../core/platform/system_document_gateway.dart';
 
@@ -836,10 +837,9 @@ class EncryptedBackupService {
   Future<int> _countRetainedArchiveRows(DateTime now) async {
     var total = 0;
     for (final tableName in _archiveTableNames) {
-      final count = await _countTableRows(
-        tableName,
-        rawSmsAfter: tableName == 'raw_sms' ? now : null,
-      );
+      final count = tableName == 'raw_sms'
+          ? await _countRetainedRawSms(now)
+          : await _countTableRows(tableName);
       _assertTableRowCount(count, tableName);
       total += count;
       if (total > _limits.maxRowsTotal) {
@@ -851,18 +851,21 @@ class EncryptedBackupService {
     return total;
   }
 
-  Future<int> _countTableRows(
-    String tableName, {
-    DateTime? rawSmsAfter,
-  }) async {
-    final where = rawSmsAfter == null ? '' : ' WHERE purge_after > ?';
-    final result = await _database.customSelect(
-      'SELECT COUNT(*) AS row_count FROM "$tableName"$where',
-      variables: [
-        if (rawSmsAfter != null) Variable.withDateTime(rawSmsAfter),
-      ],
-    ).getSingle();
+  Future<int> _countTableRows(String tableName) async {
+    final result = await _database
+        .customSelect(
+          'SELECT COUNT(*) AS row_count FROM "$tableName"',
+        )
+        .getSingle();
     return result.read<int>('row_count');
+  }
+
+  Future<int> _countRetainedRawSms(DateTime now) async {
+    final count = countAll();
+    final query = _database.selectOnly(_database.rawSms)
+      ..addColumns([count])
+      ..where(RawSmsRetention.isRetained(_database, now));
+    return (await query.getSingle()).read(count)!;
   }
 
   static const _archiveTableNames = [
@@ -934,11 +937,7 @@ class EncryptedBackupService {
     await writeTable(
       'raw_sms',
       (offset, limit) => (_database.select(_database.rawSms)
-            ..where(
-              (row) =>
-                  row.purgeAfter.isNull() |
-                  row.purgeAfter.isBiggerThanValue(now),
-            )
+            ..where((_) => RawSmsRetention.isRetained(_database, now))
             ..limit(limit, offset: offset))
           .get(),
     );
@@ -1153,10 +1152,7 @@ class EncryptedBackupService {
 
   Future<List<Map<String, Object?>>> _retainedRawSmsRows(DateTime now) async {
     final rows = await (_database.select(_database.rawSms)
-          ..where(
-            (row) =>
-                row.purgeAfter.isNull() | row.purgeAfter.isBiggerThanValue(now),
-          )
+          ..where((_) => RawSmsRetention.isRetained(_database, now))
           ..limit(_limits.maxRowsPerTable + 1))
         .get();
     return _serializeRows(rows, 'raw_sms');
@@ -1215,9 +1211,7 @@ class EncryptedBackupService {
             'Malformed archive table row: invalid raw SMS failure reason',
           );
         }
-        if (!rawSms.purgeAfter.isAfter(now)) {
-          continue;
-        }
+        // Expiry depends on links restored later; purge runs at the end.
         await database.into(database.rawSms).insert(rawSms);
         retainedRawSmsIds.add(rawSms.id);
       }
@@ -1315,6 +1309,7 @@ class EncryptedBackupService {
             .into(database.expectedEvents)
             .insert(ExpectedEvent.fromJson(eventRow));
       }
+      await RawSmsRetention.purgeExpiredUnlinked(database, now: now);
       await PayeeEvidenceRepository(database).rebuild();
       await _assertRestoredForeignKeys(database);
     });
@@ -1755,6 +1750,7 @@ class _ChunkedArchiveRestorer {
             ..where((row) => row.id.equals(entry.key)))
           .write(TransactionsCompanion(duplicateOfTxnId: Value(entry.value)));
     }
+    await RawSmsRetention.purgeExpiredUnlinked(database, now: now);
   }
 
   Future<void> _processLine(String line) async {
@@ -1849,10 +1845,9 @@ class _ChunkedArchiveRestorer {
             'Malformed archive table row: invalid raw SMS failure reason',
           );
         }
-        if (rawSms.purgeAfter.isAfter(now)) {
-          await database.into(database.rawSms).insert(rawSms);
-          _retainedRawSmsIds.add(rawSms.id);
-        }
+        // Expiry depends on links restored later; finish() purges.
+        await database.into(database.rawSms).insert(rawSms);
+        _retainedRawSmsIds.add(rawSms.id);
       case 'merchant_aliases':
         await database
             .into(database.merchantAliases)

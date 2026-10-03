@@ -1,5 +1,17 @@
 # Current Handoff
 
+## 2026-10-03 — Cloud session: T-195 source SMS provenance
+
+- T-195 (ADR 0021): SMS behind a transaction or "Not a transaction" are kept;
+  unlinked SMS expire after 7 days (flag `raw_sms_retention_days` retired);
+  backups carry linked SMS; Settings → "Restore SMS sources" re-links exact
+  inbox matches (`txn_<id>` + evidence spans), skips and counts the rest.
+  Shared `readInboxPages` now drives history import, catch-up and re-link.
+  Backup +~340 B per kept SMS (16 MiB cap ≈ 12k SMS-backed transactions).
+- Evidence: suite 1185/1185, NY-TZ touched dirs 642/642, analyze 0.
+  Owner phone still needs the re-link check. The T-177 R3 entry is in Git
+  history (`c381756`).
+
 ## 2026-10-03 — Owner-phone defects fixed; release 0.1.6+2015
 
 - Owner-phone QA (data exported by owner): UNDO-1 passed (category change,
@@ -44,22 +56,3 @@
   lane; T-177a holdout stays the product-priority gate. Owner decisions are
   listed in the roadmap and T-190 plan. No app tests run (docs only).
   The T-177 R1 entry is in Git history (`239c2d2`).
-
-## 2026-10-02 — T-177 R3 rules and Ask on resolved payee identity
-
-- A rule made on `swiggy@ybl` never fired for a text-only "SWIGGY" SMS even
-  after the user linked both, and Ask matched merchants by raw substring
-  ("ola" hit "Coca Cola"; relabeled payees vanished; VPA-only rows were
-  missed). Corrections on rows with an exact persisted merchant link
-  (`confidence_json.merchant.src` exact/new/user) now create `merchant_id`
-  rules; precedence is exact VPA → merchant_id → exact name → legacy. The
-  correction sweep covers both linked rows and exact VPA/name matches among
-  unlinked history. Ask resolves the phrase to an identity set (labels,
-  aliases, payee evidence) with whole-phrase matching, asks which payee when
-  several match (suggestions re-resolve), and answers "no matching payee"
-  instead of a ₹0 total. No schema change; rolling back leaves merchant_id
-  rules inert.
-- Impact: `RuleRepository`/`TransactionRepository` CRITICAL. Verified:
-  analyzer clean, full suite 1136/1136, intelligence/data/enrichment/capture
-  559/559 under America/New_York. Three review rounds. Release 2013 details
-  stay in docs/release-signing.md.

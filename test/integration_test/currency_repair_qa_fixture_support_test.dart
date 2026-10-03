@@ -69,10 +69,8 @@ void main() {
           ),
         );
 
-    final preview = await SourceCurrencyRepairService(
-      database,
-      clock: () => now,
-    ).preview(currencyRepairQaTransactionId);
+    final preview = await SourceCurrencyRepairService(database)
+        .preview(currencyRepairQaTransactionId);
 
     expect(preview, isNotNull);
     expect(preview!.currencyToken, 'Rs.');

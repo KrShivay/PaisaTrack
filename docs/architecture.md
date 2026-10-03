@@ -72,7 +72,8 @@ events, not relax the transaction parser's future-event rejection.
 
 - Drift is opened through SQLCipher.
 - A generated database passphrase is protected by Android Keystore.
-- `raw_sms` is retention-limited; normalized transactions persist.
+- `raw_sms` keeps the source SMS of transactions and dispositions (ADR 0021);
+  unlinked rows expire after 7 days. Normalized transactions persist.
 - Original merchant text, VPA, references, source, and confidence evidence are
   preserved separately from user corrections and future labels.
 - Payee labels use a rebuildable SQL evidence index: aggregation, search,
@@ -190,7 +191,7 @@ refuse conflicting merges without replacing raw source fields.
   same eligibility contract as Dashboard.
 - The anomaly minimum amount floor is denominated in INR. Other currencies are
   not floor-suppressed because PaisaTrack does not infer exchange rates.
-- Nightly work purges expired raw SMS, refreshes recurring/baseline/classifier
+- Nightly work purges expired unlinked raw SMS, refreshes recurring/baseline/classifier
   state, and recomputes insights with checkpoints.
 
 ## Insight claim contract

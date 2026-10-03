@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
-import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -14,6 +13,7 @@ import '../core/crypto/database_cipher.dart';
 import '../data/db/database.dart';
 import '../data/db/database_file_lock.dart';
 import '../data/db/database_provider.dart';
+import '../data/repositories/raw_sms_repository.dart';
 import '../enrichment/decision_policy.dart';
 import '../enrichment/local_classifier.dart';
 import '../enrichment/merchant_clusterer.dart';
@@ -76,21 +76,9 @@ class NightlyPipeline {
       calendar: sharedCalendar,
       actions: {
         NightlyStage.purgeExpiredRawSms: (now) async {
-          await database.transaction(() async {
-            final expiredIds = database.selectOnly(database.rawSms)
-              ..addColumns([database.rawSms.id])
-              ..where(database.rawSms.purgeAfter.isSmallerOrEqualValue(now));
-            // Transactions are permanent; raw bodies are not. Detach the
-            // nullable provenance link before deleting expired raw rows so
-            // full-history imports do not defeat the privacy retention rule.
-            await (database.update(database.transactions)
-                  ..where((row) => row.smsId.isInQuery(expiredIds)))
-                .write(const TransactionsCompanion(smsId: Value(null)));
-            await (database.delete(
-              database.rawSms,
-            )..where((row) => row.purgeAfter.isSmallerOrEqualValue(now)))
-                .go();
-          });
+          // ADR 0021: transactions and dispositions keep their source SMS;
+          // only unlinked raw SMS expire.
+          await RawSmsRetention.purgeExpiredUnlinked(database, now: now);
         },
         NightlyStage.recurringScan: (now) async {
           await derivedReads.rebuildRecurring(today: now);
