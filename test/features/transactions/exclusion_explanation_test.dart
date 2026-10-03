@@ -54,6 +54,7 @@ void main() {
             parseSource: 'generic',
             confidenceJson: '{}',
             status: 'auto',
+            isAnalyticsExcluded: const Value(true), // Excluded explicitly in SQL
             lifecycleState: const Value('settled'),
             createdAt: DateTime.utc(2026, 7, 10),
             updatedAt: DateTime.utc(2026, 7, 10),
@@ -91,7 +92,7 @@ void main() {
       confidenceJson: '{}',
       status: 'auto',
       isDeleted: false,
-      isAnalyticsExcluded: false,
+      isAnalyticsExcluded: true, // Requires explicit state to render flag
       lifecycleState: 'settled',
       createdAt: ts,
       updatedAt: ts,
@@ -123,6 +124,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.textContaining('Credit card bill payment — excluded'), findsOneWidget);
+    expect(find.textContaining('Excluded from analytics'), findsOneWidget);
   });
 }
