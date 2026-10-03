@@ -80,6 +80,25 @@ matched the verified size and SHA-256 above. Broader device acceptance remains
 open. Detailed evidence:
 [2026-10-01 owner-phone install check](reports/release-v2012-owner-phone-install-2026-10-01.md).
 
+## Published APK (0.1.7+2016)
+
+Built from `235fd18` plus the version bump (adds the month-over-month badge
+percentage fix `37beb17` on top of 0.1.6+2015) with the same split-per-ABI
+ARM64 command. 57,078,184 bytes, SHA-256
+`3d96344ea65d2058258cc4f56b79e016f96f0fb6c1e7420f75fcf1565a4cf642`, package
+`com.paisatrack`, version `0.1.7`, code `4016`, production certificate
+`6a00ef7a…9163`; arm64-v8a only, `extractNativeLibs=false`, six stored native
+libraries, zipalign passed. Android Gradle unit tests (app, keystore) passed;
+Flutter suite 1176/1176.
+
+On 2026-10-03 it replaced 4015 in place on the owner motorola edge 50 pro
+(`firstInstallTime` unchanged, installed base APK hash matched). It was
+installed while the owner was using another app, so no launch check was run
+on this build. Published on `apk-downloads` in commit
+`0e151f2f1591cc1ee06d5f5af6227f8b4c61678d`; the public download
+(https://github.com/KrShivay/PaisaTrack/raw/apk-downloads/app-release-arm64.apk)
+matched the SHA-256 above.
+
 ## Published APK (0.1.6+2015)
 
 Built from `dfb05e6` plus the version bump (main with the claim-copy fixes,
