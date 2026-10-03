@@ -43,7 +43,8 @@ the UTC instant to device-local time and reuses the shared clock and month
 formatters. Detail uses device local time while exports use the fixed `FinancialCalendar` offset (identical in India; may differ by an hour in daylight-saving zones). CSV files derive date, time, and offset from
 `FinancialCalendar`; they keep existing columns in order and append `UTC Offset`
 (`UTC+05:30`, for example) so a spreadsheet can interpret the local date and
-time. Manual entry starts with the current local date and time; choosing a
+time, then `UPI ID` (the stored VPA), because the Merchant column carries the
+readable T-198 payee title. Manual entry starts with the current local date and time; choosing a
 different date preserves the selected time of day, then `FinancialCalendar`
 converts those local date and clock fields into the stored UTC instant.
 

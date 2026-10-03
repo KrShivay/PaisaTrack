@@ -69,8 +69,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           item.categoryId != widget.initialCategoryId) {
         return false;
       }
-      if (widget.initialMerchant != null &&
-          item.displayName != widget.initialMerchant) {
+      // Callers pass a stored payee label (e.g. a recurring series), which
+      // may be a VPA while the row shows a readable title (T-198).
+      if (widget.initialMerchant case final merchant?
+          when !{
+            item.displayName,
+            item.merchantName,
+            item.merchantRaw,
+            item.counterpartyVpa,
+          }.contains(merchant)) {
         return false;
       }
       switch (_activeFilter) {
@@ -105,6 +112,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         final category = (item.categoryName ?? '').toLowerCase();
         final source = (item.paymentSourceName ?? '').toLowerCase();
         final merchant = (item.merchantRaw ?? '').toLowerCase();
+        final vpa = (item.counterpartyVpa ?? '').toLowerCase();
         if (!name.contains(q) &&
             !note.contains(q) &&
             !amt.contains(q) &&
@@ -114,7 +122,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             !account.contains(q) &&
             !category.contains(q) &&
             !source.contains(q) &&
-            !merchant.contains(q)) {
+            !merchant.contains(q) &&
+            !vpa.contains(q)) {
           return false;
         }
       }

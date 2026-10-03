@@ -12,6 +12,7 @@ import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
 
+import '../../support/drift_widget_teardown.dart';
 import '../../support/fake_sms_permission_gate.dart';
 
 void main() {
@@ -51,12 +52,6 @@ void main() {
     return database;
   }
 
-  Future<void> settle(WidgetTester tester) async {
-    for (var i = 0; i < 6; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-  }
-
   Future<ProviderContainer> pumpActivity(
     WidgetTester tester,
     AppDatabase database, {
@@ -76,20 +71,10 @@ void main() {
         child: const MaterialApp(home: TransactionsScreen()),
       ),
     );
-    await settle(tester);
+    await pumpDriftFrames(tester);
     return ProviderScope.containerOf(
       tester.element(find.byType(TransactionsScreen)),
     );
-  }
-
-  // Unmount subscribers and close the in-memory database inside the test so
-  // Drift's stream-store Timer.run is not left pending for teardown.
-  Future<void> teardown(WidgetTester tester, AppDatabase database) async {
-    await tester.pumpWidget(const SizedBox.shrink());
-    await settle(tester);
-    final closing = database.close();
-    await settle(tester);
-    await closing;
   }
 
   ScrollPosition activityPosition(WidgetTester tester) {
@@ -117,9 +102,9 @@ void main() {
     final loadMore = find.text('Load more transactions');
     await tester.scrollUntilVisible(loadMore, 400, scrollable: activityList);
     await tester.drag(activityList, const Offset(0, -200));
-    await settle(tester);
+    await pumpDriftFrames(tester);
     await tester.tap(loadMore);
-    await settle(tester);
+    await pumpDriftFrames(tester);
     expect(
       container.read(activityTransactionPageProvider).value!.rows,
       hasLength(150),
@@ -127,7 +112,7 @@ void main() {
     final anchor = find.text('Payee 120');
     await tester.scrollUntilVisible(anchor, 400, scrollable: activityList);
     await tester.ensureVisible(anchor);
-    await settle(tester);
+    await pumpDriftFrames(tester);
     return anchor;
   }
 
@@ -162,18 +147,18 @@ void main() {
       // Category changes open a picker whose search field autofocuses, so a
       // keyboard inset reaches Activity while the edit happens.
       tester.view.viewInsets = const FakeViewPadding(bottom: 320);
-      await settle(tester);
+      await pumpDriftFrames(tester);
       await TransactionRepository(database).updateWithFeedback(
         txnId: 'txn_120',
         categoryId: const Value('food'),
         context: 'test_edit',
       );
-      await settle(tester);
+      await pumpDriftFrames(tester);
       tester.view.viewInsets = FakeViewPadding.zero;
-      await settle(tester);
+      await pumpDriftFrames(tester);
 
       expectAnchorKept(tester, container, anchor, offset: offset, top: top);
-      await teardown(tester, database);
+      await unmountAndCloseDatabase(tester, database);
     });
 
     testWidgets('${layout.$1}: swipe confirm and undo keep the anchor row',
@@ -188,7 +173,7 @@ void main() {
       final top = tester.getTopLeft(anchor).dy;
 
       await tester.drag(anchor, Offset(layout.$2.width * 0.8, 0));
-      await settle(tester);
+      await pumpDriftFrames(tester);
       expectAnchorKept(tester, container, anchor, offset: offset, top: top);
       final confirmed = await (database.select(database.transactions)
             ..where((row) => row.id.equals('txn_120')))
@@ -196,13 +181,13 @@ void main() {
       expect(confirmed.status, 'confirmed');
 
       await container.read(undoControllerProvider.notifier).undo();
-      await settle(tester);
+      await pumpDriftFrames(tester);
       expectAnchorKept(tester, container, anchor, offset: offset, top: top);
       final undone = await (database.select(database.transactions)
             ..where((row) => row.id.equals('txn_120')))
           .getSingle();
       expect(undone.status, 'needs_review');
-      await teardown(tester, database);
+      await unmountAndCloseDatabase(tester, database);
     });
   }
 }

@@ -28,6 +28,7 @@ void main() {
       String? categoryName = 'Food & Dining',
       String? currencyCode,
       String? currencySymbol,
+      String? counterpartyVpa,
     }) =>
         TransactionListItem(
           id: id,
@@ -45,7 +46,23 @@ void main() {
           note: note,
           reference: reference,
           status: status,
+          counterpartyVpa: counterpartyVpa,
         );
+
+    test('T-198 keeps the stored UPI ID next to a readable merchant', () {
+      final csv = utf8.decode(
+        service.exportToCsv([
+          makeItem(
+            displayName: 'Zomato',
+            counterpartyVpa: 'payzomato@hdfcbank',
+          ),
+        ]),
+      );
+      final lines = csv.trim().split('\n');
+      expect(lines.first.trim().endsWith(',UTC Offset,UPI ID'), isTrue);
+      expect(lines.last, contains('Zomato'));
+      expect(lines.last.trim().endsWith(',payzomato@hdfcbank'), isTrue);
+    });
 
     test('generates valid CSV header and data row', () {
       final item = makeItem(note: 'Lunch', reference: 'REF123');
@@ -87,11 +104,11 @@ void main() {
       );
       final lines = csv.trim().split('\n');
 
-      expect(lines.first, endsWith('Reference,UTC Offset'));
+      expect(lines.first, endsWith('Reference,UTC Offset,UPI ID'));
       expect(lines[1], startsWith('2026-07-26,00:30:00,'));
-      expect(lines[1], endsWith(',UTC+05:30'));
+      expect(lines[1], endsWith(',UTC+05:30,'));
       expect(lines[2], startsWith('2026-07-26,23:59:00,'));
-      expect(lines[2], endsWith(',UTC+05:30'));
+      expect(lines[2], endsWith(',UTC+05:30,'));
     });
 
     test('formats an injected negative UTC offset', () {
@@ -105,7 +122,7 @@ void main() {
       );
 
       expect(csv, contains('2026-07-26,00:30:00,'));
-      expect(csv, endsWith(',UTC-04:00\n'));
+      expect(csv, endsWith(',UTC-04:00,\n'));
     });
 
     test('exports source currency alongside nominal amount', () {

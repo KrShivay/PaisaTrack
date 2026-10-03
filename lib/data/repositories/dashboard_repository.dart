@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../analytics/financial_eligibility.dart';
 import '../db/database.dart';
+import '../payee_display_name.dart';
 
 class DashboardQueryWindow {
   const DashboardQueryWindow({
@@ -273,13 +274,22 @@ ORDER BY total DESC, name ASC
     ];
   }
 
+  /// Top five payees by spend (T-198). Rows are grouped per payee identity
+  /// (merchant, else VPA, else SMS payee text, else note, else category), so
+  /// different payees are never summed together. Each group is titled with
+  /// [payeeDisplayName]; a payee-less group is titled by its category, and
+  /// identities that share a title also show their VPA or raw text.
   Future<List<DashboardMerchantAggregate>> _loadMerchants(
     DashboardQueryWindow window,
   ) async {
     final rows = await _database.customSelect(
       '''
-SELECT COALESCE(m.user_label, m.canonical_name, t.merchant_raw,
-                t.counterparty_vpa, t.description, 'Unknown') AS name,
+SELECT MAX(m.user_label) AS user_label,
+       MAX(m.canonical_name) AS canonical_name,
+       MAX(NULLIF(trim(t.merchant_raw), '')) AS merchant_raw,
+       MAX(NULLIF(trim(t.counterparty_vpa), '')) AS counterparty_vpa,
+       MAX(NULLIF(trim(t.description), '')) AS description,
+       MAX(c.name) AS category_name,
        COUNT(*) AS txn_count, SUM(t.amount) AS total
 FROM transactions t
 LEFT JOIN merchants m ON m.id = t.merchant_id
@@ -287,9 +297,17 @@ LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.ts >= ? AND t.ts < ?
   AND ${FinancialEligibility.spendingDebitSql}
   AND t.currency_code = 'INR'
-GROUP BY name
-ORDER BY total DESC, name ASC
-LIMIT 5
+GROUP BY CASE
+  WHEN t.merchant_id IS NOT NULL THEN 'm:' || t.merchant_id
+  WHEN NULLIF(trim(t.counterparty_vpa), '') IS NOT NULL
+    THEN 'v:' || lower(trim(t.counterparty_vpa))
+  WHEN NULLIF(trim(t.merchant_raw), '') IS NOT NULL
+    THEN 'r:' || lower(trim(t.merchant_raw))
+  WHEN NULLIF(trim(t.description), '') IS NOT NULL
+    THEN 'd:' || lower(trim(t.description))
+  ELSE 'c:' || COALESCE(t.category_id, '')
+END
+ORDER BY total DESC
 ''',
       variables: [
         Variable.withInt(window.start.millisecondsSinceEpoch),
@@ -301,14 +319,46 @@ LIMIT 5
         _database.merchants,
       },
     ).get();
-    return [
+    final groups = [
       for (final row in rows)
-        DashboardMerchantAggregate(
-          name: row.read<String>('name'),
+        (
+          title: payeeDisplayName(
+            userLabel: row.readNullable<String>('user_label'),
+            merchantName: row.readNullable<String>('canonical_name'),
+            merchantRaw: row.readNullable<String>('merchant_raw'),
+            counterpartyVpa: row.readNullable<String>('counterparty_vpa'),
+            description: row.readNullable<String>('description'),
+            fallback: switch (row.readNullable<String>('category_name')) {
+              final category? => 'Unnamed · $category',
+              null => 'Unnamed payee',
+            },
+          ),
+          detail: row.readNullable<String>('counterparty_vpa') ??
+              row.readNullable<String>('merchant_raw'),
           count: row.read<int>('txn_count'),
           total: row.read<double>('total'),
         ),
     ];
+    final titleCounts = <String, int>{};
+    for (final group in groups) {
+      titleCounts.update(group.title, (n) => n + 1, ifAbsent: () => 1);
+    }
+    final merchants = [
+      for (final group in groups)
+        DashboardMerchantAggregate(
+          name: titleCounts[group.title]! > 1 &&
+                  group.detail != null &&
+                  group.detail != group.title
+              ? '${group.title} · ${group.detail}'
+              : group.title,
+          count: group.count,
+          total: group.total,
+        ),
+    ]..sort((a, b) {
+        final byTotal = b.total.compareTo(a.total);
+        return byTotal != 0 ? byTotal : a.name.compareTo(b.name);
+      });
+    return merchants.take(5).toList(growable: false);
   }
 
   Future<Map<String, double>> _loadTrend(

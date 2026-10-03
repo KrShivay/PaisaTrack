@@ -135,6 +135,74 @@ void main() {
     expect(currencies['|'], 33);
   });
 
+  test('T-198 top merchants: readable VPA names, no repeated Unknown rows',
+      () async {
+    Future<void> debit(
+      String id,
+      double amount, {
+      String? merchantRaw,
+      String? vpa,
+      String categoryId = 'food_dining',
+    }) {
+      final ts = DateTime(2026, 7, 10);
+      return database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: id,
+              ts: ts.millisecondsSinceEpoch,
+              amount: amount,
+              currencyCode: const Value('INR'),
+              direction: 'debit',
+              channel: 'upi',
+              categoryId: Value(categoryId),
+              merchantRaw: Value(merchantRaw),
+              counterpartyVpa: Value(vpa),
+              parseSource: 'template',
+              confidenceJson: '{}',
+              status: 'confirmed',
+              createdAt: ts,
+              updatedAt: ts,
+            ),
+          );
+    }
+
+    // No payee at all: a personal-loan EMI and a SIP debit.
+    await debit('loan', 9000, categoryId: 'emi_personal_loan');
+    await debit('sip', 5000, categoryId: 'investments_mutual_fund_sip');
+    await debit('sip_2', 1000, categoryId: 'investments_mutual_fund_sip');
+    // A blank payee from an empty correction groups by category too.
+    await debit('blank', 50, merchantRaw: '', categoryId: 'emi_personal_loan');
+    await debit('zomato_1', 400, vpa: 'payzomato@hdfcbank');
+    await debit(
+      'zomato_2',
+      300,
+      merchantRaw: 'zomato.eternaltsp.payu@hdfcbank',
+      vpa: 'zomato.eternaltsp.payu@hdfcbank',
+    );
+
+    final snapshot = await DashboardRepository(database).load(
+      DashboardQueryWindow(
+        start: DateTime(2026, 7),
+        end: DateTime(2026, 8),
+        previousStart: DateTime(2026, 6),
+        previousEnd: DateTime(2026, 7),
+        trendStart: DateTime(2026, 2),
+        trendEnd: DateTime(2026, 8),
+      ),
+    );
+
+    final names = snapshot.merchants.map((row) => row.name).toList();
+    expect(names.toSet(), hasLength(names.length));
+    expect(names, isNot(contains('Unknown')));
+    final byName = {for (final row in snapshot.merchants) row.name: row};
+    expect(byName['Unnamed · Personal Loan']!.total, 9050);
+    expect(byName['Unnamed · Mutual Fund SIP']!.total, 6000);
+    expect(byName['Unnamed · Mutual Fund SIP']!.count, 2);
+    // Two Zomato VPAs are separate payees until the user links them: no
+    // silent merge, and the shared title is told apart by the VPA.
+    expect(byName['Zomato · payzomato@hdfcbank']!.total, 400);
+    expect(byName['Zomato · zomato.eternaltsp.payu@hdfcbank']!.total, 300);
+  });
+
   test('trend buckets honour the injected timezone offset', () async {
     // 2026-06-30 20:00 UTC is 2026-07-01 01:30 in IST (+5:30).
     await insert('boundary', DateTime.utc(2026, 6, 30, 20), 300);

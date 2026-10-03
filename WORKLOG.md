@@ -13,7 +13,7 @@
   check, moved into T-170b. Nothing else In Review; T-196–T-198 are Ready
   for @codex.
 
-## 2026-10-03 — Cloud session: T-195, T-196, T-197
+## 2026-10-03 — Cloud session: T-195 to T-198
 
 - T-195 (ADR 0021): SMS behind a transaction or "Not a transaction" are kept;
   unlinked SMS expire after 7 days (flag `raw_sms_retention_days` retired);
@@ -28,6 +28,9 @@
 - T-197: Activity lost its scroll because the category picker's autofocused
   keyboard flipped the portrait layout to the short-height one; the
   breakpoint now ignores the keyboard. Suite 1196/1196.
+- T-198: readable payee titles (display only); Top merchants' "Unknown"
+  rows came from `GROUP BY name` binding to `categories.name`; now grouped
+  per payee identity. Suite 1205/1205.
 - Push from the cloud failed (403, Claude GitHub App has no repo access);
   commits are local until access is fixed. The T-177 R3 entry is in Git
   history (`c381756`).

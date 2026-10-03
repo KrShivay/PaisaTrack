@@ -12,6 +12,7 @@ import '../../core/widgets/category_picker_sheet.dart';
 import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart' show Category, Transaction;
 import '../../data/db/database_provider.dart';
+import '../../data/payee_display_name.dart';
 import '../../data/models/normalized_transaction_record.dart'
     show FieldEvidence;
 import '../../data/repositories/category_correction.dart';
@@ -355,8 +356,15 @@ class _TransactionDetailScreenState
                 _categoryId ?? txn.categoryId ?? 'uncategorized';
             final categoryDisplayName =
                 _categoryName ?? detail.categoryName ?? 'Uncategorised';
-            final displayName =
-                detail.merchantName ?? txn.merchantRaw ?? 'Transaction';
+            // Display only: the correction sheet is prefilled with the stored
+            // merchant_raw, never this derived title (T-198, no writes).
+            final displayName = payeeDisplayName(
+              merchantName: detail.merchantName,
+              merchantRaw: txn.merchantRaw,
+              counterpartyVpa: txn.counterpartyVpa,
+              description: txn.description,
+              fallback: 'Transaction',
+            );
             final date =
                 DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true);
 
@@ -672,7 +680,7 @@ class _TransactionDetailScreenState
                                         txnId: widget.txnId,
                                         initialAmount: txn.amount,
                                         initialDirection: txn.direction,
-                                        initialMerchant: displayName,
+                                        initialMerchant: txn.merchantRaw,
                                       ),
                                     );
                                   },
@@ -776,7 +784,7 @@ class _TransactionDetailScreenState
                             txnId: widget.txnId,
                             initialAmount: txn.amount,
                             initialDirection: txn.direction,
-                            initialMerchant: displayName,
+                            initialMerchant: txn.merchantRaw,
                           ),
                         );
                       },

@@ -27,14 +27,7 @@ class PayeeKey {
   /// supported by the fixture VPA `payzomato@hdfcbank`; `payu` occurs as a
   /// separate gateway token in fixtures, so it is not stripped from words.
   static Set<String> brandTokens(String value) {
-    final at = value.lastIndexOf('@');
-    final local = at >= 0 ? value.substring(0, at) : value;
-    final separators = at >= 0 ? RegExp(r'[._\-]+') : RegExp(r'[._\-\s]+');
-    final tokens = local
-        .toLowerCase()
-        .split(separators)
-        .where((token) => token.isNotEmpty)
-        .toList(growable: false);
+    final tokens = _localTokens(value);
     if (tokens.any(_isOpaqueGatewayId)) return const {};
 
     final candidates = <String>{};
@@ -45,6 +38,38 @@ class PayeeKey {
       }
     }
     return candidates;
+  }
+
+  /// A readable display name for a VPA under the same rules as
+  /// [brandTokens]: the first brand token of the local part. The `pay`
+  /// prefix is stripped only when at least five letters remain
+  /// (`payzomato@hdfcbank` -> `Zomato`, but `payment@...` stays `Payment`).
+  /// Null for opaque gateway ids, phone numbers, and values that are not
+  /// VPAs. Display only; never used as an identity key.
+  static String? displayBrand(String vpa) {
+    if (!vpa.contains('@')) return null;
+    final candidates = brandTokens(vpa);
+    for (final token in _localTokens(vpa)) {
+      if (!candidates.contains(token)) continue;
+      final stripped = token.startsWith('pay') && token.length >= 8
+          ? token.substring('pay'.length)
+          : null;
+      final brand =
+          stripped != null && candidates.contains(stripped) ? stripped : token;
+      return brand[0].toUpperCase() + brand.substring(1);
+    }
+    return null;
+  }
+
+  static List<String> _localTokens(String value) {
+    final at = value.lastIndexOf('@');
+    final local = at >= 0 ? value.substring(0, at) : value;
+    final separators = at >= 0 ? RegExp(r'[._\-]+') : RegExp(r'[._\-\s]+');
+    return local
+        .toLowerCase()
+        .split(separators)
+        .where((token) => token.isNotEmpty)
+        .toList(growable: false);
   }
 
   static void _addBrandToken(Set<String> candidates, String token) {

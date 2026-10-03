@@ -73,7 +73,13 @@ class _TransactionCorrectionSheetState
         txnId: widget.txnId,
         amount: Value(parsedAmount),
         direction: Value(_direction),
-        merchantRaw: Value(_merchantController.text.trim()),
+        // An empty field means "no payee text", so an untouched empty field
+        // is not recorded as a payee correction.
+        merchantRaw: Value(
+          _merchantController.text.trim().isEmpty
+              ? null
+              : _merchantController.text.trim(),
+        ),
         context: 'parse_correction',
         recordParseCorrections: true,
       );

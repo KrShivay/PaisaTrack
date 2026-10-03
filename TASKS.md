@@ -231,12 +231,25 @@ later hardening.
 <!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
      proposed order of the remaining backlog. -->
 
-- [ ] T-198 [P1] Readable payee names for VPA-only rows; no repeated
-      "Unknown" in Top merchants. Details: [T-198](docs/tasks/T-198.md).
-
 ## In Review
 
 <!-- P1 tasks ready for next phase -->
+
+- [ ] T-198 [P1] Readable payee names. Code merged: one display-only
+      `payeeDisplayName` (label -> merchant name -> SMS payee text -> R4 brand
+      via `PayeeKey.displayBrand` -> stored VPA -> note) titles Activity, Sort,
+      detail and Top merchants; `payzomato@hdfcbank` and
+      `zomato.eternaltsp.payu@hdfcbank` show "Zomato", phone and gateway VPAs
+      stay as stored. Root cause of repeated "Unknown": Top merchants'
+      `GROUP BY name` bound to `categories.name`, splitting rows per category.
+      It now groups per payee identity (never merging different payees),
+      titles payee-less rows "Unnamed · <category>", and adds the VPA when two
+      payees share a title. No writes: the correction sheet is prefilled with
+      the stored `merchant_raw` and no longer turns an untouched empty field
+      into `''`. Activity filter/search and CSV ("UPI ID" column) keep the
+      VPA. Evidence (cloud): repository/widget tests red before; full suite
+      1205/1205; NY-TZ touched dirs 620/620. Open: independent review;
+      owner-phone check. Details: [T-198](docs/tasks/T-198.md).
 
 - [ ] T-197 [P1] Activity keeps its scroll position after an edit. Root
       cause: Activity chose portrait vs short-height from the

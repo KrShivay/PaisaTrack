@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../confidence_payload.dart';
+import '../payee_display_name.dart';
 import '../db/database.dart';
 import '../models/normalized_transaction_record.dart';
 import '../models/transaction_confidence_trail.dart';
@@ -54,7 +55,9 @@ class TransactionListItem {
     required this.categoryIcon,
     this.categoryIsSpending = true,
     this.merchantId,
+    this.merchantName,
     this.merchantRaw,
+    this.counterpartyVpa,
     this.accountHint,
     this.channel = 'unknown',
     this.note,
@@ -78,7 +81,11 @@ class TransactionListItem {
   final String? categoryId;
   final String? categoryIcon;
   final String? merchantId;
+
+  /// The merchant's user label or canonical name, as stored.
+  final String? merchantName;
   final String? merchantRaw;
+  final String? counterpartyVpa;
   final String? accountHint;
   final String channel;
   final String? note;
@@ -1120,6 +1127,15 @@ WHERE t.status = 'needs_review'
         );
   }
 
+  static String _displayName(Transaction txn, Merchant? merchant) =>
+      payeeDisplayName(
+        userLabel: merchant?.userLabel,
+        merchantName: merchant?.canonicalName,
+        merchantRaw: txn.merchantRaw,
+        counterpartyVpa: txn.counterpartyVpa,
+        description: txn.description,
+      );
+
   TransactionListItem _toListItem(TypedResult row) {
     final txn = row.readTable(_database.transactions);
     final merchant = row.readTableOrNull(_database.merchants);
@@ -1132,20 +1148,16 @@ WHERE t.status = 'needs_review'
       currencyCode: txn.currencyCode,
       currencySymbol: txn.currencySymbol,
       direction: _directionFromWireName(txn.direction),
-      // Presentation-time fallback (merchant -> VPA -> description); the
-      // write path keeps the signals independent (ADR 0003). Description
-      // covers manual entries, which have no merchant/VPA provenance.
-      displayName: merchant?.userLabel ??
-          merchant?.canonicalName ??
-          txn.merchantRaw ??
-          txn.counterpartyVpa ??
-          txn.description ??
-          'Unknown',
+      // Presentation-time title (T-198); the write path keeps the signals
+      // independent (ADR 0003). Description covers manual entries.
+      displayName: _displayName(txn, merchant),
       categoryName: category?.name,
       categoryId: category?.id,
       categoryIcon: category?.icon,
       merchantId: txn.merchantId,
+      merchantName: merchant?.userLabel ?? merchant?.canonicalName,
       merchantRaw: txn.merchantRaw,
+      counterpartyVpa: txn.counterpartyVpa,
       accountHint: txn.accountHint,
       channel: txn.channel,
       note: txn.description,
@@ -1174,12 +1186,7 @@ WHERE t.status = 'needs_review'
       currencyCode: txn.currencyCode,
       currencySymbol: txn.currencySymbol,
       direction: _directionFromWireName(txn.direction),
-      displayName: merchant?.userLabel ??
-          merchant?.canonicalName ??
-          txn.merchantRaw ??
-          txn.counterpartyVpa ??
-          txn.description ??
-          'Unknown',
+      displayName: _displayName(txn, merchant),
       categoryName: category?.name,
       categoryId: category?.id,
       categoryIcon: category?.icon,

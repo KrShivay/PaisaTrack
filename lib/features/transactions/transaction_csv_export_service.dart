@@ -33,7 +33,7 @@ class TransactionCsvExportService {
     // Header row.
     buffer.writeln(
       'Date,Time,Merchant,Category,Amount,Currency Code,Currency Symbol,Direction,'
-      'Channel,Account,Status,Note,Reference,UTC Offset',
+      'Channel,Account,Status,Note,Reference,UTC Offset,UPI ID',
     );
 
     for (final item in items) {
@@ -60,6 +60,7 @@ class TransactionCsvExportService {
           _escape(item.note ?? ''),
           _escape(item.reference ?? ''),
           _escape(timestamp.utcOffset),
+          _escape(item.counterpartyVpa ?? ''),
         ].join(','),
       );
     }
