@@ -251,7 +251,10 @@ edge returns from T-190g to PV-04.
   supported ARM64 phone and measured against its same-device baseline.
 - T-177a remains open until a consented real chronological holdout has enough
   explicit labels for the predeclared metrics and the separate live/resume
-  capture matrix passes on device.
+  capture matrix passes on device. Its bounded source/document reconciliation
+  is complete and independently reviewed; no period has been selected and
+  proposed thresholds await the owner's approval or revision before labels
+  are opened.
 - Backup import/recovery acceptance remains deferred and uses only ADR 0019's
   isolated QA identity. Physical restore under `com.paisatrack` is forbidden.
 
@@ -272,8 +275,9 @@ and [backup import acceptance](backup-import.md).
 
 ## Open questions for owner
 
-- Approve or revise the proposed T-177a minimum holdout cohort and target
-  thresholds in [release gates](release-gates.md) before the real-data run.
+- Choose the consented chronological T-177a period and approve or revise its
+  proposed minimum cohort and target thresholds in [release gates](release-gates.md)
+  before any holdout labels are opened or the real-data contract is frozen.
 - Confirm whether T-102 should ship CSV-only first, or include a second
   explicitly supported export format at launch.
 - Confirm whether an ambiguous partial refund should remain completely outside

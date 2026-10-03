@@ -1,5 +1,31 @@
 # Current Handoff
 
+## 2026-10-03 — T-177a source/document reconciliation complete
+
+- The 2026-09-30 report accurately described its source revision; commit
+  `f730857` added deterministic merchant resolution to history and resume on
+  2026-10-02. Current report/ADR/task wording now distinguishes that history
+  and records the v2 writer while excluding earlier v1 markers from v2 evidence.
+- Current capture wiring uses merchant resolution in all three paths;
+  history/resume skip new embedding searches but an existing learned/similarity
+  alias can still request review. Production category capture
+  does not wire merchant-memory or category-LLM callbacks. Live parser LLM uses
+  the runtime's constant default; persisted `enable_local_llm` is not wired to
+  `llmRuntimeProvider`. T-143c1–c3 tooling is complete, but production capture
+  does not schedule `ShadowPipelineRunner`.
+- R-12 documentation discrepancy is reconciled and independently reviewed.
+  R-21 stale-edge behavior is host-fixed and regression-tested by T-165b;
+  R-04 device latency remains
+  unmeasured and routes to T-165a's 10k/50k release-hardware profile.
+- Focused capture/provenance tests pass 67/67; 140 Markdown files pass link
+  checks; `git diff --check` is clean. This prose-only slice did not rerun or
+  claim the full Flutter suite. Owner selection of a consented chronological
+  period and approval/revision of proposed thresholds, real holdout, and
+  physical live/resume evidence remain open.
+- Final GitNexus `detect-changes --scope all --limit 1000 --repo .`: 8 files,
+  29 symbols, 0 flows, LOW risk; no partial/truncated result notice. Parent
+  independent review passed. T-177a itself remains In Review for owner gates.
+
 ## 2026-10-03 — T-167j host implementation in review (device gate open)
 
 - Home back now honors the active tab's `maybePop` and vetoes, retains all four
@@ -45,39 +71,3 @@
   T-194 stays on its existing branch. Owner-device QA, signed release build,
   and APK publishing remain local follow-ups in their existing tasks; no
   Android SDK or release signing was needed for T-165b.
-
-## 2026-10-03 — Cloud session: T-195 to T-198, T-154b
-
-- T-195 (ADR 0021): SMS behind a transaction or "Not a transaction" are kept;
-  unlinked SMS expire after 7 days (flag `raw_sms_retention_days` retired);
-  backups carry linked SMS; Settings → "Restore SMS sources" re-links exact
-  inbox matches (`txn_<id>` + evidence spans), skips and counts the rest.
-  Shared `readInboxPages` now drives history import, catch-up and re-link.
-  Backup +~340 B per kept SMS (16 MiB cap ≈ 12k SMS-backed transactions).
-- Evidence: suite 1185/1185, NY-TZ touched dirs 642/642, analyze 0.
-  Owner phone still needs the re-link check.
-- T-196: "TRANSACTION DETAILS" card on the detail screen (stored fields only,
-  48dp copy buttons); suite 1192/1192. In Review; owner-phone check open.
-- T-197: Activity lost its scroll because the category picker's autofocused
-  keyboard flipped the portrait layout to the short-height one; the layout
-  choice is now frozen while a keyboard is up (review caught the HomeShell
-  padding case). Also fixed a 360dp header overflow. Suite 1208/1208.
-- T-198: readable payee titles (display only); Top merchants' "Unknown"
-  rows came from `GROUP BY name` binding to `categories.name`; now grouped
-  per payee identity. Suite 1205/1205; review findings fixed.
-- T-154b: Sort "Not right?" quick corrections; guess recomputed after an
-  edit with Keep disabled until it settles; Keep stores it without feedback
-  or rules. Suite 1212/1212.
-- Reviews: each task had an independent Claude review; T-195 PASS (its
-  phone check moved into T-170b); T-196/T-197/T-198/T-154b findings fixed
-  before or after commit. T-196, T-197, T-198 and T-154b stay In Review only
-  for the owner-phone check.
-- Needs the owner's machine: phone QA of T-195 (Settings → "Restore SMS
-  sources", a >30-day transaction shows its SMS), T-196–T-198 and T-154b;
-  T-176/T-167c landscape + 2.0x + three-button recheck; signed release and
-  `apk-downloads` publish; T-194 stays on `codex/apk-size-trial`. No Android
-  SDK in the cloud container, so no debug APK build was run.
-- Push from the cloud failed (403, Claude GitHub App has no repo access);
-  the commits exist only on the cloud branch `claude/great-cannon-16aotf`
-  until access is fixed. Next code slice per roadmap: T-165b. The T-177 R3 entry is in Git
-  history (`c381756`).

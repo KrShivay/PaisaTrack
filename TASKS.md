@@ -148,7 +148,9 @@ later hardening.
     No candidate APK publication is part of this task.
   - Details: [T-194](docs/tasks/T-194.md).
 
-- [ ] T-177a [P1] Audit production integration, provenance, and baseline accuracy.
+- [ ] T-177a [P1] Audit production integration, provenance, and baseline
+      accuracy (bounded source/document reconciliation complete; owner holdout
+      and device gates open).
   - Bounded milestone: add a local chronological replay/report contract and
     synthetic fixtures that exercise live, history, and resume provider wiring;
     document per-field provenance and deliberate path differences. Keep T-177a
@@ -164,19 +166,22 @@ later hardening.
     count, and fingerprint are cleared.
   - Synthetic milestone adds live/history/resume provider fixtures, a
     chronological explicit-label report contract, and the provenance matrix in
-    `docs/reports/T-177a-capture-provenance.md`. T-140/T-143 status and their
-    production integration limits are reconciled there. Remaining T-177a gates:
-    real chronological holdout and physical capture coverage. The
-    `capture-decision-v1` contract records live `policy` vs history/resume
-    `fixed_review` mode in existing confidence JSON; ADR 0018 defines legacy
-    compatibility. Independent review passed without blocker. The resume
-    fixture calls the catch-up runner directly; app-resume lifecycle and
-    known-SMS-boundary behavior remain unverified alongside physical
-    live/resume capture. The real-data holdout and physical capture evidence
-    remain pending. The supported phone was online for the unrelated 2026-09-30
-    v2011 release install/launch; no T-177a holdout or physical capture/resume
-    acceptance was performed.
-  - Verification: threshold tests 17/17; repository/detail/template-ledger
+    `docs/reports/T-177a-capture-provenance.md`. The 2026-10-03 source audit
+    reconciles the report, ADR 0018, and T-143 component status: the supported
+    marker is `capture-decision-v2`; all three capture paths resolve merchants,
+    while history/resume skip new embedding searches (stored fuzzy aliases can
+    still request review); category memory/LLM
+    callbacks and production shadow scheduling are not wired. T-143c1–c3 are
+    complete as tooling. The resume fixture calls the catch-up runner directly;
+    app-resume lifecycle, known-SMS-boundary behavior, and physical live/resume
+    capture remain unverified. The bounded source/document slice is complete
+    and independently reviewed; T-177a remains In Review for owner holdout
+    and device acceptance. No holdout period is selected and proposed cohort/
+    metric thresholds await owner approval or revision. Real-data holdout and
+    physical capture evidence remain pending. The supported phone's unrelated
+    2026-09-30 v2011 release install/launch is not T-177a evidence.
+  - Historical verification for the threshold-safeguard implementation:
+    threshold tests 17/17; repository/detail/template-ledger
     tests 38/38; full Flutter suite 903/903; analyzer, changed-file formatting,
     and diff check clean. Same-count correction, v1/v2 state invalidation,
     multiple cohorts, undo to 49 outcomes, and full category removal are
@@ -187,15 +192,17 @@ later hardening.
     UNKNOWN with 2 dropped callers, text search corroborates call sites.
     Detect-changes reports 25 symbols, 9 files, 4 processes, MEDIUM. No schema,
     phone, or APK changes.
-  - Reviewed capture-decision slice: focused provenance/ingest/backfill tests
-    57/57; full Flutter suite 942/942; analyzer and diff check clean. GitNexus
-    detect-changes: 10 files, 28 symbols, 0 processes, LOW; independent
-    review passed. No schema migration, inference activation, accuracy claim,
-    phone, or APK change.
+  - Historical capture-decision implementation verification: focused
+    provenance/ingest/backfill tests 57/57; full Flutter suite 942/942;
+    analyzer and diff check clean at that revision. These are not fresh checks
+    for the 2026-10-03 documentation reconciliation; no full application suite
+    is claimed for this prose-only slice. No schema migration, inference
+    activation, accuracy claim, phone, or APK change.
   - Detail now has a separate evidence-backed parse-confirm action; it never
     changes transaction status/category and intentionally does not count as
-    category-threshold evidence. Broad provider/provenance/baseline audit is
-    still open.
+    category-threshold evidence. Current source wiring and provenance are now
+    documented; the real baseline, owner holdout, and physical device coverage
+    remain open.
 
 - [ ] T-167c [P1] Fix large-text overflows and cover primary transaction flows.
   - Acceptance: fix confirmed 320×568/2× overflow in HomeShell navigation,

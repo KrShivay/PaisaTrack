@@ -82,6 +82,12 @@ opening the holdout. Existing selected feedback and the four-row synthetic
 replay are not holdout evidence. If existing local labels are insufficient,
 leave the gate open; do not lower the cohort minimum or claim a pass.
 
+No evaluation period or cohort has been selected. Before opening any holdout
+labels, the owner must choose and consent to the chronological period and
+approve or revise the proposed cohort floor, metrics, and thresholds below.
+Record that decision in the frozen evaluation contract; this document does not
+imply owner approval.
+
 Use the local replay/evaluation flow from
 `test/support/capture_replay_report.dart` only if the owner-approved run can
 provide the held-out aggregate without exporting transaction/message rows. If
@@ -120,11 +126,11 @@ month/cohort, and decision mode where each bucket has enough rows:
   catch-up, including the known-SMS boundary and no duplicate rows. These
   checks do not replace the aggregate holdout metrics.
 
-These are the proposed release thresholds already described in the
-[smart-assistance plan](smart-transaction-assistance.md), with a proposed
-minimum holdout count made explicit here. An insufficient sample, missing
-chronology, unversioned rows, or any known false exclusion keeps automation
-disabled for that cohort; it is not a pass.
+These are proposed release thresholds, not owner-approved acceptance criteria.
+The proposed minimum holdout count is made explicit here; the owner may approve
+or revise it before the period and contract are frozen. An insufficient sample,
+missing chronology, unversioned rows, or any known false exclusion keeps
+automation disabled for that cohort; it is not a pass.
 
 ### Privacy and evidence
 
@@ -144,8 +150,9 @@ contract, aggregate calculations and pass/fail result.
 - T-194: physical candidate install/storage/cold-start comparison is unverified
   and open. The owner phone runs the latest published build in
   [release signing](../release-signing.md); preflight incompatibility with the 4011 candidate must be resolved.
-- T-177a: synthetic provider/replay milestone is complete, but real holdout and
-  physical live/resume evidence remain open. The provenance report currently
-  disagrees with ADR 0018 on decision marker version; resolve this documentation
-  discrepancy against `lib/capture/capture_decision_provenance.dart` before
-  freezing the holdout contract.
+- T-177a: the synthetic provider/replay milestone and bounded source/document
+  reconciliation are complete and independently reviewed. The current source
+  and ADR 0018 support `capture-decision-v2`; old/malformed/unsupported rows
+  remain excluded. Real holdout and physical live/resume evidence remain open.
+  No chronological period has been selected and proposed thresholds await
+  owner approval or revision before contract freeze.

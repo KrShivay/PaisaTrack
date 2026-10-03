@@ -4,18 +4,27 @@ Status: accepted; v2 decision contract, 2026-10-02.
 
 ## Context
 
-T-177a now exercises the production live, history, and resume providers with
-synthetic messages. Parsed transactions persist parser, merchant, and category
-provenance in `transactions.confidence_json`, but the final category/status
-decision has no version. A replay therefore cannot distinguish a versioned
-capture decision from a legacy row. The three providers intentionally differ:
-live may use the optional parser field locator and merchant resolver, while
-history and resume use template+generic parsing and omit merchant resolution.
-History and resume keep non-rule decisions in review. Rule hits still run the
-status policy so confirmed `auto` decisions are preserved, while `asked` is
-clamped to `needs_review` to keep fixed-review imports out of the Ask queue and
-daily ask budget. Live capture also honors a merchant resolver's
-`needsReview` similarity-alias signal before accepting a rule-backed status.
+The initial T-177a audit found that parsed transactions persisted parser,
+merchant, and category provenance in `transactions.confidence_json`, but the
+final category/status decision had no version. A replay therefore could not
+distinguish a versioned capture decision from a legacy row. Its 2026-09-30
+path matrix accurately recorded that history and resume then omitted merchant
+resolution. Commit `f730857` added the resolver to those paths on 2026-10-02;
+the 2026-10-03 reconciliation records the current wiring. All three paths now
+run `MerchantResolver`. Live may use the optional parser field locator and
+permits embedding-similarity search suggestions; history and resume use
+template+generic parsing and pass `allowSuggestions: false`, which skips that
+new embedding search. Previously stored learned/similarity aliases can still
+return a `needsReview` suggestion in any path.
+
+History and resume normally keep non-rule decisions in review. Settled
+duplicates take a direct `auto` branch before source-evidence write guards;
+unsettled rows still require review. Rule hits still run the status policy,
+preserving eligible `auto` results while clamping `asked` to `needs_review`;
+the live path also honors a merchant resolver's `needsReview` similarity
+signal before accepting a rule-backed status. These exceptions are part of
+the decision contract, not an assertion that all imported rows are
+review-only.
 
 ## Decision
 
@@ -74,10 +83,11 @@ reader returns no version for absent, malformed, or unsupported metadata. Old
 rows are not backfilled or treated as if they used the current version. A
 future behavior change to category/status decision semantics must use a new
 version string; changing parser-only behavior continues to use the parser
-version. The reader accepts only v2 and supported status modes; absent,
-malformed, or unknown values remain unversioned. v1 rows remain readable through
-their existing parser, merchant, and category fields but are not treated as v2
-decision evidence.
+version. The earlier writer emitted v1; those rows retain that marker and are
+not retroactively reclassified. The reader accepts only v2 and supported status
+modes; absent, malformed, or unknown values remain unsupported. v1 rows remain
+readable through their existing parser, merchant, and category fields but are
+not treated as v2 decision evidence.
 
 This is an additive JSON key in an existing text column. It needs no database
 migration or generated code. Existing confidence readers continue to read
