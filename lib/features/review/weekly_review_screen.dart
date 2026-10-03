@@ -8,15 +8,26 @@ import '../../core/theme/app_theme.dart';
 import '../../core/undo/undo_controller.dart';
 import '../../core/widgets/bloom/bloom.dart';
 import '../../core/widgets/category_picker_sheet.dart';
-import '../../data/db/database.dart' show Category;
+import '../../data/db/database.dart' show Category, Transaction;
 import '../../data/db/database_provider.dart';
 import '../../data/models/normalized_transaction_record.dart';
+import '../../data/payee_display_name.dart';
+import '../../data/repositories/sms_disposition_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../enrichment/categorizer.dart';
+import '../../enrichment/stored_transaction_record.dart';
+import '../../intelligence/derived_reads_service.dart';
 import '../settings/app_settings.dart';
+import '../transactions/transaction_correction_sheet.dart';
 import '../transactions/transaction_detail_screen.dart';
 import '../transactions/transaction_correction_controller.dart';
 import '../transactions/transactions_providers.dart';
 import 'weekly_review_providers.dart';
+
+typedef _RemovedCard = ({
+  int index,
+  ({String categoryId, String? previous})? guess,
+});
 
 /// Redesigned Bloom Sort screen: Tinder-style card swipe review with
 /// Card/List toggle, Skip action, classifier info, error handling,
@@ -33,6 +44,17 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   int _cursor = 0;
   List<TransactionReviewItem>? _stableQueue;
   int? _totalInitialCount;
+
+  /// Cards whose category guess is being recomputed after an edit (T-154b).
+  final _refreshingGuess = <String>{};
+
+  /// Cards whose recomputed guess failed; Keep stays off until the user
+  /// chooses a category.
+  final _guessFailed = <String>{};
+
+  /// Recomputed guesses not yet stored, with the stored category they would
+  /// replace so Undo can restore it.
+  final _refreshedGuess = <String, ({String categoryId, String? previous})>{};
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +157,23 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
             dragDx: _dragDx,
             isDark: isDark,
             compactLandscape: compactLandscape,
+            guessNote: _refreshingGuess.contains(item.id)
+                ? 'Updating guess…'
+                : _guessFailed.contains(item.id)
+                    ? "Couldn't update the guess. Choose a category."
+                    : _refreshedGuess.containsKey(item.id)
+                        ? 'Guess updated for the corrected payee'
+                        : null,
             onTap: () => _openDetailSheet(context, item),
           ),
         ),
       ),
+    );
+
+    final notRight = TextButton.icon(
+      onPressed: () => _showNotRight(item),
+      icon: const Icon(Icons.flag_outlined, size: 18),
+      label: const Text('Not right?'),
     );
 
     return Scaffold(
@@ -231,13 +266,19 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                 const SizedBox(height: 12),
               ],
 
-              // Swipeable Card Container
+              // Swipeable Card Container; compact landscape scrolls the
+              // "Not right?" action with the card to keep the card visible.
               Expanded(
                 child: compactLandscape
-                    ? SingleChildScrollView(child: card)
+                    ? SingleChildScrollView(
+                        child: Column(children: [card, notRight]),
+                      )
                     : Center(child: card),
               ),
-              SizedBox(height: compactLandscape ? 4 : 24),
+              if (!compactLandscape) ...[
+                notRight,
+                const SizedBox(height: 12),
+              ],
 
               // Action Buttons Row (Back / Change category / Skip / Keep)
               Row(
@@ -280,14 +321,17 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                     isDark: isDark,
                     size: compactLandscape ? 48 : 50,
                   ),
-                  // Keep button (Emerald)
+                  // Keep button (Emerald); disabled while the guess for an
+                  // edited card is recomputed (T-154b).
                   _ActionButton(
                     icon: Icons.check_rounded,
+                    semanticLabel: 'Keep',
                     color: AppColorTokens.bloomEmerald,
                     bgColor: isDark
                         ? AppColorTokens.bloomEmerald.withValues(alpha: 0.18)
                         : const Color(0xFFD3F2E4),
-                    onTap: () => _confirmItem(item),
+                    onTap:
+                        _keepBlocked(item.id) ? null : () => _confirmItem(item),
                     isDark: isDark,
                     size: compactLandscape ? 48 : 58,
                   ),
@@ -314,6 +358,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       builder: (ctx) => TransactionDetailScreen(txnId: item.id),
     );
     if (!mounted) return;
+    if (await _refreshGuessIfEdited(item) || !mounted) return;
     // Refresh the item in _stableQueue with any edits applied in the detail sheet.
     final updatedItems = ref.read(reviewQueueProvider).valueOrNull;
     if (updatedItems == null || _stableQueue == null) return;
@@ -324,6 +369,240 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       orElse: () => _stableQueue![idx],
     );
     setState(() => _stableQueue![idx] = updated);
+  }
+
+  bool _keepBlocked(String id) =>
+      _refreshingGuess.contains(id) || _guessFailed.contains(id);
+
+  /// Recomputes the category guess when an edit changed what the guess was
+  /// computed from, so Keep never confirms a guess for a corrected-away payee
+  /// (T-154b). Read path only: the guess is stored on Keep, without feedback.
+  /// A category the user chose in the meantime always wins. Returns whether
+  /// the card was updated here.
+  Future<bool> _refreshGuessIfEdited(TransactionReviewItem before) async {
+    final database = await ref.read(appDatabaseProvider.future);
+    final txn = await (database.select(database.transactions)
+          ..where((row) => row.id.equals(before.id)))
+        .getSingleOrNull();
+    if (txn == null || !mounted) return false;
+    final storedBefore = _refreshedGuess[txn.id]?.previous ?? before.categoryId;
+    final payeeChanged = txn.merchantRaw != before.merchantRaw;
+    final categoryChosen = txn.categoryId != storedBefore;
+    if (!categoryChosen &&
+        !payeeChanged &&
+        txn.amount == before.amount &&
+        txn.direction == before.direction.wireName) {
+      return false;
+    }
+    final categories = await ref.read(categoryListProvider.future);
+    Category? categoryFor(String? id) =>
+        categories.where((c) => c.id == id).firstOrNull;
+    if (!mounted) return false;
+    if (categoryChosen) {
+      // The user picked a category: show and keep it, never a guess.
+      final chosen = categoryFor(txn.categoryId);
+      setState(() {
+        _refreshedGuess.remove(txn.id);
+        _guessFailed.remove(txn.id);
+        _replaceItem(
+          before,
+          txn,
+          payeeChanged: payeeChanged,
+          categoryId: txn.categoryId,
+          categoryName: chosen?.name,
+          categoryIcon: chosen?.icon,
+        );
+      });
+      return true;
+    }
+
+    setState(() {
+      _refreshingGuess.add(txn.id);
+      _guessFailed.remove(txn.id);
+    });
+    try {
+      final categorizer = await ref.read(categorizerProvider.future);
+      // The merchant link still points at the old payee after a correction.
+      final guess = await categorizer.categorize(
+        normalizedRecordOf(txn),
+        merchantId: payeeChanged ? null : txn.merchantId,
+      );
+      if (!mounted) return true;
+      final category = categoryFor(guess.categoryId);
+      setState(() {
+        _refreshedGuess[txn.id] =
+            (categoryId: guess.categoryId, previous: storedBefore);
+        _replaceItem(
+          before,
+          txn,
+          payeeChanged: payeeChanged,
+          categoryId: guess.categoryId,
+          categoryName: category?.name,
+          categoryIcon: category?.icon,
+        );
+      });
+    } catch (_) {
+      if (mounted) setState(() => _guessFailed.add(txn.id));
+    } finally {
+      if (mounted) setState(() => _refreshingGuess.remove(txn.id));
+    }
+    return true;
+  }
+
+  void _replaceItem(
+    TransactionReviewItem item,
+    Transaction txn, {
+    required bool payeeChanged,
+    required String? categoryId,
+    String? categoryName,
+    String? categoryIcon,
+  }) {
+    final index = _stableQueue?.indexWhere((i) => i.id == item.id) ?? -1;
+    if (index == -1) return;
+    _stableQueue![index] = TransactionReviewItem(
+      id: item.id,
+      ts: item.ts,
+      amount: txn.amount,
+      currencyCode: txn.currencyCode,
+      currencySymbol: txn.currencySymbol,
+      direction: txn.direction == 'credit'
+          ? TransactionDirection.credit
+          : TransactionDirection.debit,
+      // A corrected payee no longer matches the old merchant's label.
+      displayName: payeeChanged
+          ? payeeDisplayName(
+              merchantRaw: txn.merchantRaw,
+              counterpartyVpa: txn.counterpartyVpa,
+              description: txn.description,
+            )
+          : item.displayName,
+      categoryName: categoryName,
+      categoryId: categoryId,
+      categoryIcon: categoryIcon,
+      status: item.status,
+      merchantRaw: txn.merchantRaw,
+      counterpartyKey: item.counterpartyKey,
+      isLowTrustParse: item.isLowTrustParse,
+    );
+  }
+
+  /// Quick corrections for the frequent cases without a detail round trip.
+  Future<void> _showNotRight(TransactionReviewItem item) async {
+    final database = await ref.read(appDatabaseProvider.future);
+    final txn = await (database.select(database.transactions)
+          ..where((row) => row.id.equals(item.id)))
+        .getSingleOrNull();
+    if (txn == null || !mounted) return;
+    final choice = await showBloomModalSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_note_rounded),
+              title: const Text('Wrong payee or amount'),
+              onTap: () => Navigator.of(sheetContext).pop('parse'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.swap_horiz_rounded),
+              title: const Text('Not a spend (transfer or refund)'),
+              onTap: () => Navigator.of(sheetContext).pop('transfer'),
+            ),
+            if (txn.smsId != null)
+              ListTile(
+                leading: const Icon(Icons.block_outlined),
+                title: const Text('Duplicate or not a transaction'),
+                onTap: () => Navigator.of(sheetContext).pop('not_txn'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'parse':
+        await showBloomModalSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => TransactionCorrectionSheet(
+            txnId: item.id,
+            initialAmount: txn.amount,
+            initialDirection: txn.direction,
+            initialMerchant: txn.merchantRaw,
+          ),
+        );
+        if (mounted) await _refreshGuessIfEdited(item);
+      case 'transfer':
+        await _fileUnder(
+          item,
+          categoryId: 'transfers',
+          categoryName: 'Transfers',
+          context: 'sort_not_spend',
+        );
+      case 'not_txn':
+        await _markNotTransaction(item, txn);
+    }
+  }
+
+  Future<void> _markNotTransaction(
+    TransactionReviewItem item,
+    Transaction txn,
+  ) async {
+    final database = await ref.read(appDatabaseProvider.future);
+    final dispositions = SmsDispositionRepository(
+      database,
+      derivedReadsService: await ref.read(derivedReadsServiceProvider.future),
+    );
+    final removed = _removeFromQueue(item);
+    try {
+      await dispositions.markNotTransaction(txn);
+    } catch (e) {
+      _restoreToQueue(item, removed);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to mark as not a transaction: $e')),
+        );
+      }
+      return;
+    }
+    ref.read(undoControllerProvider.notifier).pushUndo(
+          UndoToken(
+            id: 'sort_not_txn_${item.id}',
+            message: 'Marked as not a transaction',
+            undoAction: () async {
+              _restoreToQueue(item, removed);
+              await dispositions.restore(txn.smsId!);
+            },
+          ),
+        );
+  }
+
+  /// Removes a card; the result restores its position and any recomputed
+  /// guess on Undo or failure.
+  _RemovedCard _removeFromQueue(TransactionReviewItem item) {
+    final removed = (
+      index: _stableQueue?.indexWhere((i) => i.id == item.id) ?? -1,
+      guess: _refreshedGuess[item.id],
+    );
+    setState(() {
+      _refreshedGuess.remove(item.id);
+      if (removed.index != -1) {
+        _stableQueue!.removeAt(removed.index);
+        _cursor = _cursor.clamp(0, math.max(0, _stableQueue!.length - 1));
+      }
+    });
+    return removed;
+  }
+
+  void _restoreToQueue(TransactionReviewItem item, _RemovedCard removed) {
+    if (!mounted || removed.index == -1) return;
+    setState(() {
+      final insertAt = removed.index.clamp(0, _stableQueue!.length);
+      _stableQueue!.insert(insertAt, item);
+      _cursor = insertAt;
+      if (removed.guess case final guess?) _refreshedGuess[item.id] = guess;
+    });
   }
 
   void _goBack() {
@@ -355,20 +634,25 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       );
 
   Future<void> _confirmItem(TransactionReviewItem item) async {
-    final originalIdx = _stableQueue?.indexWhere((i) => i.id == item.id) ?? -1;
-    setState(() {
-      if (originalIdx != -1) {
-        _stableQueue!.removeAt(originalIdx);
-        _cursor = _cursor.clamp(0, math.max(0, _stableQueue!.length - 1));
-      }
-    });
+    if (_keepBlocked(item.id)) return;
+    final guess = _refreshedGuess[item.id];
+    final removed = _removeFromQueue(item);
 
     try {
       await _correctionController.apply(
         id: 'sort_confirm_${item.id}',
         message: 'Marked confirmed',
         action: (repo) async {
-          if (repo != null) {
+          if (repo == null) return;
+          if (guess != null) {
+            // Keep stores the recomputed guess the card showed, never the
+            // capture-time guess for the corrected-away payee.
+            await repo.applyReviewGuess(
+              txnId: item.id,
+              categoryId: guess.categoryId,
+              status: 'confirmed',
+            );
+          } else {
             await repo.updateWithFeedback(
               txnId: item.id,
               status: const Value('confirmed'),
@@ -377,14 +661,15 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           }
         },
         undo: (repo) async {
-          if (mounted) {
-            setState(() {
-              final insertAt = originalIdx.clamp(0, _stableQueue!.length);
-              _stableQueue!.insert(insertAt, item);
-              _cursor = insertAt;
-            });
-          }
-          if (repo != null) {
+          _restoreToQueue(item, removed);
+          if (repo == null) return;
+          if (guess != null) {
+            await repo.applyReviewGuess(
+              txnId: item.id,
+              categoryId: guess.previous,
+              status: 'needs_review',
+            );
+          } else {
             await repo.updateWithFeedback(
               txnId: item.id,
               status: const Value('needs_review'),
@@ -394,14 +679,8 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         },
       );
     } catch (e) {
+      _restoreToQueue(item, removed);
       if (mounted) {
-        setState(() {
-          if (originalIdx != -1) {
-            final insertAt = originalIdx.clamp(0, _stableQueue!.length);
-            _stableQueue!.insert(insertAt, item);
-            _cursor = insertAt;
-          }
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to confirm transaction: $e'),
@@ -423,38 +702,41 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       ),
     );
     if (chosen == null || !mounted) return;
+    await _fileUnder(
+      item,
+      categoryId: chosen.id,
+      categoryName: chosen.name,
+      context: 'sort_categorize',
+    );
+  }
 
-    final originalIdx = _stableQueue?.indexWhere((i) => i.id == item.id) ?? -1;
-    setState(() {
-      if (originalIdx != -1) {
-        _stableQueue!.removeAt(originalIdx);
-        _cursor = _cursor.clamp(0, math.max(0, _stableQueue!.length - 1));
-      }
-    });
+  /// Applies the user's explicit category choice (a correction with
+  /// feedback) and removes the card, with Undo.
+  Future<void> _fileUnder(
+    TransactionReviewItem item, {
+    required String categoryId,
+    required String categoryName,
+    required String context,
+  }) async {
+    final prevCategory = _refreshedGuess[item.id]?.previous ?? item.categoryId;
+    final removed = _removeFromQueue(item);
+    _guessFailed.remove(item.id);
 
     try {
-      final prevCategory = item.categoryId;
-
       await _correctionController.apply(
         id: 'sort_cat_${item.id}',
-        message: 'Filed under ${chosen.name}',
+        message: 'Filed under $categoryName',
         action: (repo) async {
           if (repo != null) {
             await repo.updateWithFeedback(
               txnId: item.id,
-              categoryId: Value(chosen.id),
-              context: 'sort_categorize',
+              categoryId: Value(categoryId),
+              context: context,
             );
           }
         },
         undo: (repo) async {
-          if (mounted) {
-            setState(() {
-              final insertAt = originalIdx.clamp(0, _stableQueue!.length);
-              _stableQueue!.insert(insertAt, item);
-              _cursor = insertAt;
-            });
-          }
+          _restoreToQueue(item, removed);
           if (repo != null) {
             await repo.updateWithFeedback(
               txnId: item.id,
@@ -465,15 +747,9 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
         },
       );
     } catch (e) {
+      _restoreToQueue(item, removed);
       if (mounted) {
-        setState(() {
-          if (originalIdx != -1) {
-            final insertAt = originalIdx.clamp(0, _stableQueue!.length);
-            _stableQueue!.insert(insertAt, item);
-            _cursor = insertAt;
-          }
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(this.context).showSnackBar(
           SnackBar(
             content: Text('Failed to update category: $e'),
           ),
@@ -650,29 +926,41 @@ class _ActionButton extends StatelessWidget {
     required this.onTap,
     required this.isDark,
     this.size = 58,
+    this.semanticLabel,
   });
 
   final IconData icon;
   final Color color;
   final Color bgColor;
-  final VoidCallback onTap;
+
+  /// Null disables the button.
+  final VoidCallback? onTap;
   final bool isDark;
   final double size;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: bgColor,
-          boxShadow: AppColorTokens.bloomSortCardShadow,
-        ),
-        child: Center(
-          child: Icon(icon, size: 24, color: color),
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      enabled: onTap != null,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Opacity(
+          opacity: onTap == null ? 0.4 : 1,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: bgColor,
+              boxShadow: AppColorTokens.bloomSortCardShadow,
+            ),
+            child: Center(
+              child: Icon(icon, size: 24, color: color),
+            ),
+          ),
         ),
       ),
     );
@@ -687,6 +975,7 @@ class _SortCard extends StatelessWidget {
     required this.dragDx,
     required this.isDark,
     required this.compactLandscape,
+    this.guessNote,
     this.onTap,
   });
 
@@ -694,6 +983,9 @@ class _SortCard extends StatelessWidget {
   final double dragDx;
   final bool isDark;
   final bool compactLandscape;
+
+  /// Shown while, or after, the guess is recomputed for an edited card.
+  final String? guessNote;
   final VoidCallback? onTap;
 
   @override
@@ -811,6 +1103,19 @@ class _SortCard extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
+            if (guessNote != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  guessNote!,
+                  style: AppTheme.bloomDisplay(
+                    11,
+                    FontWeight.w600,
+                    color: AppColorTokens.bloomEmerald,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             const SizedBox(height: 4),
 
             // Low-trust parse indicator

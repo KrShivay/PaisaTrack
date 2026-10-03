@@ -7,11 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../../core/widgets/transaction_filter_sheet.dart';
-import '../../data/models/normalized_transaction_record.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/transaction_source_repository.dart';
 import '../../enrichment/local_classifier.dart';
+import '../../enrichment/stored_transaction_record.dart';
 
 const transactionPageSize = 100;
 const reviewPageSize = 100;
@@ -319,22 +319,7 @@ final suggestedCategoriesProvider =
       : null;
   final classifier = LocalClassifier(db);
 
-  final record = NormalizedTransactionRecord(
-    amount: txn.amount,
-    direction: TransactionDirection.values.byName(txn.direction),
-    channel: TransactionChannel.values.byName(txn.channel),
-    merchantRaw: txn.merchantRaw,
-    counterpartyVpa: txn.counterpartyVpa,
-    accountHint: txn.accountHint,
-    balanceAfter: txn.balanceAfter,
-    refId: txn.refId,
-    ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
-    parseSource: ParseSource.values.firstWhere(
-      (source) => source.wireName == txn.parseSource,
-      orElse: () => ParseSource.generic,
-    ),
-    parseConfidence: 1,
-  );
+  final record = normalizedRecordOf(txn);
 
   final blob = merchant?.embedding;
   final Float32List? vector = blob == null

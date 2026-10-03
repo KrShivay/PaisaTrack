@@ -235,6 +235,21 @@ later hardening.
 
 <!-- P1 tasks ready for next phase -->
 
+- [ ] T-154b [P2] Sort: inline corrections and guess refresh before Keep.
+      Code merged: a "Not right?" action under the card offers "Wrong payee
+      or amount" (the existing correction sheet), "Not a spend (transfer or
+      refund)" and, for SMS rows, "Duplicate or not a transaction", each with
+      Undo. After any edit that changes the payee, amount or direction, the
+      guess is recomputed through the categorizer read path (ignoring the
+      stale merchant link) and Keep is disabled until it settles (and stays
+      disabled if it fails). Keep then stores the recomputed guess without a
+      feedback row, rule or alias; a category the user chose always wins.
+      Evidence (cloud): `sort_inline_correction_test.dart` (4 tests) red before;
+      full suite 1212/1212; NY-TZ touched dirs 412/412. Review: six findings
+      (user choice overwritten, Undo losing the guess, failure re-enabling
+      Keep, title, silent failure) fixed. Open: owner-phone check.
+      Details: [T-154](docs/tasks/T-154.md).
+
 - [ ] T-198 [P1] Readable payee names. Code merged: one display-only
       `payeeDisplayName` (label -> merchant name -> SMS payee text -> R4 brand
       via `PayeeKey.displayBrand` -> stored VPA -> note) titles Activity, Sort,
@@ -248,8 +263,10 @@ later hardening.
       the stored `merchant_raw` and no longer turns an untouched empty field
       into `''`. Activity filter/search and CSV ("UPI ID" column) keep the
       VPA. Evidence (cloud): repository/widget tests red before; full suite
-      1205/1205; NY-TZ touched dirs 620/620. Open: independent review;
-      owner-phone check. Details: [T-198](docs/tasks/T-198.md).
+      1205/1205; NY-TZ touched dirs 620/620. Review: six findings (neutral
+      label merges, pay-prefix, person names, blank groups, filter/search/CSV)
+      fixed before commit. Open: owner-phone check.
+      Details: [T-198](docs/tasks/T-198.md).
 
 - [ ] T-197 [P1] Activity keeps its scroll position after an edit. Root
       cause: Activity chose portrait vs short-height from the
@@ -275,7 +292,8 @@ later hardening.
       disclosure no longer repeats them. Evidence (cloud): card/screen tests
       red before the card existed; 2.0x landscape 964x434 without overflow;
       full suite 1192/1192; NY-TZ transactions + repositories 225/225.
-      Open: independent review; owner-phone check.
+      Review: payment-source name now live (finding fixed). Open:
+      owner-phone check.
       Details: [T-196](docs/tasks/T-196.md).
 
 ### Scale, privacy, and maintainability
@@ -387,7 +405,6 @@ T-154a.
 | **T-151b** | P2 | ~S | Bubble geometry and verdict answers | T-151a |
 | **T-151d** | P2 | ~M | Thinking, model-missing, no-answer states | T-151b |
 | **T-151e** | P3 | ~M | Inline charts and follow-up chips | T-151b |
-| **T-154b** | P2 | ~M | Inline corrections + guess refresh before Keep | T-154a |
 | **T-149a** | P3 | ~M | Profile shell and personalisation | — |
 | **T-149b** | P3 | ~M | Habits and money shape | T-149a |
 | **T-149c** | P3 | ~S | Data footprint and privacy posture | T-149a |
@@ -398,8 +415,8 @@ Completed T-145a/b, T-146a/b, T-147a/b, T-148a/b, and T-152a are mapped in
 Follow `PLAN.md` for delivery priority: finish T-176 physical-device
 acceptance, then T-177a. T-157b and PV-02 passed independent review and were
 removed from the active board. T-153a–c were verified complete on 2026-10-03
-(`635e63d`, `a211935`, `ebf62cd`; 26 review tests pass), so T-154b is
-unblocked. T-151b remains open pending a supported
+(`635e63d`, `a211935`, `ebf62cd`; 26 review tests pass); T-154b is now In
+Review. T-151b remains open pending a supported
 affordability intent and deterministic verdict contract.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`

@@ -684,6 +684,28 @@ WHERE t.status = 'needs_review'
     });
   }
 
+  /// Records a Sort decision on a recomputed category guess (T-154b).
+  ///
+  /// Writes the category and status only: no feedback row, rule, or alias,
+  /// exactly like keeping the capture-time guess. Undo uses it to restore the
+  /// previous category and review status.
+  Future<void> applyReviewGuess({
+    required String txnId,
+    required String? categoryId,
+    required String status,
+    DateTime Function() clock = DateTime.now,
+  }) {
+    return (_database.update(_database.transactions)
+          ..where((t) => t.id.equals(txnId)))
+        .write(
+      TransactionsCompanion(
+        categoryId: Value(categoryId),
+        status: Value(status),
+        updatedAt: Value(clock().toUtc()),
+      ),
+    );
+  }
+
   /// Confirms multiple review rows atomically without changing categories.
   ///
   /// Only rows still in `needs_review` are affected, so a stale selection
