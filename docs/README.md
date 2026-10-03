@@ -128,6 +128,7 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [tasks/T-162.md](tasks/T-162.md) | Salary-credit ingestion coverage | current; child tasks remain on board | T-162 |
 | [tasks/T-172.md](tasks/T-172.md) | Product-value review evidence boundary and waiver | historical; closed with waiver | T-172 |
 | [tasks/T-177.md](tasks/T-177.md) | Smart transaction assistance | current; active | T-177 |
+| [tasks/T-177b-S1.md](tasks/T-177b-S1.md) | Exact-payee category suggestions; bounded host slice complete, rollout gates remain open | historical; host-complete child | T-177b-S1 |
 | [tasks/T-178.md](tasks/T-178.md) | Grounded analysis, forecasts, and assistant | current proposal; Backlog | T-178 |
 | [tasks/T-098.md](tasks/T-098.md) | Category budgets brief | current; Backlog, not Ready | T-098 |
 | [tasks/T-100.md](tasks/T-100.md) | Refund/reversal accounting brief | current; Backlog, not Ready | T-100 |

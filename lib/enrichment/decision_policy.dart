@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 
 import '../core/constants.dart';
 import '../data/db/database.dart';
+import 'trusted_category_outcome.dart';
 
 enum DecisionStatus {
   auto('auto'),
@@ -136,18 +137,6 @@ class AdaptiveThresholdPolicy {
       DateTime at,
       bool corrected
     })>[];
-    bool hasCategoryPredictionEvidence(String confidenceJson) {
-      try {
-        final payload = jsonDecode(confidenceJson) as Map<String, Object?>;
-        final category = payload['category'] as Map<String, Object?>?;
-        return category?['c'] is num && category?['src'] is String;
-      } on FormatException {
-        return false;
-      } on TypeError {
-        return false;
-      }
-    }
-
     const explicitConfirmationContexts = {'activity_confirm', 'sort_confirm'};
     for (final transaction in transactions) {
       if (transaction.parseSource == 'manual' ||

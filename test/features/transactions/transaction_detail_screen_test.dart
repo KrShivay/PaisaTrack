@@ -1,30 +1,46 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/widgets/bloom/bloom.dart';
+import 'package:paisatrack/core/undo/undo_controller.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/data/repositories/merchant_category_suggestion_repository.dart';
+import 'package:paisatrack/data/repositories/payee_evidence_repository.dart';
 import 'package:paisatrack/enrichment/source_currency_repair_service.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
 import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
 import 'package:paisatrack/features/transactions/currency_repair_providers.dart';
+import 'package:paisatrack/features/transactions/merchant_category_suggestion_provider.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
+import '../../support/drift_widget_teardown.dart';
+
+class _RecordingUndoController extends UndoController {
+  @override
+  void pushUndo(UndoToken token) => state = token;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> pumpDetail(
+  Future<ProviderContainer> pumpDetail(
     WidgetTester tester,
     TransactionDetail detail, {
     double textScale = 1,
     Size viewport = const Size(402, 874),
+    MerchantCategorySuggestion? memorySuggestion,
+    AppDatabase? database,
+    Future<AppDatabase>? databaseFuture,
+    bool enableMemorySuggestions = false,
+    Stream<TransactionDetail?>? detailStream,
+    bool useRealDetailProvider = false,
   }) async {
     tester.view.physicalSize = viewport;
     tester.view.devicePixelRatio = 1.0;
@@ -36,12 +52,48 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          transactionDetailProvider(detail.txn.id)
-              .overrideWith((ref) => Stream.value(detail)),
+          if (databaseFuture != null)
+            appDatabaseProvider.overrideWith((ref) => databaseFuture),
+          if (databaseFuture == null && database != null)
+            appDatabaseProvider.overrideWith((ref) async => database),
+          if (enableMemorySuggestions)
+            categoryMemorySuggestionsEnabledProvider.overrideWith(
+              (ref) => true,
+            ),
+          if (database != null || databaseFuture != null)
+            categoryListProvider.overrideWith(
+              (ref) => Stream.value(const [
+                Category(
+                  id: 'food_dining',
+                  name: 'Food & Dining',
+                  icon: 'restaurant',
+                  isSpending: true,
+                  sortOrder: 1,
+                  isUserCreated: false,
+                ),
+                Category(
+                  id: 'travel',
+                  name: 'Travel',
+                  icon: 'train',
+                  isSpending: true,
+                  sortOrder: 2,
+                  isUserCreated: false,
+                ),
+              ]),
+            ),
+          if (database != null || databaseFuture != null)
+            undoControllerProvider.overrideWith(_RecordingUndoController.new),
+          if (!useRealDetailProvider)
+            transactionDetailProvider(detail.txn.id)
+                .overrideWith((ref) => detailStream ?? Stream.value(detail)),
           suggestedCategoriesProvider(detail.txn.id)
               .overrideWith((ref) => Future.value(['travel', 'utilities'])),
           sourceCurrencyRepairPreviewProvider(detail.txn.id)
               .overrideWith((ref) async => null),
+          if (memorySuggestion != null)
+            merchantCategorySuggestionProvider(detail.txn.id).overrideWith(
+              (ref) async => memorySuggestion,
+            ),
         ],
         child: MediaQuery(
           data: MediaQueryData.fromView(tester.view).copyWith(
@@ -57,6 +109,94 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
+    return ProviderScope.containerOf(
+      tester.element(find.byType(TransactionDetailScreen)),
+    );
+  }
+
+  Future<AppDatabase> seedCategorySuggestionDatabase({
+    int explicitOutcomes = 2,
+  }) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final now = DateTime.utc(2026, 7, 6, 9);
+    for (final category in const [
+      Category(
+        id: 'food_dining',
+        name: 'Food & Dining',
+        icon: 'restaurant',
+        isSpending: true,
+        sortOrder: 1,
+        isUserCreated: false,
+      ),
+      Category(
+        id: 'travel',
+        name: 'Travel',
+        icon: 'train',
+        isSpending: true,
+        sortOrder: 2,
+        isUserCreated: false,
+      ),
+    ]) {
+      await database.into(database.categories).insert(
+            CategoriesCompanion.insert(
+              id: category.id,
+              name: category.name,
+              icon: category.icon,
+              isSpending: category.isSpending,
+              sortOrder: category.sortOrder,
+              isUserCreated: category.isUserCreated,
+            ),
+          );
+    }
+
+    Future<void> addTransaction(String id, String categoryId) async {
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: id,
+              ts: now.millisecondsSinceEpoch,
+              amount: 449,
+              direction: 'debit',
+              channel: 'upi',
+              merchantRaw: const Value('amazon'),
+              categoryId: Value(categoryId),
+              parseSource: 'template',
+              confidenceJson: id == 'txn_101'
+                  ? '{}'
+                  : '{"category":{"c":0.8,"src":"seed"}}',
+              status: id == 'txn_101' ? 'needs_review' : 'confirmed',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await PayeeEvidenceRepository(database).replaceForTransaction(
+        transactionId: id,
+        merchantRaw: 'amazon',
+      );
+    }
+
+    await addTransaction('txn_101', 'food_dining');
+    for (var index = 0; index < explicitOutcomes; index++) {
+      final id = 'history_$index';
+      await addTransaction(id, 'travel');
+      await database.into(database.feedback).insert(
+            FeedbackCompanion.insert(
+              id: 'confirm_$id',
+              txnId: id,
+              field: 'status',
+              oldValue: const Value('needs_review'),
+              newValue: const Value('confirmed'),
+              context: 'activity_confirm',
+              createdAt: now.add(Duration(seconds: index + 1)),
+            ),
+          );
+    }
+    return database;
+  }
+
+  Future<void> pumpFrames(WidgetTester tester) async {
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
   }
 
   group('Bloom TransactionDetailScreen', () {
@@ -96,6 +236,307 @@ void main() {
       expect(find.text('Food & Dining'), findsOneWidget);
       expect(find.byType(BloomCategoryTile), findsOneWidget);
       expect(find.byType(BloomAmount), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('merchant-category-suggestion')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('shows the gated prior-choice suggestion on transaction detail',
+        (tester) async {
+      await pumpDetail(
+        tester,
+        testDetail,
+        memorySuggestion: const MerchantCategorySuggestion(
+          categoryId: 'travel',
+          categoryName: 'Travel',
+          supportingTransactionCount: 2,
+        ),
+      );
+
+      expect(find.text('Based on your past category choices'), findsOneWidget);
+      expect(find.text('Use Travel'), findsOneWidget);
+      expect(find.textContaining('2 prior transactions'), findsOneWidget);
+    });
+
+    testWidgets('removes a stale suggestion after an explicit detail edit',
+        (tester) async {
+      final database = await seedCategorySuggestionDatabase();
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() async {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          categoryListProvider.overrideWith(
+            (ref) => Stream.value(const [
+              Category(
+                id: 'food_dining',
+                name: 'Food & Dining',
+                icon: 'restaurant',
+                isSpending: true,
+                sortOrder: 1,
+                isUserCreated: false,
+              ),
+              Category(
+                id: 'travel',
+                name: 'Travel',
+                icon: 'train',
+                isSpending: true,
+                sortOrder: 2,
+                isUserCreated: false,
+              ),
+            ]),
+          ),
+          undoControllerProvider.overrideWith(_RecordingUndoController.new),
+          suggestedCategoriesProvider('txn_101')
+              .overrideWith((ref) async => const <String>[]),
+          sourceCurrencyRepairPreviewProvider('txn_101')
+              .overrideWith((ref) async => null),
+          categoryMemorySuggestionsEnabledProvider.overrideWith((ref) => true),
+        ],
+      );
+      var containerDisposed = false;
+      var databaseClosed = false;
+      addTearDown(() async {
+        if (!containerDisposed) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          container.dispose();
+          containerDisposed = true;
+          await pumpDriftFrames(tester);
+        }
+        if (!databaseClosed) await database.close();
+      });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MediaQuery(
+            data: MediaQueryData.fromView(tester.view),
+            child: const MaterialApp(
+              home: BloomUndoToastHost(
+                child: TransactionDetailScreen(txnId: 'txn_101'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpFrames(tester);
+      expect(find.text('Based on your past category choices'), findsOneWidget);
+
+      await TransactionRepository(database).updateWithFeedback(
+        txnId: 'txn_101',
+        categoryId: const Value('travel'),
+        context: 'detail_chip_edit',
+      );
+      await pumpFrames(tester);
+
+      expect(find.text('Based on your past category choices'), findsNothing);
+      expect(find.text('Travel'), findsWidgets);
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      containerDisposed = true;
+      await pumpDriftFrames(tester);
+      await unmountAndCloseDatabase(tester, database);
+      databaseClosed = true;
+    });
+
+    testWidgets('accept changes only category and receipt Undo restores it',
+        (tester) async {
+      final database = await seedCategorySuggestionDatabase();
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          categoryListProvider.overrideWith(
+            (ref) => Stream.value(const [
+              Category(
+                id: 'food_dining',
+                name: 'Food & Dining',
+                icon: 'restaurant',
+                isSpending: true,
+                sortOrder: 1,
+                isUserCreated: false,
+              ),
+              Category(
+                id: 'travel',
+                name: 'Travel',
+                icon: 'train',
+                isSpending: true,
+                sortOrder: 2,
+                isUserCreated: false,
+              ),
+            ]),
+          ),
+          undoControllerProvider.overrideWith(_RecordingUndoController.new),
+          suggestedCategoriesProvider('txn_101')
+              .overrideWith((ref) async => const <String>[]),
+          sourceCurrencyRepairPreviewProvider('txn_101')
+              .overrideWith((ref) async => null),
+          categoryMemorySuggestionsEnabledProvider.overrideWith((ref) => true),
+        ],
+      );
+      var containerDisposed = false;
+      var databaseClosed = false;
+      addTearDown(() async {
+        if (!containerDisposed) {
+          await tester.pumpWidget(const SizedBox.shrink());
+          container.dispose();
+          containerDisposed = true;
+          await pumpDriftFrames(tester);
+        }
+        if (!databaseClosed) await database.close();
+      });
+      addTearDown(() {
+        if (!containerDisposed) container.dispose();
+      });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MediaQuery(
+            data: MediaQueryData.fromView(tester.view),
+            child: const MaterialApp(
+              home: BloomUndoToastHost(
+                child: TransactionDetailScreen(txnId: 'txn_101'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await pumpFrames(tester);
+      final semantics = tester.ensureSemantics();
+
+      expect(find.text('Use Travel'), findsOneWidget);
+      final noteField = find.byType(TextField);
+      expect(noteField, findsOneWidget);
+      await tester.enterText(noteField, 'Unsaved note draft');
+      await tester.tap(find.text('Use Travel'));
+      await pumpFrames(tester);
+
+      var transaction = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_101')))
+          .getSingle();
+      expect(transaction.categoryId, 'travel');
+      expect(transaction.status, 'needs_review');
+      expect(transaction.amount, 449);
+      expect(transaction.direction, 'debit');
+      expect(transaction.confidenceJson, '{}');
+      expect(find.text('Travel'), findsWidgets);
+      expect(
+        await (database.select(database.feedback)
+              ..where(
+                (row) =>
+                    row.txnId.equals('txn_101') &
+                    row.field.equals('category_id') &
+                    row.context.equals('merchant_suggestion_accept'),
+              ))
+            .get(),
+        hasLength(1),
+      );
+      expect(container.read(undoControllerProvider), isNotNull);
+
+      await container.read(undoControllerProvider)!.undoAction();
+      await pumpFrames(tester);
+      transaction = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_101')))
+          .getSingle();
+      expect(transaction.categoryId, 'food_dining');
+      expect(transaction.status, 'needs_review');
+      expect(find.text('Food & Dining'), findsWidgets);
+      expect(
+        tester.widget<TextField>(noteField).controller?.text,
+        'Unsaved note draft',
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(r'Category, Food & Dining, double tap to change'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<BloomCategoryTile>(find.byType(BloomCategoryTile).first)
+            .categoryId,
+        'food_dining',
+      );
+      expect(
+        await (database.select(database.feedback)
+              ..where((row) => row.txnId.equals('txn_101')))
+            .get(),
+        isEmpty,
+      );
+
+      semantics.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      containerDisposed = true;
+      await pumpDriftFrames(tester);
+      await unmountAndCloseDatabase(tester, database);
+      databaseClosed = true;
+    });
+
+    testWidgets('stale suggestion acceptance shows a no-op message',
+        (tester) async {
+      final database = await seedCategorySuggestionDatabase(
+        explicitOutcomes: 1,
+      );
+      final storedTarget = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_101')))
+          .getSingle();
+      final pendingDetail = TransactionDetail(
+        txn: storedTarget,
+        merchantName: 'amazon',
+        categoryName: 'Food & Dining',
+        parseConfidence: testDetail.parseConfidence,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: false,
+      );
+      await pumpDetail(
+        tester,
+        pendingDetail,
+        database: database,
+        memorySuggestion: const MerchantCategorySuggestion(
+          categoryId: 'travel',
+          categoryName: 'Travel',
+          supportingTransactionCount: 2,
+        ),
+      );
+      await pumpFrames(tester);
+
+      expect(find.text('Use Travel'), findsOneWidget);
+      final noteField = find.byType(TextField);
+      await tester.enterText(noteField, 'Unsaved note draft');
+      await tester.tap(find.text('Use Travel'));
+      await pumpFrames(tester);
+
+      expect(
+        find.text('This suggestion changed. Refresh and try again.'),
+        findsOneWidget,
+      );
+      final transaction = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('txn_101')))
+          .getSingle();
+      expect(transaction.categoryId, 'food_dining');
+      expect(
+        tester.widget<TextField>(noteField).controller?.text,
+        'Unsaved note draft',
+      );
+      expect(
+        await (database.select(database.feedback)
+              ..where((row) => row.txnId.equals('txn_101')))
+            .get(),
+        isEmpty,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await pumpDriftFrames(tester);
+      await unmountAndCloseDatabase(tester, database);
     });
 
     testWidgets(

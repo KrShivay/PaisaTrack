@@ -19,11 +19,14 @@ import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/sms_disposition_repository.dart';
 import '../../intelligence/derived_reads_service.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/repositories/merchant_category_suggestion_repository.dart';
 import '../../enrichment/source_currency_repair_service.dart';
 import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
 import 'detail/transaction_details_card.dart';
+import 'detail/merchant_category_suggestion_panel.dart';
 import 'currency_repair_providers.dart';
+import 'merchant_category_suggestion_provider.dart';
 import 'transaction_correction_controller.dart';
 import 'transaction_correction_sheet.dart';
 import 'transactions_providers.dart';
@@ -50,6 +53,7 @@ class _TransactionDetailScreenState
   bool _savingNote = false;
   bool _savingParseConfirmation = false;
   bool _savingCurrencyRepair = false;
+  bool _savingMerchantCategorySuggestion = false;
   ReviewDetailsConfirmationReceipt? _detailsConfirmationReceipt;
   String? _noteError;
 
@@ -340,6 +344,78 @@ class _TransactionDetailScreenState
     }
   }
 
+  Future<void> _acceptMerchantCategorySuggestion(
+    MerchantCategorySuggestion suggestion,
+    Transaction transaction,
+  ) async {
+    if (_savingMerchantCategorySuggestion) return;
+    setState(() => _savingMerchantCategorySuggestion = true);
+    try {
+      final database = await ref.read(appDatabaseProvider.future);
+      final repository = MerchantCategorySuggestionRepository(database);
+      final receipt = await repository.acceptSuggestion(
+        transactionId: widget.txnId,
+        categoryId: suggestion.categoryId,
+        expectedTransaction: transaction,
+      );
+      if (receipt == null) {
+        _refreshCategoryFromStore();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This suggestion changed. Refresh and try again.'),
+            ),
+          );
+        }
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _categoryId = receipt.afterTransaction.categoryId;
+        _categoryName = suggestion.categoryName;
+      });
+      ref.read(undoControllerProvider.notifier).pushUndo(
+            UndoToken(
+              id: 'merchant_category_${widget.txnId}',
+              message: 'Category set to ${suggestion.categoryName}',
+              undoAction: () async {
+                final undone = await repository.undoSuggestion(receipt);
+                if (!undone) {
+                  throw StateError(
+                    'This category changed after the suggestion was applied.',
+                  );
+                }
+                if (mounted) {
+                  _refreshCategoryFromStore();
+                }
+              },
+            ),
+          );
+      ref.invalidate(transactionDetailProvider(widget.txnId));
+      ref.invalidate(merchantCategorySuggestionProvider(widget.txnId));
+    } catch (_) {
+      if (!mounted) return;
+      _refreshCategoryFromStore();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save the category. Try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _savingMerchantCategorySuggestion = false);
+    }
+  }
+
+  void _refreshCategoryFromStore() {
+    if (!mounted) return;
+    setState(() {
+      _categoryId = null;
+      _categoryName = null;
+    });
+    ref.invalidate(transactionDetailProvider(widget.txnId));
+    ref.invalidate(merchantCategorySuggestionProvider(widget.txnId));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -437,6 +513,9 @@ class _TransactionDetailScreenState
                     .watch(suggestedCategoriesProvider(widget.txnId))
                     .valueOrNull ??
                 [];
+            final memorySuggestion = ref
+                .watch(merchantCategorySuggestionProvider(widget.txnId))
+                .valueOrNull;
             final chips =
                 chipCategories(currentCat, allCategories, suggestedIds);
 
@@ -608,6 +687,15 @@ class _TransactionDetailScreenState
                       ],
                     ),
                   ),
+                  if (memorySuggestion case final suggestion?)
+                    MerchantCategorySuggestionPanel(
+                      suggestion: suggestion,
+                      isSaving: _savingMerchantCategorySuggestion,
+                      onAccept: () => _acceptMerchantCategorySuggestion(
+                        suggestion,
+                        txn,
+                      ),
+                    ),
                   const SizedBox(height: 16),
 
                   // Exclusion Explanation Banner (T-135c)

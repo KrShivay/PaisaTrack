@@ -1,43 +1,5 @@
 # Current Handoff
 
-## 2026-10-03 — T-199 host implementation in review
-
-- Transaction details and Sort now show a shared QR action only for a valid,
-  explicitly stored VPA. The review DTO carries VPA separately from merchant
-  identity; the static URI contains only `pa`, a safe `pn`, and `cu=INR`. It
-  performs no lookup or payment launch. Square modules use a quantized render
-  size to preserve the four-module quiet zone.
-- Verification: missing-action regression fails at the expected UI assertion;
-  max-valid payload sizing regression failed at 247.5dp before the fix and now
-  passes at 288dp with four-module quiet margins; focused QR/detail/Sort/
-  repository tests 53/53; full Flutter suite 1,259/1,259;
-  touched transaction/review/repository/shell suites in `America/New_York`
-  351/351; analyzer clean; formatter unchanged; 142 Markdown links and
-  `git diff --check` pass. GitNexus staged scan: 20 files, 57 symbols, 5
-  affected flows, medium risk, with no partial/truncated result notice. The
-  refreshed repository index reports 405 flows but warns that its global
-  entrypoint/callee inventory is capped; absent global flows are not proof of
-  no callers.
-- Independent decoder verified the synthetic QR at 960/320/256 pixels and
-  the max-input QR at 864×864 pixels. Both decode to the expected static UPI
-  fields and have at least four modules of white quiet zone on every side.
-  T-167j native-back root-exit regression also passed on the isolated
-  API 36 QA app. On-device transaction detail QR display, scan, and back-to-
-  detail behavior passed. Sort card/list device QA remains open: a route switch
-  missed its first tap during settling, and the synthetic fixture row now shows
-  the Transport category; the cause is unconfirmed. No owner rows were
-  inspected. The earlier on-device detail scan used the pre-correction QR
-  geometry; the encoded contents are unchanged. The final max-input host decode
-  verified the 256/64 VPA and 120-emoji payee with at least four white modules
-  on each side. Final artifact:
-  `.dart_tool/qa/paisatrack-v0.1.8-arm64-release.apk`, 57,144,364 bytes,
-  SHA-256 `38549d00295432512b05401c97bb6bb682f5915832c1a91091edd247fdc86a41`,
-  production signer suffix `9163`. The same-version code 4017 in-place update
-  is verified installed: package `com.paisatrack`, last-update time
-  2026-10-03 22:10:40, first-install time unchanged at 2026-09-26 22:20:54,
-  and the pulled base APK SHA-256 exactly matches the artifact hash above.
-  APK publication remains open.
-
 ## 2026-10-04 — T-200 confirmation repair installed; owner UI gate open
 
 - One `Confirm details` action replaces the independent status and parse
@@ -87,12 +49,36 @@
   Signer, ZIP integrity, alignment, and six arm64-only native libraries pass.
   No owner UI, SMS, records, database, or logs were read; physical TalkBack,
   QR Sort, confirmation UI, and native-back gates remain open.
-- User ordered merchant suggestions, refund linking, then credit-card bills/
-  repayments, implemented sequentially with parallel preparation. T-177b-S1
-  is being implemented in the managed merchant-suggestions worktree; production
-  enablement waits for existing T-177a/T-177f evaluation gates. Both original
-  stashes and the isolated T-194 size trial remain preserved. No APK publication.
+- The requested feature sequence is recorded in the T-177b-S1 brief and
+  delivery plan. Production enablement remains gated by T-177a/T-177f; both
+  original stashes and the isolated T-194 size trial remain preserved.
 
-- Final acceptance scan after documentation closure: 18 files, 41 symbols,
-  zero reported processes, LOW risk, no partial/truncated result. Final local
-  Markdown check covered 146 indexed/worktree files with no broken links.
+## 2026-10-04 — T-177b-S1 host complete; rollout gates open
+
+- Transaction detail now offers a default-off, exact-payee category suggestion
+  from at least two eligible, unanimous explicit category outcomes. The
+  separate Accept/Undo receipt changes category and feedback only; it preserves
+  status, amount, direction, parse evidence, identity, and financial eligibility.
+  Identity collisions, stale evidence, ambiguous names, mixed history, rules,
+  and ineligible or untrusted outcomes abstain. Independent source review passed.
+- The regression-first unsaved-note case failed when refreshing category state
+  reseeded the form; the fix now refreshes category caches without resetting
+  the note seed, and the same test passes across Accept and Undo.
+- Full Flutter suite 1,304/1,304; encrypted-schema migration executed without
+  skips; touched set in `America/New_York` 54/54; analyzer clean; formatter 10
+  Dart files unchanged; Markdown links and diff checks pass. Final refreshed
+  GitNexus all-change and compare scans each cover 16 files and 56 changed
+  symbols, with one reported affected flow and medium risk; structured results
+  report `partial=false` and `truncated=false`. Indexed symbols include
+  `MerchantCategorySuggestionRepository`,
+  `merchantCategorySuggestionProvider`, `MerchantCategorySuggestionPanel`, and
+  `hasCategoryPredictionEvidence`; repository context links the provider,
+  detail accept action, and tests. The refreshed index has 8,896 nodes,
+  20,835 edges, and 408 flows. Its global flow inventory is capped (1,067 of
+  1,267 candidate entrypoints were not ranked; 1,429 callees and 34 walks were
+  omitted), limiting global flow discovery but not the complete changed-symbol
+  scan.
+- T-177b-S1 is host-complete and removed from the active board. T-177a owner
+  holdout/device/threshold decisions and T-177f staged suggestion release remain
+  open; production remains default-off. No schema, capture path, phone, APK,
+  owner data, or automatic categorization changed.
