@@ -219,6 +219,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final hasMore = page?.hasMore ?? false;
     final filtered = _filterItems(items);
     final grouped = _groupByDay(filtered);
+    // Read above the Scaffold: its body sees the keyboard inset already
+    // removed and the height already reduced.
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return Scaffold(
       backgroundColor:
           isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
@@ -228,8 +231,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           builder: (context, constraints) {
             // Keep the established portrait layout; below 560dp the header
             // scrolls with Activity while search stays pinned and reachable.
-            final availableHeight =
-                constraints.maxHeight - MediaQuery.paddingOf(context).bottom;
+            // The choice ignores the keyboard: a sheet's text field (e.g. the
+            // category picker's search) must not swap the list widget and
+            // drop the user's scroll position (T-197).
+            final availableHeight = constraints.maxHeight +
+                keyboardInset -
+                MediaQuery.paddingOf(context).bottom;
             return availableHeight < 560
                 ? _landscapeLayout(
                     isDark,

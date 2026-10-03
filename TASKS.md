@@ -231,14 +231,25 @@ later hardening.
 <!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
      proposed order of the remaining backlog. -->
 
-- [ ] T-197 [P1] Activity keeps its scroll position and loaded pages after an
-      edit (owner bug). Details: [T-197](docs/tasks/T-197.md).
 - [ ] T-198 [P1] Readable payee names for VPA-only rows; no repeated
       "Unknown" in Top merchants. Details: [T-198](docs/tasks/T-198.md).
 
 ## In Review
 
 <!-- P1 tasks ready for next phase -->
+
+- [ ] T-197 [P1] Activity keeps its scroll position after an edit. Root
+      cause: Activity chose portrait vs short-height from the
+      keyboard-reduced Scaffold height; the category picker autofocuses its
+      search, so the keyboard flipped portrait to the sliver layout and back,
+      rebuilding the list at offset 0. The choice now adds back the keyboard
+      inset; pages and keyset queries are unchanged. Evidence (cloud):
+      `activity_scroll_retention_test.dart` (portrait + 964x434: two loaded
+      pages, older anchor row, edit under a keyboard inset, swipe confirm and
+      undo) red before the fix (offset 14504 -> 0), green after in UTC,
+      Asia/Kolkata and America/New_York; full suite 1196/1196.
+      Open: independent review; owner-phone check.
+      Details: [T-197](docs/tasks/T-197.md).
 
 - [ ] T-196 [P1] Transaction details card on the detail screen. Code
       merged: "TRANSACTION DETAILS" lists only stored fields (UPI ID/VPA,
