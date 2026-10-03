@@ -228,8 +228,20 @@ later hardening.
 
 ## Ready
 
-<!-- Groomed tasks awaiting an implementer. Empty: nothing is promoted yet;
-     see docs/plans/roadmap.md for the proposed order. -->
+<!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
+     proposed order of the remaining backlog. -->
+
+- [ ] T-195 [P0] Keep source SMS provenance (owner decision 2026-10-03): stop
+      the 30-day raw-SMS purge for transaction/disposition SMS, ADR 0021,
+      re-link already purged provenance from the device inbox. Supersedes the
+      expiry parts of T-169b/T-170b. Details: [T-195](docs/tasks/T-195.md).
+- [ ] T-196 [P1] Transaction details card on the detail screen: UPI ID/VPA,
+      reference/RRN, channel, account, balance, copyable.
+      Details: [T-196](docs/tasks/T-196.md).
+- [ ] T-197 [P1] Activity keeps its scroll position and loaded pages after an
+      edit (owner bug). Details: [T-197](docs/tasks/T-197.md).
+- [ ] T-198 [P1] Readable payee names for VPA-only rows; no repeated
+      "Unknown" in Top merchants. Details: [T-198](docs/tasks/T-198.md).
 
 ## In Review
 

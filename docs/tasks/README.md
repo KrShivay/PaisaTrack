@@ -19,6 +19,10 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 | T-162 | Salary-credit ingestion coverage | [T-162.md](T-162.md) | Future children remain on board |
 | T-177 | Smart transaction assistance | [T-177.md](T-177.md) | Active; T-177a gates remain open |
 | T-178 | Grounded analysis, forecasts, assistant | [T-178.md](T-178.md) | Backlog; b–d plan in [grounded-ai-validation](../plans/grounded-ai-validation.md) |
+| T-195 | Keep source SMS provenance | [T-195.md](T-195.md) | Ready (owner decision 2026-10-03) |
+| T-196 | Transaction details card | [T-196.md](T-196.md) | Ready |
+| T-197 | Activity scroll position after edit | [T-197.md](T-197.md) | Ready |
+| T-198 | Readable payee names | [T-198.md](T-198.md) | Ready |
 | T-098 | Monthly category budgets | [T-098.md](T-098.md) | Backlog; groomed, not Ready |
 | T-100 | Refund/reversal accounting | [T-100.md](T-100.md) | Backlog; groomed, not Ready |
 | T-101 | Expected-payment calendar | [T-101.md](T-101.md) | Backlog; groomed, not Ready |
