@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/capture/permissions/sms_permission.dart';
 import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/core/undo/undo_controller.dart';
+import 'package:paisatrack/core/widgets/bloom/bloom_bottom_inset.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
@@ -56,6 +57,7 @@ void main() {
     WidgetTester tester,
     AppDatabase database, {
     Size size = const Size(402, 874),
+    bool inHomeShell = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -68,7 +70,19 @@ void main() {
             FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
           ),
         ],
-        child: const MaterialApp(home: TransactionsScreen()),
+        child: MaterialApp(
+          // HomeShell reserves the floating navigation in bottom padding and
+          // drops that reservation while a keyboard is visible.
+          builder: inHomeShell
+              ? (context, child) => MediaQuery(
+                    data: BloomBottomInset.forTabContent(
+                      MediaQuery.of(context),
+                    ),
+                    child: child!,
+                  )
+              : null,
+          home: const TransactionsScreen(),
+        ),
       ),
     );
     await pumpDriftFrames(tester);
@@ -133,13 +147,21 @@ void main() {
   }
 
   for (final layout in [
-    ('portrait', const Size(402, 874)),
-    ('short-height', const Size(964, 434)),
+    ('portrait', const Size(402, 874), false),
+    ('short-height', const Size(964, 434), false),
+    // 640 - 84dp of navigation clearance sits just under the 560dp
+    // breakpoint; the clearance disappears while the keyboard is up.
+    ('home shell 360x640', const Size(360, 640), true),
   ]) {
     testWidgets('${layout.$1}: an edit keeps loaded pages and the anchor row',
         (tester) async {
       final database = await seed(150);
-      final container = await pumpActivity(tester, database, size: layout.$2);
+      final container = await pumpActivity(
+        tester,
+        database,
+        size: layout.$2,
+        inHomeShell: layout.$3,
+      );
       final anchor = await openOlderRow(tester, container);
       final offset = activityPosition(tester).pixels;
       final top = tester.getTopLeft(anchor).dy;
@@ -167,7 +189,12 @@ void main() {
       await (database.update(database.transactions)
             ..where((row) => row.id.equals('txn_120')))
           .write(const TransactionsCompanion(status: Value('needs_review')));
-      final container = await pumpActivity(tester, database, size: layout.$2);
+      final container = await pumpActivity(
+        tester,
+        database,
+        size: layout.$2,
+        inHomeShell: layout.$3,
+      );
       final anchor = await openOlderRow(tester, container);
       final offset = activityPosition(tester).pixels;
       final top = tester.getTopLeft(anchor).dy;

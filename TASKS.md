@@ -253,15 +253,18 @@ later hardening.
 
 - [ ] T-197 [P1] Activity keeps its scroll position after an edit. Root
       cause: Activity chose portrait vs short-height from the
-      keyboard-reduced Scaffold height; the category picker autofocuses its
-      search, so the keyboard flipped portrait to the sliver layout and back,
-      rebuilding the list at offset 0. The choice now adds back the keyboard
-      inset; pages and keyset queries are unchanged. Evidence (cloud):
-      `activity_scroll_retention_test.dart` (portrait + 964x434: two loaded
-      pages, older anchor row, edit under a keyboard inset, swipe confirm and
-      undo) red before the fix (offset 14504 -> 0), green after in UTC,
-      Asia/Kolkata and America/New_York; full suite 1196/1196.
-      Open: independent review; owner-phone check.
+      keyboard-reduced Scaffold height (and HomeShell drops its navigation
+      padding while a keyboard is up); the category picker autofocuses its
+      search, so the keyboard flipped the layout and back, rebuilding the
+      list at offset 0. The choice is now frozen while a keyboard is visible;
+      pages and keyset queries are unchanged. Also fixed a pre-existing 7-13dp
+      Activity header overflow on 360dp-wide phones. Evidence (cloud):
+      `activity_scroll_retention_test.dart` (402x874, 964x434 and a HomeShell
+      360x640: two loaded pages, older anchor row, edit under a keyboard
+      inset, swipe confirm and undo) red before (offset 14504 -> 0, shell
+      14835 -> 0), green after in UTC, Asia/Kolkata and America/New_York;
+      full suite 1208/1208. Review: the first fix missed the HomeShell
+      padding case (found by review, fixed). Open: owner-phone check.
       Details: [T-197](docs/tasks/T-197.md).
 
 - [ ] T-196 [P1] Transaction details card on the detail screen. Code

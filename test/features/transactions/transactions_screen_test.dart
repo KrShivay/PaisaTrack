@@ -188,6 +188,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Activity header has no overflow on a 360dp-wide phone',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      [_screenItem('responsive')],
+      size: const Size(360, 640),
+    );
+
+    expect(find.text('Add'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
       'short landscape Activity scrolls its heading away and keeps search reachable',
       (tester) async {

@@ -48,6 +48,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     ids: widget.initialTransactionIds ?? const {},
   );
   final _searchController = TextEditingController();
+  // Layout chosen while no keyboard was visible (T-197).
+  bool? _useShortHeightLayout;
   String _query = '';
   ActivityFilterChoice _activeFilter = ActivityFilterChoice.all;
 
@@ -230,7 +232,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final grouped = _groupByDay(filtered);
     // Read above the Scaffold: its body sees the keyboard inset already
     // removed and the height already reduced.
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       backgroundColor:
           isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
@@ -240,13 +242,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           builder: (context, constraints) {
             // Keep the established portrait layout; below 560dp the header
             // scrolls with Activity while search stays pinned and reachable.
-            // The choice ignores the keyboard: a sheet's text field (e.g. the
-            // category picker's search) must not swap the list widget and
-            // drop the user's scroll position (T-197).
-            final availableHeight = constraints.maxHeight +
-                keyboardInset -
-                MediaQuery.paddingOf(context).bottom;
-            return availableHeight < 560
+            // The choice is frozen while a keyboard is visible: a sheet's text
+            // field (e.g. the category picker's search) shrinks this body and
+            // HomeShell drops its navigation padding, and swapping the list
+            // widget would drop the user's scroll position (T-197).
+            final availableHeight =
+                constraints.maxHeight - MediaQuery.paddingOf(context).bottom;
+            final shortHeight = keyboardVisible
+                ? _useShortHeightLayout ?? availableHeight < 560
+                : availableHeight < 560;
+            _useShortHeightLayout = shortHeight;
+            return shortHeight
                 ? _landscapeLayout(
                     isDark,
                     pageAsync,
@@ -303,7 +309,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Widget _activityHeader(bool isDark) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 360 ||
+        // The row sits inside 20dp side padding; at 360dp-wide phones the
+        // title and actions need more than the remaining 320dp.
+        final compact = constraints.maxWidth < 400 ||
             (widget.initialEvidenceTotalCount != null &&
                 constraints.maxWidth < 600) ||
             MediaQuery.textScalerOf(context).scale(1) >= 1.5;
