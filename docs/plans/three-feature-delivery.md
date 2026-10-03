@@ -203,6 +203,11 @@ flow. Generic transaction links alone do not define net totals.
    only after shared importer acceptance. Unmatched lines remain unresolved and
    never create confirmed spend automatically.
 
+The [card source audit](../reports/T-190a1-card-source-audit.md) records current
+inferred identities, ownership writes, transfer behavior, and missing ledger
+contracts. It is read-only preparation; it does not complete T-190a1 or approve
+ownership, schema, or accounting changes.
+
 ### Acceptance evidence
 
 - Read-only audit proves no owner, instrument, analytics, relationship, or
