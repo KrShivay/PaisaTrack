@@ -177,6 +177,39 @@ void main() {
     );
   });
 
+  testWidgets('VPA row keeps copy and opens a QR at 320dp and 2x text',
+      (tester) async {
+    await pumpCard(
+      tester,
+      txn(counterpartyVpa: 'shop.name@bank'),
+      size: const Size(320, 568),
+      textScale: 2,
+    );
+
+    expect(find.byTooltip('Copy UPI ID / VPA'), findsOneWidget);
+    expect(find.byTooltip('Show UPI QR'), findsOneWidget);
+    await tester.tap(find.byTooltip('Show UPI QR'));
+    await tester.pumpAndSettle();
+    expect(find.text('UPI QR code'), findsOneWidget);
+    expect(find.text('Zomato'), findsOneWidget);
+    expect(
+      tester.widget<SelectableText>(find.byType(SelectableText)).data,
+      'shop.name@bank',
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('Close QR code'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Copy UPI ID / VPA'), findsOneWidget);
+  });
+
+  testWidgets('invalid VPA preserves copy but hides QR action', (tester) async {
+    await pumpCard(tester, txn(counterpartyVpa: 'bad vpa@bank'));
+
+    expect(find.text('bad vpa@bank'), findsOneWidget);
+    expect(find.byTooltip('Copy UPI ID / VPA'), findsOneWidget);
+    expect(find.byTooltip('Show UPI QR'), findsNothing);
+  });
+
   testWidgets('fits 2.0x text in landscape without overflow', (tester) async {
     await pumpCard(
       tester,

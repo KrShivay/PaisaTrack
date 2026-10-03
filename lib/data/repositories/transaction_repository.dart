@@ -152,6 +152,7 @@ class TransactionReviewItem {
     required this.categoryIcon,
     required this.status,
     this.merchantRaw,
+    this.counterpartyVpa,
     this.counterpartyKey,
     this.isLowTrustParse = false,
   });
@@ -168,6 +169,9 @@ class TransactionReviewItem {
   final String? categoryIcon;
   final String status;
   final String? merchantRaw;
+
+  /// Source-stored VPA, kept distinct from the merchant identity key.
+  final String? counterpartyVpa;
 
   /// Stable merchant/VPA/raw-merchant identity used to group review rows.
   final String? counterpartyKey;
@@ -1214,6 +1218,7 @@ WHERE t.status = 'needs_review'
       categoryIcon: category?.icon,
       status: txn.status,
       merchantRaw: txn.merchantRaw,
+      counterpartyVpa: txn.counterpartyVpa,
       counterpartyKey: merchant != null
           ? 'merchant:${merchant.id}'
           : txn.counterpartyVpa != null

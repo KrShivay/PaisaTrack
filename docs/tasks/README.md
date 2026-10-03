@@ -23,6 +23,7 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 | T-196 | Transaction details card | [T-196.md](T-196.md) | Ready |
 | T-197 | Activity scroll position after edit | [T-197.md](T-197.md) | Ready |
 | T-198 | Readable payee names | [T-198.md](T-198.md) | Ready |
+| T-199 | Static UPI QR for stored VPAs | [T-199.md](T-199.md) | In review; synthetic device QA and release review open |
 | T-098 | Monthly category budgets | [T-098.md](T-098.md) | Backlog; groomed, not Ready |
 | T-100 | Refund/reversal accounting | [T-100.md](T-100.md) | Backlog; groomed, not Ready |
 | T-101 | Expected-payment calendar | [T-101.md](T-101.md) | Backlog; groomed, not Ready |

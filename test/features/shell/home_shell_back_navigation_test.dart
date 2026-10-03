@@ -102,6 +102,25 @@ class _SystemPopTracker {
   int calls = 0;
 }
 
+class _FrameworkBackTracker {
+  _FrameworkBackTracker(WidgetTester tester) {
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'SystemNavigator.setFrameworkHandlesBack') {
+        current = call.arguments! as bool;
+        values.add(current!);
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+  }
+
+  final List<bool> values = [];
+  bool? current;
+}
+
 class _CustomAndroidTransitionsBuilder
     extends FadeForwardsPageTransitionsBuilder {
   const _CustomAndroidTransitionsBuilder();
@@ -122,6 +141,50 @@ NavigatorState _navigator(WidgetTester tester, int index) => tester.state(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'retained child navigators cannot release native back ownership',
+    (tester) async {
+      final frameworkBack = _FrameworkBackTracker(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await _pumpShell(tester);
+      await tester.pump();
+
+      expect(frameworkBack.values, isNotEmpty);
+      expect(frameworkBack.values.last, isTrue);
+      frameworkBack.values.clear();
+
+      for (var index = 1; index < _tabIcons.length; index++) {
+        await tester.tap(find.byIcon(_tabIcons[index]));
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(frameworkBack.current, isTrue);
+      }
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+
+      expect(frameworkBack.current, isTrue);
+      expect(frameworkBack.values, everyElement(isTrue));
+
+      await tester.tap(find.byIcon(_tabIcons[0]));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets('nested routes pop one at a time and honor route vetoes',
       (tester) async {

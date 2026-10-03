@@ -36,38 +36,64 @@
   taps and PageView swipes. ADR 0022 records the behavior.
 - Regression evidence: initial focused cases 0/4; programmatic Activity request
   → back Home → repeated Activity request also failed before provider sync.
-  Current focused suite 17/17; `America/New_York` shell/home suites 60/60; full
-  Flutter suite 1,246/1,246; analyzer, formatter, documentation links, and diff
-  checks pass. The SQLCipher migration test ran in the full suite.
-- Physical API 36 IME and native predictive gesture acceptance remains open;
-  the phone was disconnected, no device was changed, and no private data was
-  inspected. The isolated recovery-QA fixture and launcher are preserved under
-  `.dart_tool/qa/`; both are `com.paisatrack.recoveryqa` v0.1.7/code 2016,
-  built for arm64 with no SMS permissions, and signed by the local debug key.
+  Current focused suite 18/18, full combined Flutter suite 1,259/1,259, and
+  touched transaction/review/repository/shell suites in `America/New_York`
+  351/351; analyzer, formatter, documentation links, and diff checks pass.
+  The SQLCipher migration test ran in the full suite.
+- On the isolated API 36 Recovery QA app, the pre-fix Activity-root back gesture
+  exited to the owner app; after the fix, the identical gesture returns to Home
+  and keeps Recovery QA foreground. No owner data was inspected. Physical IME,
+  predictive-cancel, and three-button acceptance remain open; APK publishing
+  remains open. The earlier user-authorized 0.1.8+2017 install is verified:
+  code 4017, package `com.paisatrack`, last-update time 2026-10-03 21:49:42,
+  first-install time unchanged at 2026-09-26 22:20:54, and its base APK matched
+  that build's signed artifact hash and byte count. A cold launch
+  returned successfully; WhatsApp was foreground afterward, so no claim is made
+  that PaisaTrack remained foreground. No owner UI, logs, or rows were read.
+  That installed artifact predates T-199's max-payload QR sizing correction.
+  The final same-version 0.1.8+2017 arm64 artifact is installed and verified:
+  code 4017, last-update time 2026-10-03 22:10:40, first-install time
+  unchanged at 2026-09-26 22:20:54, and pulled base APK SHA-256 matches the
+  signed artifact. No post-install UI interaction was performed.
 - Follow-ups: owner-run T-167j IME/predictive checks and the existing T-176 /
   T-167c device gates; consented T-177a holdout/period decision; keep T-194 on
-  `codex/apk-size-trial`; signed release build and APK publishing remain open.
+  `codex/apk-size-trial`; APK publishing remains open.
   Host acceptance moved T-167j to In Review, not Done.
 
-## 2026-10-03 — T-165b completed
+## 2026-10-03 — T-199 host implementation in review
 
-- Owned-transfer reconciliation now uses bounded `idx_transactions_ts` probes,
-  reciprocal singleton matching, and transactional stale system-edge cleanup.
-  It preserves user-authored links and unchanged generated edge metadata; reruns
-  make no writes. T-190b1 is closed through this task.
-- Verification: regression fails before the fix; focused 17/17; repository
-  tests in `America/New_York` 111/111; full Flutter suite 1,229/1,229; SQLCipher
-  migration test 1/1 (not skipped); analyzer clean; formatting, 138 Markdown
-  link checks, and `git diff --check` pass. GitNexus: 11 files, 43 symbols,
-  one affected test-entry flow (`Main → ToJson`),
-  medium risk; the new test entrypoint owns that attribution. No app `main` or
-  serialization code changed.
-- Evidence and query-plan/performance methodology: [T-165b brief](docs/tasks/T-165b.md).
-  Python sqlite3 3.53.3 host
-  comparison: 12,800 old candidate rows / 17,044.6 ms vs. 0 accepted pairs /
-  25.0 ms after, on the same 10,160-row synthetic fixture; app reconciliation
-  test measured 78 ms. These are host/test measurements, not device latency.
-- T-177a retains product priority and its owner-run holdout/live-resume gates.
-  T-194 stays on its existing branch. Owner-device QA, signed release build,
-  and APK publishing remain local follow-ups in their existing tasks; no
-  Android SDK or release signing was needed for T-165b.
+- Transaction details and Sort now show a shared QR action only for a valid,
+  explicitly stored VPA. The review DTO carries VPA separately from merchant
+  identity; the static URI contains only `pa`, a safe `pn`, and `cu=INR`. It
+  performs no lookup or payment launch. Square modules use a quantized render
+  size to preserve the four-module quiet zone.
+- Verification: missing-action regression fails at the expected UI assertion;
+  max-valid payload sizing regression failed at 247.5dp before the fix and now
+  passes at 288dp with four-module quiet margins; focused QR/detail/Sort/
+  repository tests 53/53; full Flutter suite 1,259/1,259;
+  touched transaction/review/repository/shell suites in `America/New_York`
+  351/351; analyzer clean; formatter unchanged; 142 Markdown links and
+  `git diff --check` pass. GitNexus staged scan: 20 files, 57 symbols, 5
+  affected flows, medium risk, with no partial/truncated result notice. The
+  refreshed repository index reports 405 flows but warns that its global
+  entrypoint/callee inventory is capped; absent global flows are not proof of
+  no callers.
+- Independent decoder verified the synthetic QR at 960/320/256 pixels and
+  the max-input QR at 864×864 pixels. Both decode to the expected static UPI
+  fields and have at least four modules of white quiet zone on every side.
+  T-167j native-back root-exit regression also passed on the isolated
+  API 36 QA app. On-device transaction detail QR display, scan, and back-to-
+  detail behavior passed. Sort card/list device QA remains open: a route switch
+  missed its first tap during settling, and the synthetic fixture row now shows
+  the Transport category; the cause is unconfirmed. No owner rows were
+  inspected. The earlier on-device detail scan used the pre-correction QR
+  geometry; the encoded contents are unchanged. The final max-input host decode
+  verified the 256/64 VPA and 120-emoji payee with at least four white modules
+  on each side. Final artifact:
+  `.dart_tool/qa/paisatrack-v0.1.8-arm64-release.apk`, 57,144,364 bytes,
+  SHA-256 `38549d00295432512b05401c97bb6bb682f5915832c1a91091edd247fdc86a41`,
+  production signer suffix `9163`. The same-version code 4017 in-place update
+  is verified installed: package `com.paisatrack`, last-update time
+  2026-10-03 22:10:40, first-install time unchanged at 2026-09-26 22:20:54,
+  and the pulled base APK SHA-256 exactly matches the artifact hash above.
+  APK publication remains open.

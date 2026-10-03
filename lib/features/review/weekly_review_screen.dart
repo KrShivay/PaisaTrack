@@ -14,6 +14,7 @@ import '../../data/models/normalized_transaction_record.dart';
 import '../../data/payee_display_name.dart';
 import '../../data/repositories/sms_disposition_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../transactions/detail/upi_qr_action.dart';
 import '../../enrichment/categorizer.dart';
 import '../../enrichment/stored_transaction_record.dart';
 import '../../intelligence/derived_reads_service.dart';
@@ -481,6 +482,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       categoryIcon: categoryIcon,
       status: item.status,
       merchantRaw: txn.merchantRaw,
+      counterpartyVpa: txn.counterpartyVpa,
       counterpartyKey: item.counterpartyKey,
       isLowTrustParse: item.isLowTrustParse,
     );
@@ -1155,6 +1157,10 @@ class _SortCard extends StatelessWidget {
                     : AppColorTokens.inkTertiary,
               ),
             ),
+            UpiQrAction(
+              counterpartyVpa: item.counterpartyVpa,
+              transactionTitle: item.displayName,
+            ),
             const SizedBox(height: 24),
 
             // Hero Amount 48px
@@ -1392,6 +1398,10 @@ class _ReviewListRow extends StatelessWidget {
                         ),
                       ],
                     ],
+                  ),
+                  UpiQrAction(
+                    counterpartyVpa: item.counterpartyVpa,
+                    transactionTitle: item.displayName,
                   ),
                 ],
               ),

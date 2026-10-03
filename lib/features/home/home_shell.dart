@@ -335,54 +335,60 @@ class _HomeShellState extends ConsumerState<HomeShell>
           body: Stack(
             children: [
               // Swipeable PageView with independent tab navigators
-              MediaQuery(
-                data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _tabs.length,
-                  itemBuilder: (context, index) {
-                    final theme = Theme.of(context);
-                    final androidTransitions = theme
-                        .pageTransitionsTheme.builders[TargetPlatform.android];
-                    final suspendPredictiveBack = (index != _currentIndex ||
-                            !_rootRouteCurrent) &&
-                        (androidTransitions
-                                is PredictiveBackPageTransitionsBuilder ||
-                            androidTransitions
-                                is PredictiveBackFullscreenPageTransitionsBuilder);
-                    final tabNavigator = Navigator(
-                      key: _navKeys[index],
-                      observers: [_tabRouteObservers[index]],
-                      onGenerateRoute: (settings) {
-                        return MaterialPageRoute<void>(
-                          builder: (_) => _tabs[index].screen,
-                          settings: settings,
-                        );
-                      },
-                    );
-                    final navigator = suspendPredictiveBack
-                        ? Theme(
-                            data: theme.copyWith(
-                              pageTransitionsTheme: PageTransitionsTheme(
-                                builders: {
-                                  ...theme.pageTransitionsTheme.builders,
-                                  TargetPlatform.android:
-                                      const FadeForwardsPageTransitionsBuilder(),
-                                },
+              NotificationListener<NavigationNotification>(
+                // The shell's root PopScope owns native back handling. Child
+                // Navigator state is handled in _handleSystemBack and must not
+                // overwrite the root canPop contract sent to Android.
+                onNotification: (_) => true,
+                child: MediaQuery(
+                  data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    itemCount: _tabs.length,
+                    itemBuilder: (context, index) {
+                      final theme = Theme.of(context);
+                      final androidTransitions = theme.pageTransitionsTheme
+                          .builders[TargetPlatform.android];
+                      final suspendPredictiveBack = (index != _currentIndex ||
+                              !_rootRouteCurrent) &&
+                          (androidTransitions
+                                  is PredictiveBackPageTransitionsBuilder ||
+                              androidTransitions
+                                  is PredictiveBackFullscreenPageTransitionsBuilder);
+                      final tabNavigator = Navigator(
+                        key: _navKeys[index],
+                        observers: [_tabRouteObservers[index]],
+                        onGenerateRoute: (settings) {
+                          return MaterialPageRoute<void>(
+                            builder: (_) => _tabs[index].screen,
+                            settings: settings,
+                          );
+                        },
+                      );
+                      final navigator = suspendPredictiveBack
+                          ? Theme(
+                              data: theme.copyWith(
+                                pageTransitionsTheme: PageTransitionsTheme(
+                                  builders: {
+                                    ...theme.pageTransitionsTheme.builders,
+                                    TargetPlatform.android:
+                                        const FadeForwardsPageTransitionsBuilder(),
+                                  },
+                                ),
                               ),
-                            ),
-                            child: tabNavigator,
-                          )
-                        : tabNavigator;
-                    return _KeepAliveTab(
-                      key: ValueKey<String>('home_tab_page_$index'),
-                      child: TickerMode(
-                        enabled: index == _currentIndex && _rootRouteCurrent,
-                        child: navigator,
-                      ),
-                    );
-                  },
+                              child: tabNavigator,
+                            )
+                          : tabNavigator;
+                      return _KeepAliveTab(
+                        key: ValueKey<String>('home_tab_page_$index'),
+                        child: TickerMode(
+                          enabled: index == _currentIndex && _rootRouteCurrent,
+                          child: navigator,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
 

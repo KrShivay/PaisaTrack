@@ -192,6 +192,44 @@ void main() {
     expect(summary.highestImpactLabel, isNotEmpty);
   });
 
+  test('review and ask projections preserve only the stored VPA field',
+      () async {
+    await _insertTxn(
+      database,
+      id: 'review_projection_vpa',
+      status: 'needs_review',
+      counterpartyVpa: ' Payee.Name_1@sample-handle ',
+    );
+    await _insertTxn(
+      database,
+      id: 'review_projection_null_vpa',
+      status: 'needs_review',
+    );
+    await _insertTxn(
+      database,
+      id: 'ask_projection_vpa',
+      status: 'asked',
+      counterpartyVpa: 'asked.payee@sample',
+    );
+    final repository = TransactionRepository(database);
+
+    final review = await repository.watchReviewQueue().first;
+    final ask = await repository.watchAskQueue().first;
+    final storedReview = review.singleWhere(
+      (item) => item.id == 'review_projection_vpa',
+    );
+    final missingReview = review.singleWhere(
+      (item) => item.id == 'review_projection_null_vpa',
+    );
+    final storedAsk = ask.singleWhere(
+      (item) => item.id == 'ask_projection_vpa',
+    );
+
+    expect(storedReview.counterpartyVpa, ' Payee.Name_1@sample-handle ');
+    expect(missingReview.counterpartyVpa, equals(null));
+    expect(storedAsk.counterpartyVpa, 'asked.payee@sample');
+  });
+
   test('status-only Keep and Undo persist and move one row in the review queue',
       () async {
     await _insertTxn(

@@ -49,6 +49,7 @@ void main() {
     required String displayName,
     required String counterpartyKey,
     String? categoryId,
+    String? counterpartyVpa,
   }) {
     return TransactionReviewItem(
       id: id,
@@ -60,6 +61,7 @@ void main() {
       categoryId: categoryId,
       categoryIcon: 'food',
       status: 'needs_review',
+      counterpartyVpa: counterpartyVpa,
     );
   }
 
@@ -228,6 +230,51 @@ void main() {
     }
     return container;
   }
+
+  testWidgets('Sort QR is available in card and list without resolving row',
+      (tester) async {
+    final db = await seedDb();
+    final container = await pumpSortWithDb(
+      tester,
+      db,
+      [
+        reviewItem(
+          id: 'txn_001',
+          displayName: 'Synthetic Shop',
+          counterpartyKey: 'raw:synthetic-shop',
+          categoryId: 'food_cat',
+          counterpartyVpa: 'synthetic.shop@upi',
+        ),
+      ],
+    );
+
+    for (final listMode in [false, true]) {
+      final action = find.byTooltip('Show UPI QR');
+      expect(action, findsOneWidget);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.text('UPI QR code'), findsOneWidget);
+      expect(find.text('Synthetic Shop'), findsNWidgets(2));
+      expect(find.text('synthetic.shop@upi'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close QR code'));
+      await tester.pumpAndSettle();
+      expect(find.text('UPI QR code'), findsNothing);
+      expect(find.byTooltip('Show UPI QR'), findsOneWidget);
+      expect(find.text('TRANSACTION DETAILS'), findsNothing);
+
+      if (!listMode) {
+        await tester.tap(find.byIcon(Icons.view_list_rounded));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    final stored = await (db.select(db.transactions)
+          ..where((row) => row.id.equals('txn_001')))
+        .getSingle();
+    expect(stored.status, 'needs_review');
+    expect(container.read(undoControllerProvider), isNull);
+    await db.close();
+  });
 
   group('T-159a — _confirmItem', () {
     testWidgets(

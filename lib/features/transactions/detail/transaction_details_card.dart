@@ -8,6 +8,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../data/db/database.dart' show Transaction;
 import '../../../data/repositories/payment_source_repository.dart';
 import 'transaction_detail_formatting.dart';
+import 'upi_qr_action.dart';
 
 /// One labelled, copyable stored field of a transaction.
 class TransactionDetailRow {
@@ -181,10 +182,21 @@ class TransactionDetailsCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Copy ${row.label}',
-                  icon: Icon(Icons.copy_rounded, size: 18, color: labelColor),
-                  onPressed: () => _copy(context, row),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Copy ${row.label}',
+                      icon:
+                          Icon(Icons.copy_rounded, size: 18, color: labelColor),
+                      onPressed: () => _copy(context, row),
+                    ),
+                    if (row.label == 'UPI ID / VPA')
+                      UpiQrAction(
+                        counterpartyVpa: transaction.counterpartyVpa,
+                        transactionTitle: title,
+                      ),
+                  ],
                 ),
               ],
             ),

@@ -9,7 +9,12 @@ transition builder registers a binding observer for each current page route.
 The binding dispatches one system gesture to every accepting observer, so
 retained offstage tab routes can all respond to a single gesture unless their
 predictive transition is disabled. A root sheet or dialog also covers the tab
-shell and must own back before any nested route.
+shell and must own back before any nested route. On Android 13+, Flutter also
+uses bubbled `NavigationNotification`s to tell the platform whether the
+framework handles back. A retained child Navigator can report `false` after
+the shell's root `PopScope(canPop: false)` reports `true`, incorrectly handing
+back ownership to the Android Activity and allowing it to exit before the
+shell callback runs.
 
 ## Decision
 
@@ -24,6 +29,11 @@ shell and must own back before any nested route.
   nested page pops exactly that active page; cancel leaves every stack and the
   Home exit confirmation unchanged. A root dialog that has no predictive route
   transition uses the normal committed-back fallback and closes only itself.
+- The root `PopScope` remains authoritative for platform back ownership. Consume
+  `NavigationNotification`s from the retained tab Navigator/PageView subtree
+  before they reach `WidgetsApp`; they describe child stack state and must not
+  overwrite the root shell's `canPop: false` contract. Root route and modal
+  notifications continue to reach the app.
 - Ordinary shell back asks the active Navigator to `maybePop`, returns a
   non-Home tab root to Home, and never pops a route above Home. Home-root back
   announces a live-region prompt; only a second back within two seconds exits.
