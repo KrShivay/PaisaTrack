@@ -282,14 +282,20 @@ and [backup import acceptance](backup-import.md).
 
 ## Next implementation slice
 
-**T-177a remains the product-priority path:** its owner-run chronological
-holdout and live/resume gate follows the active T-176 device work. Synthetic
-replay does not close this gate. See [release gates](release-gates.md).
+**T-167j host implementation is in review.** The root-shell back audit found
+force-pop behavior, no deliberate Home exit, and tab stacks that could be
+discarded while switching pages. Host behavior and regressions are recorded in
+the [T-167j brief](../tasks/T-167j.md); the API 36 phone gate for IME precedence
+and committed/canceled native predictive gestures remains open. T-176 and
+T-167c remain in review for their own device gates. Their unfinished device
+acceptance is not claimed complete by T-167j.
 
-**T-165b is complete** on the conflict-free data lane after the
-active T-176 work permitted parallel implementation. Its task brief records
-the acceptance contract and current measurements. It must not displace or delay
-T-177a:
+**T-177a remains the product-priority path** after the existing T-176 device
+work; T-167j does not replace its chronological holdout or live/resume gates.
+Synthetic replay does not close those gates. See [release gates](release-gates.md).
+
+**T-165b is complete** on the conflict-free data lane. Its brief records the
+acceptance contract and measurements:
 
 - It is a P1 data task with low file overlap against concurrent
   Ask/Trends/payee-identity work. T-100a decides whether transfer matching is
@@ -307,5 +313,5 @@ T-177a:
   first; start by measuring the query plan against existing indexes.
 
 Its impact analysis covered `reconcileOwnedTransfers` and `TransactionRepository`;
-the latter is high-impact and remains untouched. T-177a retains product priority
-and its release gates.
+the latter is high-impact and remains untouched. T-177a retains its product
+priority and release gates.

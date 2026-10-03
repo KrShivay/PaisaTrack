@@ -8,6 +8,15 @@ later hardening.
 
 ## In Progress
 
+## Ready
+
+<!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
+     proposed order of the remaining backlog. -->
+
+## In Review
+
+<!-- Implementations in review; retain each task's remaining acceptance gates. -->
+- [ ] T-167j [P0] Implement the app-wide Android, predictive, and in-app back contract. Host behavior is implemented; see [T-167j brief](docs/tasks/T-167j.md) for test evidence and open device gates.
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.
   - Acceptance: exercise Trends, Settings (including Not transactions), Ask,
     transaction detail, nested sheets, and floating actions through their real
@@ -226,14 +235,7 @@ later hardening.
     568×320/2×/48dp with the real floating pill. Independent review
     approved the updated diff. Physical-device QA remains pending.
 
-## Ready
 
-<!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
-     proposed order of the remaining backlog. -->
-
-## In Review
-
-<!-- P1 tasks ready for next phase -->
 
 - [ ] T-154b [P2] Sort: inline corrections and guess refresh before Keep.
       Code merged: a "Not right?" action under the card offers "Wrong payee
@@ -543,7 +545,6 @@ Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
 - [ ] T-167g [P1] Add behavioral widget tests at small Android, gesture-navigation, keyboard-open, large-text, and landscape viewports proving every primary FAB/button is visible, tappable, and not hit-tested beneath bottom navigation.
 - [ ] T-167h [P1] Add golden/regression coverage for root navigation plus floating actions in light/dark themes; fail on visual intersection or <48dp exposed tap target.
 - [ ] T-167i [P2] Standardize bottom-sheet action bars and scroll padding on the same inset contract, including long forms, validation errors, and hardware-keyboard layouts.
-- [ ] T-167j [P0] Define and implement one app-wide back-navigation contract: Android back button, predictive-back gesture, and in-app back controls dismiss transient UI first, then pop every previously visited route one by one; once on a root tab, return to Home; once on Home, show an accessible “Press back again to exit” snackbar and exit only on a second back action within a documented timeout. Preserve tab history deliberately, avoid accidental exit, and add widget/integration tests for sheets, nested details, all root tabs, Home fallback, timeout expiry, keyboard-open state, and gesture/button parity.
 - [ ] T-168a [P1] Extract `TransactionDetailScreen` pure presentation helpers and subwidgets behind characterization tests (T-159a prerequisite).
 - [ ] T-168c [P2] Route remaining bespoke sheets/dialogs through Bloom helpers and add API-level presentation tests.
 - [ ] T-168d [P2] Establish a visual-regression golden suite for Activity, SMS scan, salary income, errors, and dark/light themes.

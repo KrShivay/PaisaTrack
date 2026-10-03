@@ -25,7 +25,9 @@ ADRs record durable technical decisions. Status wording below follows each file;
 | [0019](0019-isolated-recovery-qa-identity.md) | Isolated recovery QA identity | accepted for T-179a harness |
 | [0020](0020-credit-card-accounting.md) | Credit-card accounting boundaries | Proposed; no schema approved |
 | [0021](0021-retain-source-sms-provenance.md) | Retain source SMS provenance; unlinked SMS expire after 7 days | Accepted (owner decision) |
+| [0022](0022-scoped-predictive-back.md) | Scope predictive back to the visible tab | Accepted for T-167j; physical Android verification pending |
 
 ADR 0013 was present only in snapshot commit `8800ddd`; its accepted backup decision is represented by ADR 0016. It was never part of the current ADR sequence. The duplicate number 0008 is deliberate in the surviving archive: [archived on-device LLM model pin](../archive/decisions/0008-on-device-llm-model.md) was superseded by ADR 0009, while the current [ADR 0008](0008-bounded-encrypted-backups.md) covers encrypted backups. Do not renumber either file.
 
-ADR 0020 is the Proposed credit-card-accounting draft. The next free ADR number is 0022.
+ADR 0020 is the Proposed credit-card-accounting draft. ADR 0022 records the
+T-167j predictive-back decision.

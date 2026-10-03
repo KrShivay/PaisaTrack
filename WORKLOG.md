@@ -1,5 +1,28 @@
 # Current Handoff
 
+## 2026-10-03 — T-167j host implementation in review (device gate open)
+
+- Home back now honors the active tab's `maybePop` and vetoes, retains all four
+  tab Navigators, returns non-Home roots to Home, and uses an accessible
+  two-second Home exit confirmation without popping an enclosing route.
+  Predictive Android transitions are scoped to the active uncovered tab;
+  inactive/covered tab tickers are disabled, and programmatic tab state follows
+  taps and PageView swipes. ADR 0022 records the behavior.
+- Regression evidence: initial focused cases 0/4; programmatic Activity request
+  → back Home → repeated Activity request also failed before provider sync.
+  Current focused suite 17/17; `America/New_York` shell/home suites 60/60; full
+  Flutter suite 1,246/1,246; analyzer, formatter, documentation links, and diff
+  checks pass. The SQLCipher migration test ran in the full suite.
+- Physical API 36 IME and native predictive gesture acceptance remains open;
+  the phone was disconnected, no device was changed, and no private data was
+  inspected. The isolated recovery-QA fixture and launcher are preserved under
+  `.dart_tool/qa/`; both are `com.paisatrack.recoveryqa` v0.1.7/code 2016,
+  built for arm64 with no SMS permissions, and signed by the local debug key.
+- Follow-ups: owner-run T-167j IME/predictive checks and the existing T-176 /
+  T-167c device gates; consented T-177a holdout/period decision; keep T-194 on
+  `codex/apk-size-trial`; signed release build and APK publishing remain open.
+  Host acceptance moved T-167j to In Review, not Done.
+
 ## 2026-10-03 — T-165b completed
 
 - Owned-transfer reconciliation now uses bounded `idx_transactions_ts` probes,
@@ -58,30 +81,3 @@
   the commits exist only on the cloud branch `claude/great-cannon-16aotf`
   until access is fixed. Next code slice per roadmap: T-165b. The T-177 R3 entry is in Git
   history (`c381756`).
-
-## 2026-10-03 — Owner-phone defects fixed; release 0.1.6+2015
-
-- Owner-phone QA (data exported by owner): UNDO-1 passed (category change,
-  toast over detail, Undo restored it). Found and fixed: ISO/INR claim copy
-  and a false "committed to rent" caption (`5dd0248`); Ask could not find
-  VPA-only payees such as `payzomato@hdfcbank` — R4 brand-word matching with
-  disclosed payees, plus a reviewer-found "ola"/multi-word regression fix
-  (`8e4eb65`); emulator-matrix fixes (48dp Ask rows, compact landscape ring,
-  provenance badge; `82ba900`); landscape nav/Ask orb under the right system
-  bar and Activity header eating the viewport at 2.0x (`9dac2c5`, DRY
-  refactor before merge; test fix `89a20c3` after main went red); Trends
-  claim titles and day-7 minimum for category deltas (`a09bd1c`); readable
-  Ask answers with a "How this was counted" disclosure (`dfb05e6`).
-- Release 0.1.6+2015 (`13dd4d5`): suite 1174/1174, Gradle 31/31 + 10/10,
-  installed in place (firstInstallTime unchanged, hash matched), cold launch
-  1040 ms, published `apk-downloads` `5747e3c`. Open: landscape/2.0x/3-button
-  recheck on this build (phone back in portrait); the stale pre-day-7
-  category card cleared once insights regenerated. VPA-only rows still display raw
-  VPAs, Top merchants shows several "Unknown" rows. R2 entry is in Git
-  history (`f730857`). T-195–T-198 are now Ready on the task board.
-  Follow-up release 0.1.7+2016 (`016465d`, adds the month-over-month badge
-  fix `37beb17`): suite 1176/1176, installed in place, published
-  `apk-downloads` `0e151f2`.
-
-The roadmap-planning entry (plans, ADR 0020, T-190 briefs) is in Git history
-(`c381756` and earlier).

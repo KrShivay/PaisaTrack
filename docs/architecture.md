@@ -30,6 +30,14 @@ ignores overridden padding. The undo toast uses the same shell geometry. The
 full-screen Ask sheet is outside the tab Navigator and handles only its system
 safe area.
 
+The shell retains every visited tab Navigator and route stack. System back
+first offers `maybePop` to the active tab, then returns a non-Home root to Home;
+Home-root exit requires a second back within two seconds and never pops an
+enclosing route. Android predictive transitions are enabled only for the active
+tab while the shell is uncovered (ADR 0022), so offstage stacks cannot consume
+one gesture together. Root modals retain back precedence, and visible software
+IME back remains Android-owned.
+
 Activity keeps its established portrait layout when the height available after
 system insets is at least 560dp. Below 560dp, its title, SMS status and filters
 scroll with the transactions; the search field remains pinned so it is always

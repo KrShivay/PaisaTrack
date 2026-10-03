@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,6 +16,8 @@ import '../transactions/transactions_screen.dart';
 
 import '../dashboard/dashboard_providers.dart';
 
+const Duration _homeExitConfirmationWindow = Duration(seconds: 2);
+
 /// Post-onboarding Bloom app shell with 4 fixed destinations and floating nav pill.
 ///
 /// Destinations:
@@ -27,8 +30,9 @@ import '../dashboard/dashboard_providers.dart';
 /// - Floating 64px nav pill inset 20px, 30px above bottom safe area.
 /// - 48px Ask orb triggering Ask PaisaTrack root sheet.
 /// - PageView swipe navigation with 250ms transition.
-/// - Independent Navigator stack per tab; back pops active tab stack before exiting.
+/// - Independent, retained Navigator stack per tab with one shell back contract.
 /// - The root app overlay hosts the shared 10-second undo toast.
+
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -41,15 +45,30 @@ class _HomeShellState extends ConsumerState<HomeShell>
   int _currentIndex = 0;
   late final PageController _pageController;
   bool _trendsLeaveScheduled = false;
+  bool _handlingBack = false;
+  int _navigationRevision = 0;
+  bool _exitConfirmationArmed = false;
+  bool _rootRouteCurrent = true;
+  bool _hasObservedKeyboardVisibility = false;
+  bool _keyboardVisible = false;
+  Timer? _exitConfirmationTimer;
+  final GlobalKey<ScaffoldMessengerState> _shellMessengerKey =
+      GlobalKey<ScaffoldMessengerState>(debugLabel: 'home shell messenger');
 
   static const int _trendsTabIndex = 3;
 
-  static const List<GlobalObjectKey<NavigatorState>> _navKeys = [
-    GlobalObjectKey<NavigatorState>('home_tab_nav'),
-    GlobalObjectKey<NavigatorState>('activity_tab_nav'),
-    GlobalObjectKey<NavigatorState>('sort_tab_nav'),
-    GlobalObjectKey<NavigatorState>('trends_tab_nav'),
-  ];
+  late final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
+    _tabs.length,
+    (index) => GlobalKey<NavigatorState>(
+      debugLabel: '${_tabs[index].label.toLowerCase()} tab navigator',
+    ),
+    growable: false,
+  );
+  late final List<_ShellTabRouteObserver> _tabRouteObservers = List.generate(
+    _tabs.length,
+    (_) => _ShellTabRouteObserver(onTopChanged: _invalidateExitConfirmation),
+    growable: false,
+  );
 
   static const List<_TabItem> _tabs = [
     _TabItem(
@@ -87,6 +106,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
 
   @override
   void dispose() {
+    _clearExitConfirmation();
     _markTrendsSeen();
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
@@ -95,6 +115,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _invalidateExitConfirmation();
     if (switch (state) {
       AppLifecycleState.hidden ||
       AppLifecycleState.paused ||
@@ -103,6 +124,104 @@ class _HomeShellState extends ConsumerState<HomeShell>
       AppLifecycleState.resumed || AppLifecycleState.inactive => false,
     }) {
       _markTrendsSeen();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final routeIsCurrent = ModalRoute.isCurrentOf(context);
+    if (routeIsCurrent != null && routeIsCurrent != _rootRouteCurrent) {
+      _rootRouteCurrent = routeIsCurrent;
+      _invalidateExitConfirmation();
+    }
+
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    if (_hasObservedKeyboardVisibility && keyboardVisible != _keyboardVisible) {
+      _invalidateExitConfirmation();
+    }
+    _keyboardVisible = keyboardVisible;
+    _hasObservedKeyboardVisibility = true;
+  }
+
+  void _clearExitConfirmation() {
+    _exitConfirmationTimer?.cancel();
+    _exitConfirmationTimer = null;
+    final wasArmed = _exitConfirmationArmed;
+    _exitConfirmationArmed = false;
+    if (wasArmed) _shellMessengerKey.currentState?.hideCurrentSnackBar();
+  }
+
+  void _invalidateExitConfirmation() {
+    _navigationRevision++;
+    _clearExitConfirmation();
+  }
+
+  void _armExitConfirmation() {
+    _exitConfirmationArmed = true;
+    // The exit prompt must start immediately; an existing informational
+    // snackbar cannot be allowed to delay it past the two-second window.
+    _shellMessengerKey.currentState?.clearSnackBars();
+    const bottomClearance = kBottomNavHeight + kBottomNavBottomGap + 8;
+    _shellMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        key: const ValueKey('home-exit-snackbar'),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, bottomClearance),
+        content: Semantics(
+          liveRegion: true,
+          child: const Text('Press back again to exit'),
+        ),
+        duration: _homeExitConfirmationWindow,
+      ),
+    );
+    _exitConfirmationTimer = Timer(_homeExitConfirmationWindow, () {
+      _exitConfirmationTimer = null;
+      _exitConfirmationArmed = false;
+    });
+  }
+
+  Future<void> _handleSystemBack() async {
+    if (_handlingBack || !mounted) return;
+    _handlingBack = true;
+    try {
+      final requestRevision = _navigationRevision;
+      final requestTab = _currentIndex;
+      final currentNavigator = _navKeys[requestTab].currentState;
+      final wasHandled =
+          currentNavigator != null && await currentNavigator.maybePop();
+      if (!mounted ||
+          requestRevision != _navigationRevision ||
+          requestTab != _currentIndex ||
+          !_rootRouteCurrent) {
+        return;
+      }
+      if (wasHandled) {
+        _clearExitConfirmation();
+        return;
+      }
+
+      if (_currentIndex != 0) {
+        _clearExitConfirmation();
+        _onTabTapped(0);
+        return;
+      }
+
+      // Never pop the parent route: onboarding and permission recovery are
+      // owned by app startup, not by the Home exit affordance.
+      if (!_rootRouteCurrent) {
+        _clearExitConfirmation();
+        return;
+      }
+
+      if (_exitConfirmationArmed) {
+        _clearExitConfirmation();
+        await SystemNavigator.pop();
+      } else {
+        _armExitConfirmation();
+      }
+    } finally {
+      _handlingBack = false;
     }
   }
 
@@ -129,7 +248,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
   }
 
   void _onTabTapped(int index) {
+    _invalidateExitConfirmation();
     if (index == _currentIndex) {
+      _syncTabSelection();
       // Pop to root of current tab if tapped again
       _navKeys[index].currentState?.popUntil((route) => route.isFirst);
       return;
@@ -139,6 +260,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
     setState(() {
       _currentIndex = index;
     });
+    _syncTabSelection();
     _pageController.animateToPage(
       index,
       duration: AppDurations.standard,
@@ -148,11 +270,19 @@ class _HomeShellState extends ConsumerState<HomeShell>
 
   void _onPageChanged(int index) {
     if (_currentIndex != index) {
+      _invalidateExitConfirmation();
       if (_currentIndex == _trendsTabIndex) _markTrendsSeen();
       if (index == _trendsTabIndex) _trendsLeaveScheduled = false;
       setState(() {
         _currentIndex = index;
       });
+      _syncTabSelection();
+    }
+  }
+
+  void _syncTabSelection() {
+    if (ref.read(homeTabControllerProvider) != _currentIndex) {
+      ref.read(homeTabControllerProvider.notifier).state = _currentIndex;
     }
   }
 
@@ -195,65 +325,122 @@ class _HomeShellState extends ConsumerState<HomeShell>
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final currentNav = _navKeys[_currentIndex].currentState;
-        if (currentNav != null && currentNav.canPop()) {
-          currentNav.pop();
-        } else if (_currentIndex != 0) {
-          _onTabTapped(0);
-        } else {
-          // If at root of Home tab, allow system back / pop
-          final navigator = Navigator.of(context);
-          if (navigator.canPop()) {
-            navigator.pop();
-          }
-        }
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) unawaited(_handleSystemBack());
       },
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: Stack(
-          children: [
-            // Swipeable PageView with independent tab navigators
-            MediaQuery(
-              data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                itemCount: _tabs.length,
-                itemBuilder: (context, index) {
-                  return Navigator(
-                    key: _navKeys[index],
-                    onGenerateRoute: (settings) {
-                      return MaterialPageRoute<void>(
-                        builder: (_) => _tabs[index].screen,
-                        settings: settings,
-                      );
-                    },
-                  );
-                },
+      child: ScaffoldMessenger(
+        key: _shellMessengerKey,
+        child: Scaffold(
+          resizeToAvoidBottomInset: false,
+          body: Stack(
+            children: [
+              // Swipeable PageView with independent tab navigators
+              MediaQuery(
+                data: BloomBottomInset.forTabContent(MediaQuery.of(context)),
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  itemCount: _tabs.length,
+                  itemBuilder: (context, index) {
+                    final theme = Theme.of(context);
+                    final androidTransitions = theme
+                        .pageTransitionsTheme.builders[TargetPlatform.android];
+                    final suspendPredictiveBack = (index != _currentIndex ||
+                            !_rootRouteCurrent) &&
+                        (androidTransitions
+                                is PredictiveBackPageTransitionsBuilder ||
+                            androidTransitions
+                                is PredictiveBackFullscreenPageTransitionsBuilder);
+                    final tabNavigator = Navigator(
+                      key: _navKeys[index],
+                      observers: [_tabRouteObservers[index]],
+                      onGenerateRoute: (settings) {
+                        return MaterialPageRoute<void>(
+                          builder: (_) => _tabs[index].screen,
+                          settings: settings,
+                        );
+                      },
+                    );
+                    final navigator = suspendPredictiveBack
+                        ? Theme(
+                            data: theme.copyWith(
+                              pageTransitionsTheme: PageTransitionsTheme(
+                                builders: {
+                                  ...theme.pageTransitionsTheme.builders,
+                                  TargetPlatform.android:
+                                      const FadeForwardsPageTransitionsBuilder(),
+                                },
+                              ),
+                            ),
+                            child: tabNavigator,
+                          )
+                        : tabNavigator;
+                    return _KeepAliveTab(
+                      key: ValueKey<String>('home_tab_page_$index'),
+                      child: TickerMode(
+                        enabled: index == _currentIndex && _rootRouteCurrent,
+                        child: navigator,
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
 
-            // Floating Nav Pill
-            Positioned(
-              left: leftInset + 20,
-              right: rightInset + 20,
-              bottom:
-                  MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
-              child: HomeFloatingNavPill(
-                currentIndex: _currentIndex,
-                destinations: _tabs,
-                onTabSelected: _onTabTapped,
-                onAskTapped: _openAskPaisaTrack,
-                isDark: isDark,
-                trendsNewCount: newTrendsCount,
+              // Floating Nav Pill
+              Positioned(
+                left: leftInset + 20,
+                right: rightInset + 20,
+                bottom:
+                    MediaQuery.paddingOf(context).bottom + kBottomNavBottomGap,
+                child: HomeFloatingNavPill(
+                  currentIndex: _currentIndex,
+                  destinations: _tabs,
+                  onTabSelected: _onTabTapped,
+                  onAskTapped: _openAskPaisaTrack,
+                  isDark: isDark,
+                  trendsNewCount: newTrendsCount,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _KeepAliveTab extends StatefulWidget {
+  const _KeepAliveTab({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAliveTab> createState() => _KeepAliveTabState();
+}
+
+class _KeepAliveTabState extends State<_KeepAliveTab>
+    with AutomaticKeepAliveClientMixin<_KeepAliveTab> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+}
+
+class _ShellTabRouteObserver extends NavigatorObserver {
+  _ShellTabRouteObserver({required this.onTopChanged});
+
+  final void Function() onTopChanged;
+
+  @override
+  void didChangeTop(
+    Route<dynamic> topRoute,
+    Route<dynamic>? previousTopRoute,
+  ) {
+    onTopChanged();
   }
 }
 
