@@ -27,6 +27,7 @@ ADRs record durable technical decisions. Status wording below follows each file;
 | [0021](0021-retain-source-sms-provenance.md) | Retain source SMS provenance; unlinked SMS expire after 7 days | Accepted (owner decision) |
 | [0022](0022-scoped-predictive-back.md) | Scope predictive back to the visible tab | Accepted for T-167j; physical Android verification pending |
 | [0023](0023-static-upi-qr.md) | Render a static local UPI QR from stored VPA evidence | Accepted for T-199 implementation |
+| [0024](0024-unified-transaction-detail-confirmation.md) | Unify transaction-detail status and parse confirmation | Accepted for T-200 implementation |
 
 ADR 0013 was present only in snapshot commit `8800ddd`; its accepted backup decision is represented by ADR 0016. It was never part of the current ADR sequence. The duplicate number 0008 is deliberate in the surviving archive: [archived on-device LLM model pin](../archive/decisions/0008-on-device-llm-model.md) was superseded by ADR 0009, while the current [ADR 0008](0008-bounded-encrypted-backups.md) covers encrypted backups. Do not renumber either file.
 

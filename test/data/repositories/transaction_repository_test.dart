@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
@@ -150,6 +150,10 @@ Future<void> _insertParseConfirmationCandidate(
         ),
       );
 }
+
+Future<Transaction> _getTxn(AppDatabase database, String id) =>
+    (database.select(database.transactions)..where((row) => row.id.equals(id)))
+        .getSingle();
 
 void main() {
   late AppDatabase database;
@@ -343,6 +347,367 @@ void main() {
         .getSingle();
     expect(unchanged.status, 'needs_review');
     expect(unchanged.categoryId, 'other');
+  });
+
+  test('unified confirmation resolves review, records one verdict, and undoes',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_confirmation',
+    );
+    final repository = TransactionRepository(database);
+    final before = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_confirmation')))
+        .getSingle();
+    final confirmation = await repository.confirmReviewDetails(
+      txnId: 'unified_confirmation',
+      observedTransaction: before,
+      clock: () => DateTime.utc(2026, 7, 9, 12, 30, 15, 123456),
+    );
+
+    expect(confirmation, isNotNull);
+    expect(confirmation!.createdParseConfirmation, isNotNull);
+    expect(
+      confirmation.createdParseConfirmation!.id,
+      contains('_detail_confirm_'),
+    );
+    final after = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_confirmation')))
+        .getSingle();
+    expect(after.status, 'confirmed');
+    expect(after.amount, before.amount);
+    expect(after.direction, before.direction);
+    expect(after.merchantRaw, before.merchantRaw);
+    expect(after.categoryId, before.categoryId);
+    expect(after.paymentSourceId, before.paymentSourceId);
+    expect(
+      await database.select(database.feedback).get(),
+      hasLength(1),
+    );
+    final event = (await database.select(database.feedback).get()).single;
+    expect(event.field, 'parse_verdict');
+    expect(event.newValue, 'ok');
+    expect(event.oldValue, 'user_confirmed_v1');
+    expect(event.context, 'parse_confirm');
+    expect(
+      (await TemplateTrustLedger(database).load())
+          .entries['public_v1']
+          ?.confirmedParses,
+      1,
+    );
+    expect(
+      await repository.confirmReviewDetails(
+        txnId: 'unified_confirmation',
+        observedTransaction: before,
+      ),
+      isNull,
+    );
+
+    expect(
+      await repository.undoReviewDetailsConfirmation(confirmation),
+      isTrue,
+    );
+    final undone = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_confirmation')))
+        .getSingle();
+    expect(undone.status, before.status);
+    expect(undone.updatedAt, before.updatedAt);
+    expect(undone.categoryId, before.categoryId);
+    expect(await database.select(database.feedback).get(), isEmpty);
+    expect(
+      (await TemplateTrustLedger(database).load()).entries,
+      isEmpty,
+    );
+  });
+
+  test('unified parse-only confirmation preserves status and analytics choice',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_parse_only',
+    );
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('unified_parse_only')))
+        .write(
+      const TransactionsCompanion(
+        status: Value('auto'),
+        isAnalyticsExcluded: Value(true),
+      ),
+    );
+    final repository = TransactionRepository(database);
+    final observed = await _getTxn(database, 'unified_parse_only');
+    final confirmation = await repository.confirmReviewDetails(
+      txnId: 'unified_parse_only',
+      observedTransaction: observed,
+      clock: () => DateTime.utc(2026, 7, 9, 12),
+    );
+
+    expect(confirmation, isNotNull);
+    expect(confirmation!.createdParseConfirmation, isNotNull);
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_parse_only')))
+        .getSingle();
+    expect(transaction.status, 'auto');
+    expect(transaction.isAnalyticsExcluded, isTrue);
+    expect(await database.select(database.feedback).get(), hasLength(1));
+
+    expect(
+      await repository.undoReviewDetailsConfirmation(confirmation),
+      isTrue,
+    );
+    final undone = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_parse_only')))
+        .getSingle();
+    expect(undone.status, 'auto');
+    expect(undone.isAnalyticsExcluded, isTrue);
+    expect(await database.select(database.feedback).get(), isEmpty);
+  });
+
+  test('unified confirmation preserves an earlier parse verdict on undo',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_prior_verdict',
+    );
+    await database.into(database.feedback).insert(
+          FeedbackCompanion.insert(
+            id: 'prior_parse_verdict',
+            txnId: 'unified_prior_verdict',
+            field: 'parse_verdict',
+            oldValue: const Value('user_confirmed_v1'),
+            newValue: const Value('ok'),
+            context: 'parse_confirm',
+            createdAt: DateTime.utc(2026, 7, 8),
+          ),
+        );
+    final repository = TransactionRepository(database);
+    final observed = await _getTxn(database, 'unified_prior_verdict');
+    final confirmation = await repository.confirmReviewDetails(
+      txnId: 'unified_prior_verdict',
+      observedTransaction: observed,
+      clock: () => DateTime.utc(2026, 7, 9),
+    );
+
+    expect(confirmation, isNotNull);
+    expect(confirmation!.createdParseConfirmation, isNull);
+    final confirmed = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_prior_verdict')))
+        .getSingle();
+    expect(confirmed.status, 'confirmed');
+    expect(await database.select(database.feedback).get(), hasLength(1));
+
+    expect(
+      await repository.undoReviewDetailsConfirmation(confirmation),
+      isTrue,
+    );
+    final undone = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_prior_verdict')))
+        .getSingle();
+    expect(undone.status, 'needs_review');
+    final feedback = await database.select(database.feedback).get();
+    expect(feedback, hasLength(1));
+    expect(feedback.single.id, 'prior_parse_verdict');
+  });
+
+  test(
+      'unified status action handles missing evidence but rejects excluded rows',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_no_source',
+      rawSmsBody: null,
+    );
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('unified_no_source')))
+        .write(const TransactionsCompanion(status: Value('asked')));
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_no_fields',
+      evidenceJson: null,
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_deleted',
+      isDeleted: true,
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_not_transaction',
+      isNotTransaction: true,
+    );
+    await _insertTxn(database, id: 'unified_duplicate_parent');
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_duplicate',
+      duplicateOfTxnId: 'unified_duplicate_parent',
+    );
+    final repository = TransactionRepository(database);
+
+    for (final id in [
+      'unified_deleted',
+      'unified_not_transaction',
+      'unified_duplicate',
+    ]) {
+      expect(
+        await repository.confirmReviewDetails(
+          txnId: id,
+          observedTransaction: await _getTxn(database, id),
+        ),
+        isNull,
+        reason: id,
+      );
+      final row = await (database.select(database.transactions)
+            ..where((transaction) => transaction.id.equals(id)))
+          .getSingle();
+      expect(row.status, 'needs_review', reason: id);
+    }
+
+    for (final id in ['unified_no_source', 'unified_no_fields']) {
+      final receipt = await repository.confirmReviewDetails(
+        txnId: id,
+        observedTransaction: await _getTxn(database, id),
+      );
+      expect(receipt, isNotNull, reason: id);
+      expect(receipt!.createdParseConfirmation, isNull, reason: id);
+      final row = await (database.select(database.transactions)
+            ..where((transaction) => transaction.id.equals(id)))
+          .getSingle();
+      expect(row.status, 'confirmed', reason: id);
+      expect(
+        await repository.undoReviewDetailsConfirmation(receipt),
+        isTrue,
+        reason: id,
+      );
+      final undone = await _getTxn(database, id);
+      expect(
+        undone.status,
+        id == 'unified_no_source' ? 'asked' : 'needs_review',
+      );
+    }
+    expect(await database.select(database.feedback).get(), isEmpty);
+  });
+
+  test('unified confirmation is atomic when status update fails', () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_rollback',
+    );
+    await database.customStatement('''
+      CREATE TRIGGER reject_unified_confirmation
+      BEFORE UPDATE OF status ON transactions
+      WHEN NEW.id = 'unified_rollback'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected status failure');
+      END
+    ''');
+    final repository = TransactionRepository(database);
+
+    await expectLater(
+      repository.confirmReviewDetails(
+        txnId: 'unified_rollback',
+        observedTransaction: await _getTxn(database, 'unified_rollback'),
+      ),
+      throwsA(anything),
+    );
+
+    final transaction = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_rollback')))
+        .getSingle();
+    expect(transaction.status, 'needs_review');
+    expect(await database.select(database.feedback).get(), isEmpty);
+    expect((await TemplateTrustLedger(database).load()).entries, isEmpty);
+  });
+
+  test('unified confirmation undo rejects later row and feedback changes',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_stale_row',
+    );
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_stale_feedback',
+    );
+    final repository = TransactionRepository(database);
+    final rowReceipt = await repository.confirmReviewDetails(
+      txnId: 'unified_stale_row',
+      observedTransaction: await _getTxn(database, 'unified_stale_row'),
+      clock: () => DateTime.utc(2026, 7, 9, 12, 0, 0, 123000),
+    );
+    final feedbackReceipt = await repository.confirmReviewDetails(
+      txnId: 'unified_stale_feedback',
+      observedTransaction: await _getTxn(database, 'unified_stale_feedback'),
+      clock: () => DateTime.utc(2026, 7, 9, 12, 0, 0, 123000),
+    );
+    expect(rowReceipt?.createdParseConfirmation, isNotNull);
+    expect(feedbackReceipt?.createdParseConfirmation, isNotNull);
+
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('unified_stale_row')))
+        .write(const TransactionsCompanion(description: Value('later edit')));
+    expect(
+      await repository.undoReviewDetailsConfirmation(rowReceipt!),
+      isFalse,
+    );
+    final laterEdited = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_stale_row')))
+        .getSingle();
+    expect(laterEdited.status, 'confirmed');
+    expect(laterEdited.description, 'later edit');
+
+    final created = feedbackReceipt!.createdParseConfirmation!;
+    await (database.delete(database.feedback)
+          ..where((row) => row.id.equals(created.id)))
+        .go();
+    await database.into(database.feedback).insert(
+          FeedbackCompanion.insert(
+            id: created.id,
+            txnId: created.txnId,
+            field: created.field,
+            oldValue: Value(created.oldValue),
+            newValue: Value(created.newValue),
+            context: created.context,
+            modelConfidenceAtTime: const Value(0.1),
+            createdAt: created.createdAt.add(const Duration(seconds: 1)),
+          ),
+        );
+    expect(
+      await repository.undoReviewDetailsConfirmation(feedbackReceipt),
+      isFalse,
+    );
+    final retainedReplacement = await (database.select(database.feedback)
+          ..where((row) => row.id.equals(created.id)))
+        .getSingle();
+    expect(retainedReplacement.modelConfidenceAtTime, 0.1);
+    final stillConfirmed = await (database.select(database.transactions)
+          ..where((row) => row.id.equals('unified_stale_feedback')))
+        .getSingle();
+    expect(stillConfirmed.status, 'confirmed');
+  });
+
+  test('unified confirmation refuses to confirm a stale displayed snapshot',
+      () async {
+    await _insertParseConfirmationCandidate(
+      database,
+      id: 'unified_stale_observation',
+    );
+    final repository = TransactionRepository(database);
+    final displayed = await _getTxn(database, 'unified_stale_observation');
+    await (database.update(database.transactions)
+          ..where((row) => row.id.equals('unified_stale_observation')))
+        .write(const TransactionsCompanion(amount: Value(275)));
+
+    expect(
+      await repository.confirmReviewDetails(
+        txnId: displayed.id,
+        observedTransaction: displayed,
+      ),
+      isNull,
+    );
+    final current = await _getTxn(database, 'unified_stale_observation');
+    expect(current.status, 'needs_review');
+    expect(current.amount, 275);
+    expect(await database.select(database.feedback).get(), isEmpty);
   });
 
   test(

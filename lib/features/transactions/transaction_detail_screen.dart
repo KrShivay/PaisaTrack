@@ -50,6 +50,7 @@ class _TransactionDetailScreenState
   bool _savingNote = false;
   bool _savingParseConfirmation = false;
   bool _savingCurrencyRepair = false;
+  ReviewDetailsConfirmationReceipt? _detailsConfirmationReceipt;
   String? _noteError;
 
   @override
@@ -96,30 +97,57 @@ class _TransactionDetailScreenState
     }
   }
 
-  Future<void> _confirmParsedDetails() async {
+  Future<void> _confirmParsedDetails(Transaction observedTransaction) async {
     if (_savingParseConfirmation) return;
     setState(() => _savingParseConfirmation = true);
     try {
       final database = await ref.read(appDatabaseProvider.future);
       final repository = ref.read(transactionRepositoryProvider(database));
-      final recorded = await repository.confirmParse(txnId: widget.txnId);
-      if (recorded) {
-        ref.read(undoControllerProvider.notifier).pushUndo(
-              UndoToken(
-                id: 'parse_confirm_${widget.txnId}',
-                message: 'Parsed details confirmed',
-                undoAction: () async {
-                  await repository.undoParseConfirmation(
-                    txnId: widget.txnId,
-                  );
-                },
-              ),
-            );
+      final receipt = await repository.confirmReviewDetails(
+        txnId: widget.txnId,
+        observedTransaction: observedTransaction,
+      );
+      if (!mounted) return;
+      if (receipt == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The transaction changed or is no longer eligible. Review the latest details and try again.',
+            ),
+          ),
+        );
+        return;
       }
+
+      setState(() => _detailsConfirmationReceipt = receipt);
+      ref.read(undoControllerProvider.notifier).pushUndo(
+            UndoToken(
+              id: 'review_details_${widget.txnId}',
+              message: 'Transaction details confirmed',
+              undoAction: () async {
+                final undone = await repository.undoReviewDetailsConfirmation(
+                  receipt,
+                );
+                if (!undone) {
+                  throw StateError(
+                    'Transaction details changed after confirmation.',
+                  );
+                }
+                if (mounted) {
+                  setState(() => _detailsConfirmationReceipt = null);
+                }
+              },
+            ),
+          );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaction details confirmed.')),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not confirm parsed details.')),
+          const SnackBar(
+            content: Text('Could not confirm transaction details.'),
+          ),
         );
       }
     } finally {
@@ -356,6 +384,10 @@ class _TransactionDetailScreenState
                 _categoryId ?? txn.categoryId ?? 'uncategorized';
             final categoryDisplayName =
                 _categoryName ?? detail.categoryName ?? 'Uncategorised';
+            final confirmedCategoryName =
+                detail.categoryName?.trim().isNotEmpty == true
+                    ? detail.categoryName!.trim()
+                    : 'Uncategorised';
             // Display only: the correction sheet is prefilled with the stored
             // merchant_raw, never this derived title (T-198, no writes).
             final displayName = payeeDisplayName(
@@ -367,6 +399,25 @@ class _TransactionDetailScreenState
             );
             final date =
                 DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true);
+            final isReviewStatus =
+                txn.status == 'needs_review' || txn.status == 'asked';
+            final confirmationExcluded = txn.isDeleted ||
+                txn.isNotTransaction ||
+                txn.duplicateOfTxnId != null;
+            final pendingReview = isReviewStatus && !confirmationExcluded;
+            final pendingParse = detail.canConfirmParse &&
+                !detail.isParseConfirmed &&
+                !confirmationExcluded;
+            final confirmationReceiptMatches =
+                _detailsConfirmationReceipt?.after == txn;
+            final showConfirmationPanel = !confirmationExcluded &&
+                (pendingReview ||
+                    pendingParse ||
+                    confirmationReceiptMatches ||
+                    (detail.isLowTrustParse && detail.isParseConfirmed));
+            final confirmationComplete = !pendingReview &&
+                !pendingParse &&
+                (confirmationReceiptMatches || detail.isParseConfirmed);
 
             final allCategories = ref.watch(categoryListProvider).valueOrNull ??
                 const <Category>[];
@@ -602,9 +653,9 @@ class _TransactionDetailScreenState
                     const SizedBox(height: 16),
                   ],
 
-                  // Review Queue Banner (Confirm / Fix)
-                  if (txn.status == 'needs_review' ||
-                      detail.isLowTrustParse) ...[
+                  // One review panel owns both status and eligible parse
+                  // confirmation so the user sees one clear action.
+                  if (showConfirmationPanel) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -625,16 +676,16 @@ class _TransactionDetailScreenState
                           Row(
                             children: [
                               const Icon(
-                                Icons.help_outline_rounded,
+                                Icons.fact_check_outlined,
                                 color: AppColorTokens.warningDark,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  detail.isLowTrustParse
-                                      ? 'Low trust parse — please confirm details'
-                                      : 'Suggested Category: $categoryDisplayName',
+                                  confirmationComplete
+                                      ? 'Details confirmed'
+                                      : 'Check these transaction details',
                                   style: AppTheme.bloomDisplay(
                                     13,
                                     FontWeight.w600,
@@ -646,48 +697,90 @@ class _TransactionDetailScreenState
                               ),
                             ],
                           ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Check the amount, direction, payee, and category before confirming.',
+                          ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () async {
-                                    final database = await ref
-                                        .read(appDatabaseProvider.future);
-                                    final repo = ref.read(
-                                      transactionRepositoryProvider(
-                                        database,
-                                      ),
-                                    );
-                                    await repo.confirm(txnId: widget.txnId);
-                                  },
-                                  child: const Text('Confirm'),
-                                ),
+                          _ConfirmationField(
+                            label: 'Amount',
+                            child: BloomAmount(
+                              amount: txn.amount,
+                              currencyCode: txn.currencyCode,
+                              currencySymbol: txn.currencySymbol,
+                              size: 18,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                          _ConfirmationField(
+                            label: 'Direction',
+                            child: Text(isDebit ? 'Debit' : 'Credit'),
+                          ),
+                          _ConfirmationField(
+                            label: 'Payee',
+                            child: Text(displayName),
+                          ),
+                          _ConfirmationField(
+                            label: 'Category',
+                            child: Text(confirmedCategoryName),
+                          ),
+                          const SizedBox(height: 12),
+                          if (pendingReview || pendingParse)
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: _savingParseConfirmation
+                                    ? null
+                                    : () => _confirmParsedDetails(txn),
+                                icon: _savingParseConfirmation
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.verified_rounded),
+                                label: const Text('Confirm details'),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: FilledButton(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor:
-                                        AppColorTokens.violetPrimary,
-                                  ),
-                                  onPressed: () {
-                                    showBloomModalSheet<bool>(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      builder: (context) =>
-                                          TransactionCorrectionSheet(
-                                        txnId: widget.txnId,
-                                        initialAmount: txn.amount,
-                                        initialDirection: txn.direction,
-                                        initialMerchant: txn.merchantRaw,
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('Fix Details'),
-                                ),
+                            )
+                          else
+                            const Text(
+                              'These details have already been confirmed.',
+                            ),
+                          if (pendingReview || pendingParse) ...[
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  showBloomModalSheet<bool>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    builder: (context) =>
+                                        TransactionCorrectionSheet(
+                                      txnId: widget.txnId,
+                                      initialAmount: txn.amount,
+                                      initialDirection: txn.direction,
+                                      initialMerchant: txn.merchantRaw,
+                                    ),
+                                  );
+                                },
+                                child: const Text('Fix Details'),
                               ),
-                            ],
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'This confirms the saved details only. It does not '
+                            'change the amount or category or train category suggestions.',
+                            style: AppTheme.bloomDisplay(
+                              12,
+                              FontWeight.w400,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextSecondary
+                                  : AppColorTokens.inkSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -815,70 +908,6 @@ class _TransactionDetailScreenState
                           ? null
                           : () => _markNotTransaction(txn),
                       isDark: isDark,
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  if (detail.canConfirmParse) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColorTokens.bloomDarkCard
-                            : const Color(0xFFF6F4FE),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColorTokens.bloomDarkOutline
-                              : AppColorTokens.bloomChip,
-                        ),
-                      ),
-                      child: detail.isParseConfirmed
-                          ? const Text('Parsed details confirmed')
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Does the parsed amount, direction and payee '
-                                  'match this message?',
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    onPressed: _savingParseConfirmation
-                                        ? null
-                                        : _confirmParsedDetails,
-                                    icon: _savingParseConfirmation
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(Icons.verified_rounded),
-                                    label: const Text(
-                                      'Confirm parsed details',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'This records parse feedback only. It does '
-                                  'not confirm the transaction or change its '
-                                  'category.',
-                                  style: AppTheme.bloomDisplay(
-                                    12,
-                                    FontWeight.w400,
-                                    color: isDark
-                                        ? AppColorTokens.bloomDarkTextSecondary
-                                        : AppColorTokens.inkSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -1067,6 +1096,29 @@ class _TransactionDetailScreenState
       ),
     );
   }
+}
+
+class _ConfirmationField extends StatelessWidget {
+  const _ConfirmationField({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+            const SizedBox(height: 2),
+            child,
+          ],
+        ),
+      );
 }
 
 class _SourceMessageEvidenceView extends StatelessWidget {

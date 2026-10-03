@@ -207,10 +207,26 @@ class TransactionDetail {
   final bool isParseConfirmed;
 }
 
+/// Exact persisted state owned by one transaction-detail confirmation action.
+/// Undo compares these snapshots before touching later-edited data.
+class ReviewDetailsConfirmationReceipt {
+  const ReviewDetailsConfirmationReceipt({
+    required this.before,
+    required this.after,
+    required this.createdParseConfirmation,
+  });
+
+  final Transaction before;
+  final Transaction after;
+  final FeedbackData? createdParseConfirmation;
+}
+
 /// Reads non-deleted, non-suppressed transactions for list and dashboard
 /// screens.
 class TransactionRepository {
   const TransactionRepository(this._database);
+
+  static int _reviewConfirmationSequence = 0;
 
   final AppDatabase _database;
 
@@ -615,38 +631,166 @@ WHERE t.status = 'needs_review'
                     ..where((sms) => sms.id.equals(row.smsId!)))
                   .getSingleOrNull())
               ?.body;
-      if (!_canConfirmParse(row, rawSmsBody)) return false;
+      final created = await _recordParseConfirmation(
+        row: row,
+        rawSmsBody: rawSmsBody,
+        feedbackId: 'fb_${txnId}_parse_confirm_v1',
+        clock: clock,
+      );
+      return created != null;
+    });
+  }
 
-      final existingConfirmation = await (_database.select(_database.feedback)
-            ..where(
-              (feedback) =>
-                  feedback.txnId.equals(txnId) &
-                  feedback.field.equals('parse_verdict') &
-                  feedback.context.equals('parse_confirm') &
-                  feedback.newValue.equals('ok') &
-                  feedback.oldValue.equals(
-                    templateTrustExplicitConfirmationMarker,
-                  ),
-            ))
+  /// Resolves review status and records parse feedback, when the existing
+  /// retained-SMS/evidence guard permits it, in one atomic transaction.
+  Future<ReviewDetailsConfirmationReceipt?> confirmReviewDetails({
+    required String txnId,
+    required Transaction observedTransaction,
+    DateTime Function() clock = DateTime.now,
+  }) {
+    return _database.transaction(() async {
+      final before = await (_database.select(_database.transactions)
+            ..where((row) => row.id.equals(txnId)))
           .getSingleOrNull();
-      if (existingConfirmation != null) return false;
+      if (before == null ||
+          before != observedTransaction ||
+          before.isDeleted ||
+          before.isNotTransaction ||
+          before.duplicateOfTxnId != null) {
+        return null;
+      }
 
+      final reviewStatus =
+          before.status == 'needs_review' || before.status == 'asked';
+      final rawSmsBody = before.smsId == null
+          ? null
+          : (await (_database.select(_database.rawSms)
+                    ..where((sms) => sms.id.equals(before.smsId!)))
+                  .getSingleOrNull())
+              ?.body;
       final now = clock().toUtc();
-      await _database.into(_database.feedback).insert(
-            FeedbackCompanion.insert(
-              id: 'fb_${txnId}_parse_confirm_v1',
-              txnId: txnId,
-              field: 'parse_verdict',
-              oldValue: const Value(templateTrustExplicitConfirmationMarker),
-              newValue: const Value('ok'),
-              context: 'parse_confirm',
-              modelConfidenceAtTime: Value(_parseConfidenceOf(row)),
-              createdAt: now,
-            ),
-          );
-      await TemplateTrustLedger(_database).refresh();
+      final feedbackId =
+          'fb_${txnId}_detail_confirm_${now.microsecondsSinceEpoch}_'
+          '${++_reviewConfirmationSequence}';
+      final createdParseConfirmation = await _recordParseConfirmation(
+        row: before,
+        rawSmsBody: rawSmsBody,
+        feedbackId: feedbackId,
+        clock: () => now,
+      );
+
+      if (!reviewStatus && createdParseConfirmation == null) return null;
+
+      if (reviewStatus) {
+        await (_database.update(_database.transactions)
+              ..where((row) => row.id.equals(txnId)))
+            .write(
+          TransactionsCompanion(
+            status: const Value('confirmed'),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+
+      // Read back Drift's normalized timestamp for a precise Undo snapshot.
+      final after = await (_database.select(_database.transactions)
+            ..where((row) => row.id.equals(txnId)))
+          .getSingle();
+      return ReviewDetailsConfirmationReceipt(
+        before: before,
+        after: after,
+        createdParseConfirmation: createdParseConfirmation,
+      );
+    });
+  }
+
+  /// Reverses only persisted state that still matches this action's receipt.
+  Future<bool> undoReviewDetailsConfirmation(
+    ReviewDetailsConfirmationReceipt receipt,
+  ) {
+    return _database.transaction(() async {
+      final current = await (_database.select(_database.transactions)
+            ..where((row) => row.id.equals(receipt.after.id)))
+          .getSingleOrNull();
+      if (current == null || current != receipt.after) return false;
+
+      final created = receipt.createdParseConfirmation;
+      if (created != null) {
+        final currentFeedback = await (_database.select(_database.feedback)
+              ..where((row) => row.id.equals(created.id)))
+            .getSingleOrNull();
+        if (currentFeedback != created) return false;
+
+        final deleted = await (_database.delete(_database.feedback)
+              ..where(
+                (row) =>
+                    row.id.equals(created.id) &
+                    row.txnId.equals(receipt.after.id) &
+                    row.field.equals('parse_verdict') &
+                    row.context.equals('parse_confirm') &
+                    row.newValue.equals('ok') &
+                    row.oldValue.equals(
+                      templateTrustExplicitConfirmationMarker,
+                    ),
+              ))
+            .go();
+        if (deleted != 1) return false;
+        await TemplateTrustLedger(_database).refresh();
+      }
+
+      if (receipt.before.status != receipt.after.status ||
+          receipt.before.updatedAt != receipt.after.updatedAt) {
+        await (_database.update(_database.transactions)
+              ..where((row) => row.id.equals(receipt.before.id)))
+            .write(
+          TransactionsCompanion(
+            status: Value(receipt.before.status),
+            updatedAt: Value(receipt.before.updatedAt),
+          ),
+        );
+      }
       return true;
     });
+  }
+
+  Future<FeedbackData?> _recordParseConfirmation({
+    required Transaction row,
+    required String? rawSmsBody,
+    required String feedbackId,
+    required DateTime Function() clock,
+  }) async {
+    if (!_canConfirmParse(row, rawSmsBody)) return null;
+
+    final existingConfirmation = await (_database.select(_database.feedback)
+          ..where(
+            (feedback) =>
+                feedback.txnId.equals(row.id) &
+                feedback.field.equals('parse_verdict') &
+                feedback.context.equals('parse_confirm') &
+                feedback.newValue.equals('ok') &
+                feedback.oldValue.equals(
+                  templateTrustExplicitConfirmationMarker,
+                ),
+          ))
+        .getSingleOrNull();
+    if (existingConfirmation != null) return null;
+
+    await _database.into(_database.feedback).insert(
+          FeedbackCompanion.insert(
+            id: feedbackId,
+            txnId: row.id,
+            field: 'parse_verdict',
+            oldValue: const Value(templateTrustExplicitConfirmationMarker),
+            newValue: const Value('ok'),
+            context: 'parse_confirm',
+            modelConfidenceAtTime: Value(_parseConfidenceOf(row)),
+            createdAt: clock().toUtc(),
+          ),
+        );
+    await TemplateTrustLedger(_database).refresh();
+    return (_database.select(_database.feedback)
+          ..where((feedback) => feedback.id.equals(feedbackId)))
+        .getSingle();
   }
 
   /// Reverses the confirmation action and rebuilds the public-template ledger.

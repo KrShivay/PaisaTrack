@@ -16,6 +16,7 @@ later hardening.
 ## In Review
 
 <!-- Implementations in review; retain each task's remaining acceptance gates. -->
+- [ ] T-200 [P0] Unified transaction-detail confirmation is host-verified: one action, atomic status/eligible parse feedback, guarded Undo, and visible success/loading. Full suite 1,270/1,270; America/New_York touched suites 275/275; analyzer clean. Phone confirmation acceptance remains open; see [T-200](docs/tasks/T-200.md).
 - [ ] T-199 [P1] Show a scannable static UPI QR for stored transaction VPAs in details and Sort. Detail device QA on the earlier geometry build and normal/max-input decoder checks passed. The final same-version 0.1.8+2017 artifact is installed and hash-verified; no UI check was run on that exact build. Sort card/list QA remains open. See [T-199 brief](docs/tasks/T-199.md); QR dependency/payload decision: [ADR 0023](docs/decisions/0023-static-upi-qr.md).
 - [ ] T-167j [P0] Implement the app-wide Android, predictive, and in-app back contract. Host behavior is implemented; see [T-167j brief](docs/tasks/T-167j.md) for test evidence and open device gates.
 - [ ] T-176 [P1] Apply the global bottom-inset contract to all screens.

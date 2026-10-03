@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -94,6 +96,196 @@ void main() {
       expect(find.text('Food & Dining'), findsOneWidget);
       expect(find.byType(BloomCategoryTile), findsOneWidget);
       expect(find.byType(BloomAmount), findsOneWidget);
+    });
+
+    testWidgets(
+        'T-200 presents one unified confirmation action with checked fields',
+        (tester) async {
+      final reviewDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(
+          status: 'needs_review',
+          currencyCode: const Value('INR'),
+          currencySymbol: const Value('₹'),
+        ),
+        merchantName: 'amazon',
+        categoryName: 'Food & Dining',
+        parseConfidence: 0.62,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: true,
+        rawSmsBody: 'Paid Rs 449 to amazon',
+        canConfirmParse: true,
+      );
+
+      await pumpDetail(
+        tester,
+        reviewDetail,
+        textScale: 2,
+        viewport: const Size(320, 568),
+      );
+      final detailScreen = tester.element(
+        find.byType(TransactionDetailScreen),
+      );
+      expect(MediaQuery.sizeOf(detailScreen), const Size(320, 568));
+      expect(MediaQuery.textScalerOf(detailScreen).scale(10), 20);
+
+      final confirmationLabels = [
+        find.text('Confirm'),
+        find.text('Confirm parsed details'),
+        find.text('Confirm details'),
+      ];
+      final confirmationLabelCount = confirmationLabels.fold<int>(
+        0,
+        (count, finder) => count + tester.widgetList<Text>(finder).length,
+      );
+      expect(confirmationLabelCount, 1);
+      expect(find.text('Confirm details'), findsOneWidget);
+      expect(find.text('Confirm'), findsNothing);
+      expect(find.text('Confirm parsed details'), findsNothing);
+      expect(find.text('₹449.00'), findsOneWidget);
+      expect(find.text('Debit'), findsOneWidget);
+      expect(find.textContaining('amazon'), findsWidgets);
+      expect(find.textContaining('Food & Dining'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('T-200 keeps unknown currency unlabeled as rupees',
+        (tester) async {
+      final unknownCurrencyDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(status: 'needs_review'),
+        merchantName: 'amazon',
+        categoryName: 'Food & Dining',
+        parseConfidence: null,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: false,
+      );
+
+      await pumpDetail(tester, unknownCurrencyDetail);
+
+      expect(find.text('Confirm details'), findsOneWidget);
+      expect(find.textContaining('₹449'), findsNothing);
+    });
+
+    testWidgets('T-200 keeps confirmation visible and disabled while saving',
+        (tester) async {
+      final databaseNeverCompletes = Completer<AppDatabase>();
+      final reviewTxn = testDetail.txn.copyWith(
+        status: 'needs_review',
+        currencyCode: const Value('INR'),
+        currencySymbol: const Value('₹'),
+      );
+      final detail = TransactionDetail(
+        txn: reviewTxn,
+        merchantName: 'amazon',
+        categoryName: 'Food & Dining',
+        parseConfidence: 0.62,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: false,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider
+              .overrideWith((ref) => databaseNeverCompletes.future),
+          transactionDetailProvider(reviewTxn.id)
+              .overrideWith((ref) => Stream.value(detail)),
+          suggestedCategoriesProvider(reviewTxn.id)
+              .overrideWith((ref) => Future.value(['travel'])),
+          sourceCurrencyRepairPreviewProvider(reviewTxn.id)
+              .overrideWith((ref) async => null),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: BloomUndoToastHost(
+              child: TransactionDetailScreen(txnId: reviewTxn.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final label = find.text('Confirm details');
+      expect(label, findsOneWidget);
+      await tester.ensureVisible(label);
+      await tester.tap(label);
+      await tester.tap(label);
+      await tester.pump();
+      expect(label, findsOneWidget);
+      final button = tester.widget<FilledButton>(
+        find.ancestor(
+          of: label,
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+      await tester.pump();
+    });
+
+    testWidgets('T-200 reports stale confirmation and allows a retry',
+        (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      final reviewDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(status: 'needs_review'),
+        merchantName: 'amazon',
+        categoryName: 'Food & Dining',
+        parseConfidence: 0.62,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: false,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          transactionRepositoryProvider(database)
+              .overrideWithValue(_StaleConfirmationRepository(database)),
+          transactionDetailProvider(reviewDetail.txn.id)
+              .overrideWith((ref) => Stream.value(reviewDetail)),
+          suggestedCategoriesProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => const <String>[]),
+          sourceCurrencyRepairPreviewProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => null),
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: BloomUndoToastHost(
+              child: TransactionDetailScreen(txnId: reviewDetail.txn.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final label = find.text('Confirm details');
+      await tester.ensureVisible(label);
+      await tester.tap(label);
+      await tester.pump();
+      expect(
+        find.textContaining('changed or is no longer eligible'),
+        findsOneWidget,
+      );
+      final retryButton = tester.widget<FilledButton>(
+        find.ancestor(
+          of: label,
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(retryButton.onPressed, isNotNull);
+
+      container.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await database.close();
     });
 
     testWidgets('T-196 shows a copyable transaction details card',
@@ -194,9 +386,12 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
-      final confirmButton = find.text('Confirm parsed details');
+      final confirmButton = find.text('Confirm details');
       expect(confirmButton, findsOneWidget);
+      expect(find.text('Confirm'), findsNothing);
+      expect(find.text('Confirm parsed details'), findsNothing);
       await tester.ensureVisible(confirmButton);
+      await tester.tap(confirmButton);
       await tester.tap(confirmButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
@@ -214,9 +409,10 @@ void main() {
       final transaction = await (database.select(database.transactions)
             ..where((row) => row.id.equals('txn_confirm_177a')))
           .getSingle();
-      expect(transaction.status, 'needs_review');
+      expect(transaction.status, 'confirmed');
       expect(transaction.categoryId, 'other');
-      expect(find.text('Parsed details confirmed'), findsNWidgets(2));
+      expect(find.text('Confirm details'), findsNothing);
+      expect(find.text('Details confirmed'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       container.dispose();
@@ -571,4 +767,18 @@ void main() {
       expect(find.text('AI model · 92%'), findsOneWidget);
     });
   });
+}
+
+class _StaleConfirmationRepository extends TransactionRepository {
+  // The parent constructor exposes this as a private positional parameter.
+  // ignore: use_super_parameters
+  _StaleConfirmationRepository(AppDatabase database) : super(database);
+
+  @override
+  Future<ReviewDetailsConfirmationReceipt?> confirmReviewDetails({
+    required String txnId,
+    required Transaction observedTransaction,
+    DateTime Function() clock = DateTime.now,
+  }) async =>
+      null;
 }

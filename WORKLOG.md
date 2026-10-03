@@ -1,31 +1,5 @@
 # Current Handoff
 
-## 2026-10-03 — T-177a source/document reconciliation complete
-
-- The 2026-09-30 report accurately described its source revision; commit
-  `f730857` added deterministic merchant resolution to history and resume on
-  2026-10-02. Current report/ADR/task wording now distinguishes that history
-  and records the v2 writer while excluding earlier v1 markers from v2 evidence.
-- Current capture wiring uses merchant resolution in all three paths;
-  history/resume skip new embedding searches but an existing learned/similarity
-  alias can still request review. Production category capture
-  does not wire merchant-memory or category-LLM callbacks. Live parser LLM uses
-  the runtime's constant default; persisted `enable_local_llm` is not wired to
-  `llmRuntimeProvider`. T-143c1–c3 tooling is complete, but production capture
-  does not schedule `ShadowPipelineRunner`.
-- R-12 documentation discrepancy is reconciled and independently reviewed.
-  R-21 stale-edge behavior is host-fixed and regression-tested by T-165b;
-  R-04 device latency remains
-  unmeasured and routes to T-165a's 10k/50k release-hardware profile.
-- Focused capture/provenance tests pass 67/67; 140 Markdown files pass link
-  checks; `git diff --check` is clean. This prose-only slice did not rerun or
-  claim the full Flutter suite. Owner selection of a consented chronological
-  period and approval/revision of proposed thresholds, real holdout, and
-  physical live/resume evidence remain open.
-- Final GitNexus `detect-changes --scope all --limit 1000 --repo .`: 8 files,
-  29 symbols, 0 flows, LOW risk; no partial/truncated result notice. Parent
-  independent review passed. T-177a itself remains In Review for owner gates.
-
 ## 2026-10-03 — T-167j host implementation in review (device gate open)
 
 - Home back now honors the active tab's `maybePop` and vetoes, retains all four
@@ -97,3 +71,31 @@
   2026-10-03 22:10:40, first-install time unchanged at 2026-09-26 22:20:54,
   and the pulled base APK SHA-256 exactly matches the artifact hash above.
   APK publication remains open.
+
+## 2026-10-04 — T-200 confirmation repair installed; owner UI gate open
+
+- One `Confirm details` action replaces the independent status and parse
+  controls. It shows saved amount/currency, direction, payee, and category;
+  eligible status/evidence writes are atomic and do not change financial fields
+  or train category prediction. Receipt-based Undo preserves earlier feedback
+  and refuses stale edits. ADR 0024 records the contract.
+- Independent review passed. Full suite 1,270/1,270; encrypted-schema migration
+  executed without skips; touched repository/transaction suites in
+  `America/New_York` 275/275; analyzer clean; formatter five files unchanged;
+  Markdown links 144 files and diff checks pass. The initial full run exposed
+  two consumer render expectations, now corrected and verified.
+- Signed arm64 0.1.9+2018 compiled and installed in place (effective code 4018).
+  Last update 2026-10-04 01:59:00; first install remains 2026-09-26 22:20:54.
+  Installed base APK equals the signed 57,144,364-byte artifact SHA-256
+  `8f6e43bb50423b254f33e1cd50ed3d3037ee55761639649d8e1b21d4c34a55b6`.
+  Signature, ZIP integrity, alignment, and arm64-only libraries pass.
+- Owner-screen confirmation/Undo acceptance remains open; no private screens,
+  records, SMS, database, or logs were inspected. T-200 remains In Review.
+  QR Sort card/list and native back device gates stay open. Paused T-167b work
+  remains in both stashes; resume the newer `paused T-167b before T-200` stash
+  by applying it, preserving the older stash. No APK publication is authorized.
+
+- Final GitNexus all-change analysis: 12 files, 36 symbols, zero reported
+  affected flows, LOW risk; no partial/truncated result flag. The global
+  inventory limitation above remains; source review and regression tests
+  cover the dynamically dispatched UI path.

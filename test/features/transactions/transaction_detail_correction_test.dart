@@ -87,9 +87,9 @@ void main() {
     await pumpDetail(tester, database);
 
     expect(find.text('Transaction Detail'), findsOneWidget);
-    expect(find.text('Swiggy'), findsOneWidget);
-    expect(find.text('Food & Dining'), findsOneWidget);
-    expect(find.textContaining('450'), findsOneWidget);
+    expect(find.text('Swiggy'), findsWidgets);
+    expect(find.text('Food & Dining'), findsWidgets);
+    expect(find.textContaining('450'), findsWidgets);
 
     await database.close();
   });
@@ -136,7 +136,7 @@ void main() {
     expect(find.textContaining('Edit Parse Details'), findsOneWidget);
 
     // Suggested category confirm/fix banner.
-    expect(find.text('Confirm'), findsOneWidget);
+    expect(find.text('Confirm details'), findsOneWidget);
     expect(find.text('Fix Details'), findsOneWidget);
 
     await database.close();
