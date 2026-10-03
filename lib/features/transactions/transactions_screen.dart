@@ -364,7 +364,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
-        height: 44,
+        constraints: const BoxConstraints(minHeight: 48),
         decoration: BoxDecoration(
           color:
               isDark ? AppColorTokens.bloomDarkCard : const Color(0xFFF1EFFB),
@@ -803,24 +803,40 @@ class _FilterChip extends StatelessWidget {
     final inactiveBg =
         isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip;
 
-    return GestureDetector(
+    return Semantics(
+      container: true,
+      label: label,
+      button: true,
+      selected: isSelected,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : inactiveBg,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: AppTheme.bloomDisplay(
-            12,
-            isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected
-                ? Colors.white
-                : (isDark
-                    ? AppColorTokens.bloomDarkTextSecondary
-                    : AppColorTokens.inkSecondary),
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isSelected ? activeBg : inactiveBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  label,
+                  style: AppTheme.bloomDisplay(
+                    12,
+                    isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark
+                            ? AppColorTokens.bloomDarkTextSecondary
+                            : AppColorTokens.inkSecondary),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -992,49 +1008,72 @@ class _DismissibleTransactionRow extends StatelessWidget {
         }
         return false; // Re-render row so state updates smoothly via Riverpod stream
       },
-      child: GestureDetector(
+      child: Semantics(
+        container: true,
+        label: '${item.displayName}, ${item.categoryName ?? 'Uncategorised'}, '
+            '${formatSourceAmount(
+          item.direction == TransactionDirection.debit
+              ? -item.amount
+              : item.amount,
+          currencyCode: item.currencyCode,
+          currencySymbol: item.currencySymbol,
+        )}, ${formatActivityDateGroup(item.ts)}, '
+            'Status ${item.status.replaceAll('_', ' ')}, ${_formatMeta(item)}',
+        button: true,
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 340 ||
-                  MediaQuery.textScalerOf(context).scale(1) >= 1.5;
-              final category = BloomCategoryTile(
-                categoryId: item.categoryId,
-                iconName: item.categoryIcon,
-                size: 36,
-                borderRadius: 13,
-              );
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 340 ||
+                        MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                    final category = BloomCategoryTile(
+                      categoryId: item.categoryId,
+                      iconName: item.categoryIcon,
+                      size: 36,
+                      borderRadius: 13,
+                    );
+                    if (compact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              category,
+                              const SizedBox(width: 12),
+                              Expanded(child: details),
+                            ],
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: amount,
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
                       children: [
                         category,
                         const SizedBox(width: 12),
                         Expanded(child: details),
+                        const SizedBox(width: 8),
+                        amount,
                       ],
-                    ),
-                    Align(alignment: Alignment.centerRight, child: amount),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  category,
-                  const SizedBox(width: 12),
-                  Expanded(child: details),
-                  const SizedBox(width: 8),
-                  amount,
-                ],
-              );
-            },
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
         ),
       ),

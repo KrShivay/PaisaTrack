@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/undo/undo_controller.dart';
@@ -108,6 +110,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
             onConfirm: _confirmItem,
             onRecategorize: _recategorizeItem,
             onSkip: _skipItem,
+            keepBlocked: _keepBlocked,
           );
         }
 
@@ -189,97 +192,101 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           ),
           child: Column(
             children: [
-              // Header Row: Title + counter + view mode toggle
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sort',
-                          style: AppTheme.bloomDisplay(
-                            22,
-                            FontWeight.w700,
-                            letterSpacing: -0.03,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
-                        ),
-                        if (!compactLandscape) ...[
-                          const SizedBox(height: 1),
-                          Text(
-                            '$remainingCount left to sort today',
-                            style: AppTheme.bloomDisplay(
-                              12,
-                              FontWeight.w400,
-                              color: isDark
-                                  ? AppColorTokens.bloomDarkTextTertiary
-                                  : AppColorTokens.inkTertiary,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Row(
+              // Keep the decision controls visible while the review content
+              // scrolls on short or large-text screens.
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // View mode toggle
-                      _ViewModeToggle(isDark: isDark),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColorTokens.bloomDarkCard
-                              : AppColorTokens.bloomChip,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          '${index + 1} of $remainingCount',
-                          style: AppTheme.bloomMono(
-                            12,
-                            FontWeight.w500,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextSecondary
-                                : AppColorTokens.inkSecondary,
+                      // Header Row: Title + counter + view mode toggle
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sort',
+                                  style: AppTheme.bloomDisplay(
+                                    22,
+                                    FontWeight.w700,
+                                    letterSpacing: -0.03,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextPrimary
+                                        : AppColorTokens.ink,
+                                  ),
+                                ),
+                                if (!compactLandscape) ...[
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    '$remainingCount left to sort today',
+                                    style: AppTheme.bloomDisplay(
+                                      12,
+                                      FontWeight.w400,
+                                      color: isDark
+                                          ? AppColorTokens.bloomDarkTextTertiary
+                                          : AppColorTokens.inkTertiary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                        ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _ViewModeToggle(isDark: isDark),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkCard
+                                      : AppColorTokens.bloomChip,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  '${index + 1} of $remainingCount',
+                                  style: AppTheme.bloomMono(
+                                    12,
+                                    FontWeight.w500,
+                                    color: isDark
+                                        ? AppColorTokens.bloomDarkTextSecondary
+                                        : AppColorTokens.inkSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
+                      SizedBox(height: compactLandscape ? 4 : 12),
+                      if (!compactLandscape) ...[
+                        _SortProgressBar(
+                          total: totalInitialCount,
+                          resolved: resolvedCount,
+                          skipped: skippedCount,
+                          isDark: isDark,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      card,
+                      if (compactLandscape)
+                        notRight
+                      else ...[
+                        const SizedBox(height: 12),
+                        notRight,
+                        const SizedBox(height: 12),
+                      ],
                     ],
                   ),
-                ],
-              ),
-              SizedBox(height: compactLandscape ? 4 : 12),
-              if (!compactLandscape) ...[
-                _SortProgressBar(
-                  total: totalInitialCount,
-                  resolved: resolvedCount,
-                  skipped: skippedCount,
-                  isDark: isDark,
                 ),
-                const SizedBox(height: 12),
-              ],
-
-              // Swipeable Card Container; compact landscape scrolls the
-              // "Not right?" action with the card to keep the card visible.
-              Expanded(
-                child: compactLandscape
-                    ? SingleChildScrollView(
-                        child: Column(children: [card, notRight]),
-                      )
-                    : Center(child: card),
               ),
-              if (!compactLandscape) ...[
-                notRight,
-                const SizedBox(height: 12),
-              ],
 
               // Action Buttons Row (Back / Change category / Skip / Keep)
               Row(
@@ -288,19 +295,21 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                   // Back button — moves cursor to previous card (no-op at 0)
                   _ActionButton(
                     icon: Icons.arrow_back_rounded,
+                    semanticLabel: 'Previous transaction',
                     color: isDark
                         ? AppColorTokens.bloomDarkTextSecondary
                         : AppColorTokens.inkSecondary,
                     bgColor: isDark
                         ? AppColorTokens.bloomDarkCard
                         : AppColorTokens.bloomChip,
-                    onTap: _goBack,
+                    onTap: index == 0 ? null : _goBack,
                     isDark: isDark,
-                    size: 48,
+                    size: 50,
                   ),
                   // Change category button (Gold)
                   _ActionButton(
                     icon: Icons.sell_outlined,
+                    semanticLabel: 'Change category',
                     color: AppColorTokens.bloomGold,
                     bgColor: isDark
                         ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
@@ -312,6 +321,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                   // Skip button (Neutral)
                   _ActionButton(
                     icon: Icons.skip_next_rounded,
+                    semanticLabel: 'Skip transaction',
                     color: isDark
                         ? AppColorTokens.bloomDarkTextSecondary
                         : AppColorTokens.inkSecondary,
@@ -892,26 +902,45 @@ class _ViewModeToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(reviewViewProvider);
     final isCard = viewState.viewMode == ReviewViewMode.card;
+    final label = isCard ? 'Card view' : 'List view';
+    final nextView = isCard ? 'list' : 'card';
 
-    return GestureDetector(
-      onTap: () {
-        ref.read(reviewViewProvider.notifier).setViewMode(
-              isCard ? ReviewViewMode.list : ReviewViewMode.card,
-            );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color:
-              isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(
-          isCard ? Icons.view_list_rounded : Icons.view_carousel_rounded,
-          size: 18,
-          color: isDark
-              ? AppColorTokens.bloomDarkTextSecondary
-              : AppColorTokens.inkSecondary,
+    void toggleView() {
+      ref.read(reviewViewProvider.notifier).setViewMode(
+            isCard ? ReviewViewMode.list : ReviewViewMode.card,
+          );
+    }
+
+    return Semantics(
+      container: true,
+      label: label,
+      button: true,
+      selected: true,
+      onTap: toggleView,
+      hint: 'Switch to $nextView view',
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: toggleView,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColorTokens.bloomDarkCard
+                    : AppColorTokens.bloomChip,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                isCard ? Icons.view_list_rounded : Icons.view_carousel_rounded,
+                size: 18,
+                color: isDark
+                    ? AppColorTokens.bloomDarkTextSecondary
+                    : AppColorTokens.inkSecondary,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -923,12 +952,12 @@ class _ViewModeToggle extends ConsumerWidget {
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
+    required this.semanticLabel,
     required this.color,
     required this.bgColor,
     required this.onTap,
     required this.isDark,
     this.size = 58,
-    this.semanticLabel,
   });
 
   final IconData icon;
@@ -939,28 +968,31 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isDark;
   final double size;
-  final String? semanticLabel;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       label: semanticLabel,
       button: true,
       enabled: onTap != null,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Opacity(
-          opacity: onTap == null ? 0.4 : 1,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: bgColor,
-              boxShadow: AppColorTokens.bloomSortCardShadow,
-            ),
-            child: Center(
-              child: Icon(icon, size: 24, color: color),
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Opacity(
+            opacity: onTap == null ? 0.4 : 1,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor,
+                boxShadow: AppColorTokens.bloomSortCardShadow,
+              ),
+              child: Center(child: Icon(icon, size: 24, color: color)),
             ),
           ),
         ),
@@ -999,182 +1031,216 @@ class _SortCard extends StatelessWidget {
 
     final isSwipingRight = dragDx > 40;
     final isSwipingLeft = dragDx < -40;
+    final amount = formatSourceAmount(
+      item.direction == TransactionDirection.debit ? -item.amount : item.amount,
+      currencyCode: item.currencyCode,
+      currencySymbol: item.currencySymbol,
+    );
+    final cardDirection =
+        item.direction == TransactionDirection.debit ? 'Expense' : 'Income';
+    final cardLabel = '${item.displayName}, '
+        '${item.categoryName ?? 'Uncategorised'}, $cardDirection, $amount, '
+        '${_formatTime(item.ts)}, ${item.status}'
+        '${item.isLowTrustParse ? ', Low confidence parse — verify details' : ''}';
 
-    return GestureDetector(
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: cardLabel,
+      button: true,
+      enabled: onTap != null,
       onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(compactLandscape ? 12 : 24),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(26),
-          border: border,
-          boxShadow: AppColorTokens.bloomSortCardShadow,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag Stamp Overlay
-            if (isSwipingRight)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomDarkCard
-                      : AppColorTokens.bloomChip,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(compactLandscape ? 12 : 24),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(26),
+            border: border,
+            boxShadow: AppColorTokens.bloomSortCardShadow,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.arrow_back_rounded,
-                      size: 14,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextSecondary
-                          : AppColorTokens.inkSecondary,
+                    // Drag Stamp Overlay
+                    if (isSwipingRight)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColorTokens.bloomDarkCard
+                              : AppColorTokens.bloomChip,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.arrow_back_rounded,
+                              size: 14,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextSecondary
+                                  : AppColorTokens.inkSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'BACK',
+                              style: AppTheme.bloomDisplay(
+                                14,
+                                FontWeight.w700,
+                                color: isDark
+                                    ? AppColorTokens.bloomDarkTextSecondary
+                                    : AppColorTokens.inkSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (isSwipingLeft)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColorTokens.bloomGold,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'CHANGE CATEGORY',
+                          style: AppTheme.bloomDisplay(
+                            14,
+                            FontWeight.w700,
+                            color: AppColorTokens.ink,
+                          ),
+                        ),
+                      )
+                    else
+                      SizedBox(height: compactLandscape ? 0 : 28),
+
+                    SizedBox(height: compactLandscape ? 4 : 12),
+                    // Category Tile 52px
+                    BloomCategoryTile(
+                      categoryId: item.categoryId,
+                      iconName: item.categoryIcon,
+                      size: compactLandscape ? 44 : 52,
+                      borderRadius: compactLandscape ? 14 : 18,
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(height: compactLandscape ? 4 : 16),
+
+                    // Title
                     Text(
-                      'BACK',
+                      item.displayName,
                       style: AppTheme.bloomDisplay(
-                        14,
-                        FontWeight.w700,
+                        20,
+                        FontWeight.w600,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextPrimary
+                            : AppColorTokens.ink,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Category name & merchant raw
+                    Text(
+                      '${item.categoryName ?? "Uncategorised"}${item.merchantRaw != null ? " · ${item.merchantRaw}" : ""}',
+                      style: AppTheme.bloomDisplay(
+                        13,
+                        FontWeight.w400,
                         color: isDark
                             ? AppColorTokens.bloomDarkTextSecondary
                             : AppColorTokens.inkSecondary,
                       ),
+                      textAlign: TextAlign.center,
                     ),
+                    if (guessNote != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          guessNote!,
+                          style: AppTheme.bloomDisplay(
+                            11,
+                            FontWeight.w600,
+                            color: AppColorTokens.bloomEmerald,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+
+                    // Low-trust parse indicator
+                    if (item.isLowTrustParse)
+                      Container(
+                        margin: const EdgeInsets.only(top: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
+                              : const Color(0xFFFFF0D6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Low confidence parse — verify details',
+                          style: AppTheme.bloomDisplay(
+                            11,
+                            FontWeight.w500,
+                            color: isDark
+                                ? AppColorTokens.bloomGold
+                                : const Color(0xFF8A5A00),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 4),
+
+                    // Date / time
+                    Text(
+                      _formatTime(item.ts),
+                      style: AppTheme.bloomMono(
+                        12,
+                        FontWeight.w400,
+                        color: isDark
+                            ? AppColorTokens.bloomDarkTextTertiary
+                            : AppColorTokens.inkTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Hero Amount 48px
+                    BloomAmount(
+                      amount: item.direction == TransactionDirection.debit
+                          ? -item.amount
+                          : item.amount,
+                      currencyCode: item.currencyCode,
+                      currencySymbol: item.currencySymbol,
+                      size: 48,
+                      weight: FontWeight.w600,
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
-              )
-            else if (isSwipingLeft)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColorTokens.bloomGold,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'CHANGE CATEGORY',
-                  style: AppTheme.bloomDisplay(
-                    14,
-                    FontWeight.w700,
-                    color: AppColorTokens.ink,
-                  ),
-                ),
-              )
-            else
-              SizedBox(height: compactLandscape ? 0 : 28),
-
-            SizedBox(height: compactLandscape ? 4 : 12),
-            // Category Tile 52px
-            BloomCategoryTile(
-              categoryId: item.categoryId,
-              iconName: item.categoryIcon,
-              size: compactLandscape ? 44 : 52,
-              borderRadius: compactLandscape ? 14 : 18,
-            ),
-            SizedBox(height: compactLandscape ? 4 : 16),
-
-            // Title
-            Text(
-              item.displayName,
-              style: AppTheme.bloomDisplay(
-                20,
-                FontWeight.w600,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextPrimary
-                    : AppColorTokens.ink,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-
-            // Category name & merchant raw
-            Text(
-              '${item.categoryName ?? "Uncategorised"}${item.merchantRaw != null ? " · ${item.merchantRaw}" : ""}',
-              style: AppTheme.bloomDisplay(
-                13,
-                FontWeight.w400,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextSecondary
-                    : AppColorTokens.inkSecondary,
+              UpiQrAction(
+                counterpartyVpa: item.counterpartyVpa,
+                transactionTitle: item.displayName,
               ),
-              textAlign: TextAlign.center,
-            ),
-            if (guessNote != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  guessNote!,
-                  style: AppTheme.bloomDisplay(
-                    11,
-                    FontWeight.w600,
-                    color: AppColorTokens.bloomEmerald,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            const SizedBox(height: 4),
-
-            // Low-trust parse indicator
-            if (item.isLowTrustParse)
-              Container(
-                margin: const EdgeInsets.only(top: 6),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColorTokens.bloomGold.withValues(alpha: 0.18)
-                      : const Color(0xFFFFF0D6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Low confidence parse — verify details',
-                  style: AppTheme.bloomDisplay(
-                    11,
-                    FontWeight.w500,
-                    color: isDark
-                        ? AppColorTokens.bloomGold
-                        : const Color(0xFF8A5A00),
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 4),
-
-            // Date / time
-            Text(
-              _formatTime(item.ts),
-              style: AppTheme.bloomMono(
-                12,
-                FontWeight.w400,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextTertiary
-                    : AppColorTokens.inkTertiary,
-              ),
-            ),
-            UpiQrAction(
-              counterpartyVpa: item.counterpartyVpa,
-              transactionTitle: item.displayName,
-            ),
-            const SizedBox(height: 24),
-
-            // Hero Amount 48px
-            BloomAmount(
-              amount: item.direction == TransactionDirection.debit
-                  ? -item.amount
-                  : item.amount,
-              currencyCode: item.currencyCode,
-              currencySymbol: item.currencySymbol,
-              size: 48,
-              weight: FontWeight.w600,
-            ),
-            const SizedBox(height: 16),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1213,6 +1279,7 @@ class _ListView extends StatelessWidget {
     required this.onConfirm,
     required this.onRecategorize,
     required this.onSkip,
+    required this.keepBlocked,
   });
 
   final List<TransactionReviewItem> items;
@@ -1220,6 +1287,7 @@ class _ListView extends StatelessWidget {
   final ValueChanged<TransactionReviewItem> onConfirm;
   final ValueChanged<TransactionReviewItem> onRecategorize;
   final ValueChanged<TransactionReviewItem> onSkip;
+  final bool Function(String) keepBlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -1233,10 +1301,10 @@ class _ListView extends StatelessWidget {
             // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 360;
+                  final title = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -1262,33 +1330,53 @@ class _ListView extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                  _ViewModeToggle(isDark: isDark),
-                ],
+                  );
+                  final viewModeToggle = _ViewModeToggle(isDark: isDark);
+                  if (compact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        title,
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: viewModeToggle,
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [title, viewModeToggle],
+                  );
+                },
               ),
             ),
 
             // List
             Expanded(
-              child: ListView.separated(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  BloomBottomInset.contentPadding(context),
+              child: Semantics(
+                role: SemanticsRole.list,
+                child: ListView.separated(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    0,
+                    20,
+                    BloomBottomInset.contentPadding(context),
+                  ),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return _ReviewListRow(
+                      item: item,
+                      isDark: isDark,
+                      onConfirm: () => onConfirm(item),
+                      onRecategorize: () => onRecategorize(item),
+                      onSkip: () => onSkip(item),
+                      keepEnabled: !keepBlocked(item.id),
+                    );
+                  },
                 ),
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return _ReviewListRow(
-                    item: item,
-                    isDark: isDark,
-                    onConfirm: () => onConfirm(item),
-                    onRecategorize: () => onRecategorize(item),
-                    onSkip: () => onSkip(item),
-                  );
-                },
               ),
             ),
           ],
@@ -1305,6 +1393,7 @@ class _ReviewListRow extends StatelessWidget {
     required this.onConfirm,
     required this.onRecategorize,
     required this.onSkip,
+    required this.keepEnabled,
   });
 
   final TransactionReviewItem item;
@@ -1312,117 +1401,189 @@ class _ReviewListRow extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onRecategorize;
   final VoidCallback onSkip;
+  final bool keepEnabled;
 
   @override
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
-    return Dismissible(
-      key: ValueKey('review_${item.id}'),
-      background: Container(
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomEmerald,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: const Icon(Icons.check, color: Colors.white),
-      ),
-      secondaryBackground: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomGold,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: const Icon(Icons.sell_outlined, color: Colors.white),
-      ),
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          onConfirm();
-        } else {
-          onRecategorize();
-        }
-        return false;
-      },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: Row(
-          children: [
-            BloomCategoryTile(
-              categoryId: item.categoryId,
-              iconName: item.categoryIcon,
-              size: 36,
-              borderRadius: 13,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.displayName,
-                    style: AppTheme.bloomDisplay(
-                      14,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        item.categoryName ?? 'Uncategorised',
-                        style: AppTheme.bloomDisplay(
-                          11,
-                          FontWeight.w400,
-                          color: isDark
-                              ? AppColorTokens.bloomDarkTextTertiary
-                              : AppColorTokens.inkTertiary,
+    final signedAmount = item.direction == TransactionDirection.debit
+        ? -item.amount
+        : item.amount;
+    final spokenAmount = formatSourceAmount(
+      signedAmount,
+      currencyCode: item.currencyCode,
+      currencySymbol: item.currencySymbol,
+    );
+    final direction =
+        item.direction == TransactionDirection.debit ? 'Expense' : 'Income';
+    final lowTrustNote =
+        item.isLowTrustParse ? ', Low confidence parse — verify details' : '';
+    final statusLabel =
+        item.status == 'needs_review' ? 'Needs review' : item.status;
+    final rowActions = <CustomSemanticsAction, VoidCallback>{
+      if (keepEnabled) const CustomSemanticsAction(label: 'Keep'): onConfirm,
+      const CustomSemanticsAction(label: 'Change category'): onRecategorize,
+      const CustomSemanticsAction(label: 'Skip'): onSkip,
+    };
+
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: '${item.displayName}, ${item.categoryName ?? 'Uncategorised'}, '
+          '$direction, $spokenAmount, ${formatActivityDateGroup(item.ts)}, '
+          '$statusLabel$lowTrustNote',
+      hint: keepEnabled
+          ? 'Actions: Keep, Change category, Skip'
+          : 'Actions: Change category, Skip. Keep is unavailable until a '
+              'category guess or correction is ready.',
+      customSemanticsActions: rowActions,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExcludeSemantics(
+            child: Dismissible(
+              key: ValueKey('review_${item.id}'),
+              background: Container(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.only(left: 20),
+                decoration: BoxDecoration(
+                  color: AppColorTokens.bloomEmerald,
+                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+                ),
+                child: const Icon(Icons.check, color: Colors.white),
+              ),
+              secondaryBackground: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                decoration: BoxDecoration(
+                  color: AppColorTokens.bloomGold,
+                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+                ),
+                child: const Icon(Icons.sell_outlined, color: Colors.white),
+              ),
+              confirmDismiss: (direction) async {
+                if (direction == DismissDirection.startToEnd) {
+                  onConfirm();
+                } else {
+                  onRecategorize();
+                }
+                return false;
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 320;
+                    final amount = BloomAmount(
+                      amount: item.direction == TransactionDirection.debit
+                          ? -item.amount
+                          : item.amount,
+                      currencyCode: item.currencyCode,
+                      currencySymbol: item.currencySymbol,
+                      size: 15,
+                      weight: FontWeight.w500,
+                      maxLines: 2,
+                      textAlign: TextAlign.end,
+                    );
+                    final details = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.displayName,
+                          style: AppTheme.bloomDisplay(
+                            14,
+                            FontWeight.w500,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextPrimary
+                                : AppColorTokens.ink,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (item.isLowTrustParse) ...[
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          size: 12,
-                          color: AppColorTokens.bloomGold,
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.categoryName ?? 'Uncategorised',
+                                style: AppTheme.bloomDisplay(
+                                  11,
+                                  FontWeight.w400,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextTertiary
+                                      : AppColorTokens.inkTertiary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (item.isLowTrustParse) ...[
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 12,
+                                color: AppColorTokens.bloomGold,
+                              ),
+                            ],
+                          ],
                         ),
                       ],
-                    ],
-                  ),
-                  UpiQrAction(
-                    counterpartyVpa: item.counterpartyVpa,
-                    transactionTitle: item.displayName,
-                  ),
-                ],
+                    );
+
+                    if (compact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              BloomCategoryTile(
+                                categoryId: item.categoryId,
+                                iconName: item.categoryIcon,
+                                size: 36,
+                                borderRadius: 13,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: details),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: SizedBox(width: 112, child: amount),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        BloomCategoryTile(
+                          categoryId: item.categoryId,
+                          iconName: item.categoryIcon,
+                          size: 36,
+                          borderRadius: 13,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: details),
+                        const SizedBox(width: 8),
+                        SizedBox(width: 112, child: amount),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 112,
-              child: BloomAmount(
-                amount: item.direction == TransactionDirection.debit
-                    ? -item.amount
-                    : item.amount,
-                currencyCode: item.currencyCode,
-                currencySymbol: item.currencySymbol,
-                size: 15,
-                weight: FontWeight.w500,
-                maxLines: 2,
-                textAlign: TextAlign.end,
-              ),
-            ),
-          ],
-        ),
+          ),
+          UpiQrAction(
+            counterpartyVpa: item.counterpartyVpa,
+            transactionTitle: item.displayName,
+          ),
+        ],
       ),
     );
   }

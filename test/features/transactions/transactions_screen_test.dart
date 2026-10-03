@@ -14,7 +14,9 @@ import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
+import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_screen.dart';
+import '../../support/drift_widget_teardown.dart';
 import '../../support/fake_activity_transaction_page_controller.dart';
 import '../../support/fake_sms_permission_gate.dart';
 
@@ -70,6 +72,7 @@ void main() {
     double textScale = 1,
     double leftInset = 0,
     double rightInset = 0,
+    AppDatabase? database,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -86,6 +89,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          if (database != null)
+            appDatabaseProvider.overrideWith((ref) async => database),
           smsPermissionGateProvider.overrideWithValue(
             FakeSmsPermissionGate(initialStatus: SmsPermissionStatus.granted),
           ),
@@ -116,6 +121,195 @@ void main() {
     await pumpScreen(tester, const []);
 
     expect(find.text('No transactions found'), findsOneWidget);
+  });
+
+  testWidgets('filter chips expose selection and 48dp edge targets at 2x',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
+    final database = AppDatabase(NativeDatabase.memory());
+    var databaseClosed = false;
+    addTearDown(() async {
+      if (!databaseClosed) await unmountAndCloseDatabase(tester, database);
+    });
+    await pumpScreen(
+      tester,
+      const [],
+      size: const Size(320, 568),
+      textScale: 2,
+      database: database,
+    );
+    await tester.scrollUntilVisible(
+      find.text('All'),
+      100,
+      scrollable: find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          )
+          .first,
+    );
+    final all = find.bySemanticsLabel('All');
+    await tester.ensureVisible(all);
+    await tester.pumpAndSettle();
+    final allNode = tester.getSemantics(all);
+    final allData = allNode.getSemanticsData();
+    expect(allData.flagsCollection.isButton, isTrue);
+    expect(allData.flagsCollection.isSelected.toBoolOrNull(), isTrue);
+    final allSemanticRect = MatrixUtils.transformRect(
+      allNode.transform ?? Matrix4.identity(),
+      allNode.rect,
+    );
+    expect(allSemanticRect.height, greaterThanOrEqualTo(48));
+    expect(allSemanticRect.width, greaterThanOrEqualTo(48));
+    expect(tester.getRect(all).height, greaterThanOrEqualTo(48));
+    expect(tester.getRect(all).width, greaterThanOrEqualTo(48));
+
+    final horizontalScroll = tester
+        .state<ScrollableState>(
+          find
+              .byWidgetPredicate(
+                (widget) =>
+                    widget is Scrollable &&
+                    widget.axisDirection == AxisDirection.right,
+              )
+              .first,
+        )
+        .position;
+    horizontalScroll.jumpTo(horizontalScroll.maxScrollExtent);
+    await tester.pump();
+    final expenses = find.bySemanticsLabel('Expenses');
+    await tester.ensureVisible(expenses);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .getSemantics(expenses)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected
+          .toBoolOrNull(),
+      isFalse,
+    );
+    final expensesNode = tester.getSemantics(expenses);
+    final semanticRect = MatrixUtils.transformRect(
+      expensesNode.transform ?? Matrix4.identity(),
+      expensesNode.rect,
+    );
+    final rect = tester.getRect(expenses);
+    expect(semanticRect.height, greaterThanOrEqualTo(48));
+    expect(semanticRect.width, greaterThanOrEqualTo(48));
+    expect(rect.height, greaterThanOrEqualTo(48));
+    expect(rect.width, greaterThanOrEqualTo(48));
+    await tester.tapAt(Offset(rect.right - 1, rect.bottom - 1));
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(expenses)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected
+          .toBoolOrNull(),
+      isTrue,
+    );
+    expect(
+      tester
+          .getSemantics(all)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected
+          .toBoolOrNull(),
+      isFalse,
+    );
+
+    final searchField = find.byType(TextField);
+    await tester.ensureVisible(searchField);
+    await tester.pumpAndSettle();
+    await tester.enterText(searchField, 'search target');
+    await tester.pumpAndSettle();
+    final editable = tester
+        .state<EditableTextState>(find.byType(EditableText))
+        .renderEditable;
+    expect(
+      editable.size.height,
+      greaterThanOrEqualTo(editable.preferredLineHeight),
+    );
+    final clear = find.byTooltip('Clear search');
+    final clearRect = tester.getRect(clear);
+    final clearNode = tester.getSemantics(clear);
+    final clearSemanticRect = MatrixUtils.transformRect(
+      clearNode.transform ?? Matrix4.identity(),
+      clearNode.rect,
+    );
+    expect(clearSemanticRect.height, greaterThanOrEqualTo(48));
+    expect(clearSemanticRect.width, greaterThanOrEqualTo(48));
+    expect(clearRect.height, greaterThanOrEqualTo(48));
+    expect(clearRect.width, greaterThanOrEqualTo(48));
+    await tester.tapAt(Offset(clearRect.right - 1, clearRect.bottom - 1));
+    await tester.pump();
+    expect(find.text('Search transactions'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+    semanticsDisposed = true;
+    await unmountAndCloseDatabase(tester, database);
+    databaseClosed = true;
+  });
+
+  testWidgets('Activity transaction rows expose payee and amount as buttons',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
+    final database = AppDatabase(NativeDatabase.memory());
+    var databaseClosed = false;
+    addTearDown(() async {
+      if (!databaseClosed) await unmountAndCloseDatabase(tester, database);
+    });
+    await pumpScreen(
+      tester,
+      [
+        item(
+          id: 'accessible-activity-row',
+          ts: DateTime.utc(2026, 7, 6, 9),
+          amount: 100,
+          direction: TransactionDirection.debit,
+          displayName: 'Amazon accessibility row',
+          status: 'needs_review',
+        ),
+      ],
+      size: const Size(320, 568),
+      textScale: 2,
+      database: database,
+    );
+
+    final row = find.bySemanticsLabel(RegExp('Amazon accessibility row'));
+    final data = tester.getSemantics(row).getSemanticsData();
+    expect(data.flagsCollection.isButton, isTrue);
+    expect(data.label, contains('Amazon accessibility row'));
+    expect(data.label, contains('₹100'));
+    expect(
+      data.label,
+      contains(formatActivityDateGroup(DateTime.utc(2026, 7, 6, 9))),
+    );
+    expect(data.label, contains('Status needs review'));
+    expect(tester.getSemantics(row).rect.height, greaterThanOrEqualTo(48));
+    expect(tester.getSemantics(row).rect.width, greaterThanOrEqualTo(48));
+    expect(tester.getRect(row).height, greaterThanOrEqualTo(48));
+    expect(tester.getRect(row).width, greaterThanOrEqualTo(48));
+    final rect = tester.getRect(row);
+    await tester.tapAt(Offset(rect.right - 1, rect.bottom - 1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(TransactionDetailScreen), findsOneWidget);
+    semantics.dispose();
+    semanticsDisposed = true;
+    await unmountAndCloseDatabase(tester, database);
+    databaseClosed = true;
   });
 
   testWidgets('Activity row uses the shared localized transaction clock',

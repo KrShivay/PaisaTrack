@@ -87,37 +87,60 @@ class SettingsScreen extends ConsumerWidget {
                     children: [
                       for (final choice in AppThemeChoice.values) ...[
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              ref
-                                  .read(appSettingsControllerProvider.notifier)
-                                  .setThemeChoice(choice);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: settings.themeChoice == choice
-                                    ? (isDark
-                                        ? AppColorTokens.violetPrimary
-                                        : AppColorTokens.ink)
-                                    : (isDark
-                                        ? AppColorTokens.bloomDarkBase
-                                        : Colors.white),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Text(
-                                choice.label,
-                                style: AppTheme.bloomDisplay(
-                                  13,
-                                  FontWeight.w600,
-                                  color: settings.themeChoice == choice
-                                      ? Colors.white
-                                      : (isDark
-                                          ? AppColorTokens
-                                              .bloomDarkTextSecondary
-                                          : AppColorTokens.inkSecondary),
+                          child: Semantics(
+                            container: true,
+                            label: choice.label,
+                            button: true,
+                            selected: settings.themeChoice == choice,
+                            onTap: () => ref
+                                .read(
+                                  appSettingsControllerProvider.notifier,
+                                )
+                                .setThemeChoice(choice),
+                            child: ExcludeSemantics(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => ref
+                                    .read(
+                                      appSettingsControllerProvider.notifier,
+                                    )
+                                    .setThemeChoice(choice),
+                                child: ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(minHeight: 48),
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: settings.themeChoice == choice
+                                            ? (isDark
+                                                ? AppColorTokens.violetPrimary
+                                                : AppColorTokens.ink)
+                                            : (isDark
+                                                ? AppColorTokens.bloomDarkBase
+                                                : Colors.white),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Text(
+                                        choice.label,
+                                        style: AppTheme.bloomDisplay(
+                                          13,
+                                          FontWeight.w600,
+                                          color: settings.themeChoice == choice
+                                              ? Colors.white
+                                              : (isDark
+                                                  ? AppColorTokens
+                                                      .bloomDarkTextSecondary
+                                                  : AppColorTokens
+                                                      .inkSecondary),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
                           ),
@@ -155,7 +178,9 @@ class SettingsScreen extends ConsumerWidget {
                     activeThumbColor: AppColorTokens.violetPrimary,
                     onChanged: (val) {
                       ref
-                          .read(appSettingsControllerProvider.notifier)
+                          .read(
+                            appSettingsControllerProvider.notifier,
+                          )
                           .setShowPaise(val);
                     },
                   ),
@@ -218,7 +243,9 @@ class SettingsScreen extends ConsumerWidget {
                     activeThumbColor: AppColorTokens.violetPrimary,
                     onChanged: (val) {
                       ref
-                          .read(appSettingsControllerProvider.notifier)
+                          .read(
+                            appSettingsControllerProvider.notifier,
+                          )
                           .setCapturePaused(val);
                     },
                   ),
@@ -255,7 +282,9 @@ class SettingsScreen extends ConsumerWidget {
                             deleteIcon: const Icon(Icons.close, size: 14),
                             onDeleted: () {
                               ref
-                                  .read(appSettingsControllerProvider.notifier)
+                                  .read(
+                                    appSettingsControllerProvider.notifier,
+                                  )
                                   .setSenderPaused(sender, false);
                             },
                           ),
@@ -410,7 +439,9 @@ class SettingsScreen extends ConsumerWidget {
                           activeColor: AppColorTokens.violetPrimary,
                           onChanged: (next) {
                             ref
-                                .read(appSettingsControllerProvider.notifier)
+                                .read(
+                                  appSettingsControllerProvider.notifier,
+                                )
                                 .setAskDailyBudget(next.round());
                           },
                         ),
@@ -480,7 +511,9 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (result != null && result.isNotEmpty) {
       await ref
-          .read(appSettingsControllerProvider.notifier)
+          .read(
+            appSettingsControllerProvider.notifier,
+          )
           .setSenderPaused(result, true);
     }
   }
@@ -1070,55 +1103,69 @@ class _ResetDataButton extends ConsumerWidget {
     final dangerColor =
         isDark ? AppColorTokens.debitDark : AppColorTokens.debitLight;
 
-    return GestureDetector(
-      onTap: () async {
-        final confirm = await showBloomDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Delete all local data?'),
-            content: const Text(
-              'This permanently wipes all local transactions, categories, and learned rules from this device. This cannot be undone.',
+    Future<void> confirmReset() async {
+      final confirm = await showBloomDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete all local data?'),
+          content: const Text(
+            'This permanently wipes all local transactions, categories, and learned rules from this device. This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: dangerColor,
               ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: dangerColor,
-                ),
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Delete Everything'),
-              ),
-            ],
-          ),
-        );
-        if (confirm == true && context.mounted) {
-          await ref.read(appDataResetServiceProvider).deleteEverything();
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('All local data has been reset.')),
-            );
-          }
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: dangerColor.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-          border: Border.all(
-            color: dangerColor.withValues(alpha: 0.3),
-          ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete Everything'),
+            ),
+          ],
         ),
-        child: Center(
-          child: Text(
-            'Delete all local data',
-            style: AppTheme.bloomDisplay(
-              14,
-              FontWeight.w600,
-              color: dangerColor,
+      );
+      if (confirm == true && context.mounted) {
+        await ref.read(appDataResetServiceProvider).deleteEverything();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('All local data has been reset.')),
+          );
+        }
+      }
+    }
+
+    return Semantics(
+      container: true,
+      label: 'Delete all local data',
+      button: true,
+      onTap: confirmReset,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: confirmReset,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: dangerColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+                border: Border.all(
+                  color: dangerColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  'Delete all local data',
+                  style: AppTheme.bloomDisplay(
+                    14,
+                    FontWeight.w600,
+                    color: dangerColor,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

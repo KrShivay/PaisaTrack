@@ -79,14 +79,33 @@ class BloomNotice extends StatelessWidget {
                 ),
                 if (actionLabel != null) ...[
                   const SizedBox(height: 4),
-                  GestureDetector(
+                  Semantics(
+                    container: true,
+                    label: actionLabel,
+                    button: true,
+                    enabled: onAction != null,
                     onTap: onAction,
-                    child: Text(
-                      actionLabel!,
-                      style: AppTheme.bloomDisplay(
-                        12,
-                        FontWeight.w600,
-                        color: colors.actionColor,
+                    child: ExcludeSemantics(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onAction,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              actionLabel!,
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w600,
+                                color: colors.actionColor,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

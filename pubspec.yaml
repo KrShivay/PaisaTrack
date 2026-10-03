@@ -1,7 +1,7 @@
 name: paisatrack
 description: SMS-based intelligent expense tracker.
 publish_to: "none"
-version: 0.1.9+2018
+version: 0.1.10+2019
 
 environment:
   sdk: ">=3.4.0 <4.0.0"

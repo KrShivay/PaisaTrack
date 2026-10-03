@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/core/undo/undo_controller.dart';
@@ -10,8 +11,10 @@ import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/models/normalized_transaction_record.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
 import 'package:paisatrack/features/review/weekly_review_screen.dart';
+import 'package:paisatrack/features/review/weekly_review_providers.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
+import '../../support/drift_widget_teardown.dart';
 
 class FakeAppSettingsController extends AppSettingsController {
   @override
@@ -21,6 +24,15 @@ class FakeAppSettingsController extends AppSettingsController {
 class _FakeUndoController extends UndoController {
   @override
   void pushUndo(UndoToken token) => state = token;
+}
+
+class _InitialReviewViewNotifier extends ReviewViewNotifier {
+  _InitialReviewViewNotifier(this.mode);
+
+  final ReviewViewMode mode;
+
+  @override
+  ReviewViewState build() => ReviewViewState(viewMode: mode);
 }
 
 void main() {
@@ -50,26 +62,37 @@ void main() {
     required String counterpartyKey,
     String? categoryId,
     String? counterpartyVpa,
+    TransactionDirection direction = TransactionDirection.debit,
+    String? currencyCode,
+    String? currencySymbol,
+    bool isLowTrustParse = false,
   }) {
     return TransactionReviewItem(
       id: id,
       ts: DateTime.utc(2026, 7, 11, 10),
       amount: 100,
-      direction: TransactionDirection.debit,
+      direction: direction,
+      currencyCode: currencyCode,
+      currencySymbol: currencySymbol,
       displayName: displayName,
       categoryName: categoryId,
       categoryId: categoryId,
       categoryIcon: 'food',
       status: 'needs_review',
       counterpartyVpa: counterpartyVpa,
+      isLowTrustParse: isLowTrustParse,
     );
   }
 
   Future<void> pumpScreen(
     WidgetTester tester,
-    List<TransactionReviewItem> items,
-  ) async {
-    tester.view.physicalSize = const Size(402, 874);
+    List<TransactionReviewItem> items, {
+    Size size = const Size(402, 874),
+    double textScale = 1,
+    AppDatabase? database,
+    ReviewViewMode? initialViewMode,
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -79,6 +102,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          if (database != null)
+            appDatabaseProvider.overrideWith((ref) async => database),
+          if (initialViewMode != null)
+            reviewViewProvider.overrideWith(
+              () => _InitialReviewViewNotifier(initialViewMode),
+            ),
           reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
           categoryListProvider.overrideWith((ref) => Stream.value([])),
           appSettingsControllerProvider
@@ -86,7 +115,10 @@ void main() {
         ],
         child: MaterialApp(
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+              disableAnimations: true,
+            ),
             child: child!,
           ),
           home: const BloomUndoToastHost(
@@ -106,6 +138,26 @@ void main() {
     expect(find.text('Inbox Zero!'), findsOneWidget);
   });
 
+  testWidgets('card view stays usable at 320dp and 2x text', (tester) async {
+    await pumpScreen(
+      tester,
+      [
+        reviewItem(
+          id: 'narrow-card',
+          displayName: 'Swiggy',
+          counterpartyKey: 'raw:swiggy',
+          categoryId: 'Food',
+        ),
+      ],
+      size: const Size(320, 568),
+      textScale: 2,
+    );
+
+    final screen = tester.element(find.byType(WeeklyReviewScreen));
+    expect(MediaQuery.sizeOf(screen), const Size(320, 568));
+    expect(MediaQuery.textScalerOf(screen).scale(10), 20);
+  });
+
   testWidgets('renders top item in swipeable card stack', (tester) async {
     await pumpScreen(tester, [
       reviewItem(
@@ -118,6 +170,199 @@ void main() {
 
     expect(find.text('Sort'), findsOneWidget);
     expect(find.text('Swiggy'), findsOneWidget);
+  });
+
+  testWidgets('Review list header and row stay usable at 320dp and 2x text',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
+    final database = AppDatabase(NativeDatabase.memory());
+    var databaseClosed = false;
+    addTearDown(() async {
+      if (!databaseClosed) await unmountAndCloseDatabase(tester, database);
+    });
+    await pumpScreen(
+      tester,
+      [
+        reviewItem(
+          id: 'accessible-review',
+          displayName: 'Swiggy',
+          counterpartyKey: 'raw:swiggy',
+          categoryId: 'Food',
+        ),
+        reviewItem(
+          id: 'credit-review',
+          displayName: 'Credit shop',
+          counterpartyKey: 'raw:credit-shop',
+          categoryId: 'Income',
+          direction: TransactionDirection.credit,
+          currencyCode: 'USD',
+          currencySymbol: r'$',
+          isLowTrustParse: true,
+        ),
+      ],
+      size: const Size(320, 568),
+      textScale: 2,
+      database: database,
+      initialViewMode: ReviewViewMode.list,
+    );
+
+    final screen = tester.element(find.byType(WeeklyReviewScreen));
+    expect(MediaQuery.sizeOf(screen), const Size(320, 568));
+    expect(MediaQuery.textScalerOf(screen).scale(10), 20);
+    expect(tester.takeException(), isNull);
+
+    final listView = find.bySemanticsLabel('List view');
+    final modeData = tester.getSemantics(listView).getSemanticsData();
+    expect(modeData.flagsCollection.isButton, isTrue);
+    expect(modeData.flagsCollection.isSelected.toBoolOrNull(), isTrue);
+    expect(modeData.hint, contains('Switch to card view'));
+    expect(tester.getSemantics(listView).rect.height, greaterThanOrEqualTo(48));
+    expect(tester.getSemantics(listView).rect.width, greaterThanOrEqualTo(48));
+    final modeRect = tester.getRect(listView);
+    expect(modeRect.height, greaterThanOrEqualTo(48));
+    expect(modeRect.width, greaterThanOrEqualTo(48));
+
+    await tester.scrollUntilVisible(find.text('Swiggy'), 100);
+    final row = find.bySemanticsLabel(RegExp('Swiggy'));
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    final rowData = tester.getSemantics(row).getSemanticsData();
+    expect(rowData.label, contains('Food'));
+    expect(rowData.label, contains('Expense'));
+    expect(rowData.label, contains('-100.00 (currency unknown)'));
+    expect(rowData.label, contains('Needs review'));
+    expect(rowData.role, SemanticsRole.none);
+    expect(rowData.hasAction(SemanticsAction.tap), isFalse);
+    expect(tester.getSemantics(row).rect.height, greaterThanOrEqualTo(48));
+    expect(tester.getSemantics(row).rect.width, greaterThanOrEqualTo(48));
+    expect(tester.getRect(row).height, greaterThanOrEqualTo(48));
+    expect(tester.getRect(row).width, greaterThanOrEqualTo(48));
+    final rowNode = tester.getSemantics(row);
+    final rowActions = rowData.customSemanticsActionIds!
+        .map(CustomSemanticsAction.getAction)
+        .map((action) => action!.label)
+        .toSet();
+    expect(rowActions, containsAll(['Keep', 'Change category', 'Skip']));
+    final credit = find.bySemanticsLabel(RegExp('Credit shop'));
+    final creditLabel = tester.getSemantics(credit).getSemanticsData().label;
+    expect(creditLabel, contains('Income'));
+    expect(creditLabel, contains(r'$100.00 USD'));
+    expect(creditLabel, contains('Low confidence parse'));
+    final rowRect = tester.getRect(row);
+    await tester.tapAt(
+      Offset(rowRect.right - 1, rowRect.bottom - 1),
+    );
+    await tester.pump();
+    expect(find.text('Swiggy'), findsOneWidget);
+    final keepActionId = rowData.customSemanticsActionIds!.singleWhere(
+      (id) => CustomSemanticsAction.getAction(id)?.label == 'Keep',
+    );
+    rowNode.owner!.performAction(
+      rowNode.id,
+      SemanticsAction.customAction,
+      keepActionId,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Swiggy'), findsNothing);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+    semanticsDisposed = true;
+    await tester.pumpWidget(const SizedBox.shrink());
+    await unmountAndCloseDatabase(tester, database);
+    databaseClosed = true;
+  });
+
+  testWidgets('Review view toggle updates selected mode and destination hint',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
+    await pumpScreen(tester, [
+      reviewItem(
+        id: 'mode-review',
+        displayName: 'Swiggy',
+        counterpartyKey: 'raw:swiggy',
+        categoryId: 'Food',
+      ),
+    ]);
+
+    final card = find.bySemanticsLabel('Card view');
+    final cardData = tester.getSemantics(card).getSemanticsData();
+    expect(cardData.flagsCollection.isButton, isTrue);
+    expect(cardData.flagsCollection.isSelected.toBoolOrNull(), isTrue);
+    expect(cardData.hint, contains('Switch to list view'));
+    final cardRect = tester.getRect(card);
+    expect(cardRect.height, greaterThanOrEqualTo(48));
+    expect(cardRect.width, greaterThanOrEqualTo(48));
+    await tester.tapAt(Offset(cardRect.right - 1, cardRect.bottom - 1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final list = find.bySemanticsLabel('List view');
+    final listData = tester.getSemantics(list).getSemanticsData();
+    expect(listData.flagsCollection.isButton, isTrue);
+    expect(listData.flagsCollection.isSelected.toBoolOrNull(), isTrue);
+    expect(listData.hint, contains('Switch to card view'));
+    expect(card, findsNothing);
+    semantics.dispose();
+    semanticsDisposed = true;
+  });
+
+  testWidgets(
+      'Sort action buttons have distinct labels and truthful Back state',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
+    await pumpScreen(tester, [
+      reviewItem(
+        id: 'first-review',
+        displayName: 'Swiggy',
+        counterpartyKey: 'raw:swiggy',
+        categoryId: 'Food',
+      ),
+    ]);
+
+    for (final label in [
+      'Previous transaction',
+      'Change category',
+      'Skip transaction',
+      'Keep',
+    ]) {
+      final action = find.bySemanticsLabel(label);
+      final data = tester.getSemantics(action).getSemanticsData();
+      expect(data.flagsCollection.isButton, isTrue, reason: label);
+      expect(
+        tester.getSemantics(action).rect.height,
+        greaterThanOrEqualTo(48),
+        reason: label,
+      );
+      expect(
+        tester.getSemantics(action).rect.width,
+        greaterThanOrEqualTo(48),
+        reason: label,
+      );
+      expect(tester.getRect(action).width, greaterThanOrEqualTo(48));
+    }
+    final back = tester
+        .getSemantics(find.bySemanticsLabel('Previous transaction'))
+        .getSemanticsData();
+    expect(back.flagsCollection.isEnabled.toBoolOrNull(), isNotNull);
+    expect(back.flagsCollection.isEnabled.toBoolOrNull(), isFalse);
+    await tester.tap(find.bySemanticsLabel('Previous transaction'));
+    await tester.pump();
+    expect(find.text('Swiggy'), findsOneWidget);
+    semantics.dispose();
+    semanticsDisposed = true;
   });
 
   // ---------------------------------------------------------------------------
@@ -169,9 +414,12 @@ void main() {
   Future<ProviderContainer> pumpSortWithDb(
     WidgetTester tester,
     AppDatabase database,
-    List<TransactionReviewItem> items,
-  ) async {
-    tester.view.physicalSize = const Size(402, 874);
+    List<TransactionReviewItem> items, {
+    Size size = const Size(402, 874),
+    double textScale = 1,
+    ReviewViewMode? initialViewMode,
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -184,6 +432,10 @@ void main() {
         overrides: [
           appDatabaseProvider.overrideWith((ref) async => database),
           reviewQueueProvider.overrideWith((ref) => Stream.value(items)),
+          if (initialViewMode != null)
+            reviewViewProvider.overrideWith(
+              () => _InitialReviewViewNotifier(initialViewMode),
+            ),
           categoryListProvider.overrideWith(
             (ref) => Stream.value([
               const Category(
@@ -213,7 +465,10 @@ void main() {
             container = ProviderScope.containerOf(ctx);
             return MaterialApp(
               builder: (context, child) => MediaQuery(
-                data: MediaQuery.of(context).copyWith(disableAnimations: true),
+                data: MediaQuery.of(context).copyWith(
+                  disableAnimations: true,
+                  textScaler: TextScaler.linear(textScale),
+                ),
                 child: child!,
               ),
               home: const BloomUndoToastHost(
@@ -233,7 +488,16 @@ void main() {
 
   testWidgets('Sort QR is available in card and list without resolving row',
       (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
     final db = await seedDb();
+    var databaseClosed = false;
+    addTearDown(() async {
+      if (!databaseClosed) await unmountAndCloseDatabase(tester, db);
+    });
     final container = await pumpSortWithDb(
       tester,
       db,
@@ -250,8 +514,32 @@ void main() {
 
     for (final listMode in [false, true]) {
       final action = find.byTooltip('Show UPI QR');
+      await tester.scrollUntilVisible(action, 100);
+      await tester.pumpAndSettle();
       expect(action, findsOneWidget);
-      await tester.tap(action);
+      if (!listMode) {
+        final card = find.bySemanticsLabel(
+          RegExp(r'^Synthetic Shop, food_cat,'),
+        );
+        final cardData = tester.getSemantics(card).getSemanticsData();
+        expect(cardData.flagsCollection.isButton, isTrue);
+        final cardRect = tester.getRect(card);
+        expect(cardRect.height, greaterThanOrEqualTo(48));
+        expect(cardRect.width, greaterThanOrEqualTo(48));
+        await tester.tapAt(Offset(cardRect.right - 1, cardRect.bottom - 1));
+        await tester.pumpAndSettle();
+        expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+        tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await tester.pumpAndSettle();
+      }
+      final actionData = tester.getSemantics(action).getSemanticsData();
+      expect(actionData.flagsCollection.isButton, isTrue);
+      expect(tester.getSemantics(action).rect.height, greaterThanOrEqualTo(48));
+      expect(tester.getSemantics(action).rect.width, greaterThanOrEqualTo(48));
+      final actionRect = tester.getRect(action);
+      await tester.tapAt(
+        Offset(actionRect.right - 1, actionRect.bottom - 1),
+      );
       await tester.pumpAndSettle();
       expect(find.text('UPI QR code'), findsOneWidget);
       expect(find.text('Synthetic Shop'), findsNWidgets(2));
@@ -273,7 +561,68 @@ void main() {
         .getSingle();
     expect(stored.status, 'needs_review');
     expect(container.read(undoControllerProvider), isNull);
-    await db.close();
+    semantics.dispose();
+    semanticsDisposed = true;
+    await unmountAndCloseDatabase(tester, db);
+    databaseClosed = true;
+  });
+
+  testWidgets('Sort list QR remains independently accessible at 320dp and 2x',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    var semanticsDisposed = false;
+    addTearDown(() {
+      if (!semanticsDisposed) semantics.dispose();
+    });
+    final db = await seedDb();
+    var databaseClosed = false;
+    addTearDown(() async {
+      if (!databaseClosed) await unmountAndCloseDatabase(tester, db);
+    });
+    final container = await pumpSortWithDb(
+      tester,
+      db,
+      [
+        reviewItem(
+          id: 'txn_001',
+          displayName: 'Synthetic Shop',
+          counterpartyKey: 'raw:synthetic-shop',
+          categoryId: 'food_cat',
+          counterpartyVpa: 'synthetic.shop@upi',
+        ),
+      ],
+      size: const Size(320, 568),
+      textScale: 2,
+      initialViewMode: ReviewViewMode.list,
+    );
+
+    await tester.scrollUntilVisible(find.byTooltip('Show UPI QR'), 80);
+    final action = find.byTooltip('Show UPI QR');
+    await tester.pumpAndSettle();
+    final actionNode = tester.getSemantics(action);
+    final actionData = actionNode.getSemanticsData();
+    expect(actionData.flagsCollection.isButton, isTrue);
+    expect(actionNode.rect.height, greaterThanOrEqualTo(48));
+    expect(actionNode.rect.width, greaterThanOrEqualTo(48));
+    final rect = tester.getRect(action);
+    expect(rect.height, greaterThanOrEqualTo(48));
+    expect(rect.width, greaterThanOrEqualTo(48));
+    await tester.tapAt(Offset(rect.right - 1, rect.bottom - 1));
+    await tester.pumpAndSettle();
+    expect(find.text('UPI QR code'), findsOneWidget);
+    await tester.tap(find.byTooltip('Close QR code'));
+    await tester.pumpAndSettle();
+
+    final stored = await (db.select(db.transactions)
+          ..where((row) => row.id.equals('txn_001')))
+        .getSingle();
+    expect(stored.status, 'needs_review');
+    expect(container.read(undoControllerProvider), isNull);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+    semanticsDisposed = true;
+    await unmountAndCloseDatabase(tester, db);
+    databaseClosed = true;
   });
 
   group('T-159a — _confirmItem', () {

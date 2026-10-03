@@ -29,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
     final period = ref.watch(dashboardPeriodProvider);
     final size = MediaQuery.sizeOf(context);
     final compactLandscape = size.width > size.height && size.height < 500;
-    final sectionGap = compactLandscape ? 8.0 : 16.0;
+    final sectionGap = compactLandscape ? 4.0 : 16.0;
     final ringSize = compactLandscape ? 116.0 : 230.0;
 
     return Scaffold(

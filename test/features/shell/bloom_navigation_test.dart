@@ -11,6 +11,7 @@ import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/repositories/budget_repository.dart';
+import 'package:paisatrack/features/dashboard/dashboard_screen.dart';
 import 'package:paisatrack/features/settings/app_settings.dart';
 
 import '../../support/fake_captured_sms_source.dart';
@@ -56,7 +57,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       final finalDashboardItem = find.text('No transactions yet today');
-      await tester.ensureVisible(finalDashboardItem);
+      final dashboardScroll = find.descendant(
+        of: find.byType(DashboardScreen),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(
+        finalDashboardItem,
+        180,
+        scrollable: dashboardScroll,
+      );
       await tester.pump(const Duration(milliseconds: 100));
 
       final navRect = tester.getRect(

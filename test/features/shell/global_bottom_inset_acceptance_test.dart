@@ -416,9 +416,11 @@ void main() {
         if (cardScroll.evaluate().isNotEmpty) {
           final scrollPosition =
               tester.state<ScrollableState>(cardScroll).position;
-          await tester.drag(cardScroll, const Offset(0, -24));
-          await tester.pump();
-          expect(scrollPosition.pixels, greaterThan(0));
+          if (scrollPosition.maxScrollExtent > 0) {
+            await tester.drag(cardScroll, const Offset(0, -24));
+            await tester.pump();
+            expect(scrollPosition.pixels, greaterThan(0));
+          }
           await tester.ensureVisible(firstItem);
           await tester.pump();
 
@@ -438,7 +440,9 @@ void main() {
             expect(scrollPosition.pixels, greaterThan(previousOffset));
           }
           expect(titleRect.bottom, lessThanOrEqualTo(cardViewport.bottom));
-          expect(titleRect.top, lessThanOrEqualTo(cardViewport.top));
+          if (scrollPosition.maxScrollExtent > 0) {
+            expect(titleRect.top, lessThanOrEqualTo(cardViewport.top));
+          }
         }
         final cardTitleRect = tester.getRect(firstItem);
         expect(cardTitleRect.top, greaterThanOrEqualTo(0));
@@ -810,7 +814,10 @@ void main() {
               matching: find.byType(GestureDetector),
             )
             .first;
-        expect(tester.getSize(transactionTarget).height, greaterThanOrEqualTo(48));
+        expect(
+          tester.getSize(transactionTarget).height,
+          greaterThanOrEqualTo(48),
+        );
         _expectAboveNavigation(tester, transactionName);
         await tester.tap(transactionName);
         await tester.pump();

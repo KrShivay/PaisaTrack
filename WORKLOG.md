@@ -1,39 +1,5 @@
 # Current Handoff
 
-## 2026-10-03 — T-167j host implementation in review (device gate open)
-
-- Home back now honors the active tab's `maybePop` and vetoes, retains all four
-  tab Navigators, returns non-Home roots to Home, and uses an accessible
-  two-second Home exit confirmation without popping an enclosing route.
-  Predictive Android transitions are scoped to the active uncovered tab;
-  inactive/covered tab tickers are disabled, and programmatic tab state follows
-  taps and PageView swipes. ADR 0022 records the behavior.
-- Regression evidence: initial focused cases 0/4; programmatic Activity request
-  → back Home → repeated Activity request also failed before provider sync.
-  Current focused suite 18/18, full combined Flutter suite 1,259/1,259, and
-  touched transaction/review/repository/shell suites in `America/New_York`
-  351/351; analyzer, formatter, documentation links, and diff checks pass.
-  The SQLCipher migration test ran in the full suite.
-- On the isolated API 36 Recovery QA app, the pre-fix Activity-root back gesture
-  exited to the owner app; after the fix, the identical gesture returns to Home
-  and keeps Recovery QA foreground. No owner data was inspected. Physical IME,
-  predictive-cancel, and three-button acceptance remain open; APK publishing
-  remains open. The earlier user-authorized 0.1.8+2017 install is verified:
-  code 4017, package `com.paisatrack`, last-update time 2026-10-03 21:49:42,
-  first-install time unchanged at 2026-09-26 22:20:54, and its base APK matched
-  that build's signed artifact hash and byte count. A cold launch
-  returned successfully; WhatsApp was foreground afterward, so no claim is made
-  that PaisaTrack remained foreground. No owner UI, logs, or rows were read.
-  That installed artifact predates T-199's max-payload QR sizing correction.
-  The final same-version 0.1.8+2017 arm64 artifact is installed and verified:
-  code 4017, last-update time 2026-10-03 22:10:40, first-install time
-  unchanged at 2026-09-26 22:20:54, and pulled base APK SHA-256 matches the
-  signed artifact. No post-install UI interaction was performed.
-- Follow-ups: owner-run T-167j IME/predictive checks and the existing T-176 /
-  T-167c device gates; consented T-177a holdout/period decision; keep T-194 on
-  `codex/apk-size-trial`; APK publishing remains open.
-  Host acceptance moved T-167j to In Review, not Done.
-
 ## 2026-10-03 — T-199 host implementation in review
 
 - Transaction details and Sort now show a shared QR action only for a valid,
@@ -91,11 +57,42 @@
   Signature, ZIP integrity, alignment, and arm64-only libraries pass.
 - Owner-screen confirmation/Undo acceptance remains open; no private screens,
   records, SMS, database, or logs were inspected. T-200 remains In Review.
-  QR Sort card/list and native back device gates stay open. Paused T-167b work
-  remains in both stashes; resume the newer `paused T-167b before T-200` stash
-  by applying it, preserving the older stash. No APK publication is authorized.
+  QR Sort card/list and native back device gates stay open. T-167b has since
+  been resumed and host-accepted; both original stashes remain preserved.
+  No APK publication is authorized.
 
 - Final GitNexus all-change analysis: 12 files, 36 symbols, zero reported
   affected flows, LOW risk; no partial/truncated result flag. The global
   inventory limitation above remains; source review and regression tests
   cover the dynamically dispatched UI path.
+
+## 2026-10-04 — T-167b host accepted; first feature in parallel
+
+- Custom Activity, Dashboard, Settings, Review, and notice controls expose
+  meaningful semantics and 48dp targets. Compact/large-text search, complete
+  amounts, and scrollable Sort content preserve legibility and navigation
+  clearance. Independent review passed; T-167b is removed from the active board.
+- Full serial suite 1,285/1,285, including encrypted schema migration;
+  America/New_York touched directories 384/384; analyzer clean; formatter
+  12 edited Dart files unchanged; Markdown links and diff checks pass.
+  Complete GitNexus scan before acceptance: 17 files, 39 symbols, zero reported
+  processes, LOW risk, no partial/truncated result. Refreshed index: 8,825 nodes,
+  20,659 edges, 407 flows. Its capped global process inventory remains an
+  inference limitation; source review and actual callback tests cover UI paths.
+- Signed arm64 0.1.10+2019 compiled and installed in place, effective code 4019,
+  last update 2026-10-04 03:06:24; first install unchanged at
+  2026-09-26 22:20:54. Artifact: 57,144,360 bytes, SHA-256
+  `4e96bb36bfd02a02228942b642ab1db079325b0a9dfd6f0205e1a15d4f649ea2`.
+  Pulled installed base APK matches that exact byte count and SHA-256.
+  Signer, ZIP integrity, alignment, and six arm64-only native libraries pass.
+  No owner UI, SMS, records, database, or logs were read; physical TalkBack,
+  QR Sort, confirmation UI, and native-back gates remain open.
+- User ordered merchant suggestions, refund linking, then credit-card bills/
+  repayments, implemented sequentially with parallel preparation. T-177b-S1
+  is being implemented in the managed merchant-suggestions worktree; production
+  enablement waits for existing T-177a/T-177f evaluation gates. Both original
+  stashes and the isolated T-194 size trial remain preserved. No APK publication.
+
+- Final acceptance scan after documentation closure: 18 files, 41 symbols,
+  zero reported processes, LOW risk, no partial/truncated result. Final local
+  Markdown check covered 146 indexed/worktree files with no broken links.

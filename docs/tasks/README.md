@@ -45,6 +45,7 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 
 | Parent | Area | Brief | State |
 |---|---|---|---|
+| T-167b | Accessible custom controls | [T-167b.md](T-167b.md) | Host complete 2026-10-04; device gates T-167c/T-176 remain open |
 | T-117 | SQL payee identity index | [T-117.md](T-117.md) | Complete |
 | T-131 | Numeric trust boundary | [T-131.md](T-131.md) | Historical pointer |
 | T-132 | Lifecycle state split | [T-132.md](T-132.md) | Historical pointer |

@@ -336,25 +336,22 @@ class BloomMetricSwitcherPills extends ConsumerWidget {
       (DashboardMetricChoice.runway, 'Runway'),
     ];
 
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (final (choice, label) in choices) ...[
-            _MetricPillButton(
-              label: label,
-              isSelected: selected == choice,
-              onTap: () {
-                ref.read(selectedDashboardMetricProvider.notifier).state =
-                    choice;
-              },
-              isDark: isDark,
-            ),
-            if (choice != choices.last.$1) const SizedBox(width: 6),
-          ],
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final (choice, label) in choices) ...[
+          _MetricPillButton(
+            label: label,
+            isSelected: selected == choice,
+            onTap: () {
+              ref.read(selectedDashboardMetricProvider.notifier).state = choice;
+            },
+            isDark: isDark,
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -382,22 +379,40 @@ class _MetricPillButton extends StatelessWidget {
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
 
-    return GestureDetector(
+    return Semantics(
+      container: true,
+      label: label,
+      button: true,
+      selected: isSelected,
       onTap: onTap,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : inactiveBg,
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTheme.bloomDisplay(
-              12,
-              isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? activeFg : inactiveFg,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Container(
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? activeBg : inactiveBg,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(
+                    label,
+                    style: AppTheme.bloomDisplay(
+                      12,
+                      isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected ? activeFg : inactiveFg,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -564,6 +579,38 @@ class BloomBudgetCard extends ConsumerWidget {
     final committedFraction = spent == null
         ? 0.0
         : (commitments / budget).clamp(0.0, 1.0 - spentFraction);
+    final spentAmount = spent != null
+        ? Text(
+            formatInr(spent),
+            style: AppTheme.bloomMono(
+              30,
+              FontWeight.w600,
+              letterSpacing: -0.04,
+              color: Colors.white,
+            ),
+          )
+        : isError
+            ? Text(
+                '—',
+                style: AppTheme.bloomMono(
+                  30,
+                  FontWeight.w600,
+                  letterSpacing: -0.04,
+                  color: Colors.white,
+                ),
+              )
+            : const SizedBox(
+                width: 120,
+                child: BloomSkeleton(height: 28, borderRadius: 8),
+              );
+    final budgetAmount = Text(
+      'of ${formatInr(budget)}',
+      style: AppTheme.bloomMono(
+        13,
+        FontWeight.w400,
+        color: const Color(0xFF9DB2AB),
+      ),
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -596,24 +643,22 @@ class BloomBudgetCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header row
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        '${_monthName(now.month).toUpperCase()} BUDGET',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.bloomDisplay(
-                          11,
-                          FontWeight.w600,
-                          letterSpacing: 0.14,
-                          color: const Color(0xFF7FD9B6),
-                        ),
+                // Stack metadata on compact cards instead of squeezing it
+                // beside a large-text month label.
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final month = Text(
+                      '${_monthName(now.month).toUpperCase()} BUDGET',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.bloomDisplay(
+                        11,
+                        FontWeight.w600,
+                        letterSpacing: 0.14,
+                        color: const Color(0xFF7FD9B6),
                       ),
-                    ),
-                    const Spacer(),
-                    Container(
+                    );
+                    final days = Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 3,
@@ -630,51 +675,45 @@ class BloomBudgetCard extends ConsumerWidget {
                           color: const Color(0xFF9DB2AB),
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                    if (constraints.maxWidth < 300 ||
+                        MediaQuery.textScalerOf(context).scale(1) >= 1.5) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [month, const SizedBox(height: 8), days],
+                      );
+                    }
+                    return Row(
+                      children: [month, const Spacer(), days],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
 
-                // Amount row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    if (spent != null)
-                      Text(
-                        formatInr(spent),
-                        style: AppTheme.bloomMono(
-                          30,
-                          FontWeight.w600,
-                          letterSpacing: -0.04,
-                          color: Colors.white,
-                        ),
-                      )
-                    else if (isError)
-                      Text(
-                        '—',
-                        style: AppTheme.bloomMono(
-                          30,
-                          FontWeight.w600,
-                          letterSpacing: -0.04,
-                          color: Colors.white,
-                        ),
-                      )
-                    else
-                      const SizedBox(
-                        width: 120,
-                        child: BloomSkeleton(height: 28, borderRadius: 8),
-                      ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'of ${formatInr(budget)}',
-                      style: AppTheme.bloomMono(
-                        13,
-                        FontWeight.w400,
-                        color: const Color(0xFF9DB2AB),
-                      ),
-                    ),
-                  ],
+                // Keep both complete amounts readable at compact widths.
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 300 ||
+                        MediaQuery.textScalerOf(context).scale(1) >= 1.5) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          spentAmount,
+                          const SizedBox(height: 4),
+                          budgetAmount,
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        spentAmount,
+                        const SizedBox(width: 8),
+                        budgetAmount,
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 14),
 
@@ -752,48 +791,63 @@ class BloomBudgetCard extends ConsumerWidget {
 class _SetBudgetCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => _showBudgetInput(context, ref),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColorTokens.bloomCard,
-          borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 28,
-              color: AppColorTokens.violetPrimary,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    void openBudget() => _showBudgetInput(context, ref);
+
+    return Semantics(
+      container: true,
+      label:
+          'Set monthly budget. Unlocks safe-today calculation and progress ring.',
+      button: true,
+      onTap: openBudget,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: openBudget,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColorTokens.bloomCard,
+                borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    'Set monthly budget',
-                    style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                  const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 28,
+                    color: AppColorTokens.violetPrimary,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Unlocks safe-today calculation and progress ring.',
-                    style: AppTheme.bloomDisplay(
-                      12,
-                      FontWeight.w400,
-                      color: AppColorTokens.inkTertiary,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Set monthly budget',
+                          style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Unlocks safe-today calculation and progress ring.',
+                          style: AppTheme.bloomDisplay(
+                            12,
+                            FontWeight.w400,
+                            color: AppColorTokens.inkTertiary,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: AppColorTokens.inkTertiary,
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColorTokens.inkTertiary,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -915,26 +969,49 @@ class BloomTopCategoriesSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Where it went',
-              style: AppTheme.bloomDisplay(
-                16,
-                FontWeight.w600,
-                color: isDark
-                    ? AppColorTokens.bloomDarkTextPrimary
-                    : AppColorTokens.ink,
+            Expanded(
+              child: Text(
+                'Where it went',
+                style: AppTheme.bloomDisplay(
+                  16,
+                  FontWeight.w600,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextPrimary
+                      : AppColorTokens.ink,
+                ),
               ),
             ),
-            GestureDetector(
+            Semantics(
+              container: true,
+              label: 'View all categories',
+              button: true,
               onTap: onViewAll,
-              child: Text(
-                'All →',
-                style: AppTheme.bloomDisplay(
-                  13,
-                  FontWeight.w600,
-                  color: AppColorTokens.violetPrimary,
+              child: ExcludeSemantics(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onViewAll,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    child: Center(
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: Center(
+                        widthFactor: 1,
+                        child: Text(
+                          'All →',
+                          style: AppTheme.bloomDisplay(
+                            13,
+                            FontWeight.w600,
+                            color: AppColorTokens.violetPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -977,20 +1054,9 @@ class _CategoryRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    slice.name,
-                    style: AppTheme.bloomDisplay(
-                      13,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                  ),
-                  Text(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final amount = Text(
                     formatInr(slice.total),
                     style: AppTheme.bloomMono(
                       13,
@@ -999,8 +1065,46 @@ class _CategoryRow extends StatelessWidget {
                           ? AppColorTokens.bloomDarkTextSecondary
                           : AppColorTokens.inkSecondary,
                     ),
-                  ),
-                ],
+                  );
+                  final name = Text(
+                    slice.name,
+                    maxLines: constraints.maxWidth < 300 ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.bloomDisplay(
+                      13,
+                      FontWeight.w500,
+                      color: isDark
+                          ? AppColorTokens.bloomDarkTextPrimary
+                          : AppColorTokens.ink,
+                    ),
+                  );
+
+                  if (constraints.maxWidth < 300) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        name,
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: amount,
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: name),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: amount,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 6),
               ClipRRect(
@@ -1291,64 +1395,74 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        ),
-        child: Row(
-          children: [
-            BloomCategoryTile(
-              categoryId: txn.categoryId,
-              iconName: txn.categoryIcon,
-              size: 36,
-              borderRadius: 13,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: MergeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    txn.displayName,
-                    style: AppTheme.bloomDisplay(
-                      14,
-                      FontWeight.w500,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextPrimary
-                          : AppColorTokens.ink,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  BloomCategoryTile(
+                    categoryId: txn.categoryId,
+                    iconName: txn.categoryIcon,
+                    size: 36,
+                    borderRadius: 13,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatTime(txn.ts),
-                    style: AppTheme.bloomDisplay(
-                      11,
-                      FontWeight.w400,
-                      color: isDark
-                          ? AppColorTokens.bloomDarkTextTertiary
-                          : AppColorTokens.inkTertiary,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          txn.displayName,
+                          style: AppTheme.bloomDisplay(
+                            14,
+                            FontWeight.w500,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextPrimary
+                                : AppColorTokens.ink,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatTime(txn.ts),
+                          style: AppTheme.bloomDisplay(
+                            11,
+                            FontWeight.w400,
+                            color: isDark
+                                ? AppColorTokens.bloomDarkTextTertiary
+                                : AppColorTokens.inkTertiary,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  BloomAmount(
+                    amount: txn.direction == TransactionDirection.debit
+                        ? -txn.amount
+                        : txn.amount,
+                    currencyCode: txn.currencyCode,
+                    currencySymbol: txn.currencySymbol,
+                    size: 15,
+                    weight: FontWeight.w500,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            BloomAmount(
-              amount: txn.direction == TransactionDirection.debit
-                  ? -txn.amount
-                  : txn.amount,
-              currencyCode: txn.currencyCode,
-              currencySymbol: txn.currencySymbol,
-              size: 15,
-              weight: FontWeight.w500,
-            ),
-          ],
+          ),
         ),
       ),
     );
