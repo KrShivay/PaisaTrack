@@ -7,7 +7,7 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 | Parent | Area | Brief | Board / brief state |
 |---|---|---|---|
 | T-133 | Admission and quarantine | [T-133.md](T-133.md) | Open on board |
-| T-143 | Corpus, shadow, metrics | [T-143.md](T-143.md) | Reconciliation open: brief says T-143a–c complete; board retains T-143c1 |
+| T-143 | Corpus, shadow, metrics | [T-143.md](T-143.md) | Completed (c1–c3 verified 2026-10-03) |
 | T-149 | Local profile | [T-149.md](T-149.md) | Open children on board |
 | T-151 | Ask design conformance | [T-151.md](T-151.md) | Remaining children open |
 | T-154 | Edit from Sort | [T-154.md](T-154.md) | T-154b remains on board |
@@ -36,7 +36,7 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 
 | Parent | Area | Brief | State |
 |---|---|---|---|
-| T-153 | Sort cursor and recoverable skip | [T-153.md](T-153.md) | Stale / conditional: board says recheck only if implementation is still needed |
+| T-153 | Sort cursor and recoverable skip | [T-153.md](T-153.md) | Completed (verified 2026-10-03) |
 | T-155 | Threshold constant consolidation | [T-155.md](../archive/tasks/T-155.md) | Archived: stale and unboarded; no active board item |
 
 ## Closed or historical-pointer briefs

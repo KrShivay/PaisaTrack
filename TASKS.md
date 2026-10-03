@@ -232,7 +232,8 @@ later hardening.
      proposed order of the remaining backlog. -->
 
 - [ ] T-195 [P0] Keep source SMS provenance (owner decision 2026-10-03): stop
-      the 30-day raw-SMS purge for transaction/disposition SMS, ADR 0021,
+      the 30-day raw-SMS purge for transaction/disposition SMS (unlinked SMS
+      are removed after 7 days, owner decision), ADR 0021,
       re-link already purged provenance from the device inbox. Supersedes the
       expiry parts of T-169b/T-170b. Details: [T-195](docs/tasks/T-195.md).
 - [ ] T-196 [P1] Transaction details card on the detail screen: UPI ID/VPA,
@@ -339,12 +340,12 @@ Phase A blocks B; B blocks C and D.
 
 | Task | P | Size | Summary | Depends |
 |---|---|---|---|---|
-| **T-143c1** | P1 | ~M | Shadow table and isolated runner | T-143a/b |
 | **T-133a** | P1 | ~L | Shape scoring and quarantine store | T-129 |
 | **T-133b** | P1 | ~M | "Messages we couldn't read" + retry on upgrade | T-133a |
 
-Completed briefs are mapped in `docs/archive/planning-cleanup-2026-09.md`;
-T-140's production integration gaps are handled by T-177a/b.
+Completed briefs are mapped in `docs/archive/planning-cleanup-2026-09.md`.
+T-143c1–c3 were verified complete on 2026-10-03 (`ff7b1e3`, `cec0b3a`;
+shadow pipeline, diff and dev metrics tests pass). T-140's production integration gaps are handled by T-177a/b.
 
 #### UI gaps — `docs/ui-gaps-and-redesign.md`
 
@@ -366,8 +367,9 @@ Completed T-145a/b, T-146a/b, T-147a/b, T-148a/b, and T-152a are mapped in
 
 Follow `PLAN.md` for delivery priority: finish T-176 physical-device
 acceptance, then T-177a. T-157b and PV-02 passed independent review and were
-removed from the active board. Recheck T-153a integration only if its
-implementation is still needed; T-151b remains open pending a supported
+removed from the active board. T-153a–c were verified complete on 2026-10-03
+(`635e63d`, `a211935`, `ebf62cd`; 26 review tests pass), so T-154b is
+unblocked. T-151b remains open pending a supported
 affordability intent and deterministic verdict contract.
 
 #### Flutter refactor, no behavior change — `docs/tasks/`
