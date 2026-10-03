@@ -134,6 +134,7 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [tasks/T-101.md](tasks/T-101.md) | Expected-payment calendar brief | current; Backlog, not Ready | T-101 |
 | [tasks/T-102.md](tasks/T-102.md) | Statement import brief | current; Backlog, not Ready | T-102 |
 | [tasks/T-130.md](tasks/T-130.md) | Residual coupling brief | current; narrowed | T-130 |
+| [tasks/T-165b.md](tasks/T-165b.md) | Indexed owned-transfer reconciliation and stale-edge cleanup | historical; completed/reviewed brief retained | T-165b, T-190b1 |
 | [tasks/T-190.md](tasks/T-190.md) | Credit-card accounting phased briefs | current; Backlog, not Ready | T-190 |
 | [tasks/T-189.md](tasks/T-189.md) | Readable Ask prompt list | historical; completed/reviewed brief retained | T-189 |
 | [tasks/T-193.md](tasks/T-193.md) | Legacy currency repair | historical; physical acceptance recorded in `385e056`, UNDO-1 fixed in `58af0a4` | T-193 |

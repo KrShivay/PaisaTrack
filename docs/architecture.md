@@ -185,7 +185,13 @@ refuse conflicting merges without replacing raw source fields.
   debits marked as owned transfers or excluded from analytics; it is not a
   measure of unrecorded bank activity.
 - Payment sources can be named, marked owned/active, and excluded from analytics.
-  Conservatively paired transfers between owned sources are also excluded from
+  Reconciliation uses reciprocal singleton debit/credit matches across active
+  owned sources, with equal amount, currency bucket and settled state inside an
+  inclusive ten-minute window. It uses bounded timestamp-index probes, leaves
+  ambiguous rows unlinked, and transactionally rebuilds transfer flags plus
+  system-generated `transfer_leg` edges. Stale system edges are removed while
+  user-authored links remain intact. A repeated reconciliation with unchanged
+  evidence writes no rows. Conservatively paired transfers are excluded from
   aggregates without hiding either transaction.
 - Recurring detection derives series from settled history.
 - Anomaly, forecast, and insight engines are deterministic and consume the
@@ -263,8 +269,9 @@ Current boundaries that must be preserved while fixing the UI:
   in `baselines`, not the planned category-budget domain.
 
 Known scale concerns include bounded feed/review queries (verify full-history
-search and queue paging separately), quadratic owned-transfer reconciliation,
-and bounded legacy in-memory backup compatibility helpers. Payee evidence
+search and queue paging separately), owned-transfer candidate work proportional
+to rows in each ten-minute timestamp window, and bounded legacy in-memory
+backup compatibility helpers. Payee evidence
 aggregation already uses the SQL index described above. The production document path
 now streams authenticated rows; physical SAF/provider acceptance remains
 release evidence.

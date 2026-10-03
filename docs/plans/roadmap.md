@@ -60,7 +60,7 @@ flowchart TD
   T100c --> NET[Canonical net-spending contract]
   NET --> T098[T-098 category budgets]
   T190a1[T-190a1 read-only card source audit] --> T190a2[T-190a2 ownership decision + preview/undo]
-  T165b[T-165b indexed transfer matching + stale-edge cleanup] --> T190b1[T-190b1 owned-transfer stale-edge cleanup]
+  T165b[T-165b indexed transfer matching + stale-edge cleanup, complete] --> T190b1[T-190b1 stale-edge cleanup, closed via T-165b]
   T190b1 -. only before reconciliation is invoked .-> T190a2
   T190a1 --> T190a2
   T190a2 --> T190b2[T-190b2 payment allocation]
@@ -203,7 +203,7 @@ are planning estimates. Owner-run device gates remain open independently.
 | T-098c | Remaining, thresholds and projection UI | M | T-098b; T-100c; PV-04; T-167/PV-07 |
 | T-130a | Import-cycle map and smallest decoupling | S | T-165d interface inventory |
 | T-130b | Remaining screen/module decomposition | M | T-130a; T-165d; avoid T-168 overlap |
-| T-165b | Indexed owned-transfer query and stale `transfer_leg` cleanup | M | Impact review; current SQL behavior audit |
+| T-165b | Indexed owned-transfer query and stale `transfer_leg` cleanup | M | Complete; verification evidence in [T-165b](../tasks/T-165b.md) |
 | T-165c | Integer-paise migration design and ADR | M | Conversion inventory |
 | T-165d | TransactionRepository boundary | M | Impact review; interface inventory |
 | T-177a | Production audit, chronological holdout and live/resume capture gate | M | T-176 device access; consented local holdout |
@@ -214,9 +214,9 @@ are planning estimates. Owner-run device gates remain open independently.
 | T-177f | Evaluate and stage release | M | T-177d/e; T-143 shadow isolation; T-115 profiling |
 | T-177g | Optional receipt evidence feasibility | M | T-177f; coordinate T-102 |
 | T-190a1 | Read-only source audit report | S | T-177a findings; current payment-source code |
-| T-190a2 | Ownership/instrument decision with preview and undo | M | T-190a1; ownership/undo review; T-190b1 before reconciliation is invoked |
-| T-190b1 | Owned-transfer stale-edge cleanup (owned by T-165b) | S | T-165b impact review |
-| T-190b2 | Payment event allocation and liability projection | M | T-190a1; T-190a2 confirmed ownership; T-190b1 (via T-165b); T-100b2 link/undo contract; PV-04 |
+| T-190a2 | Ownership/instrument decision with preview and undo | M | T-190a1; ownership/undo review; T-165b stale-edge prerequisite complete |
+| T-190b1 | Owned-transfer stale-edge cleanup (delivered by T-165b) | S | Closed by T-165b |
+| T-190b2 | Payment event allocation and liability projection | M | T-190a1; T-190a2 confirmed ownership; T-165b (T-190b1 complete); T-100b2 link/undo contract; PV-04 |
 | T-190c | Authorization, decline and reversal lifecycle | M | T-190a1; T-164c; PV-04 |
 | T-190d | Refunds and cashback using T-100 links | M | T-100 completed contract/tests; T-190a1/c; PV-04 |
 | T-190e1 | Explicit card charge classification | M | T-190a1/c; T-100 reversal/refund distinction; owner category/period decision; PV-04 |
@@ -286,23 +286,26 @@ and [backup import acceptance](backup-import.md).
 holdout and live/resume gate follows the active T-176 device work. Synthetic
 replay does not close this gate. See [release gates](release-gates.md).
 
-**T-165b is the next code slice for a conflict-free parallel data lane** after
-the active T-176 work permits parallel implementation. It must not displace or
-delay T-177a:
+**T-165b is complete** on the conflict-free data lane after the
+active T-176 work permitted parallel implementation. Its task brief records
+the acceptance contract and current measurements. It must not displace or delay
+T-177a:
 
 - It is a P1 data task with low file overlap against concurrent
   Ask/Trends/payee-identity work. T-100a decides whether transfer matching is
   needed by refund accounting; T-165b is not a hard T-100 prerequisite. It is a
   hard prerequisite of T-190b2 through T-190b1 only.
-- The source-mapped T-190 review identified stale generated edges:
+- The source-mapped T-190 review identified stale generated edges in the prior
+  implementation:
   [`PaymentSourceRepository.reconcileOwnedTransfers`](../../lib/data/repositories/payment_source_repository.dart#L109)
   clears `ownedTransferId` before rebuilding pairings and does not remove
   obsolete `transfer_leg` links.
-- The review identified T-165b as a parallel-lane candidate after active T-176
-  work. Recheck file ownership when grooming; acceptance uses synthetic
-  adversarial same-amount/date fixtures.
+- T-165b delivers the indexed matcher and transactional stale-edge rebuild.
+  Its synthetic adversarial fixtures and measured plan passed independent
+  review; T-190b1 is closed through this task.
 - If a new SQL index is required it needs an ADR and an additive migration
   first; start by measuring the query plan against existing indexes.
 
-Do not start it until it is groomed into `Ready` with impact analysis on
-`reconcileOwnedTransfers` and `TransactionRepository`.
+Its impact analysis covered `reconcileOwnedTransfers` and `TransactionRepository`;
+the latter is high-impact and remains untouched. T-177a retains product priority
+and its release gates.

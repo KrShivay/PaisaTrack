@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/database.dart';
 import '../db/database_provider.dart';
 
+const _ownedTransferWindowMs = 10 * 60 * 1000;
+const _ownedTransferLinkDeleteBatchSize = 500;
+
 class PaymentSourceSummary {
   const PaymentSourceSummary({
     required this.id,
@@ -122,7 +125,9 @@ class PaymentSourceRepository {
         );
       }
     });
-    if (isOwned.present) await reconcileOwnedTransfers(clock: clock);
+    if (isOwned.present || isActive.present) {
+      await reconcileOwnedTransfers(clock: clock);
+    }
   }
 
   /// Links only unambiguous opposite-direction pairs between owned sources.
@@ -130,72 +135,193 @@ class PaymentSourceRepository {
     DateTime Function() clock = DateTime.now,
   }) {
     return _database.transaction(() async {
-      await _database.update(_database.transactions).write(
-            const TransactionsCompanion(ownedTransferId: Value(null)),
-          );
-      final ownedSources = await (_database.select(_database.paymentSources)
-            ..where(
-              (row) => row.isOwned.equals(true) & row.isActive.equals(true),
-            ))
-          .get();
-      final ownedSourceIds = ownedSources.map((row) => row.id).toSet();
-      if (ownedSourceIds.length < 2) return 0;
-
       final rows = await _database.customSelect(
         '''
-SELECT t1.id AS id1, t2.id AS id2
-FROM transactions t1
-JOIN transactions t2 ON t1.amount = t2.amount
-  AND t1.direction != t2.direction
-  AND t1.payment_source_id != t2.payment_source_id
-  AND ABS(t1.ts - t2.ts) <= 600000
-  AND t1.payment_source_id IN (SELECT id FROM payment_sources WHERE is_owned = 1 AND is_active = 1)
-  AND t2.payment_source_id IN (SELECT id FROM payment_sources WHERE is_owned = 1 AND is_active = 1)
-WHERE t1.is_deleted = 0 AND t1.is_not_transaction = 0 AND t1.duplicate_of_txn_id IS NULL AND t1.owned_transfer_id IS NULL
-  AND t2.is_deleted = 0 AND t2.is_not_transaction = 0 AND t2.duplicate_of_txn_id IS NULL AND t2.owned_transfer_id IS NULL
-ORDER BY t1.ts ASC
+-- The eligible source facts intentionally ignore prior owned_transfer_id flags.
+WITH eligible AS NOT MATERIALIZED (
+  SELECT t.id, t.ts, t.amount, t.direction, t.currency_code,
+         t.currency_symbol, t.payment_source_id
+  FROM transactions t
+  JOIN payment_sources ps ON ps.id = t.payment_source_id
+  WHERE ps.is_owned = 1 AND ps.is_active = 1
+    AND t.is_deleted = 0 AND t.is_not_transaction = 0
+    AND t.duplicate_of_txn_id IS NULL AND t.lifecycle_state = 'settled'
+    AND t.direction IN ('debit', 'credit')
+), neighbors AS MATERIALIZED (
+  SELECT t.id, t.direction,
+    (${_ownedTransferCandidateProbe(offset: 0)}) AS neighbor_id,
+    (${_ownedTransferCandidateProbe(offset: 1)}) AS second_neighbor_id
+  FROM eligible t
+), unique_neighbors AS MATERIALIZED (
+  SELECT id, direction, neighbor_id
+  FROM neighbors
+  WHERE neighbor_id IS NOT NULL AND second_neighbor_id IS NULL
+)
+SELECT debit.id AS debit_id, credit.id AS credit_id
+FROM unique_neighbors debit_neighbor
+JOIN eligible debit ON debit.id = debit_neighbor.id
+JOIN eligible credit ON credit.id = debit_neighbor.neighbor_id
+JOIN unique_neighbors credit_neighbor
+  ON credit_neighbor.id = credit.id
+ AND credit_neighbor.neighbor_id = debit.id
+WHERE debit.direction = 'debit' AND credit.direction = 'credit'
+ORDER BY debit.id, credit.id
 ''',
         readsFrom: {_database.transactions, _database.paymentSources},
       ).get();
 
-      final used = <String>{};
-      var pairs = 0;
-
+      final pairIdsByTransaction = <String, String>{};
+      final desiredLinksByPair = <String, _OwnedTransferLink>{};
       for (final row in rows) {
-        final id1 = row.read<String>('id1');
-        final id2 = row.read<String>('id2');
-        if (used.contains(id1) || used.contains(id2)) continue;
+        final debitId = row.read<String>('debit_id');
+        final creditId = row.read<String>('credit_id');
+        final pairParts = [debitId, creditId]..sort();
+        final pairKey = _ownedTransferPairKey(pairParts[0], pairParts[1]);
+        final transferId = 'owned_transfer_$pairKey';
+        pairIdsByTransaction[debitId] = transferId;
+        pairIdsByTransaction[creditId] = transferId;
+        desiredLinksByPair[pairKey] = _OwnedTransferLink(
+          debitId: debitId,
+          creditId: creditId,
+        );
+      }
 
-        final ids = [id1, id2]..sort();
-        final pairId = 'owned_transfer_${ids.join('_')}';
-        final nowMs = clock().toUtc().millisecondsSinceEpoch;
-
+      // Re-derive the complete projection from source evidence. Old flags must
+      // not hide a newly valid pair or keep a pair that has become stale.
+      final currentTransfers = await (_database.select(
+        _database.transactions,
+      )..where((row) => row.ownedTransferId.isNotNull()))
+          .get();
+      final currentIdsByTransaction = {
+        for (final row in currentTransfers) row.id: row.ownedTransferId,
+      };
+      final now = clock().toUtc();
+      for (final entry in pairIdsByTransaction.entries) {
+        if (currentIdsByTransaction[entry.key] == entry.value) continue;
         await (_database.update(_database.transactions)
-              ..where((transaction) => transaction.id.isIn(ids)))
+              ..where((row) => row.id.equals(entry.key)))
             .write(
           TransactionsCompanion(
-            ownedTransferId: Value(pairId),
-            updatedAt: Value(clock().toUtc()),
+            ownedTransferId: Value(entry.value),
+            updatedAt: Value(now),
           ),
         );
-
-        await _database.into(_database.transactionLinks).insertOnConflictUpdate(
-              TransactionLinksCompanion.insert(
-                id: 'link_${ids.join('_')}',
-                fromTxnId: id1,
-                toTxnId: id2,
-                linkType: 'transfer_leg',
-                basis: 'indexed_owned_transfer',
-                createdAt: nowMs,
-              ),
-            );
-
-        used.addAll(ids);
-        pairs += 1;
       }
-      return pairs;
+      for (final entry in currentIdsByTransaction.entries) {
+        if (pairIdsByTransaction.containsKey(entry.key)) continue;
+        await (_database.update(_database.transactions)
+              ..where((row) => row.id.equals(entry.key)))
+            .write(
+          TransactionsCompanion(
+            ownedTransferId: const Value(null),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+
+      final existingGeneratedLinks = await (_database.select(
+        _database.transactionLinks,
+      )
+            ..where(
+              (link) =>
+                  link.createdBy.equals('system') &
+                  link.basis.equals('indexed_owned_transfer') &
+                  link.linkType.equals('transfer_leg'),
+            )
+            ..orderBy([(link) => OrderingTerm.asc(link.id)]))
+          .get();
+      final retainedByPair = <String, TransactionLink>{};
+      final deleteLinkIds = <String>[];
+      for (final link in existingGeneratedLinks) {
+        final endpointIds = [link.fromTxnId, link.toTxnId]..sort();
+        final key = _ownedTransferPairKey(endpointIds[0], endpointIds[1]);
+        if (desiredLinksByPair.containsKey(key) &&
+            !retainedByPair.containsKey(key)) {
+          retainedByPair[key] = link;
+        } else {
+          deleteLinkIds.add(link.id);
+        }
+      }
+      // Keep parameter lists below SQLite builds' commonly supported 999 bind
+      // variables while all chunks remain inside this outer transaction.
+      for (var offset = 0;
+          offset < deleteLinkIds.length;
+          offset += _ownedTransferLinkDeleteBatchSize) {
+        final batch = deleteLinkIds
+            .skip(offset)
+            .take(_ownedTransferLinkDeleteBatchSize)
+            .toList();
+        await (_database.delete(_database.transactionLinks)
+              ..where((link) => link.id.isIn(batch)))
+            .go();
+      }
+
+      final occupiedIds = await (_database.selectOnly(
+        _database.transactionLinks,
+      )..addColumns([_database.transactionLinks.id]))
+          .get();
+      final occupiedLinkIds = occupiedIds
+          .map((row) => row.read(_database.transactionLinks.id))
+          .whereType<String>()
+          .toSet();
+      for (final entry in desiredLinksByPair.entries) {
+        if (retainedByPair.containsKey(entry.key)) continue;
+        final pair = entry.value;
+        final preferredId = 'link_${pair.debitId}_${pair.creditId}';
+        var linkId = preferredId;
+        var suffix = 1;
+        while (occupiedLinkIds.contains(linkId)) {
+          linkId =
+              'system_owned_transfer_${pair.debitId}_${pair.creditId}_$suffix';
+          suffix += 1;
+        }
+        final link = TransactionLink(
+          id: linkId,
+          fromTxnId: pair.debitId,
+          toTxnId: pair.creditId,
+          linkType: 'transfer_leg',
+          confidence: 1,
+          basis: 'indexed_owned_transfer',
+          createdBy: 'system',
+          createdAt: now.millisecondsSinceEpoch,
+        );
+        await _database.into(_database.transactionLinks).insert(link);
+        occupiedLinkIds.add(linkId);
+      }
+      return desiredLinksByPair.length;
     });
   }
+
+  String _ownedTransferCandidateProbe({required int offset}) => '''
+SELECT c.id
+FROM transactions c INDEXED BY idx_transactions_ts
+JOIN payment_sources cps ON cps.id = c.payment_source_id
+WHERE c.ts BETWEEN t.ts - $_ownedTransferWindowMs
+      AND t.ts + $_ownedTransferWindowMs
+  AND c.amount = t.amount AND c.direction != t.direction
+  AND c.direction IN ('debit', 'credit')
+  AND c.payment_source_id != t.payment_source_id
+  AND c.currency_code IS t.currency_code
+  AND c.currency_symbol IS t.currency_symbol
+  AND cps.is_owned = 1 AND cps.is_active = 1
+  AND c.is_deleted = 0 AND c.is_not_transaction = 0
+  AND c.duplicate_of_txn_id IS NULL AND c.lifecycle_state = 'settled'
+-- Ordering is unnecessary: one candidate is a singleton; a second is ambiguous.
+LIMIT 1 OFFSET $offset
+''';
+}
+
+String _ownedTransferPairKey(String firstId, String secondId) =>
+    '${firstId.length}:$firstId${secondId.length}:$secondId';
+
+class _OwnedTransferLink {
+  const _OwnedTransferLink({
+    required this.debitId,
+    required this.creditId,
+  });
+
+  final String debitId;
+  final String creditId;
 }
 
 class _PaymentSourceSummaryBuilder {

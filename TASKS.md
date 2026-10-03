@@ -529,7 +529,6 @@ Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
 - [ ] T-164c [P1] Add explainable visibility flags for deleted, duplicate-suppressed, pending, reversed, transfer, and excluded-payment-source transactions.
 - [ ] T-164d [P2] Add “show excluded” Activity filter and detail explanation without letting excluded rows alter spending/budget totals.
 - [ ] T-165a [P1] Profile 10k/50k transaction Activity rendering and query latency on release hardware; record thresholds and baseline evidence.
-- [ ] T-165b [P1] Replace O(n²) owned-transfer reconciliation with an indexed SQL candidate query and adversarial same-amount/date tests; transactionally rebuild `ownedTransferId` and generated `transfer_leg` edges (stale edges are never deleted today), preserve user-authored links, leave ambiguous pairs unlinked, and record the query plan. Next code slice per [roadmap](docs/plans/roadmap.md#next-implementation-slice); absorbs T-190b1.
 - [ ] T-165c [P2] Plan and ADR an integer-paise migration, including lossless conversion, compatibility, rollback, and migration tests.
 - [ ] T-165d [P2] Split `TransactionRepository` reads/commands/corrections behind domain DTOs; prove existing provider and migration behavior.
 - [ ] T-166a [P1] Implement explicit salary income analytics card and period totals that include credits but never treat transfers/refunds as salary.

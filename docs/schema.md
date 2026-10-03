@@ -60,6 +60,14 @@ Amounts and balances currently use Drift `real()`/Dart `double`. This is a
 known financial-integrity limitation; T-130 plans an additive migration to
 integer paise rather than extending floating-point use into new money tables.
 
+Owned-transfer reconciliation adds no schema objects. It probes the existing
+`idx_transactions_ts` index for bounded candidate windows and stores generated
+transfer legs in `transaction_links` with `created_by = 'system'`,
+`basis = 'indexed_owned_transfer'`, and `link_type = 'transfer_leg'`. Its
+length-prefixed `owned_transfer_id` values distinguish transaction IDs that
+would collide under underscore concatenation; reconciliation rewrites legacy
+derived values as it rebuilds the projection.
+
 Schema v6 is a repair migration: it backfills NULLs and rescales millisecond
 datetimes in `payment_sources` rows created by early v5 builds (which crashed
 the transactions and accounts screens through the generated force-unwrapping

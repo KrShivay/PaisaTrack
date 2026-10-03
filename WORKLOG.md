@@ -1,5 +1,28 @@
 # Current Handoff
 
+## 2026-10-03 — T-165b completed
+
+- Owned-transfer reconciliation now uses bounded `idx_transactions_ts` probes,
+  reciprocal singleton matching, and transactional stale system-edge cleanup.
+  It preserves user-authored links and unchanged generated edge metadata; reruns
+  make no writes. T-190b1 is closed through this task.
+- Verification: regression fails before the fix; focused 17/17; repository
+  tests in `America/New_York` 111/111; full Flutter suite 1,229/1,229; SQLCipher
+  migration test 1/1 (not skipped); analyzer clean; formatting, 138 Markdown
+  link checks, and `git diff --check` pass. GitNexus: 11 files, 43 symbols,
+  one affected test-entry flow (`Main → ToJson`),
+  medium risk; the new test entrypoint owns that attribution. No app `main` or
+  serialization code changed.
+- Evidence and query-plan/performance methodology: [T-165b brief](docs/tasks/T-165b.md).
+  Python sqlite3 3.53.3 host
+  comparison: 12,800 old candidate rows / 17,044.6 ms vs. 0 accepted pairs /
+  25.0 ms after, on the same 10,160-row synthetic fixture; app reconciliation
+  test measured 78 ms. These are host/test measurements, not device latency.
+- T-177a retains product priority and its owner-run holdout/live-resume gates.
+  T-194 stays on its existing branch. Owner-device QA, signed release build,
+  and APK publishing remain local follow-ups in their existing tasks; no
+  Android SDK or release signing was needed for T-165b.
+
 ## 2026-10-03 — Cloud session: T-195 to T-198, T-154b
 
 - T-195 (ADR 0021): SMS behind a transaction or "Not a transaction" are kept;
