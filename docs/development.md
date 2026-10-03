@@ -1,5 +1,26 @@
 # Development Rules
 
+## Flutter setup
+
+The repo-local SDK lives at `.tooling/flutter`, which is gitignored and is not
+included in a fresh clone or cloud checkout. CI pins Flutter **3.44.4** in
+`.github/workflows/ci.yml`. Install that SDK into `.tooling/flutter` before
+using the commands below; for example:
+
+```sh
+mkdir -p .tooling
+git clone --depth 1 --branch 3.44.4 https://github.com/flutter/flutter.git .tooling/flutter
+.tooling/flutter/bin/flutter doctor
+.tooling/flutter/bin/flutter pub get
+```
+
+`flutter doctor` reports host dependencies that are missing. Android builds
+and Gradle tests also need the Android SDK and the Java version configured in
+CI. On Ubuntu, CI installs `libsqlcipher-dev` before running database tests;
+reproduce that host dependency with `sudo apt-get update` and
+`sudo apt-get install -y libsqlcipher-dev`, as in `.github/workflows/ci.yml`. The
+`.tooling` path is local only and must not be committed.
+
 ## Definition of done
 
 Every feature includes implementation, tests, code documentation, and relevant
@@ -32,6 +53,38 @@ cd android
 
 Device-only behavior—SMS, background jobs, local models, document pickers,
 performance, and accessibility—requires physical-device evidence.
+
+## GitNexus
+
+Use the GitNexus MCP when it is available. For CLI work, the ignored local
+runner supports:
+
+```sh
+node .gitnexus/run.cjs status
+node .gitnexus/run.cjs impact "SymbolName" --direction upstream --repo .
+node .gitnexus/run.cjs detect-changes --scope all --repo .
+```
+
+If `.gitnexus/run.cjs` is absent, bootstrap GitNexus with
+`bunx gitnexus@latest analyze` or use the configured MCP. Indexing may
+regenerate root `AGENTS.md` and `CLAUDE.md`; review those diffs and restore the
+repository's policy instructions before finishing. A stale or missing index is
+not evidence that a symbol has no callers.
+
+## Owner-machine steps
+
+These steps need the owner's configured machine and must not block cloud code
+work:
+
+- ADB installation, physical-phone QA, SMS capture, and device-only acceptance
+  require the owner's Android device and local ADB setup.
+- Release builds require the gitignored
+  `android/paisatrack-release.jks` and `android/keystore.properties` described
+  in [release signing](release-signing.md). Never copy either into a cloud
+  checkout, artifact branch, or source control.
+- Codex and Luna CLI review require the owner's local installations and
+  authentication. Record which checks ran; do not report an unavailable local
+  review as passed.
 
 CI/release acceptance also requires the Android app and Keystore Gradle unit
 tests. A release artifact is invalid when it falls back to debug signing.

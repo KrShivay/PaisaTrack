@@ -2,6 +2,11 @@
 
 Status: accepted (@human proposed 2026-07-10; groomed at @human's direction)
 
+Current scope note (2026-10-03): the local, intent-routed assistant decision
+remains active. The original plan for qualitative generated insight prose is
+superseded by the claim-only rendering contract in ADR 0011 and T-178a; no
+free-form narrative generator is part of the current product.
+
 ## Context
 
 PLAN Phase 4 already reserves an on-device LLM layer (extraction fallback for
@@ -40,4 +45,4 @@ foundation (T-075) as the planned extractor/narratives:
 - The intent whitelist becomes the assistant's contract; growing it is normal
   feature work, each intent with its own tests.
 - Model download UX, storage, and delete control are owned by T-075 and shared
-  by extractor, narratives, and assistant.
+  by the extractor and assistant.

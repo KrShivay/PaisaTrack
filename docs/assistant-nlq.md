@@ -30,15 +30,19 @@ The model never writes SQL and never answers directly.
 - upcoming recurring items;
 - active deterministic insights.
 
-Filters are limited to validated category, literal merchant text, direction,
-and bounded time ranges. Unknown fields, categories, dates, aggregations, or
-intent names are refused.
+Filters are limited to validated category, payee identity, direction, and
+bounded time ranges. Payee phrases resolve across user labels, aliases, and
+captured VPA/payee evidence with whole-phrase matching; multiple matches prompt
+for clarification. Unknown fields, categories, dates, aggregations, or intent
+names are refused.
 
 ## Query rules
 
 - Spending excludes transfers, duplicate echoes, soft-deleted rows, and future
   excluded payment sources.
-- Merchant text is treated literally; wildcard characters cannot broaden it.
+- Payee identity matches do not use SQL wildcards or raw substring matching.
+- Payee answers disclose included names and the matched evidence in the
+  “How this was counted” section.
 - Recurring and insight answers relay stored deterministic results.
 - Empty data returns an honest empty answer, not an invented zero narrative.
 - Future budget/refund/source answers require typed QueryEngine results before
@@ -65,14 +69,12 @@ Adding an intent requires a typed validator model, one deterministic query
 method, fixed renderer output, seeded exact-result tests, refusal tests, and a
 privacy review. Never expand the model into a free-form answer generator.
 
-## Known implementation gap and planned extension
+## Current implementation and planned extension
 
-Source review on 2026-09-26 found that `AssistantQueryEngine._transactions`
-filters deleted, duplicate, analytics-excluded and owned-transfer rows but does
-not yet apply the canonical settled-state and spending-category predicates.
-The query rules above are the required contract, not proof of current parity.
-T-178a must add parity tests and reuse the shared eligibility contract before
-expanding spending claims. Income queries need their own explicit semantics.
+The 2026-09-26 spending-query parity finding was closed in T-178a. Current
+eligibility, payee matching, and currency behavior is documented in
+[architecture](architecture.md#grounded-assistant) and covered by the query
+contract tests. Income queries retain their own explicit semantics.
 
 [T-178](tasks/T-178.md) plans typed evidence-linked insights, forecast ranges and
 English/Hinglish questions; estimates remain separate from facts. The model

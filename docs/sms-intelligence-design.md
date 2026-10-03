@@ -91,7 +91,7 @@ against rules).
 ### G4 — Merchant identity fragments on UPI noise
 
 `MerchantResolver.normalizeAlias` is `uppercase → strip non-alphanumeric`. So
-`paytm-9876543210@ptys` becomes `PAYTM9876543210PTYS` — unique per counterparty
+`paytm-<phone>@ptys` becomes `PAYTM<PHONE>PTYS` — unique per counterparty
 phone number. Every person you pay, and every dynamic merchant QR, mints a new
 merchant row and a new review item. Device testing on 2026-07-17 recorded 6,807
 review rows across 2,467 merchants on a single install; this normalization is the
@@ -542,7 +542,7 @@ reduces spending in exactly one place with exactly one definition.
 Replace the flat `uppercase + strip` alias with a parse:
 
 ```
-VPA  9876543210@ybl              → {kind: person,   core: <phone-hash>, psp: ybl}
+VPA  <phone>@ybl                 → {kind: person,   core: <phone-hash>, psp: ybl}
 VPA  swiggy.stores@icici         → {kind: merchant, core: SWIGGYSTORES, psp: icici}
 VPA  paytmqr2810050501011x@paytm → {kind: merchant, core: <qr-opaque>,  psp: paytm}
 Card SWIGGY INSTAMART BANGALORE  → {kind: merchant, core: SWIGGYINSTAMART, geo: BANGALORE}
@@ -551,7 +551,7 @@ Card SWIGGY INSTAMART BANGALORE  → {kind: merchant, core: SWIGGYINSTAMART, geo
 Rules, in order:
 
 1. Strip a trailing digit run of length ≥ 6 from the VPA local part — that is a
-   phone number, not an identity. `paytm-9876543210` → `paytm`… but only when the
+   phone number, not an identity. `paytm-<phone>` → `paytm`… but only when the
    remaining core is itself a known PSP token, otherwise the whole local part is
    the identity. (Getting this backwards is how `PAYTM` swallows every Paytm
    user; the PSP-token check is what prevents it.)
@@ -819,7 +819,7 @@ for the tickets in §17.
 
 **Identity**
 
-25. A person whose VPA changes PSP (`9876543210@ybl` → `@paytm`) → same
+25. A person whose VPA changes PSP (`<phone>@ybl` → `@paytm`) → same
    phone-derived core, same counterparty.
 26. A merchant with a dynamic QR per store → aggregator prefix detection
    collapses them; if it fails, the nightly cluster suggestion catches it.

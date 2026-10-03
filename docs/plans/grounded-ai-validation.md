@@ -2,7 +2,7 @@
 
 Status: proposed. This plan breaks T-178b–d into groomable implementation
 slices; it does not approve a model, schema migration, rollout, or release.
-T-178a remains the prerequisite for shared evidence and coverage semantics.
+T-178a is complete and supplies the shared evidence and coverage semantics.
 See [T-178](../tasks/T-178.md), the [AI opportunities report](../reports/grounded-ai-opportunities.md), and [ADR 0011](../decisions/0011-evidence-backed-assistance.md).
 
 ## Current state
@@ -124,9 +124,9 @@ abstain instead of fabricating a range.
   distinct `basis` and validator path rather than weakening `basis: observed`
   for existing claims. Evidence includes the current-period eligible rows and
   enough stable historical period identifiers to reproduce the selected
-  training origins. Avoid adding a schema migration unless persistence cannot
-  fit the current insight envelope; decide that only after T-178a's schema and
-  coverage audit.
+  training origins. T-178a confirmed the current insight envelope supports
+  claims without a schema migration; add one only if later measured requirements
+  cannot fit the existing payload.
 - Suppress if any sufficiency floor fails, the input hash is stale, currency
   buckets are mixed, interval is non-finite or inverted, the central estimate
   falls outside the interval, known history gaps exceed the coverage rule, or
@@ -351,7 +351,7 @@ the reason rather than silently waiving the gate.
 | R5 | Hinglish and typo corpus is too narrow, making accuracy look better than real use. | Medium | High | Meet per-language minima, publish bucket metrics, add owner-approved synthetic adversarial cases, and preserve abstention. |
 | R6 | On-device model load exceeds memory/latency budget on supported ARM64 hardware. | Medium | High | Recover T-115 baseline; measure cold/warm p95 and peak/post-close memory; default-off with kill switch. |
 | R7 | Owner-local evaluation leaks row-level data in logs or exported diagnostics. | Low | High | Aggregate-only serializer, privacy tests, explicit export, no remote telemetry. |
-| R8 | New claim envelope needs schema changes before T-178a coverage decisions are stable. | Medium | Medium | Keep payload versioned/additive; defer migration until audited; add ADR and migration coverage if unavoidable. |
+| R8 | A future claim may outgrow the current versioned insight payload. | Low | Medium | Keep payload additive; require an ADR and migration coverage only if a measured requirement cannot fit the current envelope. |
 
 Open owner decisions:
 
@@ -366,7 +366,8 @@ Open owner decisions:
 
 ## Dependencies and implementation order
 
-1. T-177a production/coverage audit and T-178a evidence/eligibility contract.
+1. T-178a evidence/eligibility contract is complete; finish the open T-177a
+   production/coverage audit before broadening automatic decisions.
 2. T-178b b1–b3, with rolling-origin quality gate before enabling forecasts.
 3. T-190 card accounting before `card_bill`; verified refund accounting before
    refund result intents; T-098 contract before any budget-remaining semantics.

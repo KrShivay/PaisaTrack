@@ -6,7 +6,7 @@ ADRs record durable technical decisions. Status wording below follows each file;
 |---|---|---|
 | [0001](0001-flutter-local-first.md) | Flutter local-first app | no Status field; status unverified |
 | [0002](0002-no-cloud-services.md) | No cloud services | no Status field; status unverified |
-| [0003](0003-dedup-and-counterparty.md) | Explicit duplicate links and counterparty VPA | no Status field; status unverified |
+| [0003](0003-dedup-and-counterparty.md) | Explicit duplicate links and counterparty VPA | accepted (2026-07-07) |
 | [0004](0004-automated-agent-handoff.md) | Automated agent handoff | accepted |
 | [0005](0005-fixture-provenance-and-parse-trust.md) | Fixture provenance and parse-trust promotion | accepted |
 | [0006](0006-in-app-assistant.md) | In-app local assistant | accepted |

@@ -37,7 +37,7 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 | Parent | Area | Brief | State |
 |---|---|---|---|
 | T-153 | Sort cursor and recoverable skip | [T-153.md](T-153.md) | Stale / conditional: board says recheck only if implementation is still needed |
-| T-155 | Threshold constant consolidation | [T-155.md](T-155.md) | Stale / unboarded; groom before any execution |
+| T-155 | Threshold constant consolidation | [T-155.md](../archive/tasks/T-155.md) | Archived: stale and unboarded; no active board item |
 
 ## Closed or historical-pointer briefs
 

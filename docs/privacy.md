@@ -20,6 +20,12 @@ PaisaTrack is local-first:
   the Android document picker; Drift rows are paged on export and restored
   transactionally on import. No plaintext archive temp file is created, and a
   cancelled or incomplete destination is never reported as a completed backup.
+- The current retention default is 30 days. Ready task
+  [T-195](tasks/T-195.md) records the owner's decision to retain source SMS
+  linked to transactions or durable dispositions indefinitely and re-link
+  already-purged provenance. Until that work ships, the current 30-day expiry
+  and backup filtering remain in effect; the policy for unlinked SMS is still
+  to be decided.
 - A user's “Not a transaction” correction persists the provider SMS ID,
   transaction ID, disposition, and correction time in the encrypted local
   database and backup. It stores no message body, sender, or receipt time, and

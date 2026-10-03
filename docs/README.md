@@ -44,7 +44,7 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [decisions/README.md](decisions/README.md) | ADR index, status, and numbering notes | current | docs cleanup |
 | [decisions/0001-flutter-local-first.md](decisions/0001-flutter-local-first.md) | Flutter local-first app decision | maintained ADR; status not explicit | architecture |
 | [decisions/0002-no-cloud-services.md](decisions/0002-no-cloud-services.md) | No-cloud decision | maintained ADR; status not explicit | privacy |
-| [decisions/0003-dedup-and-counterparty.md](decisions/0003-dedup-and-counterparty.md) | Duplicate and counterparty identity decision | maintained ADR; status not explicit | capture |
+| [decisions/0003-dedup-and-counterparty.md](decisions/0003-dedup-and-counterparty.md) | Duplicate and counterparty identity decision | accepted ADR | capture |
 | [decisions/0004-automated-agent-handoff.md](decisions/0004-automated-agent-handoff.md) | Agent handoff process decision | current ADR | process |
 | [decisions/0005-fixture-provenance-and-parse-trust.md](decisions/0005-fixture-provenance-and-parse-trust.md) | Fixture provenance and trust promotion | current ADR | capture |
 | [decisions/0006-in-app-assistant.md](decisions/0006-in-app-assistant.md) | Local assistant decision | current ADR | assistant |
@@ -118,7 +118,7 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [tasks/T-152.md](tasks/T-152.md) | Full-screen sheet route | historical-pointer | T-152 |
 | [tasks/T-153.md](tasks/T-153.md) | Sort cursor and recoverable skip | stale/conditional; board says recheck only if still needed | T-153 |
 | [tasks/T-154.md](tasks/T-154.md) | Edit from Sort | current; remaining child open | T-154 |
-| [tasks/T-155.md](tasks/T-155.md) | Threshold constant consolidation | stale/unboarded; groom before execution | T-155 |
+| [archive/tasks/T-155.md](archive/tasks/T-155.md) | Threshold constant consolidation proposal | archived; stale and unboarded | T-155 |
 | [tasks/T-156.md](tasks/T-156.md) | Sheet and dialog presentation consolidation | current; remaining children open | T-156 |
 | [tasks/T-157.md](tasks/T-157.md) | Riverpod boundary hardening | historical; completed work mapped in archive | T-157 |
 | [tasks/T-158.md](tasks/T-158.md) | Transaction detail screen split | current; remaining children open | T-158 |
@@ -138,12 +138,17 @@ See the [decision index](decisions/README.md) for status and numbering, includin
 | [tasks/T-189.md](tasks/T-189.md) | Readable Ask prompt list | historical; completed/reviewed brief retained | T-189 |
 | [tasks/T-193.md](tasks/T-193.md) | Legacy currency repair | historical; physical acceptance recorded in `385e056`, UNDO-1 fixed in `58af0a4` | T-193 |
 | [tasks/T-194.md](tasks/T-194.md) | Compressed ARM64 packaging trial | current; In Progress | T-194 |
+| [tasks/T-195.md](tasks/T-195.md) | Keep source SMS provenance | current; Ready | T-195 |
+| [tasks/T-196.md](tasks/T-196.md) | Transaction details card | current; Ready | T-196 |
+| [tasks/T-197.md](tasks/T-197.md) | Activity scroll position after edit | current; Ready | T-197 |
+| [tasks/T-198.md](tasks/T-198.md) | Readable payee names | current; Ready | T-198 |
 
 ## Reports
 
 | File | Purpose | Status | Owner task |
 |---|---|---|---|
 | [reports/T-176-physical-ask-ime-2026-09-30.md](reports/T-176-physical-ask-ime-2026-09-30.md) | Physical Ask keyboard acceptance result | historical evidence; gate failed/remains open | T-176 |
+| [reports/T-176-T-167c-emulator-matrix-2026-10-02.md](reports/T-176-T-167c-emulator-matrix-2026-10-02.md) | Emulator layout matrix and first-pass results | current evidence; physical gates remain open | T-176, T-167c |
 | [reports/T-177a-capture-provenance.md](reports/T-177a-capture-provenance.md) | Synthetic replay/provenance and integration reconciliation | current evidence; physical/holdout gates open | T-177a |
 | [reports/T-179a-isolated-recovery-qa-2026-10-01.md](reports/T-179a-isolated-recovery-qa-2026-10-01.md) | Isolated physical recovery QA evidence | historical evidence; result recorded | T-179a |
 | [reports/T-193-currency-repair-qa-2026-10-01.md](reports/T-193-currency-repair-qa-2026-10-01.md) | Currency repair synthetic and physical QA evidence | historical evidence; T-193 accepted and removed from the board | T-193 |

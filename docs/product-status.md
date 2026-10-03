@@ -1,10 +1,11 @@
 # Product Status
 
-Status date: 2026-10-01
-Code baseline: main at `3d5f310`, including the T-176 Ask IME route fix and
-T-187 source-currency fidelity.
-Physical-device acceptance for T-176 remains open; T-179a isolated lost-key
-recovery passed on a physical device (2026-10-01).
+Status date: 2026-10-03
+Code baseline: main at `016465d`; package version `0.1.7+2016`.
+The published `0.1.7+2016` ARM64 release was installed in place on the owner
+device (the previous `0.1.6+2015` build was also launched and checked there). Broad T-176/T-167c layout acceptance and other listed release
+gates remain open. T-179a isolated lost-key recovery passed on a physical
+device (2026-10-01).
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -62,7 +63,7 @@ large-text acceptance, or participant pass.
 | --- | --- | --- |
 | Android platform | SMS permission, live receiver, inbox paging, notifications, document picker, model bridges, Keystore plugin | `android/app/src/main/kotlin/`, `packages/paisatrack_keystore/` |
 | Capture | Live/history/resume ingestion, template → generic → optional local-LLM parsing, deduplication, typed misses | `lib/capture/` |
-| Domain/data | Drift schema v18 on SQLCipher; transactions, recurring series, and expected events retain source currency code/symbol evidence | `lib/data/`, `lib/enrichment/` |
+| Domain/data | Drift schema v19 on SQLCipher; transactions, recurring series, and expected events retain source currency code/symbol evidence | `lib/data/`, `lib/enrichment/` |
 | Intelligence | Currency-bucketed recurring, anomaly, forecast, insight, and grounded assistant paths; INR-only budgets disclose scope; no implicit FX conversion | `lib/intelligence/` |
 | Presentation | Riverpod state with four-tab Bloom shell and task sheets/pages | `lib/features/`, `lib/core/widgets/` |
 
@@ -79,15 +80,15 @@ normative boundaries.
 | Transactions | Manual entry, detail, correction, source-currency-aware display and CSV export, search/filter UI, explicit Activity page exhaustion, strict Activity keyset paging, continuation while filtered | Activity search still covers only the loaded page; SQL-backed cross-page search remains future work, and query failures still need actionable error states |
 | Review/Sort | Card/list presentation, keep/change/skip controls with DB-first updates and shared correction/undo sequencing | Queue remains capped at 100; cursor/persistence work is T-153 |
 | Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful loading/error states, period and eligibility disclosure, known exclusions, local-data coverage caveat, separate foreign/unknown source-currency subtotals, global monthly budget prototype, recurring totals | Bank-wide capture completeness cannot be known from local records; INR-only budget math excludes other currencies |
-| Trends/recurring | Deterministic currency-bucketed aggregates, stored insights, recurring series/statuses; Trends labels INR-only charts and lists other source-currency activity separately | Eligibility diagnostics are absent; legacy rows without retained currency evidence remain unknown |
+| Trends/recurring | Deterministic evidence-backed claims power the Trends feed and local Trends inbox; recurring series/statuses and currency buckets remain separate; insight text is rendered from claims | Only valid, fresh supported claims appear; legacy rows without retained currency evidence remain unknown |
 | Categories and identities | Category manager, SQL-backed paged payee labels/search, payment-source naming/ownership/exclusion | Duplicate suggestions remain review-only; several secondary screens retain legacy surfaces |
-| Assistant | Deterministic intents and queries with guarded local-model fallback; amount and category breakdowns preserve source-currency buckets | Model status/management is not exposed truthfully in Settings; conversation accessibility is incomplete |
+| Assistant | Deterministic intents and queries with guarded local-model intent fallback; payee matching uses whole-phrase identity evidence and clarifies ambiguity; answers disclose their counting scope | Conversation accessibility remains incomplete; VPA-only rows can still display raw VPAs in other surfaces |
 | Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, durable key persistence, typed recovery | Physical-device backup/SAF acceptance remains release evidence |
-| Backup/import | v3 archive compatibility plus authenticated v2 chunked document envelope; paged row serialization, transactional restore, progress/cancellation, bounded 32 MiB encrypted file, 16 MiB payload, 50,000-row/table and 200,000-row/archive limits; only non-expired raw SMS is exported/restored; transaction links, counterparties, category hierarchy, expected events, and durable SMS dispositions round-trip | Physical SAF/provider acceptance and release evidence remain T-170b/T-171 |
+| Backup/import | v3 archive compatibility plus authenticated v2 chunked document envelope; paged row serialization, transactional restore, progress/cancellation, bounded 32 MiB encrypted file, 16 MiB payload, 50,000-row/table and 200,000-row/archive limits; only non-expired raw SMS is exported/restored; transaction links, counterparties, category hierarchy, expected events, and durable SMS dispositions round-trip | Physical SAF/provider acceptance remains open; Ready T-195 proposes changing linked-source SMS expiry and backup inclusion |
 | Delete everything | Deletes database/native state, DB key, Dart settings, and import markers | Physical-device erasure acceptance remains |
 | Accessibility | Reduced motion and some semantics/responsive tests exist | Touch targets, TalkBack labels/order, contrast, large text, and device acceptance are incomplete |
 | Offline behavior | Core finance and inference work offline after optional model downloads | Background/device-only behavior is not fully accepted on physical hardware |
-| Release/distribution | Public production-signed ARM64 `0.1.3+2012` / code `4012` download was verified against the installed artifact; bounded Ask portrait checks passed at 1×, 1.5×, and 2× | Landscape, other routes, CI/device test lanes, store distribution, data-integrity checks, and broader physical acceptance remain |
+| Release/distribution | Public production-signed ARM64 `0.1.7+2016` / code `4016` download was hash-verified against the installed artifact; cold launch and bounded checks were recorded on `0.1.6+2015` | Landscape/2×/three-button recheck, data-integrity checks, CI/device test lanes, store distribution, and broader physical acceptance remain; see [release evidence](release-signing.md) |
 
 The stored global monthly budget and merchant-cap prototype are not T-098.
 T-098 is a future per-category, per-month budget feature and depends on a shared
@@ -99,10 +100,11 @@ net-spending contract.
    financial state.
 2. **P1 — Data correctness:** retain parity tests for the shared local calendar
    and analytics-eligibility contract as future analytics paths are added.
-3. **P1 — Scale:** move Activity/Review/Payee search and paging to SQL; stream
+3. **P1 — Scale:** move Activity/Review search and paging to SQL; stream
    backups; replace quadratic owned-transfer reconciliation.
-4. **P1 — Privacy:** exclude expired/raw SMS from backups, protect lock-screen
-   notification content, and move pending answers out of plaintext preferences.
+4. **P1 — Privacy:** implement Ready T-195's owner decision to retain linked
+   source SMS beyond 30 days; protect lock-screen notification content and move
+   pending answers out of plaintext preferences.
 5. **P2 — Maintainability:** remove the database↔duplicate-rule import cycle,
    split oversized repositories/screens, and migrate money from `double`/REAL
    to integer paise.
@@ -124,15 +126,18 @@ Exact owners, dependencies, acceptance criteria, and next actions are in
 
 ## Active work
 
-The Bloom migration is partially complete. Capability-preserving corrections,
-SMS lookup, period selection, backup completeness, HDFC/ICICI templates,
-correction matching, Review list scaffolding, and several responsive tests have
-shipped. Remaining Bloom and release gaps are normalized into `TASKS.md`; the
-original audit/addendum are archived as design inputs.
+The original Bloom audit and addendum are archived as design inputs. The
+remaining active design references are [SMS intelligence](sms-intelligence-design.md)
+for open T-133/T-143 work and [UI gaps](ui-gaps-and-redesign.md) for open
+T-149/T-151/T-154 work. The active board and current implementation state are
+in `TASKS.md` and the feature table above.
 
 ## Verification snapshot
 
 ARM64 release artifact and physical launch, 2026-09-30:
+
+This is an earlier release snapshot; current release evidence is in
+[release-signing.md](release-signing.md).
 
 - The public `0.1.3+2011` ARM64 APK from commit
   `6ac898f564bfd307455a1b7201ab229a3fe09c80` was verified at 56,750,764 bytes
@@ -255,16 +260,17 @@ These must be run on the development machine before the branch merges.
 ## Documentation audit — 2026-09-26
 
 This planning review is source inspection, not a new device acceptance pass.
-[Smart assistance](plans/smart-transaction-assistance.md) (T-177) and
-[grounded AI](reports/grounded-ai-opportunities.md) (T-178) are proposed only.
+[Smart assistance](plans/smart-transaction-assistance.md) (T-177) remains
+proposed; T-178a is complete and T-178b–d remain proposed in the
+[grounded AI plan](plans/grounded-ai-validation.md).
 
 - Standard categorizer wiring omits the merchant-memory and LLM-suggestion
   callbacks despite helper implementations. Treat T-140 historical completion
   as component work, not proof of active production learning.
-- Assistant spending queries need parity with canonical settled-state and
-  spending-category eligibility before more analytical answers ship (T-178a).
-- Forecast capture gaps and partial-month comparisons need explicit handling;
-  derived claims must expose evidence and data sufficiency (T-178a/b).
+- The assistant spending-query parity gap was closed in T-178a; see the current
+  [assistant contract](assistant-nlq.md) and [architecture](architecture.md).
+- T-178a delivered evidence-checked claims and fair comparisons. Forecast
+  capture gaps and range calibration remain T-178b work.
 - Conflicting board/brief status (notably T-143) must be reconciled with tests;
   this cleanup does not close uncertain implementation work.
 

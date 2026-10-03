@@ -1,6 +1,6 @@
 # PaisaTrack — delivery plan
 
-Updated 2026-09-27. This is future direction, not a shipped-feature checklist.
+Updated 2026-10-03. This is future direction, not a shipped-feature checklist.
 Current behavior: [architecture](docs/architecture.md) and
 [product status](docs/product-status.md). Executable queue: [TASKS.md](TASKS.md).
 
@@ -20,8 +20,8 @@ about uncertainty. Then explain and forecast recorded spending with evidence.
    completion claims before adding duplicate implementations.
 3. T-177b–f: safe recognition/memory, scoped correction/undo, grouped review,
    category reuse and a measured staged rollout. [Full feature plan](docs/plans/smart-transaction-assistance.md).
-4. T-178a: evidence-linked insights and fair period comparisons; T-178b–d:
-   validated forecast ranges, grounded English/Hinglish questions and evaluation.
+4. T-178a is complete. T-178b–d cover validated forecast ranges, grounded
+   English/Hinglish questions and evaluation.
    [AI report](docs/reports/grounded-ai-opportunities.md).
 5. T-102: local statement reconciliation; T-177g: optional receipt evidence
    feasibility. Neither is required for the initial learn-once flow.
@@ -57,7 +57,8 @@ at a time. Briefs: [T-177](docs/tasks/T-177.md), [T-178](docs/tasks/T-178.md).
   linked refunds follow the verified accounting contract, not merchant-name guesses.
 - Schema changes require an ADR, additive migration, backup/delete coverage and
   migration tests. [ADR 0011](docs/decisions/0011-evidence-backed-assistance.md)
-  is proposed only; no schema/model/runtime change is approved by this document.
+  is accepted in part; this plan does not approve any additional schema, model,
+  or runtime change.
 
 ## Defaults to preserve or validate
 

@@ -500,12 +500,12 @@ Plan with slices b1–d3, metrics and pass thresholds (proposed, not Ready):
 - [ ] T-168c [P2] Route remaining bespoke sheets/dialogs through Bloom helpers and add API-level presentation tests.
 - [ ] T-168d [P2] Establish a visual-regression golden suite for Activity, SMS scan, salary income, errors, and dark/light themes.
 - [ ] T-169a [P1] Add a dedicated transaction-import progress model shared by onboarding, Settings, and Activity; remove duplicated display counters.
-- [ ] T-169b [P2] Add a privacy/data-footprint screen explaining local SMS retention, parse status, backup inclusion, and safe deletion.
+- [ ] T-169b [P2] Add a privacy/data-footprint screen explaining local SMS retention under current code and the linked-source policy defined by T-195, parse status, backup inclusion, and safe deletion.
 
 #### Reliability, privacy, and release readiness
 
 - [ ] T-170a [P0] Add fault-injection tests for database-write, parser, channel, lifecycle, and native inbox query failures; prove retries are bounded and idempotent.
-- [ ] T-170b [P1] Verify raw-SMS expiry, backup exclusion, deletion, and recovery behavior with device-backed acceptance evidence.
+- [ ] T-170b [P1] Verify raw-SMS retention after T-195, backup inclusion/exclusion, deletion, and recovery behavior with device-backed acceptance evidence.
 - [ ] T-170c [P1] Add release-build smoke tests for permission recovery, first import, resume catch-up, 10k history paging, and salary credit visibility.
 - [ ] T-170d [P2] Create a manual QA matrix for supported senders/templates, unsupported-sender telemetry, and false-positive privacy checks.
 - [ ] T-171a [P1] Add CI shards for Flutter unit/widget, Android unit, migration, and fixture-contract tests with deterministic failure artifacts.

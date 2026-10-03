@@ -1,6 +1,8 @@
 # Grounded AI opportunities
 
-Status: research and product proposal, 2026-09-26. No code or data changes.
+Status: research and product proposal, first written 2026-09-26. No code or
+data changes. The T-178a status and current-source findings below were checked
+again on 2026-10-03.
 Related: [transaction assistance plan](../plans/smart-transaction-assistance.md),
 [ADR 0011](../decisions/0011-evidence-backed-assistance.md).
 
@@ -16,12 +18,12 @@ paas nahi hai, us par guess karke fact na banaye. Number database se aaye; model
 sirf us number ko samajhne aur seedhe shabdon mein batane mein madad kare.*
 
 The near-term opportunity is better grounded assistance and analytics, not a
-bigger model. Reuse the existing deterministic insights and local query engine;
-first fix their evidence, coverage and comparison limits. Use statistical
-methods for totals, patterns and forecasts. Give the local language model the
-small job of interpreting questions or selecting supported claim IDs for
-fixed plain-language rendering. It should not make
-up missing purchases, merchant identities, user intent or amounts.
+bigger model. T-178a delivered typed claims with evidence and fair comparisons;
+reuse those contracts while validating forecasts and remaining coverage limits.
+Use statistical methods for totals, patterns and forecasts. Give the local
+language model the small job of interpreting questions or selecting supported
+claim IDs for fixed plain-language rendering. It should not make up missing
+purchases, merchant identities, user intent or amounts.
 
 ## What exists today
 
@@ -41,25 +43,21 @@ quality:
   optional feature slots are zero in normal prediction. A probability-like
   softmax score is not automatically a calibrated probability of correctness.
 - **Exact answers:** `lib/intelligence/assistant/query_engine.dart` computes
-  totals, breakdowns, comparisons, recurring items and active insight lists
-  from local records. `AnswerRenderer` formats the result. This is the right
-  owner for arithmetic; the assistant intent classifier should only route a
-  question into supported query shapes. Its transaction query currently checks
-  date range, deleted/duplicate/excluded state and owned transfers, but omits
-  `lifecycleState == settled` and spending-category eligibility. Dashboard
-  aggregates reuse `FinancialEligibility`; assistant answers can therefore
-  disagree with dashboard totals when pending/reversed rows or non-spending
-  categories are present. Treat shared eligibility and parity coverage as a
-  T-178a prerequisite; T-178c financial questions depend on its completion.
+  totals, breakdowns, comparisons, recurring items and active validated claims
+  from local records. T-178a closed the earlier settled/spending eligibility
+  parity gap. Ask payee matching now resolves whole phrases across labels,
+  aliases, and captured payee/VPA evidence, and clarifies multiple matches.
+  `AnswerRenderer` owns answer text and figures; see the current
+  [assistant contract](../assistant-nlq.md) and
+  [architecture](../architecture.md#grounded-assistant).
 - **Existing insights:** deterministic code detects recurring series,
   anomalies, fees, price changes, missed recurring payments, category changes
   and a month-end burn-rate projection. These are statistical/rule-based
   features, not generative AI. They already provide useful evidence to explain.
-- **On-device LLM:** `NarrativeInsightGenerator` sends aggregate insight JSON
-  to the local runtime and asks for one short qualitative monthly observation.
-  It rejects digits and advice words. This prevents model-authored numbers but
-  does not prove that a qualitative statement is supported by a specific
-  aggregate or that it describes the user's situation correctly.
+- **Insight claims:** T-178a stores versioned observed-fact claims and renders
+  their text through fixed `ClaimRenderer` templates after freshness and
+  evidence validation. Free-form narrative generation was removed; forecast
+  and anomaly rows remain hidden until a validated claim path is approved.
 - **Hardware and availability:** `PlatformLlmRuntime` has feature, model,
   device, timeout and failure states. Native code reports model/runtime and
   device eligibility. The optional local model can be absent, unsupported,
@@ -72,7 +70,7 @@ quality:
 |---|---|---|---|---|
 | 1 | Transaction auto-fill and learned corrections | Known payees/categories are filled from explicit rules and confirmed history; only uncertain fields need a quick answer | Deterministic parsing and rules, then tested local classifier; LLM may explain a suggestion but not establish facts | T-177 |
 | 2 | Ask questions about recorded money | “How much did I spend on food last month?” returns a date range, total, matching count and tap-through records | Local intent routing plus deterministic database query and renderer | Improve existing assistant |
-| 3 | Spending-pattern explanations | “What changed this month?” points to a verified comparison, dates and transactions | Statistical comparisons and typed evidence; optional selection/ranking of validated claim IDs with fixed rendering | T-178a |
+| 3 | Spending-pattern explanations | “What changed this month?” points to a verified comparison, dates and transactions | Statistical comparisons and typed evidence with fixed rendering | T-178a complete; further question support is T-178c |
 | 4 | Recorded-spending month-end estimate | A range, assumptions and known upcoming recurring payments; uncertainty rises when capture is incomplete | Statistical forecast and interval calibration; no LLM arithmetic | T-178b |
 | 5 | Unusual-spend alerts | Notice an unusual merchant/category amount and show its own baseline and transactions | Robust statistical detector, minimum-history and materiality gates | Improve existing anomaly path |
 | 6 | Recurring payment and price changes | Expected payment date/amount and observed changes; user can correct a mistaken series | Periodicity detection and exact transaction evidence | Improve recurring insights |
@@ -209,24 +207,20 @@ remain useful for edge cases, but are not evidence of real-world accuracy.
 
 ## Proposed delivery map
 
-These are proposed scopes from the current [T-178 task brief](../tasks/T-178.md),
-not completed work. Keep feature work aligned with T-177 and ADR 0011.
+T-178a is complete. The remaining scopes are proposals from the current
+[T-178 task brief](../tasks/T-178.md), not completed work. Keep feature work
+aligned with T-177 and ADR 0011.
 
 | Ticket | Proposed scope | Exit evidence |
 |---|---|---|
-| T-178a | Evidence-linked insight claims and fair comparisons | Each claim reproduces from linked rows; equal-period comparisons, exclusions, missing evidence and unsupported qualitative claims are tested |
+| T-178a | Evidence-linked insight claims and fair comparisons | Complete: versioned claims, eligibility parity, evidence freshness and fixed rendering; see the current architecture and release history |
 | T-178b | Forecast ranges, data sufficiency and evaluation | Rolling-origin baseline comparison, amount error, interval coverage/width, low-history abstention and capture-gap handling |
 | T-178c | Typed English/Hinglish assistant over verified results | Supported question evaluation, exact totals/filters, ambiguity clarification, evidence links and honest unavailable states |
 | T-178d | Local quality and performance release gate | Chronological quality report, sample/cohort limits, target-device latency/memory, offline and rollback evidence |
 
-Before expanding assistant financial questions, reuse `FinancialEligibility`
-where the query metric permits it and keep metric-specific rules explicit.
-Add parity tests that seed settled and pending rows, excluded and owned
-transfers, duplicates, deleted rows, spending and non-spending categories, plus
-credits/refunds; compare assistant results with the corresponding Dashboard
-query for the same period and scope. This tests shared policy rather than
-copying a second hand-maintained predicate. Preserve intentional metric
-differences (such as income versus spending) in the test expectations.
+Future assistant intents must reuse `FinancialEligibility` where the query
+metric permits it and keep metric-specific rules explicit. Preserve intentional
+metric differences (such as income versus spending) in their test expectations.
 
 Prerequisites: finish T-177a integration/evidence audit, settle the transaction
 correction and undo review in the feature plan, and test baseline data quality
@@ -235,9 +229,8 @@ substitute for this work.
 
 ## Recommendation
 
-Prioritize in this order: trustworthy transaction corrections (T-177), typed
-evidence-backed insights and fair comparisons (T-178a), measured forecast
-uncertainty (T-178b), then typed English/Hinglish questions over verified
+Prioritize in this order: trustworthy transaction corrections (T-177), measured
+forecast uncertainty (T-178b), then typed English/Hinglish questions over verified
 results (T-178c), with local quality and performance as the release gate
 (T-178d). This uses real local records, helps the user act on them, and keeps
 the model in the role it can safely do well: language, not financial truth.

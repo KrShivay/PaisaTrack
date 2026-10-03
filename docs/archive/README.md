@@ -15,6 +15,8 @@ are not current implementation guidance.
   procedure in `docs/product-quality-review.md`.
 - `planning-cleanup-2026-09.md`: compact mapping of completed task briefs and
   duplicate umbrella entries to the historical Git state.
+- `tasks/T-155.md`: stale, unboarded threshold-consolidation proposal with no
+  active board item or implementation dependency.
 
 Use `docs/product-status.md` for current state, `PLAN.md` for future outcomes,
 and `TASKS.md` for unfinished delivery work.

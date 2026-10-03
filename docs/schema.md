@@ -5,18 +5,34 @@ The executable source of truth is the Drift schema under
 
 ## Current schema
 
+`AppDatabase.schemaVersion` is **19** (`lib/data/db/database.dart`). The
+current Drift tables are `transactions`, `raw_sms`, `merchants`,
+`merchant_aliases`, `categories`, `rules`, `feedback`, `payment_sources`,
+`financial_events`, `transaction_links`, `counterparties`, `expected_events`,
+`feature_flags`, `baselines`, `insights`, `recurring_series`, `model_meta`,
+`payee_evidence`, `shadow_transactions`, and `sms_dispositions`.
+
 - `transactions`: normalized rows, source-currency code/symbol evidence, status, soft deletion,
   duplicate links, payment-source links, owned-transfer links, and analytics
   exclusion state.
 - `raw_sms`: retained source messages and processing state.
 - `merchants` / `merchant_aliases`: canonical identity, user labels, and aliases.
+- `counterparties`: structured identity registry for merchants, people,
+  institutions, self, and unknown counterparties.
+- `financial_events` / `transaction_links`: logical-event and transaction
+  relationship records.
+- `expected_events`: reminders kept separate from settled transactions.
+- `sms_dispositions`: content-free durable “Not a transaction” decisions keyed
+  by provider SMS ID; no foreign key to retention-bound `raw_sms`.
 - `payee_evidence`: derived, rebuildable normalized merchant/VPA evidence used
   by SQL payee aggregation and keyset search; original transaction fields stay
   authoritative.
 - `payment_sources`: masked accounts/cards/wallets, nicknames, institution,
   ownership, active state, and analytics inclusion.
 - `categories`, `rules`, `feedback`: taxonomy and learning inputs.
-- `recurring_series`, `insights`, `model_meta`: local intelligence state.
+- `recurring_series`, `insights`, `model_meta`, and `shadow_transactions`:
+  local intelligence and shadow-evaluation state.
+- `feature_flags`: local behavioral flags and thresholds.
 - `baselines`: anomaly/forecast state plus the current global monthly-budget and
   merchant-cap prototype. This reuse is transitional; T-098 requires a
   dedicated per-category/per-month budget model.
@@ -79,6 +95,22 @@ Schema v12 adds `expected_events` (id, source, origin_sms_id, series_id, counter
 Schema v13 adds `feature_flags` (key primary key, value, updated_at) table (T-143a) to store dynamic behavioral thresholds and flags with `AppConstants` acting as static fallbacks. Regression fixture:
 `test/data/db/app_database_v13_migration_test.dart`.
 
+Schema v14 repairs `raw_sms` installations missing `parser_version` or
+`failure_reason`, creating the current table if it is absent.
+
+Schema v15 adds `payee_evidence` for T-117. It stores one derived row per
+non-empty merchant/VPA evidence field and indexes transaction and normalized
+identity lookups. Existing transactions are backfilled without changing their
+source fields; the index is also rebuilt after an encrypted archive restore.
+
+Schema v16 adds `shadow_transactions` for local shadow evaluation.
+
+Schema v17 adds `transactions.is_not_transaction` and the content-free
+`sms_dispositions` table for T-185. The table stores the provider SMS ID,
+normalized transaction ID, disposition, and correction timestamp, with no
+foreign key to retention-bound `raw_sms`. The additive migration defaults
+existing transactions to eligible and preserves all ledger rows.
+
 Schema v18 adds nullable `currency_code` and `currency_symbol` columns to
 `transactions`, `recurring_series`, and `expected_events`. Existing rows remain
 unknown unless source evidence is available; a bare `$` retains its symbol
@@ -92,14 +124,3 @@ rules match the exact normalized payee key; only legacy rules keep the older
 word-boundary fallback, and only when no exact rule matches. Restored archives
 from before v19 are normalized the same way. Regression fixture:
 `test/data/db/app_database_v19_rule_legacy_migration_test.dart`.
-
-Schema v15 adds `payee_evidence` for T-117. It stores one derived row per
-non-empty merchant/VPA evidence field and indexes transaction and normalized
-identity lookups. Existing transactions are backfilled without changing their
-source fields; the index is also rebuilt after an encrypted archive restore.
-
-Schema v17 adds `transactions.is_not_transaction` and the content-free
-`sms_dispositions` table for T-185. The table stores the provider SMS ID,
-normalized transaction ID, disposition, and correction timestamp, with no
-foreign key to retention-bound `raw_sms`. The additive migration defaults
-existing transactions to eligible and preserves all ledger rows.

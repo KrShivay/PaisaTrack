@@ -16,10 +16,13 @@
 - Release 0.1.6+2015 (`13dd4d5`): suite 1174/1174, Gradle 31/31 + 10/10,
   installed in place (firstInstallTime unchanged, hash matched), cold launch
   1040 ms, published `apk-downloads` `5747e3c`. Open: landscape/2.0x/3-button
-  recheck on this build (phone back in portrait), stale pre-day-7 category
-  card still visible right after install, VPA-only rows still display raw
+  recheck on this build (phone back in portrait); the stale pre-day-7
+  category card cleared once insights regenerated. VPA-only rows still display raw
   VPAs, Top merchants shows several "Unknown" rows. R2 entry is in Git
-  history (`f730857`).
+  history (`f730857`). T-195–T-198 are now Ready on the task board.
+  Follow-up release 0.1.7+2016 (`016465d`, adds the month-over-month badge
+  fix `37beb17`): suite 1176/1176, installed in place, published
+  `apk-downloads` `0e151f2`.
 
 ## 2026-10-03 — Roadmap planning and docs cleanup (no code)
 
@@ -30,7 +33,8 @@
   [credit-card accounting](docs/plans/credit-card-accounting.md) + ADR 0020
   (Proposed) + briefs T-190a1–h2, and
   [grounded-AI validation](docs/plans/grounded-ai-validation.md) (T-178b–d).
-  Groomed briefs T-100/101/102/098/130; board points to them; nothing Ready.
+  Groomed briefs T-100/101/102/098/130; the board had nothing Ready at that
+  handoff. The later owner requests T-195–T-198 are Ready.
 - Docs: [index](docs/README.md), [ADR index](docs/decisions/README.md) (0013
   unused, next 0021), `scripts/check_doc_links.py` (clean), archived the
   2026-08 value review, restored the missing `## Ready` heading.
