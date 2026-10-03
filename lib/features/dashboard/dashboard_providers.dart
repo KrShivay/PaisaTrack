@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/clock.dart';
 import '../../core/financial_calendar.dart';
+import '../../core/format.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/dashboard_repository.dart';
 import '../../data/repositories/budget_repository.dart';
@@ -593,14 +594,14 @@ final dashboardGreetingProvider = Provider<String>((ref) {
 final dashboardStatusSublineProvider = Provider<String>((ref) {
   final mom = ref.watch(monthOverMonthSpendProvider).valueOrNull;
   if (mom != null && mom.pctChange != null) {
-    final pct = (mom.pctChange! * 100).abs().toStringAsFixed(0);
+    final pct = formatPercentChange(mom.pctChange!);
     final period = ref.watch(dashboardPeriodProvider);
     final now = ref.watch(clockProvider)();
     final comparison = period.comparisonSublineAt(now);
     if (mom.pctChange! < 0) {
-      return '$pct% lower spend $comparison';
+      return '$pct lower spend $comparison';
     } else if (mom.pctChange! > 0) {
-      return '$pct% higher spend $comparison';
+      return '$pct higher spend $comparison';
     }
   }
   final safeToday = ref.watch(safeTodayValueProvider).valueOrNull;

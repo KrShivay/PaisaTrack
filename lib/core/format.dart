@@ -217,3 +217,8 @@ String formatIsoDateRange(String startIso, String endIso) {
   return '${shortDate(start, includeYear: includeYear)}–'
       '${shortDate(end, includeYear: includeYear)}';
 }
+
+/// Formats the magnitude of a fractional change (0.59 → "59%") for badges and
+/// copy; callers show direction separately.
+String formatPercentChange(double fraction, {int decimals = 0}) =>
+    '${(fraction * 100).abs().toStringAsFixed(decimals)}%';

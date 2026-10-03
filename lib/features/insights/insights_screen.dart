@@ -1065,7 +1065,7 @@ class _MoMComparisonCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '${pctChange.abs().toStringAsFixed(1)}%',
+                  formatPercentChange(pctChange, decimals: 1),
                   style: AppTheme.bloomMono(
                     13,
                     FontWeight.w600,

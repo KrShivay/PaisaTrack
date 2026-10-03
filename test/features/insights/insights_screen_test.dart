@@ -77,6 +77,43 @@ void main() {
     expect(find.text('MONTH OVER MONTH'), findsOneWidget);
   });
 
+  testWidgets('month-over-month badge shows the change as a percentage',
+      (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardAggregateProvider
+              .overrideWith((ref) async => _emptyDashboardAggregate),
+          monthOverMonthSpendProvider.overrideWith(
+            (ref) => const AsyncValue.data(
+              MonthOverMonthSpend(
+                current: 111297.95,
+                previous: 69945.25,
+                pctChange: (111297.95 - 69945.25) / 69945.25,
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: InsightsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.text('MONTH OVER MONTH'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('59.1%'), findsOneWidget);
+    expect(find.text('0.6%'), findsNothing);
+  });
+
   testWidgets('unknown and injected narrative rows never render',
       (tester) async {
     tester.view.physicalSize = const Size(402, 874);

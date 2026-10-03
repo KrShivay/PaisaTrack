@@ -175,4 +175,10 @@ void main() {
       );
     });
   });
+
+  test('formatPercentChange scales a fraction and drops the sign', () {
+    expect(formatPercentChange(0.5912), '59%');
+    expect(formatPercentChange(-0.5912, decimals: 1), '59.1%');
+    expect(formatPercentChange(0.004, decimals: 1), '0.4%');
+  });
 }
