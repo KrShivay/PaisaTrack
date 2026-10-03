@@ -1,18 +1,5 @@
 # Current Handoff
 
-## 2026-10-03 — @claude review: T-195 PASS
-
-- T-195 (`126f7d4`) review PASS: ADR 0021 matches code; one `RawSmsRetention`
-  predicate drives nightly purge, backup export/restore and the unreadable
-  count; the relinker links only exact evidence matches, atomically, and never
-  edits transactions; no schema change; regression tests read and
-  non-vacuous (match/skip/ambiguous/paused/conflict/idempotent, nightly,
-  backup). Tests were not re-run in this session (shell approval
-  unavailable); relied on the recorded 1185/1185 evidence.
-- Removed T-195 from the board. Its only open item, the owner-phone re-link
-  check, moved into T-170b. Nothing else In Review; T-196–T-198 are Ready
-  for @codex.
-
 ## 2026-10-03 — Cloud session: T-195 to T-198, T-154b
 
 - T-195 (ADR 0021): SMS behind a transaction or "Not a transaction" are kept;
@@ -35,8 +22,18 @@
 - T-154b: Sort "Not right?" quick corrections; guess recomputed after an
   edit with Keep disabled until it settles; Keep stores it without feedback
   or rules. Suite 1212/1212.
+- Reviews: each task had an independent Claude review; T-195 PASS (its
+  phone check moved into T-170b); T-196/T-197/T-198/T-154b findings fixed
+  before or after commit. T-196, T-197, T-198 and T-154b stay In Review only
+  for the owner-phone check.
+- Needs the owner's machine: phone QA of T-195 (Settings → "Restore SMS
+  sources", a >30-day transaction shows its SMS), T-196–T-198 and T-154b;
+  T-176/T-167c landscape + 2.0x + three-button recheck; signed release and
+  `apk-downloads` publish; T-194 stays on `codex/apk-size-trial`. No Android
+  SDK in the cloud container, so no debug APK build was run.
 - Push from the cloud failed (403, Claude GitHub App has no repo access);
-  commits are local until access is fixed. The T-177 R3 entry is in Git
+  the commits exist only on the cloud branch `claude/great-cannon-16aotf`
+  until access is fixed. Next code slice per roadmap: T-165b. The T-177 R3 entry is in Git
   history (`c381756`).
 
 ## 2026-10-03 — Owner-phone defects fixed; release 0.1.6+2015
