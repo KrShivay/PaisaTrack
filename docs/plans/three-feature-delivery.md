@@ -118,6 +118,10 @@ is an `echo`. `FinancialEligibility` currently excludes invalid, non-settled,
 duplicate, analytics-excluded, and owned-transfer rows, but does not net refund
 edges. `FinancialEvents.netAmountPaise` has no current repository consumer.
 
+The [source audit](../reports/T-100a-refund-source-audit.md) inventories current
+callers, storage/backup gaps, synthetic cases, and unresolved owner decisions.
+It records no executed tests and does not approve the proposed contract.
+
 ### Slices and visible behavior
 
 1. **T-100a — audit and accounting contract.** Verify every aggregate caller,
