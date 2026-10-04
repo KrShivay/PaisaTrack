@@ -47,9 +47,10 @@ acceptance contract is met.
   preparation under [ADR 0026](../decisions/0026-read-only-refund-preview.md).
   It exposes no write or calendar aggregate path. The owner refund-period
   question remains unanswered; T-100a/b/c are still open.
-- T-190a1's read-only source report is the next safe card implementation.
+- [T-190a1](../tasks/T-190a1.md) adds the isolated read-only Settings source
+  report under [ADR 0027](../decisions/0027-read-only-card-source-audit.md).
   Ownership confirmation, liability, bill repayment and refund accounting
-  wait for their contracts; the source audit does not approve ADR 0020.
+  wait for their contracts; this audit does not approve ADR 0020.
 
 ## 1. Repeat-payee category suggestions
 
@@ -223,8 +224,9 @@ flow. Generic transaction links alone do not define net totals.
 
 The [card source audit](../reports/T-190a1-card-source-audit.md) records current
 inferred identities, ownership writes, transfer behavior, and missing ledger
-contracts. It is read-only preparation; it does not complete T-190a1 or approve
-ownership, schema, or accounting changes.
+contracts. Its original source-only preparation is separate from the bounded
+[T-190a1 host implementation](../tasks/T-190a1.md); neither approves ownership,
+schema, or accounting changes.
 
 ### Acceptance evidence
 

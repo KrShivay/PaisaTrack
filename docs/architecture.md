@@ -201,6 +201,17 @@ refuse conflicting merges without replacing raw source fields.
   user-authored links remain intact. A repeated reconciliation with unchanged
   evidence writes no rows. Conservatively paired transfers are excluded from
   aggregates without hiding either transaction.
+- Settings has an isolated read-only Card source audit route under
+  [ADR 0027](decisions/0027-read-only-card-source-audit.md). Its direct repository
+  uses one read transaction, SQL source/currency/lifecycle aggregates and
+  deterministic timestamp/ID candidate pages. Summaries return up to 100 sources,
+  20 buckets per source and 20 observed identity conflicts; omitted coverage is
+  explicit and source record totals remain complete. Candidates default to 40
+  per page (maximum 100). Identifiers show only a safe four-digit suffix.
+  Product/ownership remain unverified; excluded/deleted/nontransaction/duplicate
+  and transfer facts stay visible. The route bypasses paymentSourcesProvider's
+  load-time reconciliation and creates no source, relationship or accounting
+  change. Already-collapsed historical source collisions remain unobservable.
 - Recurring detection derives series from settled history.
 - `RefundLinkPreviewRepository` is a read-only preparation API with no production
   UI or ingestion caller. It uses exact stored-reference equality, source-currency

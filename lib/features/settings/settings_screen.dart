@@ -24,6 +24,7 @@ import '../transactions/transactions_providers.dart';
 import 'app_data_reset_service.dart';
 import 'app_settings.dart';
 import 'category_manager_screen.dart';
+import 'card_source_audit_screen.dart';
 import 'payee_labels_screen.dart';
 import 'payment_sources_screen.dart';
 import 'not_transactions_screen.dart';
@@ -334,6 +335,18 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const PaymentSourcesScreen(),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  _TileRow(
+                    icon: Icons.fact_check_outlined,
+                    title: 'Card source audit',
+                    subtitle: 'Review stored source details without changes',
+                    isDark: isDark,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const CardSourceAuditScreen(),
                       ),
                     ),
                   ),
@@ -1107,6 +1120,7 @@ class _ResetDataButton extends ConsumerWidget {
       final confirm = await showBloomDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          scrollable: true,
           title: const Text('Delete all local data?'),
           content: const Text(
             'This permanently wipes all local transactions, categories, and learned rules from this device. This cannot be undone.',

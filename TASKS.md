@@ -448,8 +448,8 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 
 ## Backlog
 
-- [ ] T-190 [P2] Plan credit-card purchase, bill, payment, refund, and failure
-      accounting. **Do this last among the newly requested tasks.**
+- [ ] T-190 [P2] Resolve credit-card ownership/accounting contracts and deliver
+      the remaining purchase, bill, payment, refund and failure phases. **Do this last among the newly requested tasks.**
   - Acceptance: Produce a grounded scenario map for card purchases, statement
     generation, bill payments, full/partial refunds, failed/reversed payments,
     and statement reconciliation. Define which source rows remain immutable,
@@ -463,7 +463,9 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
   - Plan drafted and independently reviewed (proposed, owner decisions open):
     [credit-card accounting](docs/plans/credit-card-accounting.md),
     [ADR 0020 (Proposed)](docs/decisions/0020-credit-card-accounting.md),
-    phased briefs [T-190a1–h2](docs/tasks/T-190.md). No child is Ready.
+    phased briefs [T-190a1–h2](docs/tasks/T-190.md). The isolated
+    [T-190a1 audit](docs/tasks/T-190a1.md) is host-complete under ADR 0027;
+    ownership/accounting children remain unapproved and no child is Ready.
 
 <!-- Groom future work here before promoting it to Ready. -->
 

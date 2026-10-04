@@ -1,11 +1,19 @@
 # Product Status
 
-Status date: 2026-10-03
-Code baseline: main at `016465d`; package version `0.1.7+2016`.
-The published `0.1.7+2016` ARM64 release was installed in place on the owner
-device (the previous `0.1.6+2015` build was also launched and checked there). Broad T-176/T-167c layout acceptance and other listed release
-gates remain open. T-179a isolated lost-key recovery passed on a physical
-device (2026-10-01).
+Status date: 2026-10-04
+Continuation baseline: main at `a2009ea`; package version `0.1.10+2019`.
+The owner phone remains on the earlier signed `0.1.10+2019` ARM64 build
+(effective code `4019`), which predates merchant suggestions and this
+continuation. No phone update or APK publication was performed here. Broad
+layout/accessibility/capture/release acceptance remains open. T-179a isolated
+lost-key recovery passed on a physical device (2026-10-01).
+
+Merchant suggestions are host-complete and default-off. The read-only refund
+preview is host-complete under [ADR 0026](decisions/0026-read-only-refund-preview.md),
+with no production caller, persistence or net-spend change. The isolated card
+source audit is host-complete under [ADR 0027](decisions/0027-read-only-card-source-audit.md).
+Owner refund-period and card accounting/ownership decisions remain open;
+these foundations do not complete either accounting feature.
 
 This is the source of truth for current product state. Normative technical
 contracts live in the linked `docs/` files, future outcomes live in `PLAN.md`,
@@ -82,13 +90,15 @@ normative boundaries.
 | Dashboard | SQL aggregates, shared local calendar/eligibility contract, period selector, truthful loading/error states, period and eligibility disclosure, known exclusions, local-data coverage caveat, separate foreign/unknown source-currency subtotals, global monthly budget prototype, recurring totals | Bank-wide capture completeness cannot be known from local records; INR-only budget math excludes other currencies |
 | Trends/recurring | Deterministic evidence-backed claims power the Trends feed and local Trends inbox; recurring series/statuses and currency buckets remain separate; insight text is rendered from claims | Only valid, fresh supported claims appear; legacy rows without retained currency evidence remain unknown |
 | Categories and identities | Category manager, SQL-backed paged payee labels/search, payment-source naming/ownership/exclusion | Duplicate suggestions remain review-only; several secondary screens retain legacy surfaces |
+| Refund tracking | Read-only guarded preview API under ADR 0026; no production caller or amount changes | Persisted links, review/Undo, owner refund-period policy and canonical net totals remain open |
+| Card bills and repayments | Isolated read-only Settings source audit under ADR 0027; stored evidence and uncertainty stay visible | Confirmed ownership/product, allocation, liability, statement and shared refund contracts remain open |
 | Assistant | Deterministic intents and queries with guarded local-model intent fallback; payee matching uses whole-phrase identity evidence and clarifies ambiguity; answers disclose their counting scope | Conversation accessibility remains incomplete; VPA-only rows can still display raw VPAs in other surfaces |
 | Encrypted storage/recovery | SQLCipher, Keystore-backed passphrase, durable key persistence, typed recovery | Physical-device backup/SAF acceptance remains release evidence |
 | Backup/import | v3 archive compatibility plus authenticated v2 chunked document envelope; paged row serialization, transactional restore, progress/cancellation, bounded 32 MiB encrypted file, 16 MiB payload, 50,000-row/table and 200,000-row/archive limits; only non-expired raw SMS is exported/restored; transaction links, counterparties, category hierarchy, expected events, and durable SMS dispositions round-trip | Physical SAF/provider acceptance remains open; Ready T-195 proposes changing linked-source SMS expiry and backup inclusion |
 | Delete everything | Deletes database/native state, DB key, Dart settings, and import markers | Physical-device erasure acceptance remains |
 | Accessibility | Reduced motion and some semantics/responsive tests exist | Touch targets, TalkBack labels/order, contrast, large text, and device acceptance are incomplete |
 | Offline behavior | Core finance and inference work offline after optional model downloads | Background/device-only behavior is not fully accepted on physical hardware |
-| Release/distribution | Public production-signed ARM64 `0.1.7+2016` / code `4016` download was hash-verified against the installed artifact; cold launch and bounded checks were recorded on `0.1.6+2015` | Landscape/2×/three-button recheck, data-integrity checks, CI/device test lanes, store distribution, and broader physical acceptance remain; see [release evidence](release-signing.md) |
+| Release/distribution | Owner phone has an earlier signed ARM64 `0.1.10+2019` / code `4019` installed in place and hash-verified; current source additions have not been installed or published | Landscape/2×/three-button recheck, data-integrity checks, CI/device test lanes, store distribution, and broader physical acceptance remain; see [release evidence](release-signing.md) |
 
 The stored global monthly budget and merchant-cap prototype are not T-098.
 T-098 is a future per-category, per-month budget feature and depends on a shared

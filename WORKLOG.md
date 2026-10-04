@@ -1,30 +1,5 @@
 # Current Handoff
 
-## 2026-10-04 — T-167b host accepted; first feature in parallel
-
-- Custom Activity, Dashboard, Settings, Review, and notice controls expose
-  meaningful semantics and 48dp targets. Compact/large-text search, complete
-  amounts, and scrollable Sort content preserve legibility and navigation
-  clearance. Independent review passed; T-167b is removed from the active board.
-- Full serial suite 1,285/1,285, including encrypted schema migration;
-  America/New_York touched directories 384/384; analyzer clean; formatter
-  12 edited Dart files unchanged; Markdown links and diff checks pass.
-  Complete GitNexus scan before acceptance: 17 files, 39 symbols, zero reported
-  processes, LOW risk, no partial/truncated result. Refreshed index: 8,825 nodes,
-  20,659 edges, 407 flows. Its capped global process inventory remains an
-  inference limitation; source review and actual callback tests cover UI paths.
-- Signed arm64 0.1.10+2019 compiled and installed in place, effective code 4019,
-  last update 2026-10-04 03:06:24; first install unchanged at
-  2026-09-26 22:20:54. Artifact: 57,144,360 bytes, SHA-256
-  `4e96bb36bfd02a02228942b642ab1db079325b0a9dfd6f0205e1a15d4f649ea2`.
-  Pulled installed base APK matches that exact byte count and SHA-256.
-  Signer, ZIP integrity, alignment, and six arm64-only native libraries pass.
-  No owner UI, SMS, records, database, or logs were read; physical TalkBack,
-  QR Sort, confirmation UI, and native-back gates remain open.
-- The requested feature sequence is recorded in the T-177b-S1 brief and
-  delivery plan. Production enablement remains gated by T-177a/T-177f; both
-  original stashes and the isolated T-194 size trial remain preserved.
-
 ## 2026-10-04 — T-177b-S1 host complete; rollout gates open
 
 - Transaction detail now offers a default-off, exact-payee category suggestion
@@ -83,3 +58,40 @@
   remain open. Phone is connected at the existing endpoint; only connection
   metadata was checked. No owner GUI/SMS/DB/log/backup/key access, phone update
   or APK publication. Both protected stashes and the T-194 trial remain intact.
+
+## 2026-10-04 — T-190a1 read-only card source audit host complete
+
+- Luna High implemented the isolated Settings route; Sol independently
+  reviewed it, with a second Luna reviewing/debugging host acceptance. The
+  repository uses one consistent read transaction, SQL groups and bounded
+  timestamp/ID pages. It exposes retained source/currency/lifecycle/flag facts,
+  safe identifier suffixes, absent labels and observed identity conflicts.
+  Product/ownership stay unverified; historical merged collisions stay unknown.
+- The real route bypasses paymentSourcesProvider's transfer reconciliation.
+  A control fixture proves the seeded reciprocal pair would reconcile; all
+  source/transaction/link/feedback values and real Dashboard aggregates remain
+  unchanged across report reads and Settings navigation. No writes, schema,
+  backup, capture or financial projection changes. ADR 0027 accepts host audit
+  only; ownership preview/confirmation/Undo and card accounting remain open.
+- Focused Settings/audit tests 15/15 in default and America/New_York; analyzer
+  clean; formatter six changed Dart files unchanged. Final serial full suite
+  passes 1,338/1,338, no failures/skips; encrypted migration executed.
+  Markdown links (154 files), board/handoff invariants and diff checks pass.
+  Refreshed GitNexus: 9,131 nodes, 21,375 edges, 416 flows. Complete scan:
+  16 files/184 symbols, all 184 returned, 11 reviewed audit-read/display/paging
+  flows, HIGH risk; no true partial/truncated flags. Global inventory still
+  omits 1,092 entrypoints, 1,459 callees and 35 walks. The provider's empty
+  graph references and existing Bloom test's one-line main span do not prove
+  absence of calls or change; actual provider/route tests and diff review cover
+  those boundaries. Widget teardown now flushes Riverpod disposal timers
+  and closes the synthetic DB in real async; no diagnostic logging remains.
+- Full-suite regression reached an existing reset-dialog overflow at
+  320×568/2× after fixing the test's offscreen edge tap. Its content is now
+  scrollable; unchanged destructive confirmation logic, full 48dp surface,
+  no-overflow and Cancel dismissal are covered without reducing text scale.
+- Merchant suggestions remain default-off; consented holdout/cohort/threshold,
+  live/resume device evidence and T-177f rollout gates remain open. The owner
+  refund-period question remains unanswered; T-100 linking/Undo/net totals and
+  card ownership/instrument/schema/accounting contracts remain open. No owner
+  GUI/SMS/DB/log/backup/key access, phone update or APK publication. Both
+  protected stashes, isolated T-194 trial and .handoff/paused remain intact.
