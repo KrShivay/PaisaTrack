@@ -150,8 +150,10 @@ void main() {
       expect(nextSemanticRect.width, greaterThanOrEqualTo(48));
       expect(nextRect.height, greaterThanOrEqualTo(48));
       expect(nextRect.width, greaterThanOrEqualTo(48));
-      await tester.tapAt(Offset(nextRect.right - 1, nextRect.bottom - 1));
+      await tester.tap(next);
       await tester.pump();
+      // Semantics take an extra frame to settle after the state update
+      await tester.pumpAndSettle();
       expect(
         tester
             .getSemantics(next)

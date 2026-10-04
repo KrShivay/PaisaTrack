@@ -18,10 +18,7 @@ import 'dashboard_providers.dart';
 
 /// Conic ring painter drawing category arcs in descending order with remainder arc.
 class BloomHeroRingPainter extends CustomPainter {
-  BloomHeroRingPainter({
-    required this.slices,
-    required this.isDark,
-  });
+  BloomHeroRingPainter({required this.slices, required this.isDark});
 
   final List<CategorySlice> slices;
   final bool isDark;
@@ -89,13 +86,15 @@ class BloomHeroRing extends ConsumerWidget {
     final creditColor = isDark
         ? AppColorTokens.bloomCreditDark
         : AppColorTokens.bloomCreditLight;
-    final debitColor =
-        isDark ? AppColorTokens.bloomDebitDark : AppColorTokens.bloomDebitLight;
+    final debitColor = isDark
+        ? AppColorTokens.bloomDebitDark
+        : AppColorTokens.bloomDebitLight;
     final secondaryColor = isDark
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
-    final primaryColor =
-        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    final primaryColor = isDark
+        ? AppColorTokens.bloomDarkTextPrimary
+        : AppColorTokens.ink;
 
     // Resolve the selected metric into displayable content while keeping the
     // aggregate's loading and error states distinct — the ring never shows a
@@ -103,7 +102,9 @@ class BloomHeroRing extends ConsumerWidget {
     final AsyncValue<_HeroMetricContent> contentAsync;
     switch (selectedMetric) {
       case DashboardMetricChoice.safeToday:
-        contentAsync = ref.watch(safeTodayValueProvider).whenData(
+        contentAsync = ref
+            .watch(safeTodayValueProvider)
+            .whenData(
               (safeToday) => _HeroMetricContent(
                 label: 'SAFE TODAY',
                 amount: safeToday != null
@@ -118,7 +119,9 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             );
       case DashboardMetricChoice.netFlow:
-        contentAsync = ref.watch(monthNetProvider).whenData(
+        contentAsync = ref
+            .watch(monthNetProvider)
+            .whenData(
               (netFlow) => _HeroMetricContent(
                 label: 'NET FLOW',
                 amount: _formatAmount(netFlow, showPaise: showPaise),
@@ -127,7 +130,9 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             );
       case DashboardMetricChoice.burn:
-        contentAsync = ref.watch(dailyAverageSpendProvider).whenData(
+        contentAsync = ref
+            .watch(dailyAverageSpendProvider)
+            .whenData(
               (burn) => _HeroMetricContent(
                 label: 'BURN RATE',
                 amount: _formatAmount(burn, showPaise: showPaise),
@@ -136,7 +141,9 @@ class BloomHeroRing extends ConsumerWidget {
               ),
             );
       case DashboardMetricChoice.runway:
-        contentAsync = ref.watch(runwayValueProvider).whenData(
+        contentAsync = ref
+            .watch(runwayValueProvider)
+            .whenData(
               (runway) => _HeroMetricContent(
                 label: 'RUNWAY',
                 amount: runway != null
@@ -150,8 +157,9 @@ class BloomHeroRing extends ConsumerWidget {
             );
     }
 
-    final innerBg =
-        isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase;
+    final innerBg = isDark
+        ? AppColorTokens.bloomDarkBase
+        : AppColorTokens.bloomBase;
     final compact = size < 200;
     final innerSize = size * 0.78;
 
@@ -164,19 +172,13 @@ class BloomHeroRing extends ConsumerWidget {
           children: [
             CustomPaint(
               size: Size.square(size),
-              painter: BloomHeroRingPainter(
-                slices: slices,
-                isDark: isDark,
-              ),
+              painter: BloomHeroRingPainter(slices: slices, isDark: isDark),
             ),
             // Keep the inner circle proportional when the landscape ring shrinks.
             Container(
               width: innerSize,
               height: innerSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: innerBg,
-              ),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: innerBg),
               child: AnimatedSwitcher(
                 duration: AppDurations.fast,
                 child: KeyedSubtree(
@@ -222,11 +224,11 @@ class BloomHeroRing extends ConsumerWidget {
   }
 
   static String _metricLabel(DashboardMetricChoice metric) => switch (metric) {
-        DashboardMetricChoice.safeToday => 'SAFE TODAY',
-        DashboardMetricChoice.netFlow => 'NET FLOW',
-        DashboardMetricChoice.burn => 'BURN RATE',
-        DashboardMetricChoice.runway => 'RUNWAY',
-      };
+    DashboardMetricChoice.safeToday => 'SAFE TODAY',
+    DashboardMetricChoice.netFlow => 'NET FLOW',
+    DashboardMetricChoice.burn => 'BURN RATE',
+    DashboardMetricChoice.runway => 'RUNWAY',
+  };
 
   Widget _heroInner({
     required String label,
@@ -372,8 +374,9 @@ class _MetricPillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeBg = isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink;
-    final inactiveBg =
-        isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip;
+    final inactiveBg = isDark
+        ? AppColorTokens.bloomDarkCard
+        : AppColorTokens.bloomChip;
     const activeFg = Colors.white;
     final inactiveFg = isDark
         ? AppColorTokens.bloomDarkTextSecondary
@@ -384,31 +387,33 @@ class _MetricPillButton extends StatelessWidget {
       label: label,
       button: true,
       selected: isSelected,
+      onTapHint: 'Select metric',
       onTap: onTap,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: Container(
+      excludeSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: Material(
+            color: isSelected ? activeBg : inactiveBg,
+            borderRadius: BorderRadius.circular(15),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: SizedBox(
                 height: 30,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? activeBg : inactiveBg,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Center(
-                  widthFactor: 1,
-                  child: Text(
-                    label,
-                    style: AppTheme.bloomDisplay(
-                      12,
-                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected ? activeFg : inactiveFg,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      label,
+                      style: AppTheme.bloomDisplay(
+                        12,
+                        isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? activeFg : inactiveFg,
+                      ),
                     ),
                   ),
                 ),
@@ -434,15 +439,18 @@ class BloomExclusionsNote extends ConsumerWidget {
     final period = ref.watch(dashboardPeriodProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showPaise = ref.watch(showPaiseProvider);
-    final primary =
-        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    final primary = isDark
+        ? AppColorTokens.bloomDarkTextPrimary
+        : AppColorTokens.ink;
     final secondary = isDark
         ? AppColorTokens.bloomDarkTextSecondary
         : AppColorTokens.inkSecondary;
-    final surface =
-        isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
-    final outline =
-        isDark ? AppColorTokens.bloomDarkOutline : AppColorTokens.bloomHairline;
+    final surface = isDark
+        ? AppColorTokens.bloomDarkCard
+        : AppColorTokens.bloomCard;
+    final outline = isDark
+        ? AppColorTokens.bloomDarkOutline
+        : AppColorTokens.bloomHairline;
     String? aggregateStatus;
     if (aggregate.isLoading) {
       aggregateStatus = 'Updating totals for this period…';
@@ -451,8 +459,9 @@ class BloomExclusionsNote extends ConsumerWidget {
           'Totals are unavailable while transaction data could not be loaded.';
     }
 
-    var excludedAmount =
-        exclusions == null ? null : formatInr(exclusions.total);
+    var excludedAmount = exclusions == null
+        ? null
+        : formatInr(exclusions.total);
     if (excludedAmount != null && !showPaise) {
       final idx = excludedAmount.lastIndexOf('.');
       if (idx != -1) excludedAmount = excludedAmount.substring(0, idx);
@@ -474,8 +483,11 @@ class BloomExclusionsNote extends ConsumerWidget {
               const SizedBox(width: 6),
               Text(
                 'About these totals',
-                style:
-                    AppTheme.bloomDisplay(12, FontWeight.w600, color: primary),
+                style: AppTheme.bloomDisplay(
+                  12,
+                  FontWeight.w600,
+                  color: primary,
+                ),
               ),
             ],
           ),
@@ -507,8 +519,11 @@ class BloomExclusionsNote extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               aggregateStatus,
-              style:
-                  AppTheme.bloomDisplay(11, FontWeight.w600, color: secondary),
+              style: AppTheme.bloomDisplay(
+                11,
+                FontWeight.w600,
+                color: secondary,
+              ),
             ),
           ] else if (exclusions != null &&
               exclusions.total > 0 &&
@@ -518,8 +533,11 @@ class BloomExclusionsNote extends ConsumerWidget {
               'Owned transfers and transactions excluded from analytics: '
               '$excludedAmount across ${exclusions.count} settled spending '
               '${exclusions.count == 1 ? 'debit' : 'debits'} not counted.',
-              style:
-                  AppTheme.bloomDisplay(11, FontWeight.w600, color: secondary),
+              style: AppTheme.bloomDisplay(
+                11,
+                FontWeight.w600,
+                color: secondary,
+              ),
             ),
           ],
         ],
@@ -550,11 +568,8 @@ class BloomBudgetCard extends ConsumerWidget {
         spent: totals.debitTotal,
         commitments: commitments,
       ),
-      loading: () => _card(
-        budget: budget,
-        spent: null,
-        commitments: commitments,
-      ),
+      loading: () =>
+          _card(budget: budget, spent: null, commitments: commitments),
       error: (_, __) => _card(
         budget: budget,
         spent: null,
@@ -574,8 +589,9 @@ class BloomBudgetCard extends ConsumerWidget {
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final daysLeft = daysInMonth - now.day;
 
-    final spentFraction =
-        spent == null ? 0.0 : (spent / budget).clamp(0.0, 1.0);
+    final spentFraction = spent == null
+        ? 0.0
+        : (spent / budget).clamp(0.0, 1.0);
     final committedFraction = spent == null
         ? 0.0
         : (commitments / budget).clamp(0.0, 1.0 - spentFraction);
@@ -590,19 +606,19 @@ class BloomBudgetCard extends ConsumerWidget {
             ),
           )
         : isError
-            ? Text(
-                '—',
-                style: AppTheme.bloomMono(
-                  30,
-                  FontWeight.w600,
-                  letterSpacing: -0.04,
-                  color: Colors.white,
-                ),
-              )
-            : const SizedBox(
-                width: 120,
-                child: BloomSkeleton(height: 28, borderRadius: 8),
-              );
+        ? Text(
+            '—',
+            style: AppTheme.bloomMono(
+              30,
+              FontWeight.w600,
+              letterSpacing: -0.04,
+              color: Colors.white,
+            ),
+          )
+        : const SizedBox(
+            width: 120,
+            child: BloomSkeleton(height: 28, borderRadius: 8),
+          );
     final budgetAmount = Text(
       'of ${formatInr(budget)}',
       style: AppTheme.bloomMono(
@@ -630,10 +646,7 @@ class BloomBudgetCard extends ConsumerWidget {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    Color(0x4D34D399),
-                    Colors.transparent,
-                  ],
+                  colors: [Color(0x4D34D399), Colors.transparent],
                 ),
               ),
             ),
@@ -683,9 +696,7 @@ class BloomBudgetCard extends ConsumerWidget {
                         children: [month, const SizedBox(height: 8), days],
                       );
                     }
-                    return Row(
-                      children: [month, const Spacer(), days],
-                    );
+                    return Row(children: [month, const Spacer(), days]);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -756,8 +767,8 @@ class BloomBudgetCard extends ConsumerWidget {
                   isError
                       ? 'Spending total is unavailable right now.'
                       : commitments > 0
-                          ? '${formatInr(commitments)} more expected this month for recurring bills (gold slice).'
-                          : 'No more recurring bills expected this month.',
+                      ? '${formatInr(commitments)} more expected this month for recurring bills (gold slice).'
+                      : 'No more recurring bills expected this month.',
                   style: AppTheme.bloomDisplay(
                     12,
                     FontWeight.w400,
@@ -773,19 +784,19 @@ class BloomBudgetCard extends ConsumerWidget {
   }
 
   String _monthName(int month) => const [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ][month - 1];
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ][month - 1];
 }
 
 class _SetBudgetCard extends ConsumerWidget {
@@ -926,41 +937,32 @@ class BloomTopCategoriesSection extends ConsumerWidget {
         final top3 = slices.take(3).toList();
         if (top3.isEmpty) return const SizedBox.shrink();
         final maxVal = top3.first.total;
-        return _wrap(
-          isDark,
-          [
-            for (final slice in top3) ...[
-              _CategoryRow(slice: slice, maxTotal: maxVal, isDark: isDark),
-              if (slice != top3.last) const SizedBox(height: 10),
-            ],
+        return _wrap(isDark, [
+          for (final slice in top3) ...[
+            _CategoryRow(slice: slice, maxTotal: maxVal, isDark: isDark),
+            if (slice != top3.last) const SizedBox(height: 10),
           ],
-        );
+        ]);
       },
-      loading: () => _wrap(
-        isDark,
-        const [
-          BloomSkeleton(height: 18),
-          SizedBox(height: 10),
-          BloomSkeleton(height: 18),
-          SizedBox(height: 10),
-          BloomSkeleton(height: 18),
-        ],
-      ),
-      error: (_, __) => _wrap(
-        isDark,
-        [
-          Text(
-            "Couldn't load category breakdown.",
-            style: AppTheme.bloomDisplay(
-              13,
-              FontWeight.w400,
-              color: isDark
-                  ? AppColorTokens.bloomDarkTextSecondary
-                  : AppColorTokens.inkSecondary,
-            ),
+      loading: () => _wrap(isDark, const [
+        BloomSkeleton(height: 18),
+        SizedBox(height: 10),
+        BloomSkeleton(height: 18),
+        SizedBox(height: 10),
+        BloomSkeleton(height: 18),
+      ]),
+      error: (_, __) => _wrap(isDark, [
+        Text(
+          "Couldn't load category breakdown.",
+          style: AppTheme.bloomDisplay(
+            13,
+            FontWeight.w400,
+            color: isDark
+                ? AppColorTokens.bloomDarkTextSecondary
+                : AppColorTokens.inkSecondary,
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 
@@ -1037,8 +1039,9 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final barFraction =
-        maxTotal > 0 ? (slice.total / maxTotal).clamp(0.05, 1.0) : 0.0;
+    final barFraction = maxTotal > 0
+        ? (slice.total / maxTotal).clamp(0.05, 1.0)
+        : 0.0;
     final color = CategoryVisuals.color(slice.categoryId);
 
     return Row(
@@ -1084,10 +1087,7 @@ class _CategoryRow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         name,
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: amount,
-                        ),
+                        Align(alignment: Alignment.centerRight, child: amount),
                       ],
                     );
                   }
@@ -1269,10 +1269,7 @@ class BloomTodayList extends ConsumerWidget {
         ),
         const SizedBox(height: 10),
         if (reviewAttention != null && reviewAttention.count > 0) ...[
-          _UnsortedRow(
-            count: reviewAttention.count,
-            isDark: isDark,
-          ),
+          _UnsortedRow(count: reviewAttention.count, isDark: isDark),
           const SizedBox(height: 10),
         ],
         if (recent.isEmpty)
@@ -1312,10 +1309,7 @@ class BloomTodayList extends ConsumerWidget {
 }
 
 class _UnsortedRow extends StatelessWidget {
-  const _UnsortedRow({
-    required this.count,
-    required this.isDark,
-  });
+  const _UnsortedRow({required this.count, required this.isDark});
 
   final int count;
   final bool isDark;
@@ -1327,8 +1321,10 @@ class _UnsortedRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColorTokens.bloomWarningBg,
         borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-        border:
-            Border.all(color: AppColorTokens.bloomWarningBorder, width: 1.5),
+        border: Border.all(
+          color: AppColorTokens.bloomWarningBorder,
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
