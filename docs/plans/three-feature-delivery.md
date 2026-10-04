@@ -33,6 +33,24 @@ This order does not close T-176, T-177a, PV-04, T-100, T-102, accessibility,
 backup, or physical-device gates. Keep their current board status until each
 acceptance contract is met.
 
+## Current continuation boundary (2026-10-04)
+
+- T-177b-S1 is host-complete on main at `d573881`; do not recreate its
+  suggestion lookup or capture replay. Suggestions remain default-off.
+- The merchant gate audit confirms that the consented chronological period,
+  cohort/threshold decision, independent labels and physical live/resume
+  evidence remain unavailable. Production shadow scheduling additionally
+  depends on T-177d/e, isolation review and T-115 profiling. A future
+  threshold-agnostic cohort/Wilson extension to the existing replay report can
+  verify synthetic metric arithmetic; it cannot clear any rollout gate.
+- [T-100a-S1](../tasks/T-100a-S1.md) is bounded read-only refund preview
+  preparation under [ADR 0026](../decisions/0026-read-only-refund-preview.md).
+  It exposes no write or calendar aggregate path. The owner refund-period
+  question remains unanswered; T-100a/b/c are still open.
+- T-190a1's read-only source report is the next safe card implementation.
+  Ownership confirmation, liability, bill repayment and refund accounting
+  wait for their contracts; the source audit does not approve ADR 0020.
+
 ## 1. Repeat-payee category suggestions
 
 ### Shipped foundation and gap

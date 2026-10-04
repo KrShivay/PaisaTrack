@@ -202,6 +202,14 @@ refuse conflicting merges without replacing raw source fields.
   evidence writes no rows. Conservatively paired transfers are excluded from
   aggregates without hiding either transaction.
 - Recurring detection derives series from settled history.
+- `RefundLinkPreviewRepository` is a read-only preparation API with no production
+  UI or ingestion caller. It uses exact stored-reference equality, source-currency
+  buckets, existing spending eligibility, and bounded relationship inspection.
+  Pair arithmetic supports six fractional decimal places and abstains on
+  unsupported precision, ambiguity, corrupt/conflicting links or over-cap
+  amounts. Source rows and monthly aggregates remain unchanged; persisted
+  refund review/Undo and accounting-period policy are still open under
+  [T-100](tasks/T-100.md) and [ADR 0026](decisions/0026-read-only-refund-preview.md).
 - Anomaly, forecast, and insight engines are deterministic and consume the
   same eligibility contract as Dashboard.
 - The anomaly minimum amount floor is denominated in INR. Other currencies are

@@ -1,33 +1,5 @@
 # Current Handoff
 
-## 2026-10-04 — T-200 confirmation repair installed; owner UI gate open
-
-- One `Confirm details` action replaces the independent status and parse
-  controls. It shows saved amount/currency, direction, payee, and category;
-  eligible status/evidence writes are atomic and do not change financial fields
-  or train category prediction. Receipt-based Undo preserves earlier feedback
-  and refuses stale edits. ADR 0024 records the contract.
-- Independent review passed. Full suite 1,270/1,270; encrypted-schema migration
-  executed without skips; touched repository/transaction suites in
-  `America/New_York` 275/275; analyzer clean; formatter five files unchanged;
-  Markdown links 144 files and diff checks pass. The initial full run exposed
-  two consumer render expectations, now corrected and verified.
-- Signed arm64 0.1.9+2018 compiled and installed in place (effective code 4018).
-  Last update 2026-10-04 01:59:00; first install remains 2026-09-26 22:20:54.
-  Installed base APK equals the signed 57,144,364-byte artifact SHA-256
-  `8f6e43bb50423b254f33e1cd50ed3d3037ee55761639649d8e1b21d4c34a55b6`.
-  Signature, ZIP integrity, alignment, and arm64-only libraries pass.
-- Owner-screen confirmation/Undo acceptance remains open; no private screens,
-  records, SMS, database, or logs were inspected. T-200 remains In Review.
-  QR Sort card/list and native back device gates stay open. T-167b has since
-  been resumed and host-accepted; both original stashes remain preserved.
-  No APK publication is authorized.
-
-- Final GitNexus all-change analysis: 12 files, 36 symbols, zero reported
-  affected flows, LOW risk; no partial/truncated result flag. The global
-  inventory limitation above remains; source review and regression tests
-  cover the dynamically dispatched UI path.
-
 ## 2026-10-04 — T-167b host accepted; first feature in parallel
 
 - Custom Activity, Dashboard, Settings, Review, and notice controls expose
@@ -82,3 +54,32 @@
   holdout/device/threshold decisions and T-177f staged suggestion release remain
   open; production remains default-off. No schema, capture path, phone, APK,
   owner data, or automatic categorization changed.
+
+## 2026-10-04 — T-100a-S1 read-only refund preview host complete
+
+- Luna High added a persisted-row preview API; Sol independently reviewed it.
+  Exact complete references, shared source-currency/eligibility rules, full
+  touched-link validation, ambiguity/cap checks and checked decimal arithmetic
+  preserve source facts. No UI/capture caller, link write or calendar total
+  change. Original/refund dates and gross/linked/remaining pair amounts remain
+  review evidence only. ADR 0026 records the bounded engineering contract.
+- Focused/default and America/New_York tests 23/23 each; full serial Flutter
+  suite 1,327/1,327 with zero failures/skips. Encrypted migration executed.
+  Analyzer, three-file formatter, documentation links and diff checks pass.
+  Review fixed cross-candidate link contamination, incomplete already-linked
+  closure, zero-credit acceptance and fractional/large-amount cap hazards.
+- Refreshed GitNexus: 8,954 nodes, 20,972 edges, 408 flows. Final complete scan:
+  9 files/58 symbols, LOW risk, zero reported flows; all 58 symbols returned,
+  including added files. Global flow inventory remains capped (1,074
+  unranked entrypoints, 1,441 skipped callees, 34 cut walks), so source review
+  and actual tests corroborate callers. Only tests call the new preview API.
+- Merchant suggestions remain default-off. Owner holdout/cohort/threshold,
+  physical live/resume capture and T-177f staged rollout gates remain open;
+  a synthetic cohort/Wilson extension cannot close them. Card audit preparation
+  found paymentSourcesProvider reconciles on load; its future read-only report
+  must use a separate Settings route and direct repository.
+- Owner refund-period question remains unanswered; T-100 persistence, durable
+  Undo and canonical net totals plus card accounting/ownership/schema contracts
+  remain open. Phone is connected at the existing endpoint; only connection
+  metadata was checked. No owner GUI/SMS/DB/log/backup/key access, phone update
+  or APK publication. Both protected stashes and the T-194 trial remain intact.

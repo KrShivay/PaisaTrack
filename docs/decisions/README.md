@@ -29,6 +29,7 @@ ADRs record durable technical decisions. Status wording below follows each file;
 | [0023](0023-static-upi-qr.md) | Render a static local UPI QR from stored VPA evidence | Accepted for T-199 implementation |
 | [0024](0024-unified-transaction-detail-confirmation.md) | Unify transaction-detail status and parse confirmation | Accepted for T-200 implementation |
 | [0025](0025-category-memory-suggestions.md) | Gated exact-payee category suggestions from confirmed history | Implemented and independently reviewed for T-177b-S1; production rollout remains gated |
+| [0026](0026-read-only-refund-preview.md) | Read-only refund preview from persisted evidence | Accepted for T-100a-S1 preparation only; no persistence, period policy or schema approved |
 
 ADR 0013 was present only in snapshot commit `8800ddd`; its accepted backup decision is represented by ADR 0016. It was never part of the current ADR sequence. The duplicate number 0008 is deliberate in the surviving archive: [archived on-device LLM model pin](../archive/decisions/0008-on-device-llm-model.md) was superseded by ADR 0009, while the current [ADR 0008](0008-bounded-encrypted-backups.md) covers encrypted backups. Do not renumber either file.
 
