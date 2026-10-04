@@ -1,0 +1,3 @@
+## 2024-05-24 - Interactive pills should use Material & InkWell
+**Learning:** Custom interactive elements like Metric pills were using `GestureDetector` with `Container` decoration. This lacks built-in a11y focus states for keyboard navigation and visual tap feedback (ripples). Wrapping the component with `Semantics` but missing `onTapHint` and not utilizing `Material`+`InkWell` compromises the micro-UX.
+**Action:** Prefer `Material` and `InkWell` over `GestureDetector` + `Container` for custom pills. Consolidate Semantics using `excludeSemantics: true` and redefine interactions on the Semantics node.
