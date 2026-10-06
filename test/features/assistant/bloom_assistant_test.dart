@@ -69,19 +69,19 @@ void main() {
       );
 
       final sendButton = tester.widget<Container>(
-        find.descendant(
+        find.ancestor(
           of: find.byKey(const ValueKey('assistant_send_button')),
           matching: find.byType(Container),
-        ),
+        ).first,
       );
       final sendDecoration = sendButton.decoration! as BoxDecoration;
       expect(
         tester
             .getSize(
-              find.descendant(
+              find.ancestor(
                 of: find.byKey(const ValueKey('assistant_send_button')),
                 matching: find.byType(Container),
-              ),
+              ).first,
             )
             .width,
         40,
@@ -89,10 +89,10 @@ void main() {
       expect(
         tester
             .getSize(
-              find.descendant(
+              find.ancestor(
                 of: find.byKey(const ValueKey('assistant_send_button')),
                 matching: find.byType(Container),
-              ),
+              ).first,
             )
             .height,
         40,
