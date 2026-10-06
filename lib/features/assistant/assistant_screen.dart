@@ -212,9 +212,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        GestureDetector(
-                          key: const ValueKey('assistant_send_button'),
-                          onTap: _send,
+                        Semantics(
+                          button: true,
+                          label: 'Send message',
                           child: Container(
                             width: 40,
                             height: 40,
@@ -227,11 +227,19 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                               ),
                               shape: BoxShape.circle,
                             ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.arrow_upward_rounded,
-                                size: 20,
-                                color: AppColorTokens.bloomDarkBase,
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: InkWell(
+                                key: const ValueKey('assistant_send_button'),
+                                onTap: _send,
+                                customBorder: const CircleBorder(),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.arrow_upward_rounded,
+                                    size: 20,
+                                    color: AppColorTokens.bloomDarkBase,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
