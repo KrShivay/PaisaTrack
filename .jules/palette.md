@@ -1,0 +1,3 @@
+## 2024-05-24 - Metric Pill Button UX
+**Learning:** Wrapping interactive elements like pills or custom chips in `Material` and `InkWell` instead of `GestureDetector` + decorated `Container` provides built-in material ripples for visual tap feedback. When doing this, managing `Semantics` accurately requires dropping descendant semantics (`excludeSemantics: true`) on the `Semantics` node and explicitly redefining interactions like `onTap` and `onTapHint` to provide a clean, single-element announcement.
+**Action:** Always prefer `Material` + `InkWell` for custom interactive components and properly manage their semantics.
