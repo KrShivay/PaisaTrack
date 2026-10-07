@@ -385,9 +385,13 @@ class _MetricPillButton extends StatelessWidget {
       button: true,
       selected: isSelected,
       onTap: onTap,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+      onTapHint: label,
+      excludeSemantics: true,
+      child: Material(
+        color: isSelected ? activeBg : inactiveBg,
+        borderRadius: BorderRadius.circular(15),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(15),
           onTap: onTap,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
@@ -397,10 +401,6 @@ class _MetricPillButton extends StatelessWidget {
               child: Container(
                 height: 30,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? activeBg : inactiveBg,
-                  borderRadius: BorderRadius.circular(15),
-                ),
                 child: Center(
                   widthFactor: 1,
                   child: Text(
