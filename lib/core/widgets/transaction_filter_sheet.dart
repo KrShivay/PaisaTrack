@@ -99,8 +99,8 @@ class TransactionFilters {
 
   static bool _sameRange(DateTimeRange? left, DateTimeRange? right) =>
       left == null
-          ? right == null
-          : right != null && left.start == right.start && left.end == right.end;
+      ? right == null
+      : right != null && left.start == right.start && left.end == right.end;
 
   bool get isEmpty => activeCount == 0;
 
@@ -108,15 +108,18 @@ class TransactionFilters {
     return TransactionFilters(
       dateRange: field == TransactionFilterField.dateRange ? null : dateRange,
       categoryId: field == TransactionFilterField.category ? null : categoryId,
-      categoryName:
-          field == TransactionFilterField.category ? null : categoryName,
+      categoryName: field == TransactionFilterField.category
+          ? null
+          : categoryName,
       merchant: field == TransactionFilterField.merchant ? null : merchant,
       account: field == TransactionFilterField.account ? null : account,
       channel: field == TransactionFilterField.channel ? null : channel,
-      minimumAmount:
-          field == TransactionFilterField.amount ? null : minimumAmount,
-      maximumAmount:
-          field == TransactionFilterField.amount ? null : maximumAmount,
+      minimumAmount: field == TransactionFilterField.amount
+          ? null
+          : minimumAmount,
+      maximumAmount: field == TransactionFilterField.amount
+          ? null
+          : maximumAmount,
       review: field == TransactionFilterField.review
           ? TransactionReviewFilter.all
           : review,
@@ -160,8 +163,9 @@ class TransactionFilters {
       final start = calendar
           .day(range.start.year, range.start.month, range.start.day)
           .start;
-      final end =
-          calendar.day(range.end.year, range.end.month, range.end.day).end;
+      final end = calendar
+          .day(range.end.year, range.end.month, range.end.day)
+          .end;
       final timestamp = item.ts.toUtc();
       if (timestamp.isBefore(start) || !timestamp.isBefore(end)) return false;
     }
@@ -178,7 +182,8 @@ class TransactionFilters {
     }
     if (review == TransactionReviewFilter.reviewed && needsReview) return false;
 
-    final isRecurring = item.merchantId != null &&
+    final isRecurring =
+        item.merchantId != null &&
         recurringMerchantIds.contains(item.merchantId);
     if (recurring == TransactionRecurringFilter.recurring && !isRecurring) {
       return false;
@@ -202,20 +207,32 @@ class TransactionFilters {
   bool matchesSearch(TransactionListItem item, String query) {
     final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return true;
-    final searchable = [
-      item.displayName,
-      item.merchantRaw,
-      item.categoryName,
-      item.amount.toStringAsFixed(2),
-      item.amount.toStringAsFixed(0),
-      item.accountHint,
-      item.channel,
-      item.note,
-      item.reference,
-      item.status == 'needs_review' ? 'needs review' : item.status,
-      item.parseSource == 'manual' ? 'manual' : 'sms',
-    ].whereType<String>();
-    return searchable.any((value) => value.toLowerCase().contains(normalized));
+
+    if (item.displayName.toLowerCase().contains(normalized)) return true;
+    if ((item.merchantRaw ?? '').toLowerCase().contains(normalized)) {
+      return true;
+    }
+    if ((item.categoryName ?? '').toLowerCase().contains(normalized)) {
+      return true;
+    }
+    if (item.amount.toStringAsFixed(2).contains(normalized)) return true;
+    if (item.amount.toStringAsFixed(0).contains(normalized)) return true;
+    if ((item.accountHint ?? '').toLowerCase().contains(normalized)) {
+      return true;
+    }
+    if (item.channel.toLowerCase().contains(normalized)) return true;
+    if ((item.note ?? '').toLowerCase().contains(normalized)) return true;
+    if ((item.reference ?? '').toLowerCase().contains(normalized)) return true;
+
+    final statusStr = item.status == 'needs_review'
+        ? 'needs review'
+        : item.status;
+    if (statusStr.toLowerCase().contains(normalized)) return true;
+
+    final sourceStr = item.parseSource == 'manual' ? 'manual' : 'sms';
+    if (sourceStr.toLowerCase().contains(normalized)) return true;
+
+    return false;
   }
 }
 
@@ -280,17 +297,14 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     };
     final merchants = {
       for (final item in widget.transactions) item.displayName,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     final accounts = {
       for (final item in widget.transactions)
         if (item.accountHint != null) item.accountHint!,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     final channels = {
       for (final item in widget.transactions) item.channel,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
 
     return BloomSheetScaffold(
       showBack: false,
@@ -304,155 +318,153 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
           ),
           child: SingleChildScrollView(
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Filter transactions',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _DateRangeField(
-                value: _dateRange,
-                onChanged: (value) => setState(() => _dateRange = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _OptionalDropdown<String>(
-                label: 'Category',
-                value: _categoryId,
-                entries: [
-                  for (final entry in categories.entries)
-                    DropdownMenuEntry(value: entry.key, label: entry.value),
-                ],
-                onChanged: (value) => setState(() => _categoryId = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _OptionalDropdown<String>(
-                label: 'Merchant',
-                value: _merchant,
-                entries: [
-                  for (final merchant in merchants)
-                    DropdownMenuEntry(value: merchant, label: merchant),
-                ],
-                onChanged: (value) => setState(() => _merchant = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _OptionalDropdown<String>(
-                      label: 'Account',
-                      value: _account,
-                      entries: [
-                        for (final account in accounts)
-                          DropdownMenuEntry(value: account, label: account),
-                      ],
-                      onChanged: (value) => setState(() => _account = value),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: _OptionalDropdown<String>(
-                      label: 'Channel',
-                      value: _channel,
-                      entries: [
-                        for (final channel in channels)
-                          DropdownMenuEntry(
-                            value: channel,
-                            label: _sentenceCase(channel),
-                          ),
-                      ],
-                      onChanged: (value) => setState(() => _channel = value),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _minimumController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Minimum amount',
-                        prefixText: '₹',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: TextField(
-                      controller: _maximumController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Maximum amount',
-                        prefixText: '₹',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _EnumDropdown<TransactionReviewFilter>(
-                label: 'Review status',
-                value: _review,
-                labels: const {
-                  TransactionReviewFilter.all: 'Any status',
-                  TransactionReviewFilter.needsReview: 'Needs review',
-                  TransactionReviewFilter.reviewed: 'Reviewed',
-                },
-                onChanged: (value) => setState(() => _review = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _EnumDropdown<TransactionRecurringFilter>(
-                label: 'Recurring state',
-                value: _recurring,
-                labels: const {
-                  TransactionRecurringFilter.all: 'Any transaction',
-                  TransactionRecurringFilter.recurring: 'Recurring',
-                  TransactionRecurringFilter.notRecurring: 'Not recurring',
-                },
-                onChanged: (value) => setState(() => _recurring = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _EnumDropdown<TransactionSourceFilter>(
-                label: 'Source',
-                value: _source,
-                labels: const {
-                  TransactionSourceFilter.all: 'SMS and manual',
-                  TransactionSourceFilter.sms: 'SMS',
-                  TransactionSourceFilter.manual: 'Manual',
-                },
-                onChanged: (value) => setState(() => _source = value),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _EnumDropdown<TransactionAnomalyFilter>(
-                label: 'Anomaly status',
-                value: _anomaly,
-                labels: const {
-                  TransactionAnomalyFilter.all: 'Any transaction',
-                  TransactionAnomalyFilter.flagged: 'Flagged as unusual',
-                  TransactionAnomalyFilter.notFlagged: 'Not flagged',
-                },
-                onChanged: (value) => setState(() => _anomaly = value),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              FilledButton(
-                onPressed: _apply,
-                child: const Text('Apply filters'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(
-                  context,
-                  const TransactionFilters(),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Filter transactions',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                child: const Text('Clear all'),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.lg),
+                _DateRangeField(
+                  value: _dateRange,
+                  onChanged: (value) => setState(() => _dateRange = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _OptionalDropdown<String>(
+                  label: 'Category',
+                  value: _categoryId,
+                  entries: [
+                    for (final entry in categories.entries)
+                      DropdownMenuEntry(value: entry.key, label: entry.value),
+                  ],
+                  onChanged: (value) => setState(() => _categoryId = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _OptionalDropdown<String>(
+                  label: 'Merchant',
+                  value: _merchant,
+                  entries: [
+                    for (final merchant in merchants)
+                      DropdownMenuEntry(value: merchant, label: merchant),
+                  ],
+                  onChanged: (value) => setState(() => _merchant = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _OptionalDropdown<String>(
+                        label: 'Account',
+                        value: _account,
+                        entries: [
+                          for (final account in accounts)
+                            DropdownMenuEntry(value: account, label: account),
+                        ],
+                        onChanged: (value) => setState(() => _account = value),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: _OptionalDropdown<String>(
+                        label: 'Channel',
+                        value: _channel,
+                        entries: [
+                          for (final channel in channels)
+                            DropdownMenuEntry(
+                              value: channel,
+                              label: _sentenceCase(channel),
+                            ),
+                        ],
+                        onChanged: (value) => setState(() => _channel = value),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _minimumController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Minimum amount',
+                          prefixText: '₹',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: TextField(
+                        controller: _maximumController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Maximum amount',
+                          prefixText: '₹',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _EnumDropdown<TransactionReviewFilter>(
+                  label: 'Review status',
+                  value: _review,
+                  labels: const {
+                    TransactionReviewFilter.all: 'Any status',
+                    TransactionReviewFilter.needsReview: 'Needs review',
+                    TransactionReviewFilter.reviewed: 'Reviewed',
+                  },
+                  onChanged: (value) => setState(() => _review = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _EnumDropdown<TransactionRecurringFilter>(
+                  label: 'Recurring state',
+                  value: _recurring,
+                  labels: const {
+                    TransactionRecurringFilter.all: 'Any transaction',
+                    TransactionRecurringFilter.recurring: 'Recurring',
+                    TransactionRecurringFilter.notRecurring: 'Not recurring',
+                  },
+                  onChanged: (value) => setState(() => _recurring = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _EnumDropdown<TransactionSourceFilter>(
+                  label: 'Source',
+                  value: _source,
+                  labels: const {
+                    TransactionSourceFilter.all: 'SMS and manual',
+                    TransactionSourceFilter.sms: 'SMS',
+                    TransactionSourceFilter.manual: 'Manual',
+                  },
+                  onChanged: (value) => setState(() => _source = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _EnumDropdown<TransactionAnomalyFilter>(
+                  label: 'Anomaly status',
+                  value: _anomaly,
+                  labels: const {
+                    TransactionAnomalyFilter.all: 'Any transaction',
+                    TransactionAnomalyFilter.flagged: 'Flagged as unusual',
+                    TransactionAnomalyFilter.notFlagged: 'Not flagged',
+                  },
+                  onChanged: (value) => setState(() => _anomaly = value),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                FilledButton(
+                  onPressed: _apply,
+                  child: const Text('Apply filters'),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      Navigator.pop(context, const TransactionFilters()),
+                  child: const Text('Clear all'),
+                ),
+              ],
             ),
           ),
         ),
@@ -498,7 +510,7 @@ class _DateRangeField extends StatelessWidget {
     final label = value == null
         ? 'Any date'
         : '${localizations.formatMediumDate(value!.start)} – '
-            '${localizations.formatMediumDate(value!.end)}';
+              '${localizations.formatMediumDate(value!.end)}';
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: const Text('Date range'),
