@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'capture/permissions/sms_permission.dart';
@@ -84,11 +85,16 @@ class PaisaTrackApp extends ConsumerWidget {
         themeMode:
             settings.valueOrNull?.themeChoice.themeMode ?? ThemeMode.dark,
         navigatorObservers: [_undoToastRouteObserver],
-        builder: (context, child) => buildBloomUndoToastAppBuilder(
-          context,
-          child,
-          routeObserver: _undoToastRouteObserver,
-          homeNavigationVisible: homeWidget is HomeShell,
+        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: AppTheme.edgeToEdgeOverlayStyle(
+            Theme.of(context).brightness,
+          ),
+          child: buildBloomUndoToastAppBuilder(
+            context,
+            child,
+            routeObserver: _undoToastRouteObserver,
+            homeNavigationVisible: homeWidget is HomeShell,
+          ),
         ),
         home: homeWidget,
       ),

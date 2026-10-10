@@ -23,7 +23,7 @@ class UndoToken {
   final DateTime createdAt;
 }
 
-/// Global Riverpod controller managing 10-second undo state.
+/// Global Riverpod controller managing 6-second undo state.
 class UndoController extends Notifier<UndoToken?> {
   Timer? _dismissTimer;
 
@@ -35,11 +35,11 @@ class UndoController extends Notifier<UndoToken?> {
     return null;
   }
 
-  /// Pushes a new undo token. Cancels any active timer and starts a 10-second countdown.
+  /// Pushes a new undo token. Cancels any active timer and starts a 6-second countdown.
   void pushUndo(UndoToken token) {
     _dismissTimer?.cancel();
     state = token;
-    _dismissTimer = Timer(const Duration(seconds: 10), () {
+    _dismissTimer = Timer(const Duration(seconds: 6), () {
       if (state?.id == token.id) {
         state = null;
       }

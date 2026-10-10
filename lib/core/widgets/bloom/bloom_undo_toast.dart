@@ -138,9 +138,17 @@ class BloomUndoToastHost extends ConsumerWidget {
                     duration: AppDurations.fast,
                     opacity: visibleToken != null ? 1.0 : 0.0,
                     child: visibleToken != null
-                        ? _ToastContent(
-                            token: visibleToken,
-                            isDark: isDark,
+                        ? _DismissibleToast(
+                            key: ValueKey<String>(
+                              'bloom-undo-toast-${visibleToken.id}',
+                            ),
+                            onDismissed: () => ref
+                                .read(undoControllerProvider.notifier)
+                                .clear(),
+                            child: _ToastContent(
+                              token: visibleToken,
+                              isDark: isDark,
+                            ),
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -155,6 +163,35 @@ class BloomUndoToastHost extends ConsumerWidget {
 
   static final ValueNotifier<bool> _noPushedRoute = ValueNotifier(false);
   static final ValueNotifier<bool> _noBlockingPopupRoute = ValueNotifier(false);
+}
+
+/// Swipe-to-dismiss wrapper: horizontal (either way) and downward. The
+/// Dismissibles only occupy the toast's own bounds, so taps elsewhere on the
+/// screen still reach the content underneath.
+class _DismissibleToast extends StatelessWidget {
+  const _DismissibleToast({
+    super.key,
+    required this.child,
+    required this.onDismissed,
+  });
+
+  final Widget child;
+  final VoidCallback onDismissed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: const Key('bloom-undo-toast-dismiss-horizontal'),
+      direction: DismissDirection.horizontal,
+      onDismissed: (_) => onDismissed(),
+      child: Dismissible(
+        key: const Key('bloom-undo-toast-dismiss-down'),
+        direction: DismissDirection.down,
+        onDismissed: (_) => onDismissed(),
+        child: child,
+      ),
+    );
+  }
 }
 
 class _ToastContent extends ConsumerWidget {
@@ -175,7 +212,7 @@ class _ToastContent extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.only(left: 18, right: 4, top: 4, bottom: 4),
         key: const Key('bloom-undo-toast'),
         decoration: BoxDecoration(
           color: bg,
@@ -223,6 +260,21 @@ class _ToastContent extends ConsumerWidget {
                   FontWeight.w600,
                   color: AppColorTokens.bloomEmerald,
                 ),
+              ),
+            ),
+            // No Tooltip: this host sits above the Navigator's Overlay.
+            Semantics(
+              button: true,
+              label: 'Dismiss',
+              excludeSemantics: true,
+              child: IconButton(
+                key: const Key('bloom-undo-dismiss-button'),
+                constraints:
+                    const BoxConstraints.tightFor(width: 48, height: 48),
+                icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                onPressed: () {
+                  ref.read(undoControllerProvider.notifier).clear();
+                },
               ),
             ),
           ],
