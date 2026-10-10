@@ -107,10 +107,11 @@ So this is an unimplemented part of the accepted design, not a new request.
 builds, as a first-class section rather than behind a "technical details"
 disclosure. Three constraints:
 
-1. **Retention.** `raw_sms` is purged after 30 days
-   (`AppConstants.rawSmsRetentionDays`), so the section must degrade to
-   "Original message no longer stored — kept for 30 days" rather than showing an
-   error or an empty box. This is a normal state, not a failure.
+1. **Retention.** Since ADR 0021, a linked source SMS is retained with its
+   transaction; only unlinked SMS expire after 7 days
+   (`AppConstants.rawSmsRetentionDays`). Rows whose SMS was purged under the
+   old 30-day rule (and not re-linked) must still degrade to "Original message
+   no longer stored" rather than showing an error or an empty box. This is a normal state, not a failure.
 2. **Masking.** Show the body as stored. It already contains masked account
    tails from parse time; do not re-derive or unmask anything.
 3. **Screenshot and lock.** The body is the most sensitive string in the app.

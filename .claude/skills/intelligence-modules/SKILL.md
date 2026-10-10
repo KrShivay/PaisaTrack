@@ -32,8 +32,15 @@ checklist:
 
 # Intelligence Modules Conventions
 
-Plan references: PLAN.md §7 (full intelligence design), §4 (Intelligence
-feature list, phased), §6.1 (`feedback`, `baselines`, `model_meta` tables).
+References: `docs/architecture.md` (Identity and categorization, Analytics and
+intelligence, Insight claim contract, On-device models), ADR 0011,
+`docs/schema.md` (`feedback`, `baselines`, `model_meta`).
+
+Legacy `PLAN.md §N` / `plan §N` references in this skill are retired. Map
+them to: §2–§4 and §7 → `docs/architecture.md` (+ `docs/sms-intelligence-design.md`
+for parsing); §6 → `docs/schema.md` and `lib/data/db/tables/`; §8 →
+`docs/privacy.md`; §10 → `docs/development.md`; §12 → `COLLABORATION.md` and
+`docs/decisions/`.
 
 ## 1. The Enricher interface contract
 

@@ -33,9 +33,15 @@ checklist:
 
 # SMS Template Authoring
 
-Plan references: PLAN.md §3 (`assets/templates/*.json`, `test/fixtures/sms/`),
-§6.3 (template JSON format, worked HDFC example), §7.1 (parser cascade),
-§10 (fixture-driven testing is "the backbone").
+References: `docs/sms-templates.md` and `assets/templates/*.json` (format),
+`docs/sms-intelligence-design.md` and `lib/capture/parser_cascade.dart`
+(cascade), `test/fixtures/sms/` (fixture-driven testing is "the backbone").
+
+Legacy `PLAN.md §N` / `plan §N` references in this skill are retired. Map
+them to: §2–§4 and §7 → `docs/architecture.md` (+ `docs/sms-intelligence-design.md`
+for parsing); §6 → `docs/schema.md` and `lib/data/db/tables/`; §8 →
+`docs/privacy.md`; §10 → `docs/development.md`; §12 → `COLLABORATION.md` and
+`docs/decisions/`.
 
 ## 1. Template JSON format
 

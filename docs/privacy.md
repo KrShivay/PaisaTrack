@@ -107,8 +107,12 @@ user export for any reconciliation report.
 
 ## On-device language model
 
-The optional language model is downloaded only after you tap Download
-in Settings, stored in app-private storage, and can be deleted there. Inference
+Settings → On-device AI offers two optional downloads: the language model
+(Qwen3-0.6B, ADR 0009, from Hugging Face) and the text embedder (Universal
+Sentence Encoder, ADR 0007, from Google's model bucket). Each is fetched only
+after you confirm its size and source, is integrity-checked against a pinned
+hash/size, stored in app-private storage, and can be deleted there; capture
+works without either. Inference
 is fully offline: prompts and responses never leave the phone. Extraction
 prompts may contain the raw SMS text needed to parse a transaction, but that
 text is passed only to the on-device model. The model download request contains

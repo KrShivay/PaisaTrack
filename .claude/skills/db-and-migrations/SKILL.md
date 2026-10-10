@@ -30,8 +30,15 @@ checklist:
 
 # DB & Migrations Conventions
 
-Plan references: PLAN.md §6 (full schema + the frozen record contract),
-§8 (privacy/security — SQLCipher key handling), §3 (`lib/data/db/` layout).
+References: `docs/schema.md` + `lib/data/db/tables/` (schema and record
+contract), `docs/privacy.md` (SQLCipher key handling), `lib/data/db/database.dart`
+(migrations).
+
+Legacy `PLAN.md §N` / `plan §N` references in this skill are retired. Map
+them to: §2–§4 and §7 → `docs/architecture.md` (+ `docs/sms-intelligence-design.md`
+for parsing); §6 → `docs/schema.md` and `lib/data/db/tables/`; §8 →
+`docs/privacy.md`; §10 → `docs/development.md`; §12 → `COLLABORATION.md` and
+`docs/decisions/`.
 
 ## 1. Drift table conventions
 

@@ -1,6 +1,12 @@
 # SMS Intelligence — Target Design
 
-Status: proposal (2026-07-26). Not yet accepted; no ADR supersedes anything here.
+Status: proposal (2026-07-26). Not yet accepted as a whole. Superseded in part:
+raw-SMS retention is now ADR 0021 (linked SMS kept with their record, unlinked
+SMS removed after 7 days) — every "30-day" retention statement below is
+historical; schema is v20 ([schema](schema.md)); evidence-backed assistance
+follows ADR 0011, so the P2P-to-transfer defaults below are superseded: a
+personal VPA alone does not establish a non-spending transfer (T-205 owns the
+review flow).
 
 This document designs the end-to-end path from an on-device SMS to a
 trustworthy, explainable financial record and the insights built on top of it.
