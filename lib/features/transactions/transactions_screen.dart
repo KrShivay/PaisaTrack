@@ -104,30 +104,31 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       }
       if (_query.isNotEmpty) {
         final q = _query.toLowerCase();
-        final name = item.displayName.toLowerCase();
-        final note = (item.note ?? '').toLowerCase();
-        final amt = item.amount.toString();
-        final channel = item.channel.toLowerCase();
-        final ref = (item.reference ?? '').toLowerCase();
-        final status = item.status.toLowerCase();
-        final account = (item.accountHint ?? '').toLowerCase();
-        final category = (item.categoryName ?? '').toLowerCase();
-        final source = (item.paymentSourceName ?? '').toLowerCase();
-        final merchant = (item.merchantRaw ?? '').toLowerCase();
-        final vpa = (item.counterpartyVpa ?? '').toLowerCase();
-        if (!name.contains(q) &&
-            !note.contains(q) &&
-            !amt.contains(q) &&
-            !channel.contains(q) &&
-            !ref.contains(q) &&
-            !status.contains(q) &&
-            !account.contains(q) &&
-            !category.contains(q) &&
-            !source.contains(q) &&
-            !merchant.contains(q) &&
-            !vpa.contains(q)) {
-          return false;
+        bool matches = false;
+        if (item.displayName.toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.note ?? '').toLowerCase().contains(q)) {
+          matches = true;
+        } else if (item.amount.toString().contains(q)) {
+          matches = true;
+        } else if (item.channel.toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.reference ?? '').toLowerCase().contains(q)) {
+          matches = true;
+        } else if (item.status.toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.accountHint ?? '').toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.categoryName ?? '').toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.paymentSourceName ?? '').toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.merchantRaw ?? '').toLowerCase().contains(q)) {
+          matches = true;
+        } else if ((item.counterpartyVpa ?? '').toLowerCase().contains(q)) {
+          matches = true;
         }
+        if (!matches) return false;
       }
       return true;
     }).toList();
@@ -161,10 +162,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final chosen = await showBloomFullScreenSheet<Category>(
       context: context,
       showBack: true,
-      builder: (context) => CategoryPickerSheet(
-        categories: categories,
-        title: 'Change Category',
-      ),
+      builder: (context) =>
+          CategoryPickerSheet(categories: categories, title: 'Change Category'),
     );
     if (chosen == null || !mounted) return;
 
@@ -178,7 +177,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       context: 'activity_swipe',
     );
 
-    ref.read(undoControllerProvider.notifier).pushUndo(
+    ref
+        .read(undoControllerProvider.notifier)
+        .pushUndo(
           UndoToken(
             id: 'categorize_${item.id}',
             message: 'Filed under ${chosen.name}',
@@ -204,7 +205,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       context: 'activity_confirm',
     );
 
-    ref.read(undoControllerProvider.notifier).pushUndo(
+    ref
+        .read(undoControllerProvider.notifier)
+        .pushUndo(
           UndoToken(
             id: 'confirm_${item.id}',
             message: 'Marked confirmed',
@@ -234,8 +237,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     // removed and the height already reduced.
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColorTokens.bloomDarkBase : AppColorTokens.bloomBase,
+      backgroundColor: isDark
+          ? AppColorTokens.bloomDarkBase
+          : AppColorTokens.bloomBase,
       body: SafeArea(
         bottom: false,
         child: LayoutBuilder(
@@ -311,7 +315,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       builder: (context, constraints) {
         // The row sits inside 20dp side padding; at 360dp-wide phones the
         // title and actions need more than the remaining 320dp.
-        final compact = constraints.maxWidth < 400 ||
+        final compact =
+            constraints.maxWidth < 400 ||
             (widget.initialEvidenceTotalCount != null &&
                 constraints.maxWidth < 600) ||
             MediaQuery.textScalerOf(context).scale(1) >= 1.5;
@@ -333,8 +338,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               label: const Text('Add'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(48, 48),
-                backgroundColor:
-                    isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink,
+                backgroundColor: isDark
+                    ? AppColorTokens.violetPrimary
+                    : AppColorTokens.ink,
                 foregroundColor: Colors.white,
               ),
             ),
@@ -366,8 +372,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       child: Container(
         constraints: const BoxConstraints(minHeight: 48),
         decoration: BoxDecoration(
-          color:
-              isDark ? AppColorTokens.bloomDarkCard : const Color(0xFFF1EFFB),
+          color: isDark
+              ? AppColorTokens.bloomDarkCard
+              : const Color(0xFFF1EFFB),
           borderRadius: BorderRadius.circular(16),
         ),
         child: TextField(
@@ -451,18 +458,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Widget _loadingState() => const Center(
-        child: BloomSkeleton(width: 280, height: 160),
-      );
+  Widget _loadingState() =>
+      const Center(child: BloomSkeleton(width: 280, height: 160));
 
   Widget _fatalErrorState() => ErrorStateView(
-        message: 'Couldn’t load transactions. Try again.',
-        onRetry: () => ref.invalidate(activityTransactionPageProvider),
-      );
+    message: 'Couldn’t load transactions. Try again.',
+    onRetry: () => ref.invalidate(activityTransactionPageProvider),
+  );
 
   Widget _loadErrorState() => _ActivityLoadError(
-        onRetry: () => ref.invalidate(activityTransactionPageProvider),
-      );
+    onRetry: () => ref.invalidate(activityTransactionPageProvider),
+  );
 
   void _clearFilters() {
     setState(() {
@@ -473,15 +479,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   Widget _emptyState(bool isDark) => Padding(
-        padding: EdgeInsets.only(
-          bottom: BloomBottomInset.contentPadding(context),
-        ),
-        child: _EmptyState(
-          isDark: isDark,
-          query: _query,
-          onClearFilters: _clearFilters,
-        ),
-      );
+    padding: EdgeInsets.only(bottom: BloomBottomInset.contentPadding(context)),
+    child: _EmptyState(
+      isDark: isDark,
+      query: _query,
+      onClearFilters: _clearFilters,
+    ),
+  );
 
   Widget _landscapeLayout(
     bool isDark,
@@ -589,53 +593,52 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           child: pageAsync.isLoading && filtered.isEmpty
               ? _loadingState()
               : pageAsync.hasError && !pageAsync.hasValue
-                  ? _fatalErrorState()
-                  : Column(
-                      children: [
-                        if (pageAsync.hasError) _loadErrorState(),
-                        Expanded(
-                          child: filtered.isEmpty
-                              ? Column(
-                                  children: [
-                                    Expanded(child: _emptyState(isDark)),
-                                    if (hasMore)
-                                      Padding(
-                                        padding: EdgeInsets.only(
-                                          bottom:
-                                              BloomBottomInset.contentPadding(
-                                            context,
-                                          ),
-                                        ),
-                                        child: _loadMoreButton(),
+              ? _fatalErrorState()
+              : Column(
+                  children: [
+                    if (pageAsync.hasError) _loadErrorState(),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Column(
+                              children: [
+                                Expanded(child: _emptyState(isDark)),
+                                if (hasMore)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: BloomBottomInset.contentPadding(
+                                        context,
                                       ),
-                                  ],
-                                )
-                              : ListView.builder(
-                                  padding: EdgeInsets.fromLTRB(
-                                    20,
-                                    0,
-                                    20,
-                                    BloomBottomInset.contentPadding(context),
+                                    ),
+                                    child: _loadMoreButton(),
                                   ),
-                                  itemCount: grouped.length + (hasMore ? 1 : 0),
-                                  itemBuilder: (context, index) =>
-                                      _groupedItem(grouped, isDark, index),
-                                ),
-                        ),
-                      ],
+                              ],
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.fromLTRB(
+                                20,
+                                0,
+                                20,
+                                BloomBottomInset.contentPadding(context),
+                              ),
+                              itemCount: grouped.length + (hasMore ? 1 : 0),
+                              itemBuilder: (context, index) =>
+                                  _groupedItem(grouped, isDark, index),
+                            ),
                     ),
+                  ],
+                ),
         ),
       ],
     );
   }
 
   String _filterLabel(ActivityFilterChoice choice) => switch (choice) {
-        ActivityFilterChoice.all => 'All',
-        ActivityFilterChoice.expenses => 'Expenses',
-        ActivityFilterChoice.income => 'Income',
-        ActivityFilterChoice.transfers => 'Transfers',
-        ActivityFilterChoice.unsorted => 'Unsorted',
-      };
+    ActivityFilterChoice.all => 'All',
+    ActivityFilterChoice.expenses => 'Expenses',
+    ActivityFilterChoice.income => 'Income',
+    ActivityFilterChoice.transfers => 'Transfers',
+    ActivityFilterChoice.unsorted => 'Unsorted',
+  };
 
   Widget _loadMoreButton() {
     return Padding(
@@ -655,20 +658,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       final date = item.ts.toLocal();
       // This padded key identifies a local civil date only; the transaction's
       // timestamp remains the original instant used for ordering and storage.
-      final dateKey = '${date.year.toString().padLeft(4, '0')}-'
+      final dateKey =
+          '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}';
       final group = groups.putIfAbsent(
         dateKey,
-        () => _MutableDayGroup(
-          header: formatActivityDateGroup(date, now: now),
-        ),
+        () => _MutableDayGroup(header: formatActivityDateGroup(date, now: now)),
       );
       group.items.add(item);
       final bucket = '${item.currencyCode ?? ""}|${item.currencySymbol ?? ""}';
       final prior = group.totals[bucket];
       group.totals[bucket] = (
-        amount: (prior?.amount ?? 0) +
+        amount:
+            (prior?.amount ?? 0) +
             (item.direction == TransactionDirection.debit
                 ? -item.amount
                 : item.amount),
@@ -800,8 +803,9 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeBg = isDark ? AppColorTokens.violetPrimary : AppColorTokens.ink;
-    final inactiveBg =
-        isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomChip;
+    final inactiveBg = isDark
+        ? AppColorTokens.bloomDarkCard
+        : AppColorTokens.bloomChip;
 
     return Semantics(
       container: true,
@@ -817,8 +821,10 @@ class _FilterChip extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             child: Center(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? activeBg : inactiveBg,
                   borderRadius: BorderRadius.circular(16),
@@ -831,8 +837,8 @@ class _FilterChip extends StatelessWidget {
                     color: isSelected
                         ? Colors.white
                         : (isDark
-                            ? AppColorTokens.bloomDarkTextSecondary
-                            : AppColorTokens.inkSecondary),
+                              ? AppColorTokens.bloomDarkTextSecondary
+                              : AppColorTokens.inkSecondary),
                   ),
                 ),
               ),
@@ -1010,14 +1016,9 @@ class _DismissibleTransactionRow extends StatelessWidget {
       },
       child: Semantics(
         container: true,
-        label: '${item.displayName}, ${item.categoryName ?? 'Uncategorised'}, '
-            '${formatSourceAmount(
-          item.direction == TransactionDirection.debit
-              ? -item.amount
-              : item.amount,
-          currencyCode: item.currencyCode,
-          currencySymbol: item.currencySymbol,
-        )}, ${formatActivityDateGroup(item.ts)}, '
+        label:
+            '${item.displayName}, ${item.categoryName ?? 'Uncategorised'}, '
+            '${formatSourceAmount(item.direction == TransactionDirection.debit ? -item.amount : item.amount, currencyCode: item.currencyCode, currencySymbol: item.currencySymbol)}, ${formatActivityDateGroup(item.ts)}, '
             'Status ${item.status.replaceAll('_', ' ')}, ${_formatMeta(item)}',
         button: true,
         onTap: onTap,
@@ -1035,7 +1036,8 @@ class _DismissibleTransactionRow extends StatelessWidget {
                 ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 340 ||
+                    final compact =
+                        constraints.maxWidth < 340 ||
                         MediaQuery.textScalerOf(context).scale(1) >= 1.5;
                     final category = BloomCategoryTile(
                       categoryId: item.categoryId,
