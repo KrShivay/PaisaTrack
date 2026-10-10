@@ -81,6 +81,11 @@ void main() {
             ]),
           ),
           appDatabaseProvider.overrideWith((ref) async => database),
+          // The user-marked section has its own provider test; a live Drift
+          // watch here never settles under the widget-test fake clock.
+          markedRecurringProvider.overrideWith(
+            (ref) => Stream.value(const <MarkedRecurringItem>[]),
+          ),
         ],
         child: MaterialApp(
           builder: (context, child) => MediaQuery(

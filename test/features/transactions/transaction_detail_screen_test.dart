@@ -703,6 +703,15 @@ void main() {
           sourceCurrencyRepairPreviewProvider(reviewDetail.txn.id)
               .overrideWith((ref) async => null),
           categoryListProvider.overrideWith((ref) => Stream.value([])),
+          // Live Drift watches never settle under the widget-test clock.
+          transactionSmsMessagesProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => const []),
+          transactionRecurringOverrideProvider(reviewDetail.txn.id)
+              .overrideWith(
+            (ref) => Stream.value(RecurringOverride.automatic),
+          ),
+          transactionDetectedRecurringProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => false),
         ],
       );
       await tester.pumpWidget(
@@ -756,6 +765,15 @@ void main() {
           sourceCurrencyRepairPreviewProvider(reviewDetail.txn.id)
               .overrideWith((ref) async => null),
           categoryListProvider.overrideWith((ref) => Stream.value([])),
+          // Live Drift watches never settle under the widget-test clock.
+          transactionSmsMessagesProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => const []),
+          transactionRecurringOverrideProvider(reviewDetail.txn.id)
+              .overrideWith(
+            (ref) => Stream.value(RecurringOverride.automatic),
+          ),
+          transactionDetectedRecurringProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => false),
         ],
       );
       await tester.pumpWidget(
