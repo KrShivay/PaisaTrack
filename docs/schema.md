@@ -143,3 +143,35 @@ Schema v20 (ADR 0032) adds nullable `transactions.recurring_override`
 `sms_transaction_links` table with `idx_sms_transaction_links_transaction_id`.
 Both steps are guarded so repaired legacy shapes migrate idempotently.
 Regression fixture: `test/data/db/app_database_v20_migration_test.dart`.
+
+## Category taxonomy seed (no schema change, 2026-10-10)
+
+`assets/seed/categories.json` is a two-level taxonomy (32 top-level, 302
+subcategories; fields `id`, `name`, `parent_id`, `icon`, `is_spending`,
+`sort_order`, `is_user_created`, plus optional `since`). Seed rules:
+
+- Ids are permanent. The original 87 ids (no `since`, snapshot in
+  `test/fixtures/categories_v1.json`) are never renamed, moved or removed, and
+  their rows are never rewritten. That includes legacy flags that look odd
+  (`investments*` and `emi_credit_card` stay `is_spending = true`); changing
+  them needs a deliberate data migration decision.
+- `seedDefaultCategories()` is insert-or-ignore by `id`. Version-1 rows are
+  re-offered every launch (historical behaviour; `other` is the categorizer
+  fallback). Rows with `since: N` are offered once per install: the highest
+  offered version is stored in `model_meta` under `category_seed_version`
+  (included in backups). Existing installs therefore receive new categories on
+  the next launch; a category the user later deletes or merges away is not
+  resurrected, and a user rename/icon/flag edit is never overwritten. A new row
+  whose parent is missing is skipped.
+- Restoring an archive from before the expansion lacks the marker, so the new
+  categories are topped up on the next launch.
+- New non-spending groups: transfers, income, cash withdrawal, lending &
+  borrowing, new investment holdings, credit-card bill payment
+  (`emi_credit_card_payment`) and refundable deposits (`rent_deposit`).
+- `assets/seed/category_seed.json` maps exact normalized merchant/VPA tokens
+  to category ids (token-boundary matching; keys under 6 characters must also
+  end at a boundary; longest key wins). Personal VPAs are never mapped to
+  transfers (ADR 0011). A seed hit is used only if the category row still
+  exists.
+- Every `icon` string must be registered in `CategoryVisuals`; every new
+  top-level id needs a colour entry there.

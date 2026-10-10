@@ -781,5 +781,2475 @@
     "is_spending": true,
     "sort_order": 1001,
     "is_user_created": false
+  },
+  {
+    "id": "food_tea_chai_stall",
+    "name": "Tea / Chai Stall",
+    "parent_id": "food_dining",
+    "icon": "emoji_food_beverage",
+    "is_spending": true,
+    "sort_order": 16,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_coffee",
+    "name": "Coffee",
+    "parent_id": "food_dining",
+    "icon": "coffee_rounded",
+    "is_spending": true,
+    "sort_order": 17,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_street_food",
+    "name": "Street Food",
+    "parent_id": "food_dining",
+    "icon": "ramen_dining_rounded",
+    "is_spending": true,
+    "sort_order": 18,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_bakery_sweets",
+    "name": "Bakery & Sweets",
+    "parent_id": "food_dining",
+    "icon": "bakery_dining_rounded",
+    "is_spending": true,
+    "sort_order": 19,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_restaurants",
+    "name": "Restaurants",
+    "parent_id": "food_dining",
+    "icon": "restaurant_menu_rounded",
+    "is_spending": true,
+    "sort_order": 20,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_fast_food",
+    "name": "Fast Food",
+    "parent_id": "food_dining",
+    "icon": "fastfood_rounded",
+    "is_spending": true,
+    "sort_order": 21,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_office_canteen",
+    "name": "Office Canteen",
+    "parent_id": "food_dining",
+    "icon": "local_dining_rounded",
+    "is_spending": true,
+    "sort_order": 22,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_juice_beverages",
+    "name": "Juice & Cold Drinks",
+    "parent_id": "food_dining",
+    "icon": "local_drink_rounded",
+    "is_spending": true,
+    "sort_order": 23,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_ice_cream_desserts",
+    "name": "Ice Cream & Desserts",
+    "parent_id": "food_dining",
+    "icon": "icecream_rounded",
+    "is_spending": true,
+    "sort_order": 24,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_packaged_snacks",
+    "name": "Snacks & Chocolates",
+    "parent_id": "food_dining",
+    "icon": "cookie_rounded",
+    "is_spending": true,
+    "sort_order": 25,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_tiffin_mess",
+    "name": "Tiffin & Mess",
+    "parent_id": "food_dining",
+    "icon": "takeout_dining_rounded",
+    "is_spending": true,
+    "sort_order": 26,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "food_catering",
+    "name": "Catering & Party Orders",
+    "parent_id": "food_dining",
+    "icon": "celebration_rounded",
+    "is_spending": true,
+    "sort_order": 28,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_kirana",
+    "name": "Kirana / Local Shop",
+    "parent_id": "groceries",
+    "icon": "storefront_rounded",
+    "is_spending": true,
+    "sort_order": 24,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_weekly_market",
+    "name": "Weekly Market & Mandi",
+    "parent_id": "groceries",
+    "icon": "store_mall_directory_rounded",
+    "is_spending": true,
+    "sort_order": 25,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_dairy_milk",
+    "name": "Dairy & Milk",
+    "parent_id": "groceries",
+    "icon": "egg_alt_rounded",
+    "is_spending": true,
+    "sort_order": 26,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_meat_fish",
+    "name": "Meat & Fish",
+    "parent_id": "groceries",
+    "icon": "set_meal_rounded",
+    "is_spending": true,
+    "sort_order": 27,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_online_grocery",
+    "name": "Online Grocery",
+    "parent_id": "groceries",
+    "icon": "add_shopping_cart_rounded",
+    "is_spending": true,
+    "sort_order": 28,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_staples_oil",
+    "name": "Grains, Pulses & Oil",
+    "parent_id": "groceries",
+    "icon": "grain_rounded",
+    "is_spending": true,
+    "sort_order": 29,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_dry_fruits_spices",
+    "name": "Dry Fruits & Spices",
+    "parent_id": "groceries",
+    "icon": "spa_rounded",
+    "is_spending": true,
+    "sort_order": 30,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "groceries_household_supplies",
+    "name": "Household Supplies",
+    "parent_id": "groceries",
+    "icon": "cleaning_services",
+    "is_spending": true,
+    "sort_order": 33,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transport_airport_transfer",
+    "name": "Airport Shuttle",
+    "parent_id": "transport",
+    "icon": "airport_shuttle_rounded",
+    "is_spending": true,
+    "sort_order": 39,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_footwear",
+    "name": "Footwear",
+    "parent_id": "shopping",
+    "icon": "hiking_rounded",
+    "is_spending": true,
+    "sort_order": 45,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_furniture",
+    "name": "Furniture",
+    "parent_id": "shopping",
+    "icon": "chair_rounded",
+    "is_spending": true,
+    "sort_order": 46,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_jewellery",
+    "name": "Jewellery & Watches",
+    "parent_id": "shopping",
+    "icon": "diamond_rounded",
+    "is_spending": true,
+    "sort_order": 47,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_online_marketplace",
+    "name": "Online Marketplaces",
+    "parent_id": "shopping",
+    "icon": "shopping_cart",
+    "is_spending": true,
+    "sort_order": 48,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_mobile_accessories",
+    "name": "Mobiles & Accessories",
+    "parent_id": "shopping",
+    "icon": "smartphone_rounded",
+    "is_spending": true,
+    "sort_order": 49,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_appliances",
+    "name": "Home Appliances",
+    "parent_id": "shopping",
+    "icon": "kitchen_rounded",
+    "is_spending": true,
+    "sort_order": 50,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_kitchen_homeware",
+    "name": "Kitchen & Homeware",
+    "parent_id": "shopping",
+    "icon": "soup_kitchen_rounded",
+    "is_spending": true,
+    "sort_order": 51,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_market",
+    "name": "Market & Street Shopping",
+    "parent_id": "shopping",
+    "icon": "store_mall_directory_rounded",
+    "is_spending": true,
+    "sort_order": 53,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_books_stationery",
+    "name": "Books & Stationery Shop",
+    "parent_id": "shopping",
+    "icon": "menu_book_rounded",
+    "is_spending": true,
+    "sort_order": 54,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "shopping_decor_garden",
+    "name": "Decor & Garden",
+    "parent_id": "shopping",
+    "icon": "yard_rounded",
+    "is_spending": true,
+    "sort_order": 57,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "bills_piped_gas",
+    "name": "Piped Gas (PNG)",
+    "parent_id": "bills_utilities",
+    "icon": "gas_meter_rounded",
+    "is_spending": true,
+    "sort_order": 58,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "bills_postpaid",
+    "name": "Postpaid Mobile Bill",
+    "parent_id": "bills_utilities",
+    "icon": "sim_card_rounded",
+    "is_spending": true,
+    "sort_order": 60,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "bills_property_tax",
+    "name": "Property Tax",
+    "parent_id": "bills_utilities",
+    "icon": "domain_rounded",
+    "is_spending": true,
+    "sort_order": 62,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "bills_courier_postage",
+    "name": "Courier & Postage",
+    "parent_id": "bills_utilities",
+    "icon": "local_shipping_rounded",
+    "is_spending": true,
+    "sort_order": 64,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "subscriptions_software",
+    "name": "Software & Apps",
+    "parent_id": "subscriptions",
+    "icon": "apps_rounded",
+    "is_spending": true,
+    "sort_order": 67,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "subscriptions_news_magazines",
+    "name": "News & Magazines",
+    "parent_id": "subscriptions",
+    "icon": "newspaper_rounded",
+    "is_spending": true,
+    "sort_order": 68,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "subscriptions_ai_tools",
+    "name": "AI Tools",
+    "parent_id": "subscriptions",
+    "icon": "smart_toy",
+    "is_spending": true,
+    "sort_order": 69,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "subscriptions_vpn_security",
+    "name": "VPN & Security",
+    "parent_id": "subscriptions",
+    "icon": "vpn_key_rounded",
+    "is_spending": true,
+    "sort_order": 70,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "subscriptions_gaming",
+    "name": "Gaming Subscriptions",
+    "parent_id": "subscriptions",
+    "icon": "sports_esports_rounded",
+    "is_spending": true,
+    "sort_order": 71,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "subscriptions_memberships",
+    "name": "Club & Prime Memberships",
+    "parent_id": "subscriptions",
+    "icon": "card_membership_rounded",
+    "is_spending": true,
+    "sort_order": 73,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_maintenance",
+    "name": "Maintenance Dues",
+    "parent_id": "rent_housing",
+    "icon": "apartment",
+    "is_spending": true,
+    "sort_order": 75,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_deposit",
+    "name": "Security Deposit (refundable)",
+    "parent_id": "rent_housing",
+    "icon": "lock_rounded",
+    "is_spending": false,
+    "sort_order": 76,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_furnishing",
+    "name": "Furnishing & Interiors",
+    "parent_id": "rent_housing",
+    "icon": "weekend_rounded",
+    "is_spending": true,
+    "sort_order": 77,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_pg_hostel",
+    "name": "PG & Hostel",
+    "parent_id": "rent_housing",
+    "icon": "bed_rounded",
+    "is_spending": true,
+    "sort_order": 78,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_brokerage",
+    "name": "Brokerage",
+    "parent_id": "rent_housing",
+    "icon": "real_estate_agent_rounded",
+    "is_spending": true,
+    "sort_order": 79,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_shifting",
+    "name": "Packers & Movers",
+    "parent_id": "rent_housing",
+    "icon": "local_shipping_rounded",
+    "is_spending": true,
+    "sort_order": 80,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_electrician_plumber",
+    "name": "Plumber & Electrician",
+    "parent_id": "rent_housing",
+    "icon": "plumbing_rounded",
+    "is_spending": true,
+    "sort_order": 81,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "rent_painting",
+    "name": "Painting & Renovation",
+    "parent_id": "rent_housing",
+    "icon": "format_paint_rounded",
+    "is_spending": true,
+    "sort_order": 82,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "emi_education_loan",
+    "name": "Student Loan",
+    "parent_id": "emi_loans",
+    "icon": "school",
+    "is_spending": true,
+    "sort_order": 85,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "emi_gold_loan",
+    "name": "Gold Loan",
+    "parent_id": "emi_loans",
+    "icon": "savings",
+    "is_spending": true,
+    "sort_order": 86,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "emi_consumer_loan",
+    "name": "Product EMI & BNPL",
+    "parent_id": "emi_loans",
+    "icon": "credit_score_rounded",
+    "is_spending": true,
+    "sort_order": 87,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "emi_loan_prepayment",
+    "name": "Loan Prepayment / Foreclosure",
+    "parent_id": "emi_loans",
+    "icon": "price_check_rounded",
+    "is_spending": true,
+    "sort_order": 88,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "emi_business_loan",
+    "name": "Business Loan",
+    "parent_id": "emi_loans",
+    "icon": "business_center_rounded",
+    "is_spending": true,
+    "sort_order": 89,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "emi_credit_card_payment",
+    "name": "Credit Card Payment (not spending)",
+    "parent_id": "emi_loans",
+    "icon": "credit_card",
+    "is_spending": false,
+    "sort_order": 91,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_diagnostics",
+    "name": "Diagnostics & Lab Tests",
+    "parent_id": "health",
+    "icon": "biotech_rounded",
+    "is_spending": true,
+    "sort_order": 97,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_hospital",
+    "name": "Hospital",
+    "parent_id": "health",
+    "icon": "local_hospital",
+    "is_spending": true,
+    "sort_order": 98,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_dental",
+    "name": "Dental",
+    "parent_id": "health",
+    "icon": "medical_services",
+    "is_spending": true,
+    "sort_order": 99,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_eye_care",
+    "name": "Eye Care",
+    "parent_id": "health",
+    "icon": "visibility_rounded",
+    "is_spending": true,
+    "sort_order": 100,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_therapy",
+    "name": "Therapy & Mental Health",
+    "parent_id": "health",
+    "icon": "psychology_rounded",
+    "is_spending": true,
+    "sort_order": 101,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_physio",
+    "name": "Physiotherapy",
+    "parent_id": "health",
+    "icon": "accessibility_new_rounded",
+    "is_spending": true,
+    "sort_order": 102,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_ayurveda",
+    "name": "Ayurveda & Alternative",
+    "parent_id": "health",
+    "icon": "spa_rounded",
+    "is_spending": true,
+    "sort_order": 103,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_medical_devices",
+    "name": "Medical Devices & Supplies",
+    "parent_id": "health",
+    "icon": "monitor_heart_rounded",
+    "is_spending": true,
+    "sort_order": 104,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "health_yoga_meditation",
+    "name": "Yoga & Meditation",
+    "parent_id": "health",
+    "icon": "self_improvement_rounded",
+    "is_spending": true,
+    "sort_order": 108,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "education_college_fees",
+    "name": "College / University Fees",
+    "parent_id": "education",
+    "icon": "account_balance",
+    "is_spending": true,
+    "sort_order": 105,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "education_coaching",
+    "name": "Coaching & Tuition",
+    "parent_id": "education",
+    "icon": "co_present_rounded",
+    "is_spending": true,
+    "sort_order": 106,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "education_stationery",
+    "name": "Stationery",
+    "parent_id": "education",
+    "icon": "edit_note_rounded",
+    "is_spending": true,
+    "sort_order": 107,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "education_exam_fees",
+    "name": "Exam & Application Fees",
+    "parent_id": "education",
+    "icon": "assignment_rounded",
+    "is_spending": true,
+    "sort_order": 108,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "education_uniform_transport",
+    "name": "School Uniform & Van",
+    "parent_id": "education",
+    "icon": "directions_bus",
+    "is_spending": true,
+    "sort_order": 110,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "education_skill_workshops",
+    "name": "Workshops & Skill Classes",
+    "parent_id": "education",
+    "icon": "construction_rounded",
+    "is_spending": true,
+    "sort_order": 112,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_ott_rentals",
+    "name": "Movie & Show Rentals",
+    "parent_id": "entertainment",
+    "icon": "live_tv_rounded",
+    "is_spending": true,
+    "sort_order": 114,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_gaming",
+    "name": "Gaming",
+    "parent_id": "entertainment",
+    "icon": "sports_esports_rounded",
+    "is_spending": true,
+    "sort_order": 115,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_hobbies",
+    "name": "Hobbies & Crafts",
+    "parent_id": "entertainment",
+    "icon": "palette_rounded",
+    "is_spending": true,
+    "sort_order": 116,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_concerts",
+    "name": "Concerts & Live Events",
+    "parent_id": "entertainment",
+    "icon": "festival_rounded",
+    "is_spending": true,
+    "sort_order": 117,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_amusement",
+    "name": "Amusement Parks & Outings",
+    "parent_id": "entertainment",
+    "icon": "attractions_rounded",
+    "is_spending": true,
+    "sort_order": 118,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_books_media",
+    "name": "Books, Music & Media",
+    "parent_id": "entertainment",
+    "icon": "library_books_rounded",
+    "is_spending": true,
+    "sort_order": 119,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_clubs_sports",
+    "name": "Sports Clubs & Turf Booking",
+    "parent_id": "entertainment",
+    "icon": "sports_soccer_rounded",
+    "is_spending": true,
+    "sort_order": 120,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "entertainment_fantasy_apps",
+    "name": "Fantasy / Contest Entry Fees",
+    "parent_id": "entertainment",
+    "icon": "emoji_events_rounded",
+    "is_spending": true,
+    "sort_order": 121,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_intercity_bus",
+    "name": "Intercity Bus",
+    "parent_id": "travel",
+    "icon": "directions_bus",
+    "is_spending": true,
+    "sort_order": 124,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_stay_homestay",
+    "name": "Homestay, Hostel & Airbnb",
+    "parent_id": "travel",
+    "icon": "cottage_rounded",
+    "is_spending": true,
+    "sort_order": 125,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_insurance",
+    "name": "Travel Insurance",
+    "parent_id": "travel",
+    "icon": "shield",
+    "is_spending": true,
+    "sort_order": 126,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_visa_passport",
+    "name": "Visa & Passport Fees",
+    "parent_id": "travel",
+    "icon": "badge_rounded",
+    "is_spending": true,
+    "sort_order": 127,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_forex",
+    "name": "Forex & Currency Exchange",
+    "parent_id": "travel",
+    "icon": "currency_exchange",
+    "is_spending": true,
+    "sort_order": 128,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_tours_activities",
+    "name": "Tours & Activities",
+    "parent_id": "travel",
+    "icon": "tour_rounded",
+    "is_spending": true,
+    "sort_order": 129,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_luggage_gear",
+    "name": "Luggage & Travel Gear",
+    "parent_id": "travel",
+    "icon": "luggage_rounded",
+    "is_spending": true,
+    "sort_order": 130,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_resort_villa",
+    "name": "Resorts & Villas",
+    "parent_id": "travel",
+    "icon": "villa_rounded",
+    "is_spending": true,
+    "sort_order": 133,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_pilgrimage",
+    "name": "Pilgrimage & Yatra",
+    "parent_id": "travel",
+    "icon": "temple_hindu",
+    "is_spending": true,
+    "sort_order": 134,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "travel_booking_fees",
+    "name": "Booking & Convenience Fees",
+    "parent_id": "travel",
+    "icon": "receipt_long",
+    "is_spending": true,
+    "sort_order": 135,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transfers_self",
+    "name": "Self Transfer (own accounts)",
+    "parent_id": "transfers",
+    "icon": "sync_alt_rounded",
+    "is_spending": false,
+    "sort_order": 133,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transfers_friends",
+    "name": "Friends",
+    "parent_id": "transfers",
+    "icon": "people_rounded",
+    "is_spending": false,
+    "sort_order": 134,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transfers_wallet_topup",
+    "name": "Wallet Top-up",
+    "parent_id": "transfers",
+    "icon": "account_balance_wallet",
+    "is_spending": false,
+    "sort_order": 135,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transfers_parents",
+    "name": "Parents",
+    "parent_id": "transfers",
+    "icon": "family_restroom_rounded",
+    "is_spending": false,
+    "sort_order": 136,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transfers_children",
+    "name": "Children / Allowance",
+    "parent_id": "transfers",
+    "icon": "child_friendly_rounded",
+    "is_spending": false,
+    "sort_order": 137,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "transfers_split_settlement",
+    "name": "Split Bill Settlement",
+    "parent_id": "transfers",
+    "icon": "group_add_rounded",
+    "is_spending": false,
+    "sort_order": 138,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_business",
+    "name": "Business Income",
+    "parent_id": "income",
+    "icon": "storefront_rounded",
+    "is_spending": false,
+    "sort_order": 144,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_refunds",
+    "name": "Refunds",
+    "parent_id": "income",
+    "icon": "assignment_return_rounded",
+    "is_spending": false,
+    "sort_order": 145,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_cashback",
+    "name": "Cashback & Rewards",
+    "parent_id": "income",
+    "icon": "loyalty_rounded",
+    "is_spending": false,
+    "sort_order": 146,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_interest",
+    "name": "Interest Received",
+    "parent_id": "income",
+    "icon": "savings",
+    "is_spending": false,
+    "sort_order": 147,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_rent_received",
+    "name": "Rental Income",
+    "parent_id": "income",
+    "icon": "house",
+    "is_spending": false,
+    "sort_order": 148,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_gifts_received",
+    "name": "Gifts Received",
+    "parent_id": "income",
+    "icon": "redeem",
+    "is_spending": false,
+    "sort_order": 149,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_reimbursement",
+    "name": "Reimbursements",
+    "parent_id": "income",
+    "icon": "receipt_long",
+    "is_spending": false,
+    "sort_order": 150,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_bonus",
+    "name": "Bonus & Incentives",
+    "parent_id": "income",
+    "icon": "military_tech_rounded",
+    "is_spending": false,
+    "sort_order": 151,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_pension",
+    "name": "Pension & Retirement Income",
+    "parent_id": "income",
+    "icon": "elderly_rounded",
+    "is_spending": false,
+    "sort_order": 152,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_capital_gains",
+    "name": "Gains & Maturity Proceeds",
+    "parent_id": "income",
+    "icon": "trending_up",
+    "is_spending": false,
+    "sort_order": 153,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_tax_refund",
+    "name": "Tax Refund",
+    "parent_id": "income",
+    "icon": "currency_rupee",
+    "is_spending": false,
+    "sort_order": 154,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_deposit_refund",
+    "name": "Deposit Refund",
+    "parent_id": "income",
+    "icon": "lock_open_rounded",
+    "is_spending": false,
+    "sort_order": 155,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "income_insurance_claim",
+    "name": "Insurance Claim Received",
+    "parent_id": "income",
+    "icon": "verified_user_rounded",
+    "is_spending": false,
+    "sort_order": 158,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_late_penalty",
+    "name": "Late Fees & Penalties",
+    "parent_id": "fees_charges",
+    "icon": "report_rounded",
+    "is_spending": true,
+    "sort_order": 153,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_interest_charges",
+    "name": "Interest Charges",
+    "parent_id": "fees_charges",
+    "icon": "percent_rounded",
+    "is_spending": true,
+    "sort_order": 154,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_gst",
+    "name": "GST on Charges",
+    "parent_id": "fees_charges",
+    "icon": "request_quote",
+    "is_spending": true,
+    "sort_order": 155,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_annual_card",
+    "name": "Card Annual Fee",
+    "parent_id": "fees_charges",
+    "icon": "credit_card",
+    "is_spending": true,
+    "sort_order": 156,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_atm",
+    "name": "ATM Fees",
+    "parent_id": "fees_charges",
+    "icon": "atm",
+    "is_spending": true,
+    "sort_order": 157,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_forex_markup",
+    "name": "Forex Markup",
+    "parent_id": "fees_charges",
+    "icon": "currency_exchange",
+    "is_spending": true,
+    "sort_order": 158,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "fees_processing",
+    "name": "Processing & Convenience Fees",
+    "parent_id": "fees_charges",
+    "icon": "receipt_long",
+    "is_spending": true,
+    "sort_order": 160,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "cash_atm",
+    "name": "ATM Withdrawal",
+    "parent_id": "cash_withdrawal",
+    "icon": "atm",
+    "is_spending": false,
+    "sort_order": 161,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "cash_at_shop",
+    "name": "Cash at Shop / Cashback",
+    "parent_id": "cash_withdrawal",
+    "icon": "point_of_sale_rounded",
+    "is_spending": false,
+    "sort_order": 162,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "cash_branch",
+    "name": "Bank Branch / Cheque",
+    "parent_id": "cash_withdrawal",
+    "icon": "account_balance",
+    "is_spending": false,
+    "sort_order": 163,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_rd",
+    "name": "Recurring Deposit",
+    "parent_id": "investments",
+    "icon": "savings",
+    "is_spending": false,
+    "sort_order": 176,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_crypto",
+    "name": "Crypto",
+    "parent_id": "investments",
+    "icon": "currency_bitcoin_rounded",
+    "is_spending": false,
+    "sort_order": 177,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_bonds",
+    "name": "Bonds & Debentures",
+    "parent_id": "investments",
+    "icon": "request_page_rounded",
+    "is_spending": false,
+    "sort_order": 178,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_sgb_gold_etf",
+    "name": "SGB & Gold ETF",
+    "parent_id": "investments",
+    "icon": "trending_up",
+    "is_spending": false,
+    "sort_order": 179,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_real_estate",
+    "name": "Real Estate & Land",
+    "parent_id": "investments",
+    "icon": "landscape_rounded",
+    "is_spending": false,
+    "sort_order": 180,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_etf_index",
+    "name": "ETFs & Index Funds",
+    "parent_id": "investments",
+    "icon": "show_chart",
+    "is_spending": false,
+    "sort_order": 181,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "investments_demat_charges",
+    "name": "Demat & Broker Costs",
+    "parent_id": "investments",
+    "icon": "request_quote",
+    "is_spending": true,
+    "sort_order": 184,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "other_uncategorised",
+    "name": "Uncategorised",
+    "parent_id": "other",
+    "icon": "help_outline_rounded",
+    "is_spending": true,
+    "sort_order": 1002,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "other_miscellaneous",
+    "name": "Miscellaneous",
+    "parent_id": "other",
+    "icon": "more_horiz_rounded",
+    "is_spending": true,
+    "sort_order": 1003,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "other_adjustment",
+    "name": "Adjustment / Correction",
+    "parent_id": "other",
+    "icon": "tune_rounded",
+    "is_spending": false,
+    "sort_order": 1004,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco",
+    "name": "Alcohol & Tobacco",
+    "parent_id": null,
+    "icon": "local_bar_rounded",
+    "is_spending": true,
+    "sort_order": 180,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_liquor_store",
+    "name": "Alcohol / Liquor Store",
+    "parent_id": "alcohol_tobacco",
+    "icon": "liquor_rounded",
+    "is_spending": true,
+    "sort_order": 181,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_bar_pub",
+    "name": "Bar & Pub",
+    "parent_id": "alcohol_tobacco",
+    "icon": "sports_bar_rounded",
+    "is_spending": true,
+    "sort_order": 182,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_cigarettes",
+    "name": "Cigarettes & Tobacco",
+    "parent_id": "alcohol_tobacco",
+    "icon": "smoking_rooms_rounded",
+    "is_spending": true,
+    "sort_order": 183,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_paan",
+    "name": "Paan & Gutkha",
+    "parent_id": "alcohol_tobacco",
+    "icon": "grass",
+    "is_spending": true,
+    "sort_order": 184,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_cannabis",
+    "name": "Cannabis",
+    "parent_id": "alcohol_tobacco",
+    "icon": "grass",
+    "is_spending": true,
+    "sort_order": 185,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_vape",
+    "name": "Vape & E-cigarette",
+    "parent_id": "alcohol_tobacco",
+    "icon": "vaping_rooms_rounded",
+    "is_spending": true,
+    "sort_order": 186,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_wine_beer",
+    "name": "Wine & Beer",
+    "parent_id": "alcohol_tobacco",
+    "icon": "wine_bar_rounded",
+    "is_spending": true,
+    "sort_order": 187,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_hookah",
+    "name": "Hookah / Shisha",
+    "parent_id": "alcohol_tobacco",
+    "icon": "smoke_free_rounded",
+    "is_spending": true,
+    "sort_order": 188,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "alcohol_tobacco_brewery_club",
+    "name": "Brewery & Nightclub",
+    "parent_id": "alcohol_tobacco",
+    "icon": "nightlife_rounded",
+    "is_spending": true,
+    "sort_order": 189,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care",
+    "name": "Personal Care",
+    "parent_id": null,
+    "icon": "face_retouching_natural",
+    "is_spending": true,
+    "sort_order": 190,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_salon_barber",
+    "name": "Salon & Barber",
+    "parent_id": "personal_care",
+    "icon": "content_cut",
+    "is_spending": true,
+    "sort_order": 191,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_cosmetics_skincare",
+    "name": "Cosmetics & Skincare",
+    "parent_id": "personal_care",
+    "icon": "face_3_rounded",
+    "is_spending": true,
+    "sort_order": 192,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_grooming_products",
+    "name": "Grooming Products",
+    "parent_id": "personal_care",
+    "icon": "face_rounded",
+    "is_spending": true,
+    "sort_order": 193,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_spa_massage",
+    "name": "Spa & Massage",
+    "parent_id": "personal_care",
+    "icon": "spa_rounded",
+    "is_spending": true,
+    "sort_order": 194,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_hygiene",
+    "name": "Hygiene Products",
+    "parent_id": "personal_care",
+    "icon": "soap_rounded",
+    "is_spending": true,
+    "sort_order": 195,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_hair_care",
+    "name": "Hair Care",
+    "parent_id": "personal_care",
+    "icon": "dry_rounded",
+    "is_spending": true,
+    "sort_order": 196,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_nails_beauty",
+    "name": "Nails & Beauty Services",
+    "parent_id": "personal_care",
+    "icon": "brush_rounded",
+    "is_spending": true,
+    "sort_order": 197,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "personal_care_feminine_hygiene",
+    "name": "Feminine Hygiene",
+    "parent_id": "personal_care",
+    "icon": "woman_rounded",
+    "is_spending": true,
+    "sort_order": 199,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets",
+    "name": "Pets",
+    "parent_id": null,
+    "icon": "pets",
+    "is_spending": true,
+    "sort_order": 200,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_food",
+    "name": "Pet Feed & Treats",
+    "parent_id": "pets",
+    "icon": "pets",
+    "is_spending": true,
+    "sort_order": 201,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_vet",
+    "name": "Vet & Medicines",
+    "parent_id": "pets",
+    "icon": "vaccines_rounded",
+    "is_spending": true,
+    "sort_order": 202,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_grooming",
+    "name": "Pet Grooming",
+    "parent_id": "pets",
+    "icon": "content_cut",
+    "is_spending": true,
+    "sort_order": 203,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_supplies",
+    "name": "Pet Supplies & Accessories",
+    "parent_id": "pets",
+    "icon": "shopping_bag",
+    "is_spending": true,
+    "sort_order": 204,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_boarding",
+    "name": "Pet Boarding & Daycare",
+    "parent_id": "pets",
+    "icon": "house_siding_rounded",
+    "is_spending": true,
+    "sort_order": 205,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_training",
+    "name": "Pet Training",
+    "parent_id": "pets",
+    "icon": "school",
+    "is_spending": true,
+    "sort_order": 206,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "pets_insurance",
+    "name": "Pet Insurance",
+    "parent_id": "pets",
+    "icon": "shield",
+    "is_spending": true,
+    "sort_order": 207,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own",
+    "name": "Vehicle (Own)",
+    "parent_id": null,
+    "icon": "directions_car",
+    "is_spending": true,
+    "sort_order": 210,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_fuel_petrol_diesel",
+    "name": "Fuel (Car / Other)",
+    "parent_id": "vehicle_own",
+    "icon": "local_gas_station",
+    "is_spending": true,
+    "sort_order": 211,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_ev_charging",
+    "name": "EV Charging",
+    "parent_id": "vehicle_own",
+    "icon": "ev_station_rounded",
+    "is_spending": true,
+    "sort_order": 212,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_cng",
+    "name": "CNG",
+    "parent_id": "vehicle_own",
+    "icon": "local_gas_station",
+    "is_spending": true,
+    "sort_order": 213,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_service_repairs",
+    "name": "Servicing & Repairs",
+    "parent_id": "vehicle_own",
+    "icon": "car_repair_rounded",
+    "is_spending": true,
+    "sort_order": 214,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_insurance",
+    "name": "Vehicle Insurance",
+    "parent_id": "vehicle_own",
+    "icon": "shield",
+    "is_spending": true,
+    "sort_order": 215,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_parking",
+    "name": "Parking",
+    "parent_id": "vehicle_own",
+    "icon": "local_parking",
+    "is_spending": true,
+    "sort_order": 216,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_toll_fastag",
+    "name": "Tolls & FASTag",
+    "parent_id": "vehicle_own",
+    "icon": "toll",
+    "is_spending": true,
+    "sort_order": 217,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_washing",
+    "name": "Washing & Detailing",
+    "parent_id": "vehicle_own",
+    "icon": "local_car_wash_rounded",
+    "is_spending": true,
+    "sort_order": 218,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_accessories",
+    "name": "Accessories",
+    "parent_id": "vehicle_own",
+    "icon": "build_rounded",
+    "is_spending": true,
+    "sort_order": 219,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_challan_fines",
+    "name": "Challan & Traffic Fines",
+    "parent_id": "vehicle_own",
+    "icon": "gavel_rounded",
+    "is_spending": true,
+    "sort_order": 220,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_tyres_battery",
+    "name": "Tyres & Battery",
+    "parent_id": "vehicle_own",
+    "icon": "tire_repair_rounded",
+    "is_spending": true,
+    "sort_order": 221,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_own_registration_puc",
+    "name": "Registration, RC & PUC",
+    "parent_id": "vehicle_own",
+    "icon": "assignment_rounded",
+    "is_spending": true,
+    "sort_order": 222,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental",
+    "name": "Vehicle Rental & Rides",
+    "parent_id": null,
+    "icon": "car_rental_rounded",
+    "is_spending": true,
+    "sort_order": 220,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental_self_drive",
+    "name": "Self-drive Car Rental",
+    "parent_id": "vehicle_rental",
+    "icon": "car_rental_rounded",
+    "is_spending": true,
+    "sort_order": 221,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental_bike",
+    "name": "Bike / Scooter Rental",
+    "parent_id": "vehicle_rental",
+    "icon": "two_wheeler",
+    "is_spending": true,
+    "sort_order": 222,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental_cab",
+    "name": "Cab / Ride-hailing",
+    "parent_id": "vehicle_rental",
+    "icon": "local_taxi",
+    "is_spending": true,
+    "sort_order": 223,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental_auto",
+    "name": "Auto-rickshaw",
+    "parent_id": "vehicle_rental",
+    "icon": "electric_rickshaw",
+    "is_spending": true,
+    "sort_order": 224,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental_bike_taxi",
+    "name": "Bike Taxi",
+    "parent_id": "vehicle_rental",
+    "icon": "moped_rounded",
+    "is_spending": true,
+    "sort_order": 225,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "vehicle_rental_outstation",
+    "name": "Outstation Cab",
+    "parent_id": "vehicle_rental",
+    "icon": "add_road_rounded",
+    "is_spending": true,
+    "sort_order": 226,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport",
+    "name": "Public Transit",
+    "parent_id": null,
+    "icon": "directions_transit_rounded",
+    "is_spending": true,
+    "sort_order": 230,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport_metro",
+    "name": "Metro Rail",
+    "parent_id": "public_transport",
+    "icon": "subway",
+    "is_spending": true,
+    "sort_order": 231,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport_bus",
+    "name": "City Bus",
+    "parent_id": "public_transport",
+    "icon": "directions_bus",
+    "is_spending": true,
+    "sort_order": 232,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport_local_train",
+    "name": "Local Train",
+    "parent_id": "public_transport",
+    "icon": "train",
+    "is_spending": true,
+    "sort_order": 233,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport_transit_card",
+    "name": "Transit Card Recharge",
+    "parent_id": "public_transport",
+    "icon": "contactless_rounded",
+    "is_spending": true,
+    "sort_order": 234,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport_monthly_pass",
+    "name": "Monthly Pass",
+    "parent_id": "public_transport",
+    "icon": "badge_rounded",
+    "is_spending": true,
+    "sort_order": 235,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "public_transport_ferry",
+    "name": "Ferry & Boat",
+    "parent_id": "public_transport",
+    "icon": "directions_ferry_rounded",
+    "is_spending": true,
+    "sort_order": 236,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household",
+    "name": "Home & Household",
+    "parent_id": null,
+    "icon": "cleaning_services",
+    "is_spending": true,
+    "sort_order": 240,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_cleaning_supplies",
+    "name": "Cleaning Supplies",
+    "parent_id": "home_household",
+    "icon": "cleaning_services",
+    "is_spending": true,
+    "sort_order": 241,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_home_services",
+    "name": "Home Services (Urban Company etc.)",
+    "parent_id": "home_household",
+    "icon": "home_repair_service_rounded",
+    "is_spending": true,
+    "sort_order": 242,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_appliance_repair",
+    "name": "Appliance Repair",
+    "parent_id": "home_household",
+    "icon": "handyman",
+    "is_spending": true,
+    "sort_order": 243,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_water_purifier",
+    "name": "Water Purifier & RO",
+    "parent_id": "home_household",
+    "icon": "water_drop",
+    "is_spending": true,
+    "sort_order": 244,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_security",
+    "name": "Home Security & CCTV",
+    "parent_id": "home_household",
+    "icon": "security_rounded",
+    "is_spending": true,
+    "sort_order": 245,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_plants_garden",
+    "name": "Plants & Gardening",
+    "parent_id": "home_household",
+    "icon": "yard_rounded",
+    "is_spending": true,
+    "sort_order": 246,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_gas_cylinder",
+    "name": "LPG Cylinder Refill",
+    "parent_id": "home_household",
+    "icon": "propane",
+    "is_spending": true,
+    "sort_order": 247,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "home_household_pooja_items",
+    "name": "Pooja Items & Flowers",
+    "parent_id": "home_household",
+    "icon": "local_florist_rounded",
+    "is_spending": true,
+    "sort_order": 248,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family",
+    "name": "Kids & Family",
+    "parent_id": null,
+    "icon": "family_restroom_rounded",
+    "is_spending": true,
+    "sort_order": 250,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_childcare",
+    "name": "Childcare & Daycare",
+    "parent_id": "kids_family",
+    "icon": "child_care",
+    "is_spending": true,
+    "sort_order": 251,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_school_supplies",
+    "name": "School Supplies",
+    "parent_id": "kids_family",
+    "icon": "backpack_rounded",
+    "is_spending": true,
+    "sort_order": 252,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_toys",
+    "name": "Toys & Games",
+    "parent_id": "kids_family",
+    "icon": "toys_rounded",
+    "is_spending": true,
+    "sort_order": 253,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_elder_care",
+    "name": "Elder Care",
+    "parent_id": "kids_family",
+    "icon": "elderly_rounded",
+    "is_spending": true,
+    "sort_order": 254,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_household_help",
+    "name": "Household Help (Maid / Cook / Driver)",
+    "parent_id": "kids_family",
+    "icon": "cleaning_services",
+    "is_spending": true,
+    "sort_order": 255,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_baby_products",
+    "name": "Baby Products & Diapers",
+    "parent_id": "kids_family",
+    "icon": "baby_changing_station_rounded",
+    "is_spending": true,
+    "sort_order": 256,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_activities",
+    "name": "Kids Activities & Hobby Classes",
+    "parent_id": "kids_family",
+    "icon": "sports_gymnastics_rounded",
+    "is_spending": true,
+    "sort_order": 258,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "kids_family_pocket_money",
+    "name": "Pocket Money",
+    "parent_id": "kids_family",
+    "icon": "payments",
+    "is_spending": true,
+    "sort_order": 259,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations",
+    "name": "Events & Celebrations",
+    "parent_id": null,
+    "icon": "celebration_rounded",
+    "is_spending": true,
+    "sort_order": 260,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations_wedding",
+    "name": "Wedding Expenses",
+    "parent_id": "events_celebrations",
+    "icon": "diamond_rounded",
+    "is_spending": true,
+    "sort_order": 261,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations_birthday_party",
+    "name": "Birthday & Party",
+    "parent_id": "events_celebrations",
+    "icon": "cake_rounded",
+    "is_spending": true,
+    "sort_order": 262,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations_festivals",
+    "name": "Festivals (Diwali, Eid, Christmas)",
+    "parent_id": "events_celebrations",
+    "icon": "festival_rounded",
+    "is_spending": true,
+    "sort_order": 263,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations_decor_flowers",
+    "name": "Decor & Flowers",
+    "parent_id": "events_celebrations",
+    "icon": "local_florist_rounded",
+    "is_spending": true,
+    "sort_order": 264,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations_venue_catering",
+    "name": "Venue & Catering",
+    "parent_id": "events_celebrations",
+    "icon": "restaurant",
+    "is_spending": true,
+    "sort_order": 265,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "events_celebrations_ceremony_puja",
+    "name": "Ceremonies & Puja",
+    "parent_id": "events_celebrations",
+    "icon": "temple_hindu",
+    "is_spending": true,
+    "sort_order": 266,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations",
+    "name": "Gifts & Donations",
+    "parent_id": null,
+    "icon": "card_giftcard_rounded",
+    "is_spending": true,
+    "sort_order": 270,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations_gifts",
+    "name": "Gifts & Presents",
+    "parent_id": "gifts_donations",
+    "icon": "redeem",
+    "is_spending": true,
+    "sort_order": 271,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations_charity",
+    "name": "Donations & Charity",
+    "parent_id": "gifts_donations",
+    "icon": "volunteer_activism",
+    "is_spending": true,
+    "sort_order": 272,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations_temple",
+    "name": "Religious & Temple Offerings",
+    "parent_id": "gifts_donations",
+    "icon": "temple_hindu",
+    "is_spending": true,
+    "sort_order": 273,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations_crowdfunding",
+    "name": "Crowdfunding & Relief Funds",
+    "parent_id": "gifts_donations",
+    "icon": "diversity_1_rounded",
+    "is_spending": true,
+    "sort_order": 274,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations_shagun",
+    "name": "Shagun / Envelope Gifts",
+    "parent_id": "gifts_donations",
+    "icon": "payments",
+    "is_spending": true,
+    "sort_order": 275,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "gifts_donations_gift_cards",
+    "name": "Gift Cards & Vouchers",
+    "parent_id": "gifts_donations",
+    "icon": "card_giftcard_rounded",
+    "is_spending": true,
+    "sort_order": 278,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance",
+    "name": "Insurance",
+    "parent_id": null,
+    "icon": "shield",
+    "is_spending": true,
+    "sort_order": 280,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance_life",
+    "name": "Life Insurance",
+    "parent_id": "insurance",
+    "icon": "favorite",
+    "is_spending": true,
+    "sort_order": 281,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance_term",
+    "name": "Term Insurance",
+    "parent_id": "insurance",
+    "icon": "shield",
+    "is_spending": true,
+    "sort_order": 282,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance_home",
+    "name": "Home & Property Insurance",
+    "parent_id": "insurance",
+    "icon": "home",
+    "is_spending": true,
+    "sort_order": 283,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance_personal_accident",
+    "name": "Personal Accident Insurance",
+    "parent_id": "insurance",
+    "icon": "health_and_safety_rounded",
+    "is_spending": true,
+    "sort_order": 284,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance_gadget",
+    "name": "Gadget & Warranty Cover",
+    "parent_id": "insurance",
+    "icon": "phonelink_lock_rounded",
+    "is_spending": true,
+    "sort_order": 285,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "insurance_crop_other",
+    "name": "Other Insurance",
+    "parent_id": "insurance",
+    "icon": "policy_rounded",
+    "is_spending": true,
+    "sort_order": 286,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal",
+    "name": "Government & Legal",
+    "parent_id": null,
+    "icon": "account_balance",
+    "is_spending": true,
+    "sort_order": 290,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_income_tax",
+    "name": "Direct Tax (ITR / Advance Tax)",
+    "parent_id": "govt_legal",
+    "icon": "currency_rupee",
+    "is_spending": true,
+    "sort_order": 291,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_gst",
+    "name": "GST Payment",
+    "parent_id": "govt_legal",
+    "icon": "receipt_long",
+    "is_spending": true,
+    "sort_order": 292,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_fines",
+    "name": "Fines & Penalties",
+    "parent_id": "govt_legal",
+    "icon": "gavel_rounded",
+    "is_spending": true,
+    "sort_order": 293,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_documents",
+    "name": "Documents & Certificates",
+    "parent_id": "govt_legal",
+    "icon": "description_rounded",
+    "is_spending": true,
+    "sort_order": 294,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_stamp_registration",
+    "name": "Stamp Duty & Registration",
+    "parent_id": "govt_legal",
+    "icon": "approval_rounded",
+    "is_spending": true,
+    "sort_order": 295,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_legal_fees",
+    "name": "Lawyer & Legal Fees",
+    "parent_id": "govt_legal",
+    "icon": "balance_rounded",
+    "is_spending": true,
+    "sort_order": 296,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_passport_license",
+    "name": "Passport, Licence & Aadhaar Services",
+    "parent_id": "govt_legal",
+    "icon": "badge_rounded",
+    "is_spending": true,
+    "sort_order": 297,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "govt_legal_ca_filing",
+    "name": "CA & Tax Filing Fees",
+    "parent_id": "govt_legal",
+    "icon": "calculate_rounded",
+    "is_spending": true,
+    "sort_order": 299,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business",
+    "name": "Business Expenses",
+    "parent_id": null,
+    "icon": "business_center_rounded",
+    "is_spending": true,
+    "sort_order": 300,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_office_supplies",
+    "name": "Office Supplies",
+    "parent_id": "business",
+    "icon": "inventory_2_rounded",
+    "is_spending": true,
+    "sort_order": 301,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_software_tools",
+    "name": "Software & Tools",
+    "parent_id": "business",
+    "icon": "apps_rounded",
+    "is_spending": true,
+    "sort_order": 302,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_travel",
+    "name": "Work Trips",
+    "parent_id": "business",
+    "icon": "flight",
+    "is_spending": true,
+    "sort_order": 303,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_marketing",
+    "name": "Marketing & Ads",
+    "parent_id": "business",
+    "icon": "campaign_rounded",
+    "is_spending": true,
+    "sort_order": 304,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_inventory",
+    "name": "Inventory & Raw Material",
+    "parent_id": "business",
+    "icon": "inventory_rounded",
+    "is_spending": true,
+    "sort_order": 305,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_salaries",
+    "name": "Staff Salaries & Wages",
+    "parent_id": "business",
+    "icon": "groups_rounded",
+    "is_spending": true,
+    "sort_order": 306,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_coworking_rent",
+    "name": "Coworking & Shop Lease",
+    "parent_id": "business",
+    "icon": "business_rounded",
+    "is_spending": true,
+    "sort_order": 307,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_equipment",
+    "name": "Equipment & Machinery",
+    "parent_id": "business",
+    "icon": "precision_manufacturing_rounded",
+    "is_spending": true,
+    "sort_order": 308,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_professional_fees",
+    "name": "Professional Fees",
+    "parent_id": "business",
+    "icon": "work_rounded",
+    "is_spending": true,
+    "sort_order": 309,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "business_shipping",
+    "name": "Shipping & Logistics",
+    "parent_id": "business",
+    "icon": "local_shipping_rounded",
+    "is_spending": true,
+    "sort_order": 310,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing",
+    "name": "Lending & Borrowing",
+    "parent_id": null,
+    "icon": "handshake_rounded",
+    "is_spending": false,
+    "sort_order": 320,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing_lent",
+    "name": "Money Lent",
+    "parent_id": "lending_borrowing",
+    "icon": "call_made_rounded",
+    "is_spending": false,
+    "sort_order": 321,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing_borrowed",
+    "name": "Money Borrowed",
+    "parent_id": "lending_borrowing",
+    "icon": "call_received_rounded",
+    "is_spending": false,
+    "sort_order": 322,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing_repaid_by_friend",
+    "name": "Repayment Received",
+    "parent_id": "lending_borrowing",
+    "icon": "assignment_return_rounded",
+    "is_spending": false,
+    "sort_order": 323,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing_repaid_to_friend",
+    "name": "Repayment Made",
+    "parent_id": "lending_borrowing",
+    "icon": "assignment_turned_in_rounded",
+    "is_spending": false,
+    "sort_order": 324,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing_advance",
+    "name": "Advance Paid / Received",
+    "parent_id": "lending_borrowing",
+    "icon": "schedule_send_rounded",
+    "is_spending": false,
+    "sort_order": 325,
+    "is_user_created": false,
+    "since": 2
+  },
+  {
+    "id": "lending_borrowing_hand_loan_interest",
+    "name": "Hand-loan Interest",
+    "parent_id": "lending_borrowing",
+    "icon": "percent_rounded",
+    "is_spending": false,
+    "sort_order": 326,
+    "is_user_created": false,
+    "since": 2
   }
 ]

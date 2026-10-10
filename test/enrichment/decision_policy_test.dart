@@ -249,7 +249,11 @@ void main() {
       );
       final result = await AdaptiveThresholdPolicy(database).recompute();
       expect(result, isEmpty);
-      expect(await database.select(database.modelMeta).get(), isEmpty);
+      expect(
+        (await database.select(database.modelMeta).get())
+            .where((row) => row.key != categorySeedVersionKey),
+        isEmpty,
+      );
     });
 
     test('raises the threshold +0.03 when correction rate exceeds 15%',

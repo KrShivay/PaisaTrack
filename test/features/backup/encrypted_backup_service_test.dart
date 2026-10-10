@@ -240,6 +240,49 @@ void main() {
     expect(await database.select(database.smsDispositions).get(), isEmpty);
   });
 
+  test(
+      'restoring an archive from before the taxonomy expansion works and '
+      'later receives the new categories', () async {
+    const passphrase = 'pre-expansion-archive-passphrase';
+    final legacyIds = (jsonDecode(
+      File('test/fixtures/categories_v1.json').readAsStringSync(),
+    ) as List<Object?>)
+        .map((row) => (row! as Map<String, Object?>)['id']! as String)
+        .toSet();
+    final current = await service().exportBytes(passphrase: passphrase);
+    final oldArchive = await _legacyArchiveWithV1Categories(
+      current,
+      passphrase,
+      legacyIds,
+    );
+
+    await service().importBytes(bytes: oldArchive, passphrase: passphrase);
+
+    final restored = await database.select(database.categories).get();
+    expect(restored.map((row) => row.id).toSet(), legacyIds);
+    expect(
+      restored.singleWhere((row) => row.id == 'food_dining').name,
+      'Renamed in old backup',
+    );
+    expect(
+      await (database.select(database.modelMeta)
+            ..where((row) => row.key.equals(categorySeedVersionKey)))
+          .get(),
+      isEmpty,
+    );
+
+    // The next launch tops the new taxonomy up once, leaving restored rows
+    // exactly as they were.
+    await database.seedDefaultCategories();
+    final topped = await database.select(database.categories).get();
+    expect(topped.length, greaterThan(legacyIds.length + 200));
+    expect(
+      topped.singleWhere((row) => row.id == 'food_dining').name,
+      'Renamed in old backup',
+    );
+    expect(topped.map((row) => row.id), contains('alcohol_tobacco_cannabis'));
+  });
+
   test('restore tags merchant rules from an older backup as legacy', () async {
     await database.into(database.rules).insert(
           RulesCompanion.insert(
@@ -1709,7 +1752,22 @@ void main() {
 
     expect(await database.select(database.baselines).get(), hasLength(1));
     expect(await database.select(database.insights).get(), hasLength(1));
-    expect(await database.select(database.modelMeta).get(), hasLength(1));
+    // The category-seed bookkeeping row travels with the archive too.
+    expect(
+      (await database.select(database.modelMeta).get())
+          .where((row) => row.key != categorySeedVersionKey),
+      hasLength(1),
+    );
+    expect(
+      await database.select(database.modelMeta).get(),
+      contains(
+        isA<ModelMetaData>().having(
+          (row) => row.key,
+          'key',
+          categorySeedVersionKey,
+        ),
+      ),
+    );
     expect(await database.select(database.recurringSeries).get(), hasLength(1));
   });
 
@@ -2079,6 +2137,63 @@ Future<Uint8List> _legacyArchiveWithoutDispositionTable(
   for (final row in (tables['transactions'] as List<dynamic>)) {
     (row as Map<String, dynamic>).remove('isNotTransaction');
   }
+
+  final nonce = List<int>.generate(12, (index) => index + 1);
+  final box = await aes.encrypt(
+    utf8.encode(jsonEncode(archive)),
+    secretKey: key,
+    nonce: nonce,
+  );
+  envelope['cipher'] = {
+    'name': 'aes-256-gcm',
+    'nonce': base64Encode(box.nonce),
+    'mac': base64Encode(box.mac.bytes),
+    'ciphertext': base64Encode(box.cipherText),
+  };
+  return Uint8List.fromList(utf8.encode(jsonEncode(envelope)));
+}
+
+Future<Uint8List> _legacyArchiveWithV1Categories(
+  Uint8List encrypted,
+  String passphrase,
+  Set<String> legacyIds,
+) async {
+  final envelope = jsonDecode(utf8.decode(encrypted)) as Map<String, dynamic>;
+  final kdf = envelope['kdf'] as Map<String, dynamic>;
+  final cipher = envelope['cipher'] as Map<String, dynamic>;
+  final salt = base64Decode(kdf['salt'] as String);
+  final key = await Argon2id(
+    memory: kdf['memory'] as int,
+    parallelism: kdf['parallelism'] as int,
+    iterations: kdf['iterations'] as int,
+    hashLength: kdf['hash_length'] as int,
+  ).deriveKey(
+    secretKey: SecretKey(utf8.encode(passphrase)),
+    nonce: salt,
+  );
+  final aes = AesGcm.with256bits();
+  final plaintext = await aes.decrypt(
+    SecretBox(
+      base64Decode(cipher['ciphertext'] as String),
+      nonce: base64Decode(cipher['nonce'] as String),
+      mac: Mac(base64Decode(cipher['mac'] as String)),
+    ),
+    secretKey: key,
+  );
+  final archive = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+  final tables = archive['tables'] as Map<String, dynamic>;
+  tables['categories'] = [
+    for (final row in tables['categories'] as List<dynamic>)
+      if (legacyIds.contains((row as Map<String, dynamic>)['id']))
+        if (row['id'] == 'food_dining')
+          {...row, 'name': 'Renamed in old backup'}
+        else
+          row,
+  ];
+  tables['model_meta'] = [
+    for (final row in tables['model_meta'] as List<dynamic>)
+      if ((row as Map<String, dynamic>)['key'] != categorySeedVersionKey) row,
+  ];
 
   final nonce = List<int>.generate(12, (index) => index + 1);
   final box = await aes.encrypt(

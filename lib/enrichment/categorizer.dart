@@ -88,12 +88,14 @@ class Categorizer {
     Future<double> Function(String categoryId)? classifierThreshold,
     MerchantMemoryResolver? merchantMemory,
     LlmCategorySuggester? llmSuggester,
+    Future<bool> Function(String categoryId)? categoryExists,
   })  : _rules = rules,
         _seedMap = seedMap,
         _classifier = classifier,
         _classifierThreshold = classifierThreshold,
         _merchantMemory = merchantMemory,
-        _llmSuggester = llmSuggester;
+        _llmSuggester = llmSuggester,
+        _categoryExists = categoryExists;
 
   static const seedConfidence = AppConstants.seedConfidence;
   static const fallbackConfidence = AppConstants.categorizerFallbackConfidence;
@@ -106,6 +108,10 @@ class Categorizer {
   final Future<double> Function(String categoryId)? _classifierThreshold;
   final MerchantMemoryResolver? _merchantMemory;
   final LlmCategorySuggester? _llmSuggester;
+
+  /// When set, a bundled-seed hit is used only if the category still exists,
+  /// so a seed category the user deleted never produces a dangling reference.
+  final Future<bool> Function(String categoryId)? _categoryExists;
 
   /// Runs the ladder for one parsed record. Rules always win.
   Future<CategorizationResult> categorize(
@@ -164,7 +170,8 @@ class Categorizer {
 
     final seeded = _seedMap.categoryFor(record.merchantRaw) ??
         _seedMap.categoryFor(record.counterpartyVpa);
-    if (seeded != null) {
+    if (seeded != null &&
+        (_categoryExists == null || await _categoryExists(seeded))) {
       return CategorizationResult(
         categoryId: seeded,
         confidence: seedConfidence,
@@ -228,5 +235,6 @@ final categorizerProvider = FutureProvider<Categorizer>((ref) async {
     seedMap: seedMap,
     classifier: LocalClassifier(database),
     classifierThreshold: AdaptiveThresholdPolicy(database).thresholdFor,
+    categoryExists: database.categoryExists,
   );
 });
