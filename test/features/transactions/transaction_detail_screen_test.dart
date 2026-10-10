@@ -16,6 +16,8 @@ import 'package:paisatrack/data/repositories/merchant_category_suggestion_reposi
 import 'package:paisatrack/data/repositories/payee_evidence_repository.dart';
 import 'package:paisatrack/enrichment/source_currency_repair_service.dart';
 import 'package:paisatrack/capture/template_engine/template_trust_ledger.dart';
+import 'package:paisatrack/data/repositories/recurring_override_repository.dart';
+import 'package:paisatrack/data/repositories/transaction_sms_repository.dart';
 import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
 import 'package:paisatrack/features/transactions/currency_repair_providers.dart';
 import 'package:paisatrack/features/transactions/merchant_category_suggestion_provider.dart';
@@ -88,6 +90,13 @@ void main() {
                 .overrideWith((ref) => detailStream ?? Stream.value(detail)),
           suggestedCategoriesProvider(detail.txn.id)
               .overrideWith((ref) => Future.value(['travel', 'utilities'])),
+          transactionSmsMessagesProvider(detail.txn.id)
+              .overrideWith((ref) async => const []),
+          transactionRecurringOverrideProvider(detail.txn.id).overrideWith(
+            (ref) => Stream.value(RecurringOverride.automatic),
+          ),
+          transactionDetectedRecurringProvider(detail.txn.id)
+              .overrideWith((ref) async => false),
           sourceCurrencyRepairPreviewProvider(detail.txn.id)
               .overrideWith((ref) async => null),
           if (memorySuggestion != null)
@@ -417,6 +426,7 @@ void main() {
       final noteField = find.byType(TextField);
       expect(noteField, findsOneWidget);
       await tester.enterText(noteField, 'Unsaved note draft');
+      await tester.ensureVisible(find.text('Use Travel'));
       await tester.tap(find.text('Use Travel'));
       await pumpFrames(tester);
 
@@ -513,6 +523,7 @@ void main() {
       expect(find.text('Use Travel'), findsOneWidget);
       final noteField = find.byType(TextField);
       await tester.enterText(noteField, 'Unsaved note draft');
+      await tester.ensureVisible(find.text('Use Travel'));
       await tester.tap(find.text('Use Travel'));
       await pumpFrames(tester);
 
@@ -582,7 +593,7 @@ void main() {
       expect(find.text('Confirm details'), findsOneWidget);
       expect(find.text('Confirm'), findsNothing);
       expect(find.text('Confirm parsed details'), findsNothing);
-      expect(find.text('₹449.00'), findsOneWidget);
+      expect(find.text('₹449.00'), findsWidgets);
       expect(find.text('Debit'), findsOneWidget);
       expect(find.textContaining('amazon'), findsWidgets);
       expect(find.textContaining('Food & Dining'), findsWidgets);
@@ -1009,7 +1020,7 @@ void main() {
         (tester) async {
       await pumpDetail(tester, testDetail);
 
-      final techHeader = find.text('Technical details & SMS provenance');
+      final techHeader = find.text('Technical details');
       expect(techHeader, findsOneWidget);
 
       await tester.ensureVisible(techHeader);
@@ -1017,8 +1028,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.textContaining('Review status: confirmed'), findsOneWidget);
-      expect(find.textContaining('CONFIDENCE: 98%'), findsOneWidget);
+      expect(find.text('Review status'), findsOneWidget);
+      expect(find.text('98%'), findsOneWidget);
     });
 
     testWidgets(
@@ -1063,7 +1074,7 @@ void main() {
 
       await pumpDetail(tester, retainedDetail);
 
-      expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
+      expect(find.text('SOURCE SMS'), findsOneWidget);
       expect(find.text('Paid Rs 449 to Swiggy on A/c XX1234'), findsOneWidget);
     });
 
@@ -1081,15 +1092,14 @@ void main() {
 
       await pumpDetail(tester, purgedDetail);
 
-      expect(find.text('WHERE THIS CAME FROM'), findsOneWidget);
+      expect(find.text('SOURCE SMS'), findsOneWidget);
       expect(
-        find.text('Original message is not stored on this phone'),
+        find.text('Source message not available'),
         findsOneWidget,
       );
     });
 
-    testWidgets(
-        'T-147a: omits WHERE THIS CAME FROM section for manual entry rows',
+    testWidgets('T-147a: omits SOURCE SMS section for manual entry rows',
         (tester) async {
       final manualDetail = TransactionDetail(
         txn: testDetail.txn.copyWith(smsId: const Value(null)),
@@ -1103,7 +1113,7 @@ void main() {
 
       await pumpDetail(tester, manualDetail);
 
-      expect(find.text('WHERE THIS CAME FROM'), findsNothing);
+      expect(find.text('SOURCE SMS'), findsNothing);
     });
 
     testWidgets(

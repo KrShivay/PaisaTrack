@@ -1,5 +1,4 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,17 +12,17 @@ import '../../data/confidence_payload.dart';
 import '../../data/db/database.dart' show Category, Transaction;
 import '../../data/db/database_provider.dart';
 import '../../data/payee_display_name.dart';
-import '../../data/models/normalized_transaction_record.dart'
-    show FieldEvidence;
 import '../../data/repositories/category_correction.dart';
 import '../../data/repositories/sms_disposition_repository.dart';
 import '../../intelligence/derived_reads_service.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/merchant_category_suggestion_repository.dart';
 import '../../enrichment/source_currency_repair_service.dart';
-import 'detail/transaction_detail_evidence.dart';
 import 'detail/transaction_detail_formatting.dart';
+import 'detail/recurring_override_control.dart';
 import 'detail/transaction_details_card.dart';
+import 'detail/transaction_source_sms_section.dart';
+import 'detail/transaction_technical_details_card.dart';
 import 'detail/merchant_category_suggestion_panel.dart';
 import 'currency_repair_providers.dart';
 import 'merchant_category_suggestion_provider.dart';
@@ -49,7 +48,6 @@ class _TransactionDetailScreenState
   bool _seeded = false;
   String? _categoryId;
   String? _categoryName;
-  bool _showTechnicalDetails = false;
   bool _savingNote = false;
   bool _savingParseConfirmation = false;
   bool _savingCurrencyRepair = false;
@@ -583,129 +581,6 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 24),
 
-                  if (currencyRepair.valueOrNull case final preview?) ...[
-                    _CurrencyRepairCard(
-                      preview: preview,
-                      saving: _savingCurrencyRepair,
-                      onConfirm: () => _confirmCurrencyRepair(preview),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // Metadata Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkCard
-                          : AppColorTokens.bloomCard,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        // Category Row with Inline Chips (T-148b)
-                        Semantics(
-                          label:
-                              'Category, $categoryDisplayName, double tap to change',
-                          button: true,
-                          child: InkWell(
-                            onTap: _changeCategory,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'CATEGORY',
-                                    style: AppTheme.bloomDisplay(
-                                      12,
-                                      FontWeight.w700,
-                                      letterSpacing: 0.1,
-                                      color: isDark
-                                          ? AppColorTokens.bloomDarkTextTertiary
-                                          : AppColorTokens.inkTertiary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: [
-                                        for (final cat in chips) ...[
-                                          _InlineCategoryChip(
-                                            category: cat,
-                                            isSelected: cat.id == currentCatId,
-                                            isDark: isDark,
-                                            onTap: () {
-                                              if (cat.id == currentCatId) {
-                                                _changeCategory();
-                                              } else {
-                                                _selectCategoryDirectly(cat);
-                                              }
-                                            },
-                                          ),
-                                          const SizedBox(width: 8),
-                                        ],
-                                        _MoreCategoryChip(
-                                          isDark: isDark,
-                                          onTap: _changeCategory,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (txn.accountHint != null &&
-                            txn.accountHint!.isNotEmpty) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Divider(height: 1),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Payment Source',
-                                style: AppTheme.bloomDisplay(
-                                  13,
-                                  FontWeight.w400,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextSecondary
-                                      : AppColorTokens.inkSecondary,
-                                ),
-                              ),
-                              Text(
-                                txn.accountHint!,
-                                style: AppTheme.bloomMono(
-                                  13,
-                                  FontWeight.w500,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextPrimary
-                                      : AppColorTokens.ink,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (memorySuggestion case final suggestion?)
-                    MerchantCategorySuggestionPanel(
-                      suggestion: suggestion,
-                      isSaving: _savingMerchantCategorySuggestion,
-                      onAccept: () => _acceptMerchantCategorySuggestion(
-                        suggestion,
-                        txn,
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
                   // Exclusion Explanation Banner (T-135c)
                   if (exclusionReasonFor(txn) case final reason?) ...[
                     Container(
@@ -747,6 +622,15 @@ class _TransactionDetailScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
+                  ],
+
+                  if (currencyRepair.valueOrNull case final preview?) ...[
+                    _CurrencyRepairCard(
+                      preview: preview,
+                      saving: _savingCurrencyRepair,
+                      onConfirm: () => _confirmCurrencyRepair(preview),
+                    ),
+                    const SizedBox(height: 20),
                   ],
 
                   // One review panel owns both status and eligible parse
@@ -884,6 +768,170 @@ class _TransactionDetailScreenState
                     const SizedBox(height: 16),
                   ],
 
+                  // Action: Correct Parse Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: const Text(
+                        'Edit Parse Details (Amount/Direction/Payee)',
+                      ),
+                      onPressed: () {
+                        showBloomModalSheet<bool>(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (context) => TransactionCorrectionSheet(
+                            txnId: widget.txnId,
+                            initialAmount: txn.amount,
+                            initialDirection: txn.direction,
+                            initialMerchant: txn.merchantRaw,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Source SMS: always expanded, above transaction details
+                  TransactionSourceSmsSection(
+                    txnId: txn.id,
+                    hasSmsLink: txn.smsId != null,
+                    fallbackBody: detail.rawSmsBody,
+                    parseSource: txn.parseSource,
+                    parseConfidence: detail.parseConfidence,
+                    isNotTransaction: txn.isNotTransaction,
+                    onMarkNotTransaction: txn.isNotTransaction
+                        ? null
+                        : () => _markNotTransaction(txn),
+                  ),
+                  if (txn.smsId != null) const SizedBox(height: 20),
+                  // Stored transaction fields; copy only on curated identifiers
+                  TransactionDetailsCard(
+                    transaction: txn,
+                    title: displayName,
+                    paymentSourceName: txn.paymentSourceId == null
+                        ? null
+                        : ref
+                            .watch(
+                              paymentSourceNameProvider(txn.paymentSourceId!),
+                            )
+                            .valueOrNull,
+                    footer: RecurringOverrideControl(txnId: txn.id),
+                  ),
+                  const SizedBox(height: 20),
+                  // Metadata Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomCard,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        // Category Row with Inline Chips (T-148b)
+                        Semantics(
+                          label:
+                              'Category, $categoryDisplayName, double tap to change',
+                          button: true,
+                          child: InkWell(
+                            onTap: _changeCategory,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'CATEGORY',
+                                    style: AppTheme.bloomDisplay(
+                                      12,
+                                      FontWeight.w700,
+                                      letterSpacing: 0.1,
+                                      color: isDark
+                                          ? AppColorTokens.bloomDarkTextTertiary
+                                          : AppColorTokens.inkTertiary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        for (final cat in chips) ...[
+                                          _InlineCategoryChip(
+                                            category: cat,
+                                            isSelected: cat.id == currentCatId,
+                                            isDark: isDark,
+                                            onTap: () {
+                                              if (cat.id == currentCatId) {
+                                                _changeCategory();
+                                              } else {
+                                                _selectCategoryDirectly(cat);
+                                              }
+                                            },
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        _MoreCategoryChip(
+                                          isDark: isDark,
+                                          onTap: _changeCategory,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (txn.accountHint != null &&
+                            txn.accountHint!.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Divider(height: 1),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Payment Source',
+                                style: AppTheme.bloomDisplay(
+                                  13,
+                                  FontWeight.w400,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                              ),
+                              Text(
+                                txn.accountHint!,
+                                style: AppTheme.bloomMono(
+                                  13,
+                                  FontWeight.w500,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextPrimary
+                                      : AppColorTokens.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (memorySuggestion case final suggestion?)
+                    MerchantCategorySuggestionPanel(
+                      suggestion: suggestion,
+                      isSaving: _savingMerchantCategorySuggestion,
+                      onAccept: () => _acceptMerchantCategorySuggestion(
+                        suggestion,
+                        txn,
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+
                   // Note Editor & Save Action
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -957,209 +1005,19 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 20),
 
-                  // Action: Correct Parse Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.edit_note_rounded, size: 18),
-                      label: const Text(
-                        'Edit Parse Details (Amount/Direction/Payee)',
-                      ),
-                      onPressed: () {
-                        showBloomModalSheet<bool>(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (context) => TransactionCorrectionSheet(
-                            txnId: widget.txnId,
-                            initialAmount: txn.amount,
-                            initialDirection: txn.direction,
-                            initialMerchant: txn.merchantRaw,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Stored transaction fields, each copyable (T-196)
-                  TransactionDetailsCard(
+                  TransactionTechnicalDetailsCard(
                     transaction: txn,
-                    title: displayName,
-                    paymentSourceName: txn.paymentSourceId == null
-                        ? null
-                        : ref
-                            .watch(
-                              paymentSourceNameProvider(txn.paymentSourceId!),
-                            )
-                            .valueOrNull,
+                    parseConfidence: detail.parseConfidence,
+                    isLowTrustParse: detail.isLowTrustParse,
+                    evidence: parseEvidenceFromJson(txn.evidenceJson),
+                    rawSmsBody: detail.rawSmsBody,
                   ),
                   const SizedBox(height: 20),
-                  // WHERE THIS CAME FROM (T-147a & T-147b) - First-class source message section
-                  if (txn.smsId != null) ...[
-                    _WhereThisCameFromSection(
-                      rawSmsBody: detail.rawSmsBody,
-                      parseSource: txn.parseSource,
-                      parseConfidence: detail.parseConfidence,
-                      isNotTransaction: txn.isNotTransaction,
-                      onMarkNotTransaction: txn.isNotTransaction
-                          ? null
-                          : () => _markNotTransaction(txn),
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // Technical SMS Provenance Disclosure
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showTechnicalDetails = !_showTechnicalDetails;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColorTokens.bloomDarkCard
-                            : const Color(0xFFF1EFFB),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.terminal_rounded,
-                                  size: 16,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextTertiary
-                                      : AppColorTokens.inkTertiary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Technical details & SMS provenance',
-                                    style: AppTheme.bloomDisplay(
-                                      12,
-                                      FontWeight.w500,
-                                      color: isDark
-                                          ? AppColorTokens
-                                              .bloomDarkTextSecondary
-                                          : AppColorTokens.inkSecondary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            _showTechnicalDetails
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            size: 18,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextTertiary
-                                : AppColorTokens.inkTertiary,
-                          ),
-                        ],
-                      ),
-                    ),
+                  // Extra room so the note field can scroll above the keyboard now
+                  // that it sits near the end of the page.
+                  SizedBox(
+                    height: 40 + MediaQuery.viewInsetsOf(context).bottom,
                   ),
-
-                  if (_showTechnicalDetails) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColorTokens.bloomDarkCard
-                            : AppColorTokens.bloomCard,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColorTokens.bloomDarkOutline
-                              : AppColorTokens.bloomChip,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'PARSED PROVENANCE',
-                            style: AppTheme.bloomDisplay(
-                              10,
-                              FontWeight.w600,
-                              letterSpacing: 0.1,
-                              color: isDark
-                                  ? AppColorTokens.bloomDarkTextTertiary
-                                  : AppColorTokens.inkTertiary,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Review status: ${txn.status}',
-                            style: AppTheme.bloomMono(
-                              12,
-                              FontWeight.w400,
-                              color: isDark
-                                  ? AppColorTokens.bloomDarkTextSecondary
-                                  : AppColorTokens.inkSecondary,
-                            ),
-                          ),
-                          if (detail.parseConfidence != null) ...[
-                            const SizedBox(height: 10),
-                            Text(
-                              'CONFIDENCE: ${(detail.parseConfidence! * 100).toStringAsFixed(0)}% (${detail.isLowTrustParse ? "Low Trust" : "High Trust"})',
-                              style: AppTheme.bloomMono(
-                                11,
-                                FontWeight.w600,
-                                color: detail.isLowTrustParse
-                                    ? AppColorTokens.warningDark
-                                    : AppColorTokens.emerald,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          _SourceMessageEvidenceView(
-                            rawSmsBody: detail.rawSmsBody,
-                            evidence: parseEvidenceFromJson(txn.evidenceJson),
-                            parseSource: txn.parseSource,
-                            parseConfidence: detail.parseConfidence,
-                            isDark: isDark,
-                          ),
-
-                          // Debug Mode Boundary: Raw SMS Body & LLM Json strictly gated
-                          if (kDebugMode) ...[
-                            const SizedBox(height: 12),
-                            const Divider(),
-                            Text(
-                              'DEBUG EVIDENCE (DEVELOPER ONLY)',
-                              style: AppTheme.bloomDisplay(
-                                10,
-                                FontWeight.w700,
-                                color: AppColorTokens.errorDark,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            SelectableText(
-                              'Confidence JSON: ${txn.confidenceJson}',
-                              style: AppTheme.bloomMono(10, FontWeight.w400),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 40),
                 ],
               ),
             );
@@ -1185,6 +1043,9 @@ class _TransactionDetailScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Marked as not a transaction.'),
+        // Fade after the undo window instead of persisting until dismissed.
+        persist: false,
+        duration: const Duration(seconds: 6),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () => dispositions.restore(smsId),
@@ -1215,26 +1076,6 @@ class _ConfirmationField extends StatelessWidget {
           ],
         ),
       );
-}
-
-class _SourceMessageEvidenceView extends StatelessWidget {
-  const _SourceMessageEvidenceView({
-    required this.rawSmsBody,
-    required this.evidence,
-    required this.parseSource,
-    required this.parseConfidence,
-    required this.isDark,
-  });
-
-  final String? rawSmsBody;
-  final List<FieldEvidence>? evidence;
-  final String parseSource;
-  final double? parseConfidence;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) =>
-      buildEvidenceSpans(rawSmsBody, evidence, isDark, parseConfidence);
 }
 
 class _InlineCategoryChip extends StatelessWidget {
@@ -1353,144 +1194,6 @@ class _MoreCategoryChip extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _WhereThisCameFromSection extends StatelessWidget {
-  const _WhereThisCameFromSection({
-    required this.rawSmsBody,
-    this.parseSource,
-    this.parseConfidence,
-    required this.isNotTransaction,
-    this.onMarkNotTransaction,
-    required this.isDark,
-  });
-
-  final String? rawSmsBody;
-  final String? parseSource;
-  final double? parseConfidence;
-  final bool isNotTransaction;
-  final VoidCallback? onMarkNotTransaction;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF132820) : const Color(0xFFF1FBF6);
-    final border = isDark ? const Color(0xFF1B4D3E) : const Color(0xFFC9EEDD);
-    final textColor = isDark
-        ? AppColorTokens.bloomDarkTextSecondary
-        : const Color(0xFF4E7A69);
-
-    final displayBody =
-        rawSmsBody ?? 'Original message is not stored on this phone';
-
-    final infoLine = parserSourceLabel(parseSource, parseConfidence);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'WHERE THIS CAME FROM',
-          style: AppTheme.bloomDisplay(
-            12,
-            FontWeight.w700,
-            letterSpacing: 0.1,
-            color: isDark
-                ? AppColorTokens.bloomDarkTextTertiary
-                : AppColorTokens.inkTertiary,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: border, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                displayBody,
-                style: AppTheme.bloomMono(
-                  11,
-                  FontWeight.w400,
-                  color: textColor,
-                ).copyWith(height: 1.6),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: onMarkNotTransaction,
-                  icon: Icon(
-                    isNotTransaction ? Icons.check_circle_outline : Icons.block,
-                    size: 18,
-                  ),
-                  label: Text(
-                    isNotTransaction
-                        ? 'Marked not a transaction'
-                        : 'Not a transaction',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    key: const ValueKey('parser_provenance_badge'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0E7A56),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.security_rounded,
-                          size: 13,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Parsed locally',
-                          style: AppTheme.bloomDisplay(
-                            11,
-                            FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      infoLine,
-                      style: AppTheme.bloomMono(
-                        11,
-                        FontWeight.w500,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextSecondary
-                            : AppColorTokens.inkSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

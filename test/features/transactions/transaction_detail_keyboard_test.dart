@@ -168,6 +168,7 @@ void main() {
           expect(find.text('Swiggy'), findsOneWidget);
 
           final noteField = find.byType(TextField);
+          await tester.ensureVisible(noteField);
           await tester.tap(noteField);
           await tester.pump();
           tester.view.viewInsets = const FakeViewPadding(bottom: 320);

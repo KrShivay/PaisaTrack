@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../core/widgets/bloom/bloom_sheet_scaffold.dart';
+import 'detail/detail_clipboard.dart';
 import 'transactions_providers.dart';
 
 /// Explicit provenance actions shared by transaction detail and review.
@@ -31,13 +31,8 @@ class TransactionSourceActions extends ConsumerWidget {
         if (vpa != null)
           OutlinedButton.icon(
             key: ValueKey('copy_vpa_$txnId'),
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: vpa));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('VPA copied')),
-              );
-            },
+            onPressed: () =>
+                copyDetailValue(context, text: vpa, label: 'UPI ID'),
             icon: const Icon(Icons.copy, size: 18),
             label: const Text('Copy VPA'),
           ),
@@ -105,13 +100,6 @@ Future<void> _showSourceSms(
                 child: SingleChildScrollView(
                   child: SelectableText(body),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                "Raw SMS is available only during the app's retention window.",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
               ),
             ],
           ),

@@ -152,6 +152,7 @@ void main() {
       // returns ['shopping_cat'] and it is not the current category.
       expect(find.text('Shopping'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('Shopping'));
       await tester.tap(find.text('Shopping'));
       await tester.pumpAndSettle();
 
@@ -171,6 +172,7 @@ void main() {
       final db = await _seedDb();
       final container = await _pumpDetail(tester, db);
 
+      await tester.ensureVisible(find.text('Shopping'));
       await tester.tap(find.text('Shopping'));
       await tester.pumpAndSettle();
 
@@ -266,6 +268,7 @@ void main() {
       // _changeCategory) that wraps the entire row, and sits above the
       // horizontal chip scroll (which may overflow the viewport).
       expect(find.text('CATEGORY'), findsOneWidget);
+      await tester.ensureVisible(find.text('CATEGORY'));
       await tester.tap(find.text('CATEGORY'));
       await tester.pumpAndSettle();
 
@@ -297,6 +300,7 @@ void main() {
       final db = await _seedDb();
       final container = await _pumpDetail(tester, db);
 
+      await tester.ensureVisible(find.text('CATEGORY'));
       await tester.tap(find.text('CATEGORY'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Shopping').first);
