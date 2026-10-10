@@ -141,9 +141,7 @@ class _TransactionDetailScreenState
               },
             ),
           );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction details confirmed.')),
-      );
+      // The undo toast above is the single confirmation; no extra SnackBar.
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -581,6 +579,130 @@ class _TransactionDetailScreenState
                   ),
                   const SizedBox(height: 24),
 
+                  if (currencyRepair.valueOrNull case final preview?) ...[
+                    _CurrencyRepairCard(
+                      preview: preview,
+                      saving: _savingCurrencyRepair,
+                      onConfirm: () => _confirmCurrencyRepair(preview),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Category stays directly under the amount (owner).
+                  // Metadata Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColorTokens.bloomDarkCard
+                          : AppColorTokens.bloomCard,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        // Category Row with Inline Chips (T-148b)
+                        Semantics(
+                          label:
+                              'Category, $categoryDisplayName, double tap to change',
+                          button: true,
+                          child: InkWell(
+                            onTap: _changeCategory,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'CATEGORY',
+                                    style: AppTheme.bloomDisplay(
+                                      12,
+                                      FontWeight.w700,
+                                      letterSpacing: 0.1,
+                                      color: isDark
+                                          ? AppColorTokens.bloomDarkTextTertiary
+                                          : AppColorTokens.inkTertiary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        for (final cat in chips) ...[
+                                          _InlineCategoryChip(
+                                            category: cat,
+                                            isSelected: cat.id == currentCatId,
+                                            isDark: isDark,
+                                            onTap: () {
+                                              if (cat.id == currentCatId) {
+                                                _changeCategory();
+                                              } else {
+                                                _selectCategoryDirectly(cat);
+                                              }
+                                            },
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        _MoreCategoryChip(
+                                          isDark: isDark,
+                                          onTap: _changeCategory,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (txn.accountHint != null &&
+                            txn.accountHint!.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Divider(height: 1),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Payment Source',
+                                style: AppTheme.bloomDisplay(
+                                  13,
+                                  FontWeight.w400,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextSecondary
+                                      : AppColorTokens.inkSecondary,
+                                ),
+                              ),
+                              Text(
+                                txn.accountHint!,
+                                style: AppTheme.bloomMono(
+                                  13,
+                                  FontWeight.w500,
+                                  color: isDark
+                                      ? AppColorTokens.bloomDarkTextPrimary
+                                      : AppColorTokens.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (memorySuggestion case final suggestion?)
+                    MerchantCategorySuggestionPanel(
+                      suggestion: suggestion,
+                      isSaving: _savingMerchantCategorySuggestion,
+                      onAccept: () => _acceptMerchantCategorySuggestion(
+                        suggestion,
+                        txn,
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+
                   // Exclusion Explanation Banner (T-135c)
                   if (exclusionReasonFor(txn) case final reason?) ...[
                     Container(
@@ -622,15 +744,6 @@ class _TransactionDetailScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
-                  ],
-
-                  if (currencyRepair.valueOrNull case final preview?) ...[
-                    _CurrencyRepairCard(
-                      preview: preview,
-                      saving: _savingCurrencyRepair,
-                      onConfirm: () => _confirmCurrencyRepair(preview),
-                    ),
-                    const SizedBox(height: 20),
                   ],
 
                   // One review panel owns both status and eligible parse
@@ -818,120 +931,6 @@ class _TransactionDetailScreenState
                     footer: RecurringOverrideControl(txnId: txn.id),
                   ),
                   const SizedBox(height: 20),
-                  // Metadata Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColorTokens.bloomDarkCard
-                          : AppColorTokens.bloomCard,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        // Category Row with Inline Chips (T-148b)
-                        Semantics(
-                          label:
-                              'Category, $categoryDisplayName, double tap to change',
-                          button: true,
-                          child: InkWell(
-                            onTap: _changeCategory,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'CATEGORY',
-                                    style: AppTheme.bloomDisplay(
-                                      12,
-                                      FontWeight.w700,
-                                      letterSpacing: 0.1,
-                                      color: isDark
-                                          ? AppColorTokens.bloomDarkTextTertiary
-                                          : AppColorTokens.inkTertiary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: [
-                                        for (final cat in chips) ...[
-                                          _InlineCategoryChip(
-                                            category: cat,
-                                            isSelected: cat.id == currentCatId,
-                                            isDark: isDark,
-                                            onTap: () {
-                                              if (cat.id == currentCatId) {
-                                                _changeCategory();
-                                              } else {
-                                                _selectCategoryDirectly(cat);
-                                              }
-                                            },
-                                          ),
-                                          const SizedBox(width: 8),
-                                        ],
-                                        _MoreCategoryChip(
-                                          isDark: isDark,
-                                          onTap: _changeCategory,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (txn.accountHint != null &&
-                            txn.accountHint!.isNotEmpty) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Divider(height: 1),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Payment Source',
-                                style: AppTheme.bloomDisplay(
-                                  13,
-                                  FontWeight.w400,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextSecondary
-                                      : AppColorTokens.inkSecondary,
-                                ),
-                              ),
-                              Text(
-                                txn.accountHint!,
-                                style: AppTheme.bloomMono(
-                                  13,
-                                  FontWeight.w500,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextPrimary
-                                      : AppColorTokens.ink,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (memorySuggestion case final suggestion?)
-                    MerchantCategorySuggestionPanel(
-                      suggestion: suggestion,
-                      isSaving: _savingMerchantCategorySuggestion,
-                      onAccept: () => _acceptMerchantCategorySuggestion(
-                        suggestion,
-                        txn,
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
                   // Note Editor & Save Action
                   Container(
                     padding: const EdgeInsets.all(16),

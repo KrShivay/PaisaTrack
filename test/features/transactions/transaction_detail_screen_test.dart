@@ -680,6 +680,59 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('confirming details shows exactly one toast (owner report)',
+        (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      final reviewDetail = TransactionDetail(
+        txn: testDetail.txn.copyWith(status: 'needs_review'),
+        merchantName: 'amazon',
+        categoryName: 'Food & Dining',
+        parseConfidence: 0.62,
+        confidenceTrail: testDetail.confidenceTrail,
+        isLowTrustParse: false,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWith((ref) async => database),
+          transactionRepositoryProvider(database)
+              .overrideWithValue(_ConfirmingRepository(database)),
+          transactionDetailProvider(reviewDetail.txn.id)
+              .overrideWith((ref) => Stream.value(reviewDetail)),
+          suggestedCategoriesProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => const <String>[]),
+          sourceCurrencyRepairPreviewProvider(reviewDetail.txn.id)
+              .overrideWith((ref) async => null),
+          categoryListProvider.overrideWith((ref) => Stream.value([])),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: BloomUndoToastHost(
+              child: TransactionDetailScreen(txnId: reviewDetail.txn.id),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final label = find.text('Confirm details');
+      await tester.ensureVisible(label);
+      await tester.tap(label);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.text('Transaction details confirmed'), findsOneWidget);
+
+      container.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await database.close();
+    });
+
     testWidgets('T-200 reports stale confirmation and allows a retry',
         (tester) async {
       final database = AppDatabase(NativeDatabase.memory());
@@ -1218,6 +1271,24 @@ void main() {
       expect(find.text('AI model · 92%'), findsOneWidget);
     });
   });
+}
+
+class _ConfirmingRepository extends TransactionRepository {
+  // The parent constructor exposes this as a private positional parameter.
+  // ignore: use_super_parameters
+  _ConfirmingRepository(AppDatabase database) : super(database);
+
+  @override
+  Future<ReviewDetailsConfirmationReceipt?> confirmReviewDetails({
+    required String txnId,
+    required Transaction observedTransaction,
+    DateTime Function() clock = DateTime.now,
+  }) async =>
+      ReviewDetailsConfirmationReceipt(
+        before: observedTransaction,
+        after: observedTransaction.copyWith(status: 'confirmed'),
+        createdParseConfirmation: null,
+      );
 }
 
 class _StaleConfirmationRepository extends TransactionRepository {
