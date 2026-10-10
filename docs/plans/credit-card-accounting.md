@@ -139,20 +139,27 @@ Fixture IDs and expected case behavior live only in the [scenario map](#scenario
 
 ## Owner decisions
 
-1. Refund-period default: purchase date, posting date, or both views with one default.
-   - Owner answer (2026-10-10): refunds normally arrive 3–5 business days
-     after the purchase. Any refund-matching date-range restriction must be
-     generous: allow up to 31 days between purchase and refund credit. The
-     attribution default (purchase vs posting period) is still to be
-     confirmed; the short typical lag favours the proposed purchase-period
-     default with a visible posting-period view.
-2. Dedicated `Card charges` spending category and its period attribution (proposed posting period).
-3. Cash advance/ATM withdrawal spend treatment (proposed no categorized spend; liability still increases).
-4. Rewards redemption: statement credit versus voucher and whether/when a posted credit affects net spend (proposed no spend reduction absent explicit purchase link).
-5. Cashback treatment, distinct from reward-point redemption.
-6. Overpayment display: negative liability/card credit or floor displayed liability at zero.
-7. Statement-cycle totals as secondary view alongside transaction-date default.
-8. Add-on cards: separate liabilities or shared issuer-confirmed liability group.
-9. EMI presentation when issuer gives only a combined installment amount.
+Refreshed 2026-10-10. Decided: refunds normally arrive 3-5 business days after
+purchase and matching may look back up to 31 days (a refund credit is a
+candidate for a purchase up to 31 days earlier; exact-reference and
+user-chosen links are not window-limited). Window design:
+[T-100](../tasks/T-100.md#matching-window-design). Card refunds reuse T-100
+matching and the single `RefundAttribution` switch; this plan defines no
+second rule. Reversals net in the original purchase period regardless.
+T-207 supplies limit/due/statement facts (ADR 0034); see
+[T-190 coordination](../tasks/T-190.md#t-207-coordination-do-not-duplicate).
 
-Keep unresolved semantics visible in later phases until the owner decides. T-190a1 is a read-only audit and needs no product decision.
+| # | Decision | Proposed default (recommendation) | Blocks |
+|---|---|---|---|
+| 1 | Refund attribution: purchase period, posting period (T-209) | Purchase period, posting date visible, one switch | T-100b/c, T-190d |
+| 2 | `Card charges` category and period | New category, posting period | T-190e1b |
+| 3 | Cash advance / ATM withdrawal spend | Not categorized spend; liability up; fees are card charges | T-190e2b |
+| 4 | Rewards: statement credit vs voucher | Credit lowers liability only; no net-spend change unless explicitly linked; voucher none | T-190d2 |
+| 5 | Cashback | Posted lowers liability, no net-spend change unless linked and approved; promised = 0 | T-190d2 |
+| 6 | Overpayment display | Show as card credit (negative liability), labelled | T-190f2a |
+| 7 | Statement-cycle view | Secondary view; transaction date default (non-blocking) | - |
+| 8 | Add-on cards | Separate liabilities unless issuer evidence/user confirms a group | T-190b2c, f2a |
+| 9 | Combined-only EMI amounts | Show one unsplit amount, flagged "unsplit" (non-blocking) | - |
+
+Keep unresolved semantics visible in later phases until the owner decides.
+T-190a1 is a read-only audit and needs no product decision.
