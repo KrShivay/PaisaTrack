@@ -140,6 +140,12 @@ Fixture IDs and expected case behavior live only in the [scenario map](#scenario
 ## Owner decisions
 
 1. Refund-period default: purchase date, posting date, or both views with one default.
+   - Owner answer (2026-10-10): refunds normally arrive 3–5 business days
+     after the purchase. Any refund-matching date-range restriction must be
+     generous: allow up to 31 days between purchase and refund credit. The
+     attribution default (purchase vs posting period) is still to be
+     confirmed; the short typical lag favours the proposed purchase-period
+     default with a visible posting-period view.
 2. Dedicated `Card charges` spending category and its period attribution (proposed posting period).
 3. Cash advance/ATM withdrawal spend treatment (proposed no categorized spend; liability still increases).
 4. Rewards redemption: statement credit versus voucher and whether/when a posted credit affects net spend (proposed no spend reduction absent explicit purchase link).
