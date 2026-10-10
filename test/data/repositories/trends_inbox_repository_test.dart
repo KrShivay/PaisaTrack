@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/core/constants.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/data/repositories/trends_inbox_repository.dart';
@@ -86,6 +87,73 @@ void main() {
       (await repository.readPeriod('2026-11')).single.state,
       TrendsInboxState.newItem,
     );
+  });
+
+  test('restore returns a cleared item to seen and un-dismisses it', () async {
+    final insight = _claim(period: '2026-10');
+    await database.into(database.insights).insert(
+          InsightsCompanion.insert(
+            id: insight.id,
+            period: insight.period,
+            kind: insight.kind,
+            payloadJson: insight.payloadJson,
+          ),
+        );
+    final items = await repository.reconcile(
+      period: '2026-10',
+      freshClaims: [insight],
+    );
+    await repository.clear(items.single.key);
+    expect(
+      (await repository.readAll()).single.state,
+      TrendsInboxState.cleared,
+    );
+
+    await repository.restore(items.single.key);
+
+    expect((await repository.readAll()).single.state, TrendsInboxState.seen);
+    final row = await (database.select(database.insights)
+          ..where((r) => r.id.equals(insight.id)))
+        .getSingle();
+    expect(row.dismissed, isFalse);
+
+    await repository.moveToLater(items.single.key);
+    await repository.restore(items.single.key);
+    expect((await repository.readAll()).single.state, TrendsInboxState.moved);
+    await repository.restore('missing');
+  });
+
+  test('legacy stored JSON with cleared items still parses via readAll',
+      () async {
+    final insight = _claim(period: '2026-10');
+    final legacy = jsonEncode({
+      'v': 1,
+      'items': {
+        'legacy-key': {
+          'state': 'cleared',
+          'current': false,
+          'insight': {
+            'id': insight.id,
+            'period': insight.period,
+            'kind': insight.kind,
+            'payload': insight.payloadJson,
+            'dismissed': true,
+          },
+        },
+      },
+    });
+    await database.into(database.modelMeta).insert(
+          ModelMetaCompanion.insert(
+            key: trendsInboxModelMetaKey,
+            value: legacy,
+          ),
+        );
+
+    final items = await repository.readAll();
+
+    expect(items.single.key, 'legacy-key');
+    expect(items.single.state, TrendsInboxState.cleared);
+    expect(items.single.isCurrent, isFalse);
   });
 
   test('claim dropping on recompute retains last snapshot as not current',
@@ -209,11 +277,12 @@ void main() {
     );
   });
 
-  test('reconcile retains only its period and previous three periods',
-      () async {
+  test('reconcile retains its period and the previous 12 months', () async {
     final now = DateTime.now();
     final periods = [
-      for (var monthsBack = 5; monthsBack >= 0; monthsBack--)
+      for (var monthsBack = AppConstants.trendsInboxRetentionMonths + 2;
+          monthsBack >= 0;
+          monthsBack--)
         _periodFor(DateTime(now.year, now.month - monthsBack)),
     ];
     for (final period in periods) {
