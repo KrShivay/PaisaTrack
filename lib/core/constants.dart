@@ -149,4 +149,8 @@ class AppConstants {
 
   /// Generic parser confidence when amount is ambiguous or merchant is absent.
   static const genericLowParseConfidence = 0.5;
+
+  /// Months of Trends inbox history retained (including cleared items) before
+  /// older items are pruned from the `trends_inbox_v1` metadata.
+  static const trendsInboxRetentionMonths = 12;
 }

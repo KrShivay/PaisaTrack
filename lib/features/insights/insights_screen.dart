@@ -21,6 +21,7 @@ import '../dashboard/period_selection_sheet.dart';
 import '../dashboard/source_currency_activity.dart';
 import '../recurring/recurring_screen.dart';
 import '../transactions/transactions_screen.dart';
+import 'trends_history_screen.dart';
 
 /// Stream of non-dismissed precomputed insights for the current period.
 final activeInsightsProvider = StreamProvider<List<Insight>>((ref) {
@@ -109,6 +110,39 @@ final trendsInboxItemsProvider = StreamProvider<List<TrendsInboxItem>>((ref) {
     ),
   );
 });
+
+/// Every retained inbox item across periods, including cleared and Later.
+///
+/// Watches [trendsInboxItemsProvider] so any mutation that invalidates the
+/// live inbox also refreshes the history.
+final trendsInboxHistoryProvider =
+    FutureProvider.autoDispose<List<TrendsInboxItem>>((ref) async {
+  ref.watch(trendsInboxItemsProvider);
+  final database = await ref.watch(appDatabaseProvider.future);
+  return TrendsInboxRepository(database).readAll();
+});
+
+/// Opens the evidence transactions behind an inbox item.
+Future<void> openTrendsInboxEvidence(
+  BuildContext context,
+  TrendsInboxItem item,
+) =>
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TransactionsScreen(
+          initialTransactionIds: item.claim.evidenceIds.toSet(),
+          initialEvidenceTotalCount: item.claim.evidenceCount,
+        ),
+      ),
+    );
+
+void openTrendsHistory(BuildContext context) {
+  unawaited(
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const TrendsHistoryScreen()),
+    ),
+  );
+}
 
 final markTrendsInboxSeenProvider =
     Provider<Future<void> Function(Iterable<String>)>((ref) {
@@ -450,7 +484,19 @@ class _TrendsInboxSectionState extends ConsumerState<_TrendsInboxSection> {
           (item) => item.isCurrent && item.state != TrendsInboxState.cleared,
         )
         .toList(growable: false);
-    if (visible.isEmpty) return const SizedBox.shrink();
+    final historyCount =
+        ref.watch(trendsInboxHistoryProvider).valueOrNull?.length ?? 0;
+    if (visible.isEmpty) {
+      if (historyCount == 0) return const SizedBox.shrink();
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => openTrendsHistory(context),
+          icon: const Icon(Icons.history_rounded, size: 18),
+          label: Text('View insight history ($historyCount)'),
+        ),
+      );
+    }
     final repository = ref.read(appDatabaseProvider).valueOrNull == null
         ? null
         : TrendsInboxRepository(ref.read(appDatabaseProvider).requireValue);
@@ -474,6 +520,10 @@ class _TrendsInboxSectionState extends ConsumerState<_TrendsInboxSection> {
                       : AppColorTokens.inkSecondary,
                 ),
               ),
+            ),
+            TextButton(
+              onPressed: () => openTrendsHistory(context),
+              child: const Text('History'),
             ),
             TextButton(
               onPressed: repository == null
@@ -519,15 +569,7 @@ class _TrendsInboxSectionState extends ConsumerState<_TrendsInboxSection> {
                   ? null
                   : () async {
                       if (!context.mounted) return;
-                      await Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (_) => TransactionsScreen(
-                            initialTransactionIds:
-                                item.claim.evidenceIds.toSet(),
-                            initialEvidenceTotalCount: item.claim.evidenceCount,
-                          ),
-                        ),
-                      );
+                      await openTrendsInboxEvidence(context, item);
                     },
               onMove: repository == null
                   ? null
