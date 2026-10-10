@@ -501,6 +501,12 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 - [ ] T-209 [P2] Confirm refund attribution default (purchase vs posting
       period) with owner before T-100; matching window up to 31 days is
       decided (docs/plans/credit-card-accounting.md).
+- [ ] T-211 [P0] Spending flags on legacy categories: `investments` (+5
+      children) and `emi_credit_card` are `is_spending = 1`, so SIPs and card
+      bill payments can inflate spend/budget. Needs an ADR, a guarded data
+      migration that respects user edits, dashboard/budget regression tests,
+      and an owner-visible changelog note. New taxonomy rows are already
+      correct (334 categories, `since: 2` seed top-up).
 - [ ] T-210 [P2] Test-suite speed: profile the full Flutter suite, find slow
       or hanging tests, and shard/optimise without weakening assertions.
 
