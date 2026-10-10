@@ -37,21 +37,26 @@ class RetainedSmsFailureSummary {
 
 /// Source-SMS retention (ADR 0021).
 ///
-/// The SMS behind a transaction or a "not a transaction" disposition is
-/// provenance and is kept for as long as that record exists. Every other raw
-/// SMS (unparsed, unreadable, never linked) expires when its `purge_after`
-/// passes or it is [AppConstants.rawSmsRetentionDays] old, whichever is
-/// first; the age cap also covers rows captured under the old 30-day rule.
+/// The SMS behind a transaction, a "not a transaction" disposition, or a
+/// supporting-message link (`sms_transaction_links`) is provenance and is kept
+/// for as long as that record exists. Every other raw SMS (unparsed,
+/// unreadable, never linked) expires when its `purge_after` passes or it is
+/// [AppConstants.rawSmsRetentionDays] old, whichever is first; the age cap
+/// also covers rows captured under the old 30-day rule.
 abstract final class RawSmsRetention {
-  /// Whether a raw SMS row backs a transaction or a disposition.
+  /// Whether a raw SMS row backs a transaction, a disposition, or is a
+  /// supporting message linked to a transaction (ADR 0032).
   static Expression<bool> isLinked(AppDatabase database) {
     final transactionSmsIds = database.selectOnly(database.transactions)
       ..addColumns([database.transactions.smsId])
       ..where(database.transactions.smsId.isNotNull());
     final dispositionSmsIds = database.selectOnly(database.smsDispositions)
       ..addColumns([database.smsDispositions.smsId]);
+    final supportingSmsIds = database.selectOnly(database.smsTransactionLinks)
+      ..addColumns([database.smsTransactionLinks.smsId]);
     return database.rawSms.id.isInQuery(transactionSmsIds) |
-        database.rawSms.id.isInQuery(dispositionSmsIds);
+        database.rawSms.id.isInQuery(dispositionSmsIds) |
+        database.rawSms.id.isInQuery(supportingSmsIds);
   }
 
   static Expression<bool> _isExpired(AppDatabase database, DateTime now) =>

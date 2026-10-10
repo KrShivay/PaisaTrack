@@ -44,6 +44,7 @@ const _optionalArchiveTables = {
   'counterparties',
   'expected_events',
   'transaction_links',
+  'sms_transaction_links',
 };
 
 enum EncryptedBackupProgressPhase {
@@ -877,6 +878,7 @@ class EncryptedBackupService {
     'transactions',
     'sms_dispositions',
     'transaction_links',
+    'sms_transaction_links',
     'counterparties',
     'expected_events',
     'rules',
@@ -968,6 +970,12 @@ class EncryptedBackupService {
     await writeTable(
       'transaction_links',
       (offset, limit) => (_database.select(_database.transactionLinks)
+            ..limit(limit, offset: offset))
+          .get(),
+    );
+    await writeTable(
+      'sms_transaction_links',
+      (offset, limit) => (_database.select(_database.smsTransactionLinks)
             ..limit(limit, offset: offset))
           .get(),
     );
@@ -1116,6 +1124,10 @@ class EncryptedBackupService {
         'transaction_links': await _rows(
           _database.transactionLinks,
           tableName: 'transaction_links',
+        ),
+        'sms_transaction_links': await _rows(
+          _database.smsTransactionLinks,
+          tableName: 'sms_transaction_links',
         ),
         'counterparties': await _rows(
           _database.counterparties,
@@ -1267,6 +1279,11 @@ class EncryptedBackupService {
         await database
             .into(database.transactionLinks)
             .insert(TransactionLink.fromJson(row));
+      }
+      for (final row in _optionalTableRows(tables, 'sms_transaction_links')) {
+        await database
+            .into(database.smsTransactionLinks)
+            .insert(SmsTransactionLink.fromJson(row));
       }
       for (final row in _optionalTableRows(tables, 'counterparties')) {
         await database
@@ -1888,6 +1905,10 @@ class _ChunkedArchiveRestorer {
         await database
             .into(database.transactionLinks)
             .insert(TransactionLink.fromJson(row));
+      case 'sms_transaction_links':
+        await database
+            .into(database.smsTransactionLinks)
+            .insert(SmsTransactionLink.fromJson(row));
       case 'counterparties':
         await database
             .into(database.counterparties)
@@ -1936,6 +1957,7 @@ class _ChunkedArchiveRestorer {
     'transactions',
     'sms_dispositions',
     'transaction_links',
+    'sms_transaction_links',
     'counterparties',
     'expected_events',
     'rules',
@@ -1961,6 +1983,7 @@ Future<void> _clearDatabaseForRestore(AppDatabase database) async {
   await database.delete(database.merchantAliases).go();
   await database.delete(database.payeeEvidence).go();
   await database.delete(database.smsDispositions).go();
+  await database.delete(database.smsTransactionLinks).go();
   await database.delete(database.transactionLinks).go();
   await (database.update(database.transactions)).write(
     const TransactionsCompanion(duplicateOfTxnId: Value(null)),

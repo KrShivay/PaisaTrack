@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,8 @@ import '../core/crypto/database_cipher.dart';
 import '../data/db/database.dart';
 import '../data/db/database_file_lock.dart';
 import '../data/db/database_provider.dart';
+import '../capture/supporting_sms_classifier.dart';
+import '../capture/supporting_sms_linker.dart';
 import '../data/repositories/raw_sms_repository.dart';
 import '../enrichment/decision_policy.dart';
 import '../enrichment/local_classifier.dart';
@@ -34,6 +37,7 @@ enum NightlyStage {
   recomputeThresholds,
   merchantClustering,
   precomputeInsights,
+  linkSupportingSms,
 }
 
 class NightlyRunResult {
@@ -61,6 +65,7 @@ class NightlyPipeline {
     Embedder recurringEmbedder = const NoopEmbedder(),
     DateTime Function()? clock,
     FinancialCalendar? calendar,
+    Future<SupportingSmsClassifier> Function()? supportingClassifierLoader,
   }) {
     final sharedCalendar = calendar ?? FinancialCalendar();
     final derivedReads = DerivedReadsService(
@@ -99,6 +104,20 @@ class NightlyPipeline {
           await derivedReads.rebuildForecastAndInsights(today: now);
           // TODO(T-178c): allow model selection of validated claim IDs only.
           await derivedReads.writeFreshnessStamp();
+        },
+        NightlyStage.linkSupportingSms: (_) async {
+          // ADR 0032: idempotent, bounded backfill that attaches retained
+          // dividend/RD/EMI/collect-request SMS to existing transactions.
+          final SupportingSmsClassifier classifier;
+          try {
+            classifier = await (supportingClassifierLoader ??
+                _loadSupportingClassifier)();
+          } catch (_) {
+            // Optional enrichment: an unreadable asset must not fail the
+            // nightly run; the next run retries.
+            return;
+          }
+          await SupportingSmsLinker(database, classifier).backfill();
         },
       },
     );
@@ -179,6 +198,12 @@ class NightlyPipeline {
     return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
         '${local.day.toString().padLeft(2, '0')}';
   }
+}
+
+Future<SupportingSmsClassifier> _loadSupportingClassifier() async {
+  final cueJson =
+      await rootBundle.loadString(SupportingSmsClassifier.assetPath);
+  return SupportingSmsClassifier.fromJson(cueJson);
 }
 
 @pragma('vm:entry-point')

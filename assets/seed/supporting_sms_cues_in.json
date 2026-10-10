@@ -1,0 +1,81 @@
+{
+  "locale": "en_IN",
+  "description": "Cue patterns for supporting SMS (ADR 0032). A kind matches when any 'include' pattern matches and no 'exclude' pattern (kind-specific or shared) matches. These messages only annotate transactions; they never create them.",
+  "exclude_all": [
+    "\\bOTP\\s*(?:is|for|:)",
+    "\\b(?:is|as)\\s+(?:your\\s+)?(?:OTP|one[- ]time)",
+    "verification code",
+    "\\b(?:cashback|reward)\\s+offer\\b",
+    "\\bpre-?approved\\b",
+    "\\bapply\\s+now\\b",
+    "\\bclick\\s+(?:here|on)\\b",
+    "\\bhttps?://"
+  ],
+  "kinds": {
+    "dividend": {
+      "include": [
+        "\\bdividend\\b.{0,120}\\b(?:credited|credit|paid|remitted|transferred|received|payout)\\b",
+        "\\b(?:credited|received|paid|remitted)\\b.{0,120}\\bdividend\\b",
+        "\\b(?:ach|ecs|nach|neft|rtgs|imps)\\b.{0,40}\\bdiv(?:idend)?\\b",
+        "\\bdiv(?:idend)?\\s+warrant\\b.{0,60}\\b(?:credited|paid|processed)\\b"
+      ],
+      "exclude": [
+        "\\b(?:get|earn|enjoy|expect|receive)\\b.{0,30}\\bdividend",
+        "dividend[- ]like",
+        "\\bdividend\\s+yield\\b",
+        "\\bper\\s+(?:equity\\s+)?share\\b",
+        "\\brecord\\s+date\\b",
+        "\\bex[- ]?(?:dividend\\s+)?date\\b",
+        "\\bwill\\s+be\\s+(?:credited|paid)\\b",
+        "\\b(?:not|never)\\s+(?:been\\s+)?(?:credited|paid)\\b",
+        "\\b(?:failed|returned|unsuccessful|rejected|unclaimed|withheld)\\b",
+        "\\b(?:invest|offer|scheme|returns?|mutual\\s+fund|sip)\\b"
+      ]
+    },
+    "rd_instalment": {
+      "include": [
+        "\\b(?:rd|recurring\\s+deposit)\\b.{0,100}\\b(?:instal+ment|installment|debited|deducted|auto[- ]?debit(?:ed)?|deposit(?:ed)?|credited|booked)\\b",
+        "\\b(?:instal+ment|installment)\\b.{0,80}\\b(?:rd|recurring\\s+deposit)\\b",
+        "\\b(?:debited|deducted)\\b.{0,100}\\b(?:towards|for)\\s+(?:your\\s+)?(?:rd|recurring\\s+deposit)\\b"
+      ],
+      "exclude": [
+        "\\b(?:open|start|begin|book)\\b.{0,40}\\b(?:rd|recurring\\s+deposit)\\b",
+        "\\b(?:overdue|missed|default|dishonou?red|bounced|insufficient|unsuccessful|failed|not\\s+debited|returned)\\b",
+        "\\b(?:interest\\s+rate|rate\\s+of\\s+interest|per\\s+annum|maturity\\s+value)\\b",
+        "\\b(?:offer|invest|earn|assured\\s+returns?)\\b"
+      ]
+    },
+    "emi_notice": {
+      "include": [
+        "\\b(?:emi|equated\\s+monthly\\s+instal+ment|loan\\s+instal+ment)\\b.{0,100}\\b(?:due|will\\s+be\\s+(?:auto[- ]?)?(?:debited|deducted|recovered)|scheduled|upcoming|presented|to\\s+be\\s+(?:auto[- ]?)?debited)\\b",
+        "\\b(?:due|upcoming|scheduled)\\b.{0,60}\\b(?:emi|loan\\s+instal+ment)\\b",
+        "\\bmaintain\\b.{0,60}\\b(?:balance|funds)\\b.{0,100}\\b(?:emi|loan|instal+ment)\\b",
+        "\\b(?:emi|loan\\s+instal+ment)\\b.{0,80}\\b(?:debited|deducted|auto[- ]?debited|recovered|received|paid)\\b",
+        "\\b(?:debited|deducted)\\b.{0,100}\\b(?:towards|for)\\s+(?:your\\s+)?(?:loan\\s+)?(?:emi|loan\\s+(?:instal+ment|a/c|account|repayment))\\b"
+      ],
+      "exclude": [
+        "\\b(?:bounced|dishonou?red|insufficient|unsuccessful|failed|declined|returned|unpaid|overdue)\\b",
+        "\\bno[- ]cost\\s+emi\\b",
+        "\\b(?:convert(?:ed)?|conversion)\\b.{0,30}\\bemi\\b",
+        "\\bemi\\s+(?:offer|option|starting|@|from)\\b",
+        "\\b(?:avail|apply|get)\\b.{0,30}\\b(?:loan|emi)\\b",
+        "\\b(?:starting|starts)\\s+(?:at|from)\\b",
+        "\\bcalculator\\b"
+      ]
+    },
+    "collect_request": {
+      "include": [
+        "\\b(?:upi\\s+)?(?:collect|payment|money)\\s+request\\b",
+        "\\brequest(?:ed|ing)?\\b.{0,60}(?:\\binr\\b|\\brs\\.?|₹)\\s*[\\d,]+(?:\\.\\d{1,2})?.{0,60}\\b(?:from\\s+you|via\\s+upi|on\\s+upi|using\\s+upi|through\\s+upi)\\b",
+        "\\b(?:has|have)\\s+requested\\b.{0,60}(?:\\binr\\b|\\brs\\.?|₹)\\s*\\d",
+        "\\bupi\\s+(?:mandate\\s+)?collect\\b",
+        "\\b(?:approve|accept|authori[sz]e)\\b.{0,50}\\b(?:request|payment)\\b.{0,50}\\b(?:gpay|google\\s+pay|phonepe|paytm|bhim|upi)\\b"
+      ],
+      "exclude": [
+        "\\b(?:declined|rejected|expired|cancel+ed|failed|timed?\\s*out|not\\s+approved|ignored|withdrawn|revoked|unsuccessful)\\b",
+        "\\b(?:offer|cashback|win|coupon|scratch|reward)\\b",
+        "\\bloan\\b"
+      ]
+    }
+  }
+}
