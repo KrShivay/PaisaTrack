@@ -59,7 +59,8 @@ Waves, parallel groups, hot-file locks and the dependency ledger live in the
   linked refunds follow the verified accounting contract, not merchant-name guesses.
 - Schema changes require an ADR, additive migration, backup/delete coverage and
   migration tests. [ADR 0011](docs/decisions/0011-evidence-backed-assistance.md)
-  is accepted in part; ADRs 0033–0036 are Proposed. This plan approves no
+  is accepted in part; ADRs 0033–0036 were accepted by the owner on
+  2026-10-10 (not yet implemented). This plan approves no other
   schema, model or runtime change.
 - Deterministic extraction is authoritative; the on-device model is advisory,
   RAM-gated (ADR 0009), never awaited on the capture path and never sets

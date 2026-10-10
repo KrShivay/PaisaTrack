@@ -1,6 +1,7 @@
 # ADR 0033 — Integer minor-unit (paise) amounts
 
-Status: Proposed, planning only — 2026-10-10. Needs `@human` approval because
+Status: Accepted (owner, 2026-10-10). Not yet implemented (T-165c). Owner
+approval was required because
 it amends the frozen normalized transaction record contract
 (`lib/data/models/normalized_transaction_record.dart`) and
 the on-disk schema (db-and-migrations checklist). Brief: [T-165c](../tasks/T-165c.md).

@@ -161,5 +161,7 @@ T-207 supplies limit/due/statement facts (ADR 0034); see
 | 8 | Add-on cards | Separate liabilities unless issuer evidence/user confirms a group | T-190b2c, f2a |
 | 9 | Combined-only EMI amounts | Show one unsplit amount, flagged "unsplit" (non-blocking) | - |
 
-Keep unresolved semantics visible in later phases until the owner decides.
+**Owner answers (2026-10-10):** decisions 1–6 and 8 accepted as the
+proposed defaults above (1 = purchase period); 7 and 9 keep their
+non-blocking defaults. Refund exact-reference matches stay suggest-only.
 T-190a1 is a read-only audit and needs no product decision.

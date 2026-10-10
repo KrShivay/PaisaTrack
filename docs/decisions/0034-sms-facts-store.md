@@ -1,7 +1,9 @@
 # ADR 0034 — Source-faithful SMS facts store (schema v21)
 
-Status: Proposed (T-207; planning only, 2026-10-10). No schema approved until
-the owner accepts this ADR.
+Status: Accepted (owner, 2026-10-10), including the narrow ADR 0021 retention
+amendment in Decision 4. Not yet implemented (T-207j onward). Ask/insight
+wording for balances is "balance per last SMS, as of <date>" with a staleness
+label (orchestrator default; never a promised or live balance).
 Schema version numbers here are provisional; see the allocation rule in
 [schema](../schema.md#planned-additive-areas).
 

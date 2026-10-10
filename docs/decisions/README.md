@@ -23,7 +23,7 @@ ADRs record durable technical decisions. Status wording below follows each file;
 | [0017](0017-source-currency-fidelity.md) | Source currency fidelity | accepted for T-187 |
 | [0018](0018-capture-decision-version.md) | Capture decision version | accepted; v2 contract |
 | [0019](0019-isolated-recovery-qa-identity.md) | Isolated recovery QA identity | accepted for T-179a harness |
-| [0020](0020-credit-card-accounting.md) | Credit-card accounting boundaries | Proposed; no schema approved |
+| [0020](0020-credit-card-accounting.md) | Credit-card accounting boundaries | Proposed; owner accepted product defaults 2026-10-10; no schema approved |
 | [0021](0021-retain-source-sms-provenance.md) | Retain source SMS provenance; unlinked SMS expire after 7 days | Accepted (owner decision) |
 | [0022](0022-scoped-predictive-back.md) | Scope predictive back to the visible tab | Accepted for T-167j; physical Android verification pending |
 | [0023](0023-static-upi-qr.md) | Render a static local UPI QR from stored VPA evidence | Accepted for T-199 implementation |
@@ -36,13 +36,13 @@ ADRs record durable technical decisions. Status wording below follows each file;
 | [0030](0030-sms-identity-timestamp-compatibility.md) | Sent-time SMS identity with legacy compatibility | Accepted for T-201 capture repair |
 | [0031](0031-recurring-and-correction-integrity.md) | Recurring projections and guarded category correction | Accepted for T-201 fixes |
 | [0032](0032-recurring-intent-and-supporting-sms.md) | Per-transaction recurring intent and supporting SMS links (schema v20) | Accepted (owner request) |
-| [0033](0033-integer-paise-amounts.md) | Integer minor-unit money (expand/contract migration) | Proposed (T-165c); owner approval needed |
-| [0034](0034-sms-facts-store.md) | Source-faithful SMS facts store; narrow ADR 0021 retention amendment | Proposed (T-207); owner approval needed |
-| [0035](0035-dashboard-layout-store.md) | Dashboard layout and local interaction-count store | Proposed (T-207) |
-| [0036](0036-explicit-payee-decisions-and-cue-rules.md) | Explicit payee decisions and direction-aware cue rules | Proposed (T-205); no schema |
+| [0033](0033-integer-paise-amounts.md) | Integer minor-unit money (expand/contract migration) | Accepted (owner 2026-10-10); T-165c pending |
+| [0034](0034-sms-facts-store.md) | Source-faithful SMS facts store; narrow ADR 0021 retention amendment | Accepted (owner 2026-10-10); T-207 pending |
+| [0035](0035-dashboard-layout-store.md) | Dashboard layout and local interaction-count store | Accepted (owner 2026-10-10); T-207 pending |
+| [0036](0036-explicit-payee-decisions-and-cue-rules.md) | Explicit payee decisions and direction-aware cue rules | Accepted (owner 2026-10-10); no schema; T-205/T-211 pending |
 
 ADR 0013 was present only in snapshot commit `8800ddd`; its accepted backup decision is represented by ADR 0016. It was never part of the current ADR sequence. The duplicate number 0008 is deliberate in the surviving archive: [archived on-device LLM model pin](../archive/decisions/0008-on-device-llm-model.md) was superseded by ADR 0009, while the current [ADR 0008](0008-bounded-encrypted-backups.md) covers encrypted backups. Do not renumber either file.
 
 ADR 0020 is the Proposed credit-card-accounting draft. Schema version numbers
-in Proposed ADRs are provisional ([allocation rule](../schema.md#planned-additive-areas)). ADR 0022 records the
+in ADRs 0033–0035 are provisional ([allocation rule](../schema.md#planned-additive-areas)). ADR 0022 records the
 T-167j predictive-back decision.

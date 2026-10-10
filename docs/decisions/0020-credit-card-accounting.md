@@ -1,6 +1,9 @@
 # ADR 0020: Credit-card purchases, payments and liability accounting
 
-Status: Proposed
+Status: Proposed. Owner accepted the recommended product defaults on
+2026-10-10 (decisions 1–6 and 8 in the
+[plan](../plans/credit-card-accounting.md#owner-decisions)); formal acceptance of
+this ADR's accounting boundaries remains T-190s1.
 
 ## Context
 

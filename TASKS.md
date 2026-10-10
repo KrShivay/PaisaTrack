@@ -27,8 +27,14 @@ Subtask ids suffix the parent (T-203a). Parents are containers; claim a child.
       Now: a, b, d, e. Then c, f, g2–g5b (parallel Haiku), g6, h, i.
       [T-203](docs/tasks/T-203.md).
 - [ ] T-205 [P0] Categorisation and income gap (~96% "Other"). Now: a
-      (counts-only diagnostics), b (cue engine). Then c, d. e–h after ADR 0036
-      is accepted. [Plan](docs/plans/categorisation-v2.md), [T-205](docs/tasks/T-205.md).
+      (counts-only diagnostics), b (cue engine), e (payee decision model;
+      ADR 0036 accepted). Then c, d, f, g, h.
+      [Plan](docs/plans/categorisation-v2.md), [T-205](docs/tasks/T-205.md).
+- [ ] T-170d [P0] Native sender allowlist gap: `SmsFilter.kt` lacks `KOTAKD`
+      (public fixtures), `HDFCBN`, `ICICIP`, so those senders are dropped before
+      parsing (likely part of the income gap). Now: d2 (Kotlin↔registry parity
+      test), d1, d4, d5, d7. Then d3 (admit tokens with fixtures), d8, d6.
+      [T-170](docs/tasks/T-170.md).
 - [ ] T-210 [P1] Test-suite speed (~15 min). Now: a, c1, d. Then b, g1,
       c2–c5 (parallel Haiku), e/f, g2, h. Never weaken assertions.
       [T-210](docs/tasks/T-210.md).
@@ -39,18 +45,27 @@ Subtask ids suffix the parent (T-203a). Parents are containers; claim a child.
 - [ ] T-208 [P1] Performance budgets and host proxies. Now: a, e, h, l. Then
       b, d, j1; c; f (after T-203e); g, i, j2, k.
       [Plan](docs/plans/performance.md), [T-208](docs/tasks/T-208.md).
-- [ ] T-207 [P1] Intelligence v2, no-schema phase. Now: a, b, c, d, e. Then
-      f, ag; g, h, i. Schema children (j onward) wait for ADR 0034/0035.
+- [ ] T-207 [P1] Intelligence v2 (ADR 0034/0035 accepted). Now: a, b, c, d,
+      e. Then f, ag; g, h, i; j and w follow the roadmap schema queue.
       [Plan](docs/plans/intelligence-v2.md), [T-207](docs/tasks/T-207.md).
 - [ ] T-211 [P1] Comprehensive category taxonomy (35 top / ≤300 sub). Now: a
-      (trim draft). Then c; b/e after ADR 0036; d.
+      (trim draft). Then b, c, e; d.
       [T-211](docs/tasks/T-211.md).
 - [ ] T-162b [P1] Sender-onboarding evidence format and allowlist review gate.
       Now: b1. Then b2. [T-162](docs/tasks/T-162.md).
 - [ ] T-171b [P2] Publish performance/accessibility acceptance budgets. Now:
       b1, b2a. Then b2b, b2c, b3 (after T-208l), b4. [T-171](docs/tasks/T-171.md).
-- [ ] T-206 [P1] Merge the integration branch to `main` (PR) and hand the
-      owner the remote-branch deletion list (session proxy cannot delete).
+- [ ] T-165c [P1] Integer minor-unit money (ADR 0033 accepted). Now: c1.
+      Then c2, c6; c3 per schema queue; c4, c13; c5; c7–c11; c12, c14, c15.
+      c16 (drop REAL columns) needs a later separate approval.
+      [T-165c](docs/tasks/T-165c.md).
+- [ ] T-100 [P2] Refunds: purchase-period attribution, 31-day lookback,
+      suggest-only (owner 2026-10-10). Now: a2, b1a, c0. Then b1b (uses
+      T-165c1 Money), b2a–b2c; c1–c5 after T-165c7–c11. b1c dropped.
+      [T-100](docs/tasks/T-100.md).
+- [ ] T-206 [P1] Merge the integration branch to `main` (PR #153 exists) and
+      hand the owner the remote-branch deletion list (session proxy cannot
+      delete).
       [T-206](docs/tasks/T-206.md).
 
 ## In Review
@@ -86,31 +101,23 @@ Subtask ids suffix the parent (T-203a). Parents are containers; claim a child.
 
 ## Backlog
 
-### Blocked on an owner decision (see WORKLOG questions)
+### Planned after current waves
 
-- [ ] T-209 [P1] Refund attribution default (purchase vs posting period);
-      blocks T-100b/c. Window decided: 31-day lookback, 3–5 business days.
-- [ ] T-165c [P1] Integer minor-unit money; 16 children after ADR 0033 is
-      accepted. Recommended before T-100c/T-190f/T-098.
-      [T-165c](docs/tasks/T-165c.md).
-- [ ] T-100 [P2] Refund/reimbursement links and net totals; a2/b1a ready
-      after T-209; b1b–c5 follow. [T-100](docs/tasks/T-100.md).
-- [ ] T-190 [P2] Credit-card accounting; re-split slices await ADR 0020 and
-      card decisions 2–6, 8. [T-190](docs/tasks/T-190.md),
+- [ ] T-190 [P2] Credit-card accounting; owner accepted product defaults
+      2026-10-10. Start with s1 (ADR 0020 acceptance) after T-100b2 and
+      T-165c5. [T-190](docs/tasks/T-190.md),
       [plan](docs/plans/credit-card-accounting.md).
 - [ ] T-098 [P3] Monthly category budgets; after T-165c and T-100c1.
       [T-098](docs/tasks/T-098.md).
-- [ ] T-207 schema phase (j–am) after ADR 0034/0035 acceptance.
 
 ### Planned, groomed briefs
 
 - [ ] T-162d [P2] Payroll alias recognition after T-205b/c/e.
       [T-162](docs/tasks/T-162.md).
-- [ ] T-170d [P2] Manual QA matrix for senders/templates, unsupported-sender
-      telemetry and false-positive privacy checks. [T-170](docs/tasks/T-170.md).
 - [ ] T-177g [P3] Local receipt/screenshot matching feasibility (spikes
       only). [T-177](docs/tasks/T-177.md).
-- [ ] T-130 [P2] Residual architectural coupling (import-cycle map, seams).
+- [ ] T-130 [P2] Residual coupling: three real import cycles; a–d no longer
+      wait for T-165d.
       [T-130](docs/tasks/T-130.md).
 - [ ] T-178b [P1] Forecast range validation and backtesting; T-178c Hinglish
       intents and T-178d evaluation follow. [T-178](docs/tasks/T-178.md),

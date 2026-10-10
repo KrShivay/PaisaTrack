@@ -1,5 +1,43 @@
 # Current Handoff
 
+## 2026-10-10 — Planning batch: plans, briefs, board slimming (T-207/T-205/T-208/T-204/T-210 …)
+
+- Docs-only session on `claude/paisatrack-multi-feature-mh2nhw` (no lib/test
+  behaviour change; one comment-only fix in `app_tokens.dart`). No Flutter or
+  device checks run; doc links, `git diff --check` and GitNexus
+  detect-changes (docs sections only, 0 processes) pass.
+- New plans: [intelligence-v2](docs/plans/intelligence-v2.md),
+  [categorisation-v2](docs/plans/categorisation-v2.md),
+  [performance](docs/plans/performance.md), [ux-v2](docs/plans/ux-v2.md).
+  Briefs with 1–3-file children, model sizing, parallel groups: T-203, T-204,
+  T-205, T-206, T-207, T-208, T-210, T-211, T-165c, T-170, T-171; refreshed
+  T-098, T-100, T-130, T-162, T-177 (g), T-178 (b), T-190. Proposed ADRs
+  0033 (minor-unit money), 0034 (SMS facts, narrow retention amendment),
+  0035 (dashboard layout), 0036 (payee decisions, cue rules; no schema).
+- Key findings: flicker = Dashboard aggregates watch the transaction list +
+  `.when` reload skeletons; "Other" = direction-blind ladder, unwired memory,
+  P2P fallback, allowlist dropping credit senders; LLM field locator is
+  awaited on the capture path; LLM/embedder channels likely absent in the
+  WorkManager isolate (T-207d spike); streak chip is the only shell Settings
+  entry and its count is untruthful; Settings shows "Version 2.4.0".
+- Decisions taken here: T-205 builds on the shipped ADR 0031 correction path
+  (does not wait for T-177c/d); schema versions are assigned at task start
+  (queue in roadmap); design-system sections stay named; parallel workers
+  allowed on disjoint files per roadmap hot-file locks.
+- Board: TASKS.md slimmed to one line per task (evidence moved to briefs);
+  Ready = wave 1–2 parents with "Now:" children; roadmap has waves, hot-file
+  locks and the schema queue (`sms_facts` → minor-unit money → dashboard).
+- Owner answers (2026-10-10): refund attribution = purchase period (T-209
+  closed); ADRs 0033–0036 accepted; card defaults 1–6/8 accepted; refund
+  exact-reference matches suggest-only (T-100b1c dropped). Non-blocking
+  defaults: APKs move to GitHub Releases before deleting `apk-downloads`;
+  prefer Tesseract over ML Kit for T-177g spikes; admit `KOTAKD` natively with
+  fixtures (T-170d3), `HDFCBN`/`ICICIP` only with fixtures.
+- New finding: `SmsFilter.kt` bank tokens lack `KOTAKD`/`HDFCBN`/`ICICIP`, so
+  those senders are dropped natively — promoted to P0 T-170d2/d3.
+- T-206: PR #153 merges the integration branch; 18 stale bot branches are
+  listed for owner deletion in [T-206](docs/tasks/T-206.md).
+
 ## 2026-10-11 — Owner 12-item batch merged on integration branch (T-202)
 
 - Branch `claude/paisatrack-multi-feature-mh2nhw` (pushed). Schema v20 / ADR
@@ -51,40 +89,3 @@
   remain open. Phone is connected at the existing endpoint; only connection
   metadata was checked. No owner GUI/SMS/DB/log/backup/key access, phone update
   or APK publication. Both protected stashes and the T-194 trial remain intact.
-
-## 2026-10-04 — T-190a1 read-only card source audit host complete
-
-- Luna High implemented the isolated Settings route; Sol independently
-  reviewed it, with a second Luna reviewing/debugging host acceptance. The
-  repository uses one consistent read transaction, SQL groups and bounded
-  timestamp/ID pages. It exposes retained source/currency/lifecycle/flag facts,
-  safe identifier suffixes, absent labels and observed identity conflicts.
-  Product/ownership stay unverified; historical merged collisions stay unknown.
-- The real route bypasses paymentSourcesProvider's transfer reconciliation.
-  A control fixture proves the seeded reciprocal pair would reconcile; all
-  source/transaction/link/feedback values and real Dashboard aggregates remain
-  unchanged across report reads and Settings navigation. No writes, schema,
-  backup, capture or financial projection changes. ADR 0027 accepts host audit
-  only; ownership preview/confirmation/Undo and card accounting remain open.
-- Focused Settings/audit tests 15/15 in default and America/New_York; analyzer
-  clean; formatter six changed Dart files unchanged. Final serial full suite
-  passes 1,338/1,338, no failures/skips; encrypted migration executed.
-  Markdown links (154 files), board/handoff invariants and diff checks pass.
-  Refreshed GitNexus: 9,131 nodes, 21,375 edges, 416 flows. Complete scan:
-  16 files/184 symbols, all 184 returned, 11 reviewed audit-read/display/paging
-  flows, HIGH risk; no true partial/truncated flags. Global inventory still
-  omits 1,092 entrypoints, 1,459 callees and 35 walks. The provider's empty
-  graph references and existing Bloom test's one-line main span do not prove
-  absence of calls or change; actual provider/route tests and diff review cover
-  those boundaries. Widget teardown now flushes Riverpod disposal timers
-  and closes the synthetic DB in real async; no diagnostic logging remains.
-- Full-suite regression reached an existing reset-dialog overflow at
-  320×568/2× after fixing the test's offscreen edge tap. Its content is now
-  scrollable; unchanged destructive confirmation logic, full 48dp surface,
-  no-overflow and Cancel dismissal are covered without reducing text scale.
-- Merchant suggestions remain default-off; consented holdout/cohort/threshold,
-  live/resume device evidence and T-177f rollout gates remain open. The owner
-  refund-period question remains unanswered; T-100 linking/Undo/net totals and
-  card ownership/instrument/schema/accounting contracts remain open. No owner
-  GUI/SMS/DB/log/backup/key access, phone update or APK publication. Both
-  protected stashes, isolated T-194 trial and .handoff/paused remain intact.

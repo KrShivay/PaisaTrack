@@ -1,6 +1,6 @@
 # ADR 0036 — Explicit payee decisions and direction-aware cue rules
 
-Status: Proposed (planning only — 2026-10-10). Not implemented.
+Status: Accepted (owner, 2026-10-10). Not yet implemented (T-205, T-211).
 
 ## Context
 

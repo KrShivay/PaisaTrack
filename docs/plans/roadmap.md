@@ -15,11 +15,11 @@ parallel group and the hot-file locks below allow.
 
 | Wave | Goal | Children (briefs) | Gate to start |
 |---|---|---|---|
-| 1 | No flicker, honest categories, fast tests | T-203a/b/d/e; T-205a/b; T-210a/c1/d; T-204a/c/d/e/i/m/o; T-208a/e/h/l; T-207a–e; T-211a; T-162b1; T-171b1/b2a | none |
+| 1 | No flicker, honest categories, fast tests | T-203a/b/d/e; T-205a/b/e; T-170d1/d2/d4/d5/d7; T-165c1; T-100a2/b1a/c0; T-210a/c1/d; T-204a/c/d/e/i/m/o; T-208a/e/h/l; T-207a–e; T-211a; T-162b1; T-171b1/b2a | none |
 | 2 | Apply foundations | T-203c/f/g2–g5b/g6; T-205c/d; T-210b/g1/c2–c5/e/f; T-204b/f/g/h/j/k/l; T-208b/d/j1/c; T-207f/ag/g/h/i; T-211c; T-162b2 | wave-1 parents' Depends |
-| 3 | Screens and owner-decided features | T-204 screens (n–al) per folder; T-205e–h + T-211b/e (ADR 0036); T-207j–q (ADR 0034); T-165c1–c6 (ADR 0033); T-203h/i; T-208f/g/i | owner accepts ADRs |
-| 4 | Intelligence surfaces and money | T-207r–am (ADR 0035 for w+); T-204s–aa, am, ao; T-165c7–c15; T-100 (T-209); T-162d | wave 3 |
-| 5 | Accounting and release | T-190 slices; T-098; T-178b–d; T-102; T-171b3/b4; T-170d; T-177g; T-130 | card decisions; T-100c |
+| 3 | Screens and owner-decided features | T-204 screens (n–al) per folder; T-205e–h + T-211b/e (ADR 0036); T-207j–q (ADR 0034); T-165c1–c6 (ADR 0033); T-203h/i; T-208f/g/i | ADRs 0033–0036 accepted 2026-10-10 |
+| 4 | Intelligence surfaces and money | T-207r–am (ADR 0035 for w+); T-204s–aa, am, ao; T-165c7–c15; T-100b1b–c5; T-162d; T-170d3/d6/d8 | wave 3 |
+| 5 | Accounting and release | T-190 slices; T-098; T-178b–d; T-102; T-171b3/b4; T-177g; T-130 | card defaults accepted; T-100c |
 
 Device/owner gates in `In Review` (T-176, T-167c/j, T-199, T-200, T-202,
 T-194, T-177a, T-154b, T-196–198) stay open in parallel; batch them into one
@@ -41,6 +41,7 @@ the merged result. Briefs' Depends lines already serialise the known pairs.
 | `lib/features/settings/settings_screen.dart` | T-203g2b → T-204p → T-204ad |
 | `lib/core/theme/category_visuals.dart` | T-204j → T-211c |
 | `lib/capture/parser_cascade.dart` | T-207ak only |
+| `android/.../SmsFilter.kt` | T-170d3 → T-162b2 |
 | `.github/workflows/*`, `dart_test.yaml` | T-210a → T-210b → T-210f → T-171a |
 
 ### Schema queue
@@ -285,13 +286,13 @@ Child-level dependencies live in each brief; parents appear here once.
 |---|---|---|
 | T-203 | Import flicker and speed | None |
 | T-204 | UI/UX v2 and icon system | T-203 per folder; T-158c for detail children |
-| T-205 | Categorisation/income gap and payee review | ADR 0036 for e–h |
+| T-205 | Categorisation/income gap and payee review | ADR 0036 (accepted) |
 | T-206 | Merge to `main`, branch deletion list | Owner action |
 | T-207 | Intelligence v2 | ADR 0034/0035 for schema children; T-178c2/c3 for Ask intents |
 | T-208 | Performance budgets and proxies | T-203e for f |
-| T-209 | Refund attribution owner decision | Owner |
+| T-209 | Refund attribution owner decision | Closed 2026-10-10: purchase period |
 | T-210 | Test-suite speed and shards | None |
-| T-211 | Category taxonomy | ADR 0036 for b/e |
+| T-211 | Category taxonomy | ADR 0036 (accepted) |
 | T-162b/d | Sender evidence; payroll aliases | T-205b/c/e for d |
 | T-171b | Acceptance budgets | T-208l for b3 |
 
@@ -338,6 +339,8 @@ and [backup import acceptance](backup-import.md).
   before any holdout labels are opened or the real-data contract is frozen.
 - Confirm whether T-102 should ship CSV-only first, or include a second
   explicitly supported export format at launch.
+- Answered 2026-10-10: refund attribution = purchase period; ADRs 0033–0036
+  accepted; card defaults accepted; refunds suggest-only.
 - Confirm whether an ambiguous partial refund should remain completely outside
   budget net totals until the user links it, or be shown as a separate
   unlinked-credit adjustment.

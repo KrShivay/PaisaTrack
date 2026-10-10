@@ -1,6 +1,6 @@
 # ADR 0035 — Dashboard layout and interaction-count store (schema v22)
 
-Status: Proposed (T-207; planning only, 2026-10-10). Depends on ADR 0034
+Status: Accepted (owner, 2026-10-10); not yet implemented (T-207w onward). Depends on ADR 0034
 having claimed schema v21.
 Schema version numbers here are provisional; see the allocation rule in
 [schema](../schema.md#planned-additive-areas).
