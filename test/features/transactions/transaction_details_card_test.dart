@@ -94,6 +94,7 @@ void main() {
       expect(rows.keys, [
         'Channel',
         'Direction',
+        'Amount',
         'Date and time',
         'Parsed by',
       ]);
@@ -109,6 +110,33 @@ void main() {
       expect(rows['Balance after'], r'$12.00 (currency unknown)');
       expect(rows['Currency'], r'$ (ISO code unknown)');
     });
+  });
+
+  test('only the curated identifiers are copyable', () {
+    final rows = transactionDetailRows(
+      txn(
+        counterpartyVpa: 'payzomato@hdfcbank',
+        merchantRaw: 'ZOMATO LTD',
+        refId: '624512345678',
+        accountHint: 'XX1234',
+        balanceAfter: 10450.5,
+        currencyCode: 'INR',
+        lifecycleState: 'pending',
+      ),
+      title: 'Zomato',
+      paymentSourceName: 'HDFC savings',
+    );
+
+    expect(
+      rows.where((row) => row.copyable).map((row) => row.label).toSet(),
+      {
+        'UPI ID / VPA',
+        'Reference / RRN',
+        'Account or card',
+        'Amount',
+        'Date and time',
+      },
+    );
   });
 
   Future<void> pumpCard(

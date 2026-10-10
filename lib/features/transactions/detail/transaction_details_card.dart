@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format.dart' show formatSourceAmount;
@@ -7,15 +6,18 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../data/db/database.dart' show Transaction;
 import '../../../data/repositories/payment_source_repository.dart';
+import 'detail_clipboard.dart';
 import 'transaction_detail_formatting.dart';
 import 'upi_qr_action.dart';
 
-/// One labelled, copyable stored field of a transaction.
+/// One labelled stored field of a transaction. Only the curated identifiers
+/// (UPI ID, account/card, reference, amount, date and time) are [copyable].
 class TransactionDetailRow {
-  const TransactionDetailRow(this.label, this.value);
+  const TransactionDetailRow(this.label, this.value, {this.copyable = false});
 
   final String label;
   final String value;
+  final bool copyable;
 }
 
 /// Stored transaction fields worth reading or copying, in display order.
@@ -49,17 +51,32 @@ List<TransactionDetailRow> transactionDetailRows(
   final date = DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true);
 
   return [
-    if (vpa != null) TransactionDetailRow('UPI ID / VPA', vpa),
+    if (vpa != null) TransactionDetailRow('UPI ID / VPA', vpa, copyable: true),
     if (showPayee) TransactionDetailRow('Payee in SMS', payee),
-    if (ref != null) TransactionDetailRow('Reference / RRN', ref),
+    if (ref != null)
+      TransactionDetailRow('Reference / RRN', ref, copyable: true),
     TransactionDetailRow('Channel', _channelLabel(txn.channel)),
-    if (account != null) TransactionDetailRow('Account or card', account),
+    if (account != null)
+      TransactionDetailRow('Account or card', account, copyable: true),
     if (source != null) TransactionDetailRow('Payment source', source),
     TransactionDetailRow(
       'Direction',
       txn.direction == 'credit' ? 'Credit (money in)' : 'Debit (money out)',
     ),
-    TransactionDetailRow('Date and time', formatDetailDate(date)),
+    TransactionDetailRow(
+      'Amount',
+      formatSourceAmount(
+        txn.amount,
+        currencyCode: txn.currencyCode,
+        currencySymbol: txn.currencySymbol,
+      ),
+      copyable: true,
+    ),
+    TransactionDetailRow(
+      'Date and time',
+      formatDetailDate(date),
+      copyable: true,
+    ),
     if (balance != null)
       TransactionDetailRow(
         'Balance after',
@@ -100,19 +117,21 @@ final paymentSourceNameProvider =
   yield* repository.watchDisplayName(id);
 });
 
-/// "Transaction details" card (T-196): UPI ID, reference, channel, account,
-/// balance and more, each copyable.
+/// "Transaction details" card (T-196): stored fields, with copy actions only
+/// on the curated identifiers. An optional [footer] hosts related controls.
 class TransactionDetailsCard extends StatelessWidget {
   const TransactionDetailsCard({
     super.key,
     required this.transaction,
     required this.title,
     this.paymentSourceName,
+    this.footer,
   });
 
   final Transaction transaction;
   final String title;
   final String? paymentSourceName;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -185,12 +204,20 @@ class TransactionDetailsCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      tooltip: 'Copy ${row.label}',
-                      icon:
-                          Icon(Icons.copy_rounded, size: 18, color: labelColor),
-                      onPressed: () => _copy(context, row),
-                    ),
+                    if (row.copyable)
+                      IconButton(
+                        tooltip: 'Copy ${row.label}',
+                        icon: Icon(
+                          Icons.copy_rounded,
+                          size: 18,
+                          color: labelColor,
+                        ),
+                        onPressed: () => copyDetailValue(
+                          context,
+                          text: row.value,
+                          label: row.label,
+                        ),
+                      ),
                     if (row.label == 'UPI ID / VPA')
                       UpiQrAction(
                         counterpartyVpa: transaction.counterpartyVpa,
@@ -200,16 +227,13 @@ class TransactionDetailsCard extends StatelessWidget {
                 ),
               ],
             ),
+          if (footer != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12, top: 4, bottom: 8),
+              child: footer,
+            ),
         ],
       ),
     );
-  }
-
-  Future<void> _copy(BuildContext context, TransactionDetailRow row) async {
-    final messenger = ScaffoldMessenger.of(context);
-    await Clipboard.setData(ClipboardData(text: row.value));
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('Copied ${row.label}')));
   }
 }
