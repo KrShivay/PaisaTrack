@@ -1,26 +1,66 @@
 # Sequenced roadmap
 
-Status: proposed; planning only. Delivery priorities and invariants remain in
-[PLAN.md](../../PLAN.md); current behavior is in
-[product status](../product-status.md) and
-[architecture](../architecture.md). This document sequences open work and does
-not change release gates or claim completion.
+Status: proposed sequencing (updated 2026-10-10). Product priorities and
+invariants: [PLAN.md](../../PLAN.md). Current behavior:
+[product status](../product-status.md), [architecture](../architecture.md).
+Executable queue: [TASKS.md](../../TASKS.md). This file owns waves, parallel
+groups, hot-file locks and the dependency ledger; it does not change release
+gates or claim completion.
 
-## Scope and principles
+## Waves (owner batch 2026-10-10)
 
-- Follow [PLAN.md](../../PLAN.md), [COLLABORATION.md](../../COLLABORATION.md),
-  current [architecture](../architecture.md), [schema](../schema.md), and
-  accepted ADRs. One implementation child at a time; new work stays Backlog
-  until groomed and explicitly promoted.
+The owner wants the app smooth, fast and intelligent, and shipping faster.
+Waves run in order; inside a wave, children run in parallel when their brief's
+parallel group and the hot-file locks below allow.
+
+| Wave | Goal | Children (briefs) | Gate to start |
+|---|---|---|---|
+| 1 | No flicker, honest categories, fast tests | T-203a/b/d/e; T-205a/b; T-210a/c1/d; T-204a/c/d/e/i/m/o; T-208a/e/h/l; T-207a–e; T-211a; T-162b1; T-171b1/b2a | none |
+| 2 | Apply foundations | T-203c/f/g2–g5b/g6; T-205c/d; T-210b/g1/c2–c5/e/f; T-204b/f/g/h/j/k/l; T-208b/d/j1/c; T-207f/ag/g/h/i; T-211c; T-162b2 | wave-1 parents' Depends |
+| 3 | Screens and owner-decided features | T-204 screens (n–al) per folder; T-205e–h + T-211b/e (ADR 0036); T-207j–q (ADR 0034); T-165c1–c6 (ADR 0033); T-203h/i; T-208f/g/i | owner accepts ADRs |
+| 4 | Intelligence surfaces and money | T-207r–am (ADR 0035 for w+); T-204s–aa, am, ao; T-165c7–c15; T-100 (T-209); T-162d | wave 3 |
+| 5 | Accounting and release | T-190 slices; T-098; T-178b–d; T-102; T-171b3/b4; T-170d; T-177g; T-130 | card decisions; T-100c |
+
+Device/owner gates in `In Review` (T-176, T-167c/j, T-199, T-200, T-202,
+T-194, T-177a, T-154b, T-196–198) stay open in parallel; batch them into one
+owner phone session.
+
+### Hot-file locks
+
+Only one in-flight child may edit each file below; later children rebase on
+the merged result. Briefs' Depends lines already serialise the known pairs.
+
+| File | Order of owners |
+|---|---|
+| `lib/data/db/database.dart` (+ generated) | one schema child at a time: T-207j → T-165c3 → T-207w (provisional order); T-208c/i index/startup edits never concurrently with a schema child |
+| `lib/features/dashboard/dashboard_providers.dart`, `dashboard_widgets.dart` | T-203c → T-204r (move-only split) → T-204q/s–v → T-207z/aa/ab |
+| `lib/features/transactions/transactions_providers.dart` | T-203f → T-203g6 → T-204w |
+| `lib/capture/sms_backfill.dart`, `sms_ingestion.dart` | T-203e → T-208f → T-207m |
+| `lib/intelligence/nightly_job.dart` | T-207n → T-207ah |
+| `lib/enrichment/categorizer.dart` | T-205c → T-162d2 |
+| `lib/features/settings/settings_screen.dart` | T-203g2b → T-204p → T-204ad |
+| `lib/core/theme/category_visuals.dart` | T-204j → T-211c |
+| `lib/capture/parser_cascade.dart` | T-207ak only |
+| `.github/workflows/*`, `dart_test.yaml` | T-210a → T-210b → T-210f → T-171a |
+
+### Schema queue
+
+Provisional versions are assigned at start ([rule](../schema.md#planned-additive-areas)):
+`sms_facts` (ADR 0034) → minor-unit money columns (ADR 0033) → dashboard
+tables (ADR 0035). T-205 and T-211 need no schema change (ADR 0036).
+
+## Principles
+
+- One child per worker; parallel workers only on disjoint files. New work
+  stays Backlog until its brief is groomed.
 - Keep device/private-data gates open until their stated evidence exists.
   Synthetic fixtures prove logic only. See [release gates](release-gates.md)
   and [backup import acceptance](backup-import.md).
-- Audit and reuse current links, expected events, eligibility, and archive
-  support before schema work. Additive schema changes require an ADR first,
-  migrations, backup/delete coverage, and migration tests.
-- New financial semantics must use source currency and preserve source rows;
-  one canonical eligibility and net-spending contract must feed aggregates,
-  budgets, and insights.
+- Audit and reuse current links, expected events, eligibility and archive
+  support before schema work. Schema changes need an accepted ADR, additive
+  migration, backup/delete coverage and migration tests.
+- Source currency and source rows are preserved; one canonical eligibility
+  and net-spending contract feeds aggregates, budgets and insights.
 
 ## Dependency graph
 
@@ -237,6 +277,24 @@ are planning estimates. Owner-run device gates remain open independently.
 | T-178d2 | Device profile and budgets | M | T-115; T-194 context; ADR 0009; evaluator/instrumentation |
 | T-178d3 | Opt-in stages and kill switch | M | T-178d1/d2; T-178a–c |
 
+### New parents (2026-10-10)
+
+Child-level dependencies live in each brief; parents appear here once.
+
+| Parent | Work | Depends |
+|---|---|---|
+| T-203 | Import flicker and speed | None |
+| T-204 | UI/UX v2 and icon system | T-203 per folder; T-158c for detail children |
+| T-205 | Categorisation/income gap and payee review | ADR 0036 for e–h |
+| T-206 | Merge to `main`, branch deletion list | Owner action |
+| T-207 | Intelligence v2 | ADR 0034/0035 for schema children; T-178c2/c3 for Ask intents |
+| T-208 | Performance budgets and proxies | T-203e for f |
+| T-209 | Refund attribution owner decision | Owner |
+| T-210 | Test-suite speed and shards | None |
+| T-211 | Category taxonomy | ADR 0036 for b/e |
+| T-162b/d | Sender evidence; payroll aliases | T-205b/c/e for d |
+| T-171b | Acceptance budgets | T-208l for b3 |
+
 **Graph validation:** every listed board ID and implementation slice appears
 once in this sequence. The overview graph's cross-task edges were checked
 against the corresponding brief/plan Depends statements (intra-task slice
@@ -286,36 +344,6 @@ and [backup import acceptance](backup-import.md).
 
 ## Next implementation slice
 
-**T-167j host implementation is in review.** The root-shell back audit found
-force-pop behavior, no deliberate Home exit, and tab stacks that could be
-discarded while switching pages. Host behavior and regressions are recorded in
-the [T-167j brief](../tasks/T-167j.md); the API 36 phone gate for IME precedence
-and committed/canceled native predictive gestures remains open. T-176 and
-T-167c remain in review for their own device gates. Their unfinished device
-acceptance is not claimed complete by T-167j.
-
-**T-177a remains the product-priority path** after the existing T-176 device
-work; T-167j does not replace its chronological holdout or live/resume gates.
-Synthetic replay does not close those gates. See [release gates](release-gates.md).
-
-**T-165b is complete** on the conflict-free data lane. Its brief records the
-acceptance contract and measurements:
-
-- It is a P1 data task with low file overlap against concurrent
-  Ask/Trends/payee-identity work. T-100a decides whether transfer matching is
-  needed by refund accounting; T-165b is not a hard T-100 prerequisite. It is a
-  hard prerequisite of T-190b2 through T-190b1 only.
-- The source-mapped T-190 review identified stale generated edges in the prior
-  implementation:
-  [`PaymentSourceRepository.reconcileOwnedTransfers`](../../lib/data/repositories/payment_source_repository.dart#L109)
-  clears `ownedTransferId` before rebuilding pairings and does not remove
-  obsolete `transfer_leg` links.
-- T-165b delivers the indexed matcher and transactional stale-edge rebuild.
-  Its synthetic adversarial fixtures and measured plan passed independent
-  review; T-190b1 is closed through this task.
-- If a new SQL index is required it needs an ADR and an additive migration
-  first; start by measuring the query plan against existing indexes.
-
-Its impact analysis covered `reconcileOwnedTransfers` and `TransactionRepository`;
-the latter is high-impact and remains untouched. T-177a retains its product
-priority and release gates.
+Wave 1 above. T-165b is complete ([brief](../tasks/T-165b.md)); T-177a keeps
+its product priority for assistance work but no longer blocks T-205, which
+uses the shipped ADR 0031 correction path.
