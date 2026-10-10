@@ -583,12 +583,15 @@ final smsHistoryImportRunnerProvider =
   final categorizer = await ref.watch(categorizerProvider.future);
   final messageKindClassifier =
       await ref.watch(messageKindClassifierProvider.future);
+  final supportingSmsClassifier =
+      await ref.watch(supportingSmsClassifierProvider.future);
   final ingestor = SmsIngestor(
     database: database,
     parser: parser,
     financialCalendar: ref.watch(financialCalendarProvider),
     categorizer: categorizer,
     messageKindClassifier: messageKindClassifier,
+    supportingSmsClassifier: supportingSmsClassifier,
     merchantResolver: ref.watch(merchantResolverProvider(database)),
     fixedStatus: DecisionStatus.needsReview,
     captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
@@ -619,6 +622,8 @@ final smsIncrementalCatchUpProvider =
   final categorizer = await ref.watch(categorizerProvider.future);
   final messageKindClassifier =
       await ref.watch(messageKindClassifierProvider.future);
+  final supportingSmsClassifier =
+      await ref.watch(supportingSmsClassifierProvider.future);
   return SmsIncrementalCatchUp(
     database: database,
     ingestor: SmsIngestor(
@@ -627,6 +632,7 @@ final smsIncrementalCatchUpProvider =
       financialCalendar: ref.watch(financialCalendarProvider),
       categorizer: categorizer,
       messageKindClassifier: messageKindClassifier,
+      supportingSmsClassifier: supportingSmsClassifier,
       merchantResolver: ref.watch(merchantResolverProvider(database)),
       fixedStatus: DecisionStatus.needsReview,
       captureDecisionStatusMode: CaptureDecisionStatusMode.fixedReview,
