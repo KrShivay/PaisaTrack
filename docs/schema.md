@@ -5,12 +5,13 @@ The executable source of truth is the Drift schema under
 
 ## Current schema
 
-`AppDatabase.schemaVersion` is **19** (`lib/data/db/database.dart`). The
+`AppDatabase.schemaVersion` is **20** (`lib/data/db/database.dart`). The
 current Drift tables are `transactions`, `raw_sms`, `merchants`,
 `merchant_aliases`, `categories`, `rules`, `feedback`, `payment_sources`,
 `financial_events`, `transaction_links`, `counterparties`, `expected_events`,
 `feature_flags`, `baselines`, `insights`, `recurring_series`, `model_meta`,
-`payee_evidence`, `shadow_transactions`, and `sms_dispositions`.
+`payee_evidence`, `shadow_transactions`, `sms_dispositions`, and
+`sms_transaction_links`.
 
 - `transactions`: normalized rows, source-currency code/symbol evidence, status, soft deletion,
   duplicate links, payment-source links, owned-transfer links, and analytics
@@ -25,6 +26,9 @@ current Drift tables are `transactions`, `raw_sms`, `merchants`,
 - `expected_events`: reminders kept separate from settled transactions.
 - `sms_dispositions`: content-free durable “Not a transaction” decisions keyed
   by provider SMS ID; no foreign key to retention-bound `raw_sms`.
+- `sms_transaction_links`: content-free supporting-SMS links (dividend, RD,
+  EMI notice, UPI collect request) for one transaction; linked raw SMS is
+  retained as provenance (ADR 0032).
 - `payee_evidence`: derived, rebuildable normalized merchant/VPA evidence used
   by SQL payee aggregation and keyset search; original transaction fields stay
   authoritative.
@@ -133,3 +137,9 @@ rules match the exact normalized payee key; only legacy rules keep the older
 word-boundary fallback, and only when no exact rule matches. Restored archives
 from before v19 are normalized the same way. Regression fixture:
 `test/data/db/app_database_v19_rule_legacy_migration_test.dart`.
+
+Schema v20 (ADR 0032) adds nullable `transactions.recurring_override`
+(`recurring` | `not_recurring` | NULL = automatic) and the
+`sms_transaction_links` table with `idx_sms_transaction_links_transaction_id`.
+Both steps are guarded so repaired legacy shapes migrate idempotently.
+Regression fixture: `test/data/db/app_database_v20_migration_test.dart`.

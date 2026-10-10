@@ -26,6 +26,7 @@ import 'tables/recurring_series_table.dart';
 import 'tables/rules_table.dart';
 import 'tables/shadow_transactions_table.dart';
 import 'tables/sms_dispositions_table.dart';
+import 'tables/sms_transaction_links_table.dart';
 import 'tables/transaction_links_table.dart';
 import 'tables/transactions_table.dart';
 
@@ -55,6 +56,7 @@ part 'database.g.dart';
     Rules,
     ShadowTransactions,
     SmsDispositions,
+    SmsTransactionLinks,
     TransactionLinks,
     Transactions,
   ],
@@ -113,7 +115,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current local schema version.
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   /// Creates the initial schema and enables SQLite foreign-key enforcement.
   @override
@@ -264,6 +266,7 @@ class AppDatabase extends _$AppDatabase {
             );
           }
         }
+        if (from < 20) await _addV20RecurringAndSupportingSms(migrator);
         if (from < 15) await _backfillPayeeEvidence();
         // Generated row mapping expects the latest non-null/defaulted columns,
         // so legacy data backfills run only after every additive step above.
@@ -286,6 +289,32 @@ class AppDatabase extends _$AppDatabase {
         }
         await _ensurePaymentSourceTrigger();
       },
+    );
+  }
+
+  /// v20 (ADR 0032): additive per-transaction recurring intent and supporting
+  /// SMS links. Earlier repair steps may already have created either shape,
+  /// so both are added only when absent.
+  Future<void> _addV20RecurringAndSupportingSms(Migrator migrator) async {
+    final columns = await customSelect('PRAGMA table_info(transactions)').get();
+    final hasOverride =
+        columns.any((row) => row.read<String>('name') == 'recurring_override');
+    if (!hasOverride) {
+      await migrator.addColumn(transactions, transactions.recurringOverride);
+    }
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS sms_transaction_links ('
+      'sms_id TEXT NOT NULL, '
+      'transaction_id TEXT NOT NULL, '
+      'kind TEXT NOT NULL, '
+      'basis TEXT NOT NULL, '
+      'confidence REAL NOT NULL DEFAULT 1.0, '
+      'created_at INTEGER NOT NULL, '
+      'PRIMARY KEY (sms_id, transaction_id));',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_sms_transaction_links_transaction_id '
+      'ON sms_transaction_links (transaction_id);',
     );
   }
 

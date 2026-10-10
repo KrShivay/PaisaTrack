@@ -3801,6 +3801,12 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> messageKind = GeneratedColumn<String>(
       'message_kind', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _recurringOverrideMeta =
+      const VerificationMeta('recurringOverride');
+  @override
+  late final GeneratedColumn<String> recurringOverride =
+      GeneratedColumn<String>('recurring_override', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -3844,6 +3850,7 @@ class $TransactionsTable extends Transactions
         lifecycleState,
         lifecycleReason,
         messageKind,
+        recurringOverride,
         createdAt,
         updatedAt
       ];
@@ -4027,6 +4034,12 @@ class $TransactionsTable extends Transactions
           messageKind.isAcceptableOrUnknown(
               data['message_kind']!, _messageKindMeta));
     }
+    if (data.containsKey('recurring_override')) {
+      context.handle(
+          _recurringOverrideMeta,
+          recurringOverride.isAcceptableOrUnknown(
+              data['recurring_override']!, _recurringOverrideMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -4106,6 +4119,8 @@ class $TransactionsTable extends Transactions
           DriftSqlType.string, data['${effectivePrefix}lifecycle_reason']),
       messageKind: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}message_kind']),
+      recurringOverride: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}recurring_override']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -4149,6 +4164,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String lifecycleState;
   final String? lifecycleReason;
   final String? messageKind;
+  final String? recurringOverride;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction(
@@ -4181,6 +4197,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.lifecycleState,
       this.lifecycleReason,
       this.messageKind,
+      this.recurringOverride,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -4248,6 +4265,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     if (!nullToAbsent || messageKind != null) {
       map['message_kind'] = Variable<String>(messageKind);
+    }
+    if (!nullToAbsent || recurringOverride != null) {
+      map['recurring_override'] = Variable<String>(recurringOverride);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -4317,6 +4337,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       messageKind: messageKind == null && nullToAbsent
           ? const Value.absent()
           : Value(messageKind),
+      recurringOverride: recurringOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurringOverride),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -4356,6 +4379,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       lifecycleState: serializer.fromJson<String>(json['lifecycleState']),
       lifecycleReason: serializer.fromJson<String?>(json['lifecycleReason']),
       messageKind: serializer.fromJson<String?>(json['messageKind']),
+      recurringOverride:
+          serializer.fromJson<String?>(json['recurringOverride']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -4393,6 +4418,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'lifecycleState': serializer.toJson<String>(lifecycleState),
       'lifecycleReason': serializer.toJson<String?>(lifecycleReason),
       'messageKind': serializer.toJson<String?>(messageKind),
+      'recurringOverride': serializer.toJson<String?>(recurringOverride),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -4428,6 +4454,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           String? lifecycleState,
           Value<String?> lifecycleReason = const Value.absent(),
           Value<String?> messageKind = const Value.absent(),
+          Value<String?> recurringOverride = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Transaction(
@@ -4474,6 +4501,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             ? lifecycleReason.value
             : this.lifecycleReason,
         messageKind: messageKind.present ? messageKind.value : this.messageKind,
+        recurringOverride: recurringOverride.present
+            ? recurringOverride.value
+            : this.recurringOverride,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -4509,6 +4539,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('lifecycleState: $lifecycleState, ')
           ..write('lifecycleReason: $lifecycleReason, ')
           ..write('messageKind: $messageKind, ')
+          ..write('recurringOverride: $recurringOverride, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -4546,6 +4577,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         lifecycleState,
         lifecycleReason,
         messageKind,
+        recurringOverride,
         createdAt,
         updatedAt
       ]);
@@ -4582,6 +4614,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.lifecycleState == this.lifecycleState &&
           other.lifecycleReason == this.lifecycleReason &&
           other.messageKind == this.messageKind &&
+          other.recurringOverride == this.recurringOverride &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -4616,6 +4649,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> lifecycleState;
   final Value<String?> lifecycleReason;
   final Value<String?> messageKind;
+  final Value<String?> recurringOverride;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -4649,6 +4683,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.lifecycleState = const Value.absent(),
     this.lifecycleReason = const Value.absent(),
     this.messageKind = const Value.absent(),
+    this.recurringOverride = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4683,6 +4718,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.lifecycleState = const Value.absent(),
     this.lifecycleReason = const Value.absent(),
     this.messageKind = const Value.absent(),
+    this.recurringOverride = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -4726,6 +4762,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? lifecycleState,
     Expression<String>? lifecycleReason,
     Expression<String>? messageKind,
+    Expression<String>? recurringOverride,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -4761,6 +4798,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (lifecycleState != null) 'lifecycle_state': lifecycleState,
       if (lifecycleReason != null) 'lifecycle_reason': lifecycleReason,
       if (messageKind != null) 'message_kind': messageKind,
+      if (recurringOverride != null) 'recurring_override': recurringOverride,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -4797,6 +4835,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String>? lifecycleState,
       Value<String?>? lifecycleReason,
       Value<String?>? messageKind,
+      Value<String?>? recurringOverride,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -4830,6 +4869,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       lifecycleState: lifecycleState ?? this.lifecycleState,
       lifecycleReason: lifecycleReason ?? this.lifecycleReason,
       messageKind: messageKind ?? this.messageKind,
+      recurringOverride: recurringOverride ?? this.recurringOverride,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -4926,6 +4966,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (messageKind.present) {
       map['message_kind'] = Variable<String>(messageKind.value);
     }
+    if (recurringOverride.present) {
+      map['recurring_override'] = Variable<String>(recurringOverride.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4970,6 +5013,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('lifecycleState: $lifecycleState, ')
           ..write('lifecycleReason: $lifecycleReason, ')
           ..write('messageKind: $messageKind, ')
+          ..write('recurringOverride: $recurringOverride, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -8849,6 +8893,350 @@ class SmsDispositionsCompanion extends UpdateCompanion<SmsDisposition> {
   }
 }
 
+class $SmsTransactionLinksTable extends SmsTransactionLinks
+    with TableInfo<$SmsTransactionLinksTable, SmsTransactionLink> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SmsTransactionLinksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _smsIdMeta = const VerificationMeta('smsId');
+  @override
+  late final GeneratedColumn<String> smsId = GeneratedColumn<String>(
+      'sms_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _transactionIdMeta =
+      const VerificationMeta('transactionId');
+  @override
+  late final GeneratedColumn<String> transactionId = GeneratedColumn<String>(
+      'transaction_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _basisMeta = const VerificationMeta('basis');
+  @override
+  late final GeneratedColumn<String> basis = GeneratedColumn<String>(
+      'basis', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _confidenceMeta =
+      const VerificationMeta('confidence');
+  @override
+  late final GeneratedColumn<double> confidence = GeneratedColumn<double>(
+      'confidence', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1.0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [smsId, transactionId, kind, basis, confidence, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sms_transaction_links';
+  @override
+  VerificationContext validateIntegrity(Insertable<SmsTransactionLink> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sms_id')) {
+      context.handle(
+          _smsIdMeta, smsId.isAcceptableOrUnknown(data['sms_id']!, _smsIdMeta));
+    } else if (isInserting) {
+      context.missing(_smsIdMeta);
+    }
+    if (data.containsKey('transaction_id')) {
+      context.handle(
+          _transactionIdMeta,
+          transactionId.isAcceptableOrUnknown(
+              data['transaction_id']!, _transactionIdMeta));
+    } else if (isInserting) {
+      context.missing(_transactionIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('basis')) {
+      context.handle(
+          _basisMeta, basis.isAcceptableOrUnknown(data['basis']!, _basisMeta));
+    } else if (isInserting) {
+      context.missing(_basisMeta);
+    }
+    if (data.containsKey('confidence')) {
+      context.handle(
+          _confidenceMeta,
+          confidence.isAcceptableOrUnknown(
+              data['confidence']!, _confidenceMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {smsId, transactionId};
+  @override
+  SmsTransactionLink map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SmsTransactionLink(
+      smsId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sms_id'])!,
+      transactionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}transaction_id'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      basis: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}basis'])!,
+      confidence: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}confidence'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $SmsTransactionLinksTable createAlias(String alias) {
+    return $SmsTransactionLinksTable(attachedDatabase, alias);
+  }
+}
+
+class SmsTransactionLink extends DataClass
+    implements Insertable<SmsTransactionLink> {
+  final String smsId;
+  final String transactionId;
+
+  /// `dividend` | `rd_instalment` | `emi_notice` | `collect_request` |
+  /// `related`.
+  final String kind;
+
+  /// Deterministic matching rule that produced the link.
+  final String basis;
+  final double confidence;
+  final DateTime createdAt;
+  const SmsTransactionLink(
+      {required this.smsId,
+      required this.transactionId,
+      required this.kind,
+      required this.basis,
+      required this.confidence,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sms_id'] = Variable<String>(smsId);
+    map['transaction_id'] = Variable<String>(transactionId);
+    map['kind'] = Variable<String>(kind);
+    map['basis'] = Variable<String>(basis);
+    map['confidence'] = Variable<double>(confidence);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SmsTransactionLinksCompanion toCompanion(bool nullToAbsent) {
+    return SmsTransactionLinksCompanion(
+      smsId: Value(smsId),
+      transactionId: Value(transactionId),
+      kind: Value(kind),
+      basis: Value(basis),
+      confidence: Value(confidence),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SmsTransactionLink.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SmsTransactionLink(
+      smsId: serializer.fromJson<String>(json['smsId']),
+      transactionId: serializer.fromJson<String>(json['transactionId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      basis: serializer.fromJson<String>(json['basis']),
+      confidence: serializer.fromJson<double>(json['confidence']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'smsId': serializer.toJson<String>(smsId),
+      'transactionId': serializer.toJson<String>(transactionId),
+      'kind': serializer.toJson<String>(kind),
+      'basis': serializer.toJson<String>(basis),
+      'confidence': serializer.toJson<double>(confidence),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SmsTransactionLink copyWith(
+          {String? smsId,
+          String? transactionId,
+          String? kind,
+          String? basis,
+          double? confidence,
+          DateTime? createdAt}) =>
+      SmsTransactionLink(
+        smsId: smsId ?? this.smsId,
+        transactionId: transactionId ?? this.transactionId,
+        kind: kind ?? this.kind,
+        basis: basis ?? this.basis,
+        confidence: confidence ?? this.confidence,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('SmsTransactionLink(')
+          ..write('smsId: $smsId, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('kind: $kind, ')
+          ..write('basis: $basis, ')
+          ..write('confidence: $confidence, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(smsId, transactionId, kind, basis, confidence, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SmsTransactionLink &&
+          other.smsId == this.smsId &&
+          other.transactionId == this.transactionId &&
+          other.kind == this.kind &&
+          other.basis == this.basis &&
+          other.confidence == this.confidence &&
+          other.createdAt == this.createdAt);
+}
+
+class SmsTransactionLinksCompanion extends UpdateCompanion<SmsTransactionLink> {
+  final Value<String> smsId;
+  final Value<String> transactionId;
+  final Value<String> kind;
+  final Value<String> basis;
+  final Value<double> confidence;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const SmsTransactionLinksCompanion({
+    this.smsId = const Value.absent(),
+    this.transactionId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.basis = const Value.absent(),
+    this.confidence = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SmsTransactionLinksCompanion.insert({
+    required String smsId,
+    required String transactionId,
+    required String kind,
+    required String basis,
+    this.confidence = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : smsId = Value(smsId),
+        transactionId = Value(transactionId),
+        kind = Value(kind),
+        basis = Value(basis),
+        createdAt = Value(createdAt);
+  static Insertable<SmsTransactionLink> custom({
+    Expression<String>? smsId,
+    Expression<String>? transactionId,
+    Expression<String>? kind,
+    Expression<String>? basis,
+    Expression<double>? confidence,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (smsId != null) 'sms_id': smsId,
+      if (transactionId != null) 'transaction_id': transactionId,
+      if (kind != null) 'kind': kind,
+      if (basis != null) 'basis': basis,
+      if (confidence != null) 'confidence': confidence,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SmsTransactionLinksCompanion copyWith(
+      {Value<String>? smsId,
+      Value<String>? transactionId,
+      Value<String>? kind,
+      Value<String>? basis,
+      Value<double>? confidence,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return SmsTransactionLinksCompanion(
+      smsId: smsId ?? this.smsId,
+      transactionId: transactionId ?? this.transactionId,
+      kind: kind ?? this.kind,
+      basis: basis ?? this.basis,
+      confidence: confidence ?? this.confidence,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (smsId.present) {
+      map['sms_id'] = Variable<String>(smsId.value);
+    }
+    if (transactionId.present) {
+      map['transaction_id'] = Variable<String>(transactionId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (basis.present) {
+      map['basis'] = Variable<String>(basis.value);
+    }
+    if (confidence.present) {
+      map['confidence'] = Variable<double>(confidence.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SmsTransactionLinksCompanion(')
+          ..write('smsId: $smsId, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('kind: $kind, ')
+          ..write('basis: $basis, ')
+          ..write('confidence: $confidence, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $TransactionLinksTable extends TransactionLinks
     with TableInfo<$TransactionLinksTable, TransactionLink> {
   @override
@@ -9299,6 +9687,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ShadowTransactionsTable(this);
   late final $SmsDispositionsTable smsDispositions =
       $SmsDispositionsTable(this);
+  late final $SmsTransactionLinksTable smsTransactionLinks =
+      $SmsTransactionLinksTable(this);
   late final $TransactionLinksTable transactionLinks =
       $TransactionLinksTable(this);
   late final Index idxInsightsPeriod = Index('idx_insights_period',
@@ -9318,6 +9708,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxRecurringSeriesNextExpectedDate = Index(
       'idx_recurring_series_next_expected_date',
       'CREATE INDEX idx_recurring_series_next_expected_date ON recurring_series (next_expected_date)');
+  late final Index idxSmsTransactionLinksTransactionId = Index(
+      'idx_sms_transaction_links_transaction_id',
+      'CREATE INDEX idx_sms_transaction_links_transaction_id ON sms_transaction_links (transaction_id)');
   late final Index idxTransactionsTs = Index('idx_transactions_ts',
       'CREATE INDEX idx_transactions_ts ON transactions (ts)');
   late final Index idxTransactionsMerchantId = Index(
@@ -9366,6 +9759,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         rules,
         shadowTransactions,
         smsDispositions,
+        smsTransactionLinks,
         transactionLinks,
         idxInsightsPeriod,
         idxPaymentSourcesIdentity,
@@ -9373,6 +9767,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         idxPayeeEvidenceNormalizedKey,
         idxRecurringSeriesMerchantId,
         idxRecurringSeriesNextExpectedDate,
+        idxSmsTransactionLinksTransactionId,
         idxTransactionsTs,
         idxTransactionsMerchantId,
         idxTransactionsCategoryId,
@@ -11125,6 +11520,7 @@ typedef $$TransactionsTableInsertCompanionBuilder = TransactionsCompanion
   Value<String> lifecycleState,
   Value<String?> lifecycleReason,
   Value<String?> messageKind,
+  Value<String?> recurringOverride,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -11160,6 +11556,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String> lifecycleState,
   Value<String?> lifecycleReason,
   Value<String?> messageKind,
+  Value<String?> recurringOverride,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -11214,6 +11611,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> lifecycleState = const Value.absent(),
             Value<String?> lifecycleReason = const Value.absent(),
             Value<String?> messageKind = const Value.absent(),
+            Value<String?> recurringOverride = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -11248,6 +11646,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             lifecycleState: lifecycleState,
             lifecycleReason: lifecycleReason,
             messageKind: messageKind,
+            recurringOverride: recurringOverride,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -11282,6 +11681,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> lifecycleState = const Value.absent(),
             Value<String?> lifecycleReason = const Value.absent(),
             Value<String?> messageKind = const Value.absent(),
+            Value<String?> recurringOverride = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -11316,6 +11716,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             lifecycleState: lifecycleState,
             lifecycleReason: lifecycleReason,
             messageKind: messageKind,
+            recurringOverride: recurringOverride,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -11455,6 +11856,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get messageKind => $state.composableBuilder(
       column: $state.table.messageKind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get recurringOverride => $state.composableBuilder(
+      column: $state.table.recurringOverride,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -11716,6 +12122,11 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<String> get messageKind => $state.composableBuilder(
       column: $state.table.messageKind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get recurringOverride => $state.composableBuilder(
+      column: $state.table.recurringOverride,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -13622,6 +14033,167 @@ class $$SmsDispositionsTableOrderingComposer
           ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
+typedef $$SmsTransactionLinksTableInsertCompanionBuilder
+    = SmsTransactionLinksCompanion Function({
+  required String smsId,
+  required String transactionId,
+  required String kind,
+  required String basis,
+  Value<double> confidence,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$SmsTransactionLinksTableUpdateCompanionBuilder
+    = SmsTransactionLinksCompanion Function({
+  Value<String> smsId,
+  Value<String> transactionId,
+  Value<String> kind,
+  Value<String> basis,
+  Value<double> confidence,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$SmsTransactionLinksTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SmsTransactionLinksTable,
+    SmsTransactionLink,
+    $$SmsTransactionLinksTableFilterComposer,
+    $$SmsTransactionLinksTableOrderingComposer,
+    $$SmsTransactionLinksTableProcessedTableManager,
+    $$SmsTransactionLinksTableInsertCompanionBuilder,
+    $$SmsTransactionLinksTableUpdateCompanionBuilder> {
+  $$SmsTransactionLinksTableTableManager(
+      _$AppDatabase db, $SmsTransactionLinksTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          filteringComposer: $$SmsTransactionLinksTableFilterComposer(
+              ComposerState(db, table)),
+          orderingComposer: $$SmsTransactionLinksTableOrderingComposer(
+              ComposerState(db, table)),
+          getChildManagerBuilder: (p) =>
+              $$SmsTransactionLinksTableProcessedTableManager(p),
+          getUpdateCompanionBuilder: ({
+            Value<String> smsId = const Value.absent(),
+            Value<String> transactionId = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<String> basis = const Value.absent(),
+            Value<double> confidence = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SmsTransactionLinksCompanion(
+            smsId: smsId,
+            transactionId: transactionId,
+            kind: kind,
+            basis: basis,
+            confidence: confidence,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          getInsertCompanionBuilder: ({
+            required String smsId,
+            required String transactionId,
+            required String kind,
+            required String basis,
+            Value<double> confidence = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SmsTransactionLinksCompanion.insert(
+            smsId: smsId,
+            transactionId: transactionId,
+            kind: kind,
+            basis: basis,
+            confidence: confidence,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+        ));
+}
+
+class $$SmsTransactionLinksTableProcessedTableManager
+    extends ProcessedTableManager<
+        _$AppDatabase,
+        $SmsTransactionLinksTable,
+        SmsTransactionLink,
+        $$SmsTransactionLinksTableFilterComposer,
+        $$SmsTransactionLinksTableOrderingComposer,
+        $$SmsTransactionLinksTableProcessedTableManager,
+        $$SmsTransactionLinksTableInsertCompanionBuilder,
+        $$SmsTransactionLinksTableUpdateCompanionBuilder> {
+  $$SmsTransactionLinksTableProcessedTableManager(super.$state);
+}
+
+class $$SmsTransactionLinksTableFilterComposer
+    extends FilterComposer<_$AppDatabase, $SmsTransactionLinksTable> {
+  $$SmsTransactionLinksTableFilterComposer(super.$state);
+  ColumnFilters<String> get smsId => $state.composableBuilder(
+      column: $state.table.smsId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get transactionId => $state.composableBuilder(
+      column: $state.table.transactionId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get basis => $state.composableBuilder(
+      column: $state.table.basis,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+}
+
+class $$SmsTransactionLinksTableOrderingComposer
+    extends OrderingComposer<_$AppDatabase, $SmsTransactionLinksTable> {
+  $$SmsTransactionLinksTableOrderingComposer(super.$state);
+  ColumnOrderings<String> get smsId => $state.composableBuilder(
+      column: $state.table.smsId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get transactionId => $state.composableBuilder(
+      column: $state.table.transactionId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get kind => $state.composableBuilder(
+      column: $state.table.kind,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get basis => $state.composableBuilder(
+      column: $state.table.basis,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<double> get confidence => $state.composableBuilder(
+      column: $state.table.confidence,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get createdAt => $state.composableBuilder(
+      column: $state.table.createdAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+}
+
 typedef $$TransactionLinksTableInsertCompanionBuilder
     = TransactionLinksCompanion Function({
   required String id,
@@ -13884,6 +14456,8 @@ class _$AppDatabaseManager {
       $$ShadowTransactionsTableTableManager(_db, _db.shadowTransactions);
   $$SmsDispositionsTableTableManager get smsDispositions =>
       $$SmsDispositionsTableTableManager(_db, _db.smsDispositions);
+  $$SmsTransactionLinksTableTableManager get smsTransactionLinks =>
+      $$SmsTransactionLinksTableTableManager(_db, _db.smsTransactionLinks);
   $$TransactionLinksTableTableManager get transactionLinks =>
       $$TransactionLinksTableTableManager(_db, _db.transactionLinks);
 }
