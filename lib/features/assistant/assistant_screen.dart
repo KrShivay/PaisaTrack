@@ -8,6 +8,8 @@ import '../../data/db/database_provider.dart';
 import '../../intelligence/assistant/assistant_controller.dart';
 import '../../intelligence/assistant/prompt_catalogue.dart';
 import '../../intelligence/llm/llm_runtime.dart';
+import '../settings/ai_model_controller.dart';
+import '../settings/settings_screen.dart';
 
 final assistantControllerProvider = FutureProvider<AssistantController>((
   ref,
@@ -174,6 +176,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: BloomSkeleton(width: 160, height: 24),
                   ),
+
+                const _ModelDownloadBanner(),
 
                 // Bottom Input Bar
                 Padding(
@@ -747,6 +751,67 @@ class _MessageBubble extends StatelessWidget {
               color: AppColorTokens.bloomDarkTextSecondary,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Offers the on-device model download when the assistant has no model, so
+/// users who only see keyword answers can discover Settings > On-device AI.
+class _ModelDownloadBanner extends ConsumerWidget {
+  const _ModelDownloadBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(aiModelControllerProvider);
+    final String? message;
+    var showAction = false;
+    switch (state.phase) {
+      case AiModelPhase.notDownloaded:
+        message = 'The on-device AI model is not downloaded. '
+            'Answers use keyword search.';
+        showAction = true;
+      case AiModelPhase.downloading:
+        message = state.progress == null
+            ? 'Downloading AI model…'
+            : 'Downloading AI model ${(state.progress! * 100).floor()}%…';
+      case AiModelPhase.loading ||
+            AiModelPhase.verifying ||
+            AiModelPhase.installed ||
+            AiModelPhase.unsupported:
+        message = null;
+    }
+    if (message == null) return const SizedBox.shrink();
+    return Padding(
+      key: const ValueKey('assistant_model_banner'),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: AppTheme.bloomDisplay(
+                12,
+                FontWeight.w500,
+                color: AppColorTokens.bloomDarkTextSecondary,
+              ),
+            ),
+          ),
+          if (showAction)
+            TextButton(
+              key: const ValueKey('assistant_download_model'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                foregroundColor: AppColorTokens.bloomEmerald,
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              ),
+              child: const Text('Download AI model'),
+            ),
         ],
       ),
     );
