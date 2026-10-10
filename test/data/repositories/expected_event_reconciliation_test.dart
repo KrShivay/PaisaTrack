@@ -335,6 +335,7 @@ void main() {
     final expectedDate = DateTime.utc(2026, 7, 10);
     await repository.recordExpectedEvent(
       source: 'sms_reminder',
+      counterpartyId: 'water@bank',
       label: 'Water Bill',
       expectedAmountPaise: 120000,
       expectedDate: expectedDate,
@@ -342,7 +343,7 @@ void main() {
       confidence: 0.95,
     );
 
-    // Reconcile 5 days after expected date (past window of 3 days) with no matching debit
+    // Reconcile 6 days after expected date (past window of 3 days) with no matching debit
     final today = DateTime.utc(2026, 7, 16);
     await repository.reconcileExpectedEvents(today: today);
 
