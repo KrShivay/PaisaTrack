@@ -71,7 +71,8 @@ No “all done” state while unresolved/deferred items remain.
 | Personal transfer purpose | Explicit source or user answer | Unknown; a person's VPA does not prove non-spending |
 | Refund/own-transfer relationship | Validated linkage contract and source evidence | Keep separate; preview ambiguous links |
 
-The current `p2p_default` transfers behavior must be evaluated in T-177b:
+P2P payments now fall back to `other` (the former `p2p_default` transfer
+behavior is gone); T-205's payee review asks the user instead, because
 shopkeepers may use personal VPAs. Identity type alone must not remove genuine
 expenses from spending totals. Category and accounting eligibility are separate
 review concerns.
