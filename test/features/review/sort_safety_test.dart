@@ -113,7 +113,7 @@ void main() {
 
       expect(find.text('Zomato'), findsOneWidget);
 
-      final skipButton = find.byIcon(Icons.skip_next_rounded);
+      final skipButton = find.byIcon(Icons.arrow_forward_rounded);
       await tester.tap(skipButton);
       await tester.pumpAndSettle();
 
@@ -159,7 +159,7 @@ void main() {
       // Cursor at 0: counter shows "1 of 3"
       expect(find.text('1 of 3'), findsOneWidget);
 
-      final skipButton = find.byIcon(Icons.skip_next_rounded);
+      final skipButton = find.byIcon(Icons.arrow_forward_rounded);
 
       // Skip item 1 — cursor advances to 1
       await tester.tap(skipButton);
@@ -178,7 +178,8 @@ void main() {
       expect(find.text('Inbox Zero!'), findsNothing);
     });
 
-    testWidgets('resolve removes item — Inbox Zero after confirming the only item',
+    testWidgets(
+        'resolve removes item — Inbox Zero after confirming the only item',
         (tester) async {
       final items = [
         testReviewItem(
@@ -216,7 +217,7 @@ void main() {
       expect(find.text('1 of 1'), findsOneWidget);
 
       // Skip the only item — T-153c: all items skipped → skipped summary
-      final skipButton = find.byIcon(Icons.skip_next_rounded);
+      final skipButton = find.byIcon(Icons.arrow_forward_rounded);
       await tester.tap(skipButton);
       await tester.pumpAndSettle();
 
@@ -245,7 +246,7 @@ void main() {
 
       await pumpSort(tester, items);
 
-      final skipButton = find.byIcon(Icons.skip_next_rounded);
+      final skipButton = find.byIcon(Icons.arrow_forward_rounded);
 
       // Skip Zomato
       await tester.tap(skipButton);
@@ -261,7 +262,8 @@ void main() {
       expect(find.text('Review them now?'), findsOneWidget);
     });
 
-    testWidgets('skip state persists across provider rebuild (reviewViewProvider)',
+    testWidgets(
+        'skip state persists across provider rebuild (reviewViewProvider)',
         (tester) async {
       final items = [
         testReviewItem(
@@ -311,8 +313,8 @@ void main() {
               container = ProviderScope.containerOf(ctx);
               return MaterialApp(
                 builder: (context, child) => MediaQuery(
-                  data: MediaQuery.of(context)
-                      .copyWith(disableAnimations: true),
+                  data:
+                      MediaQuery.of(context).copyWith(disableAnimations: true),
                   child: child!,
                 ),
                 home: const BloomUndoToastHost(
@@ -353,7 +355,7 @@ void main() {
       await pumpSort(tester, items);
 
       // Skip the only item to trigger skipped-summary state
-      await tester.tap(find.byIcon(Icons.skip_next_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text('1 skipped'), findsOneWidget);
@@ -369,7 +371,8 @@ void main() {
   });
 
   group('T-154a — detail sheet from card', () {
-    testWidgets('tapping sort card opens a sheet without losing cursor position',
+    testWidgets(
+        'tapping sort card opens a sheet without losing cursor position',
         (tester) async {
       final items = [
         testReviewItem(
@@ -391,7 +394,7 @@ void main() {
       expect(find.text('1 of 2'), findsOneWidget);
 
       // Skip to move cursor to item 2
-      await tester.tap(find.byIcon(Icons.skip_next_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
       await tester.pumpAndSettle();
       expect(find.text('Swiggy'), findsOneWidget);
       expect(find.text('2 of 2'), findsOneWidget);
@@ -435,7 +438,7 @@ void main() {
       expect(find.text('Zomato'), findsOneWidget);
 
       // Skip Zomato → cursor advances to Swiggy
-      await tester.tap(find.byIcon(Icons.skip_next_rounded));
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
       await tester.pumpAndSettle();
       expect(find.text('Swiggy'), findsOneWidget);
 
@@ -445,7 +448,8 @@ void main() {
       expect(find.text('Zomato'), findsOneWidget);
     });
 
-    testWidgets('back at cursor 0 is a no-op and does not crash', (tester) async {
+    testWidgets('back at cursor 0 is a no-op and does not crash',
+        (tester) async {
       final items = [
         testReviewItem(
           id: '1',

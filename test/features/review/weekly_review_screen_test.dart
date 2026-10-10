@@ -247,17 +247,6 @@ void main() {
         .map((action) => action!.label)
         .toSet();
     expect(rowActions, containsAll(['Keep', 'Change category', 'Skip']));
-    final credit = find.bySemanticsLabel(RegExp('Credit shop'));
-    final creditLabel = tester.getSemantics(credit).getSemanticsData().label;
-    expect(creditLabel, contains('Income'));
-    expect(creditLabel, contains(r'$100.00 USD'));
-    expect(creditLabel, contains('Low confidence parse'));
-    final rowRect = tester.getRect(row);
-    await tester.tapAt(
-      Offset(rowRect.right - 1, rowRect.bottom - 1),
-    );
-    await tester.pump();
-    expect(find.text('Swiggy'), findsOneWidget);
     final keepActionId = rowData.customSemanticsActionIds!.singleWhere(
       (id) => CustomSemanticsAction.getAction(id)?.label == 'Keep',
     );
@@ -269,6 +258,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Swiggy'), findsNothing);
+    await tester.ensureVisible(find.text('Credit shop'));
+    await tester.pumpAndSettle();
+    final credit = find.bySemanticsLabel(RegExp('Credit shop'));
+    final creditLabel = tester.getSemantics(credit).getSemanticsData().label;
+    expect(creditLabel, contains('Income'));
+    expect(creditLabel, contains(r'$100.00 USD'));
+    expect(creditLabel, contains('Low confidence parse'));
     expect(tester.takeException(), isNull);
     semantics.dispose();
     semanticsDisposed = true;
@@ -335,7 +331,7 @@ void main() {
     for (final label in [
       'Previous transaction',
       'Change category',
-      'Skip transaction',
+      'Skip to next transaction',
       'Keep',
     ]) {
       final action = find.bySemanticsLabel(label);
@@ -598,6 +594,7 @@ void main() {
 
     await tester.scrollUntilVisible(find.byTooltip('Show UPI QR'), 80);
     final action = find.byTooltip('Show UPI QR');
+    await tester.ensureVisible(action);
     await tester.pumpAndSettle();
     final actionNode = tester.getSemantics(action);
     final actionData = actionNode.getSemanticsData();
@@ -623,6 +620,57 @@ void main() {
     semanticsDisposed = true;
     await unmountAndCloseDatabase(tester, db);
     databaseClosed = true;
+  });
+
+  testWidgets('Sort list row tap opens transaction detail and returns',
+      (tester) async {
+    final db = await seedDb();
+    await pumpSortWithDb(
+      tester,
+      db,
+      [
+        reviewItem(
+          id: 'txn_001',
+          displayName: 'Swiggy',
+          counterpartyKey: 'raw:swiggy',
+          categoryId: 'food_cat',
+        ),
+      ],
+      initialViewMode: ReviewViewMode.list,
+    );
+
+    await tester.tap(find.text('Swiggy'));
+    await tester.pumpAndSettle();
+    expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('TRANSACTION DETAILS'), findsNothing);
+    expect(find.text('Swiggy'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await unmountAndCloseDatabase(tester, db);
+  });
+
+  testWidgets('card mode back and skip buttons are a matching pair',
+      (tester) async {
+    await pumpScreen(tester, [
+      reviewItem(id: '1', displayName: 'A', counterpartyKey: 'raw:a'),
+      reviewItem(id: '2', displayName: 'B', counterpartyKey: 'raw:b'),
+    ]);
+    final backIcon = find.byIcon(Icons.arrow_back_rounded);
+    final nextIcon = find.byIcon(Icons.arrow_forward_rounded);
+    expect(backIcon, findsOneWidget);
+    expect(nextIcon, findsOneWidget);
+    expect(tester.widget<Icon>(backIcon).size, 24);
+    expect(tester.widget<Icon>(nextIcon).size, 24);
+    Rect circle(Finder icon) => tester.getRect(
+          find.ancestor(of: icon, matching: find.byType(Container)).first,
+        );
+    final back = circle(backIcon);
+    final next = circle(nextIcon);
+    expect(back.size, next.size);
+    expect(back.width, greaterThanOrEqualTo(48));
+    expect(back.height, greaterThanOrEqualTo(48));
   });
 
   group('T-159a — _confirmItem', () {
