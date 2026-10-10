@@ -35,8 +35,9 @@ class DuplicateSuppressor {
   /// user-deleted, are never a match target.
   bool isDuplicate(
     NormalizedTransactionRecord candidate,
-    Transaction existing,
-  ) {
+    Transaction existing, {
+    required String lifecycleState,
+  }) {
     if (existing.isDeleted || existing.duplicateOfTxnId != null) return false;
     if (!SourceCurrency(
       code: candidate.currencyCode,
@@ -56,6 +57,7 @@ class DuplicateSuppressor {
     ).matches(
       direction: candidate.direction.wireName,
       amount: candidate.amount,
+      lifecycleState: lifecycleState,
       ts: candidate.ts,
       refId: candidate.refId,
       counterpartyKey: DuplicateMatchRule.counterpartyKeyOf(

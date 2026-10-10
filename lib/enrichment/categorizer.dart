@@ -20,6 +20,7 @@ class CategorizationResult {
     required this.confidence,
     required this.source,
     this.ruleId,
+    this.description,
   });
 
   /// Never null: the ladder bottoms out at `other`.
@@ -31,6 +32,9 @@ class CategorizationResult {
 
   /// Set when a user-taught rule decided the category.
   final String? ruleId;
+
+  /// Explicit text from a user rule, independent of category classification.
+  final String? description;
 }
 
 /// Categorizer ladder, steps 1 + 3 for Phase 2 (PLAN §7.4):
@@ -114,12 +118,14 @@ class Categorizer {
       merchantRaw: record.merchantRaw,
       counterpartyVpa: record.counterpartyVpa,
     );
+    final ruleDescription = rule?.setDescription;
     if (rule?.setCategoryId != null) {
       return CategorizationResult(
         categoryId: rule!.setCategoryId!,
         confidence: 1.0,
         source: 'rule',
         ruleId: rule.id,
+        description: ruleDescription,
       );
     }
 
@@ -130,7 +136,13 @@ class Categorizer {
       );
       if (memoryHit != null &&
           memoryHit.confidence >= AppConstants.llmCategorySuggestionCap) {
-        return memoryHit;
+        return CategorizationResult(
+          categoryId: memoryHit.categoryId,
+          confidence: memoryHit.confidence,
+          source: memoryHit.source,
+          ruleId: memoryHit.ruleId,
+          description: ruleDescription,
+        );
       }
     }
 
@@ -146,6 +158,7 @@ class Categorizer {
         categoryId: prediction.categoryId,
         confidence: prediction.confidence,
         source: 'classifier',
+        description: ruleDescription,
       );
     }
 
@@ -156,6 +169,7 @@ class Categorizer {
         categoryId: seeded,
         confidence: seedConfidence,
         source: 'seed',
+        description: ruleDescription,
       );
     }
 
@@ -165,10 +179,11 @@ class Categorizer {
     );
     if (counterparty.kind == CounterpartyKind.person ||
         counterparty.kind == CounterpartyKind.self) {
-      return const CategorizationResult(
-        categoryId: 'transfers',
-        confidence: 1.0,
-        source: 'p2p_default',
+      return CategorizationResult(
+        categoryId: fallbackCategoryId,
+        confidence: fallbackConfidence,
+        source: 'fallback',
+        description: ruleDescription,
       );
     }
 
@@ -183,14 +198,16 @@ class Categorizer {
           categoryId: suggestion.categoryId,
           confidence: cappedConfidence,
           source: 'llm_suggestion',
+          description: ruleDescription,
         );
       }
     }
 
-    return const CategorizationResult(
+    return CategorizationResult(
       categoryId: fallbackCategoryId,
       confidence: fallbackConfidence,
       source: 'fallback',
+      description: ruleDescription,
     );
   }
 }

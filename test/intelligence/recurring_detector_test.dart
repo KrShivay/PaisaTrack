@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:paisatrack/data/db/database.dart';
+import 'package:paisatrack/data/repositories/recurring_repository.dart';
+import 'package:paisatrack/data/repositories/recurring_status_memory.dart';
 import 'package:paisatrack/intelligence/insights_engine.dart';
 import 'package:paisatrack/intelligence/models/embedder.dart';
 import 'package:paisatrack/intelligence/recurring_detector.dart';
@@ -416,6 +419,88 @@ void main() {
     );
   });
 
+  test('foreground scan prunes stale projection after a complete pass',
+      () async {
+    await merchant('mobile', 'Mobile Recharge');
+    for (var month = 1; month <= 3; month++) {
+      await txn(
+        id: 'projection-$month',
+        merchantId: 'mobile',
+        date: DateTime.utc(2026, month, 1),
+        amount: 299,
+      );
+    }
+    final scanner = ForegroundRecurringScanner(database);
+    await scanner.runIfStale(now: DateTime.utc(2026, 3, 10));
+    final detected =
+        await database.select(database.recurringSeries).getSingle();
+    await database.into(database.recurringSeries).insert(
+          detected.toCompanion(false).copyWith(
+                id: const Value('stale-series'),
+                status: const Value('paused'),
+              ),
+        );
+
+    await txn(
+      id: 'projection-4',
+      merchantId: 'mobile',
+      date: DateTime.utc(2026, 4, 1),
+      amount: 349,
+    );
+    await scanner.runIfStale(now: DateTime.utc(2026, 4, 2));
+
+    expect(
+      await (database.select(database.recurringSeries)
+            ..where((row) => row.id.equals('stale-series')))
+          .getSingleOrNull(),
+      equals(null),
+    );
+    final statusMemory = await RecurringStatusMemory.read(database);
+    expect(
+      statusMemory[RecurringStatusMemory.identity(detected)],
+      'paused',
+    );
+  });
+
+  test('projection keeps status changed while detection is awaiting', () async {
+    await merchant('mobile', 'Mobile Recharge');
+    for (var month = 1; month <= 3; month++) {
+      await txn(
+        id: 'status-race-$month',
+        merchantId: 'mobile',
+        date: DateTime.utc(2026, month, 1),
+        amount: 299,
+      );
+    }
+    await RecurringDetector(database).run(today: DateTime.utc(2026, 3, 10));
+    final series = await database.select(database.recurringSeries).getSingle();
+    final embedStarted = Completer<void>();
+    final releaseEmbed = Completer<void>();
+    final scanner = ForegroundRecurringScanner(
+      database,
+      embedder: _GatedEmbedder(embedStarted, releaseEmbed),
+    );
+
+    final scan = scanner.runIfStale(now: DateTime.utc(2026, 3, 11));
+    await embedStarted.future;
+    await RecurringRepository(database).setStatus(
+      seriesId: series.id,
+      status: 'paused',
+    );
+    releaseEmbed.complete();
+    await scan;
+
+    expect(
+      (await (database.select(database.recurringSeries)
+                ..where((row) => row.id.equals(series.id)))
+              .getSingle())
+          .status,
+      'paused',
+    );
+    final statuses = await RecurringStatusMemory.read(database);
+    expect(statuses[RecurringStatusMemory.identity(series)], 'paused');
+  });
+
   test('detects imported history without resolved merchant ids', () async {
     for (var month = 1; month <= 4; month++) {
       await txn(
@@ -506,6 +591,33 @@ class _RecurringKindEmbedder implements Embedder {
     final investment = text.contains('Wealth Builder') ||
         text.contains('SIP mutual fund NPS investment');
     return Float32List.fromList(investment ? [1, 0] : [0, 1]);
+  }
+
+  @override
+  Future<bool> isModelAvailable() async => true;
+
+  @override
+  Future<bool> downloadModel() async => true;
+
+  @override
+  Future<bool> deleteModel() async => true;
+}
+
+class _GatedEmbedder implements Embedder {
+  _GatedEmbedder(this.started, this.release);
+
+  final Completer<void> started;
+  final Completer<void> release;
+  bool _hasWaited = false;
+
+  @override
+  Future<Float32List?> embed(String text) async {
+    if (!_hasWaited) {
+      _hasWaited = true;
+      started.complete();
+      await release.future;
+    }
+    return null;
   }
 
   @override

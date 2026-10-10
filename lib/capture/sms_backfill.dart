@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:drift/drift.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +26,8 @@ import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
 import 'sms_import_state.dart';
 import 'sms_ingestion.dart';
+
+const _maxFailedSmsIdsRetainedPerRun = 10000;
 
 class SmsInboxCursor {
   const SmsInboxCursor({
@@ -183,6 +186,7 @@ class SmsImportProgress {
     this.parsed = 0,
     this.unparsed = 0,
     this.totalMessages,
+    this.incomplete = false,
   });
 
   final int processed;
@@ -196,6 +200,7 @@ class SmsImportProgress {
   final int parsed;
   final int unparsed;
   final int? totalMessages;
+  final bool incomplete;
 }
 
 class SmsImportResult extends SmsImportProgress {
@@ -211,6 +216,7 @@ class SmsImportResult extends SmsImportProgress {
     super.parsed = 0,
     super.unparsed = 0,
     super.totalMessages,
+    super.incomplete = false,
     this.skipped = false,
   });
 
@@ -252,14 +258,50 @@ class SmsBackfiller {
     var accepted = 0;
     var parsed = 0;
     var unparsed = 0;
+    final failedIdsAttemptedThisRun = <String>{};
+    final identityCohortGuard = SmsIdentityCohortGuard();
     await for (final page in readInboxPages(
       _reader,
       before: initialCursor,
       pageSize: _pageSize,
     )) {
+      if (failedIdsAttemptedThisRun.length + page.messages.length >
+          _maxFailedSmsIdsRetainedPerRun) {
+        onProgress?.call(
+          SmsImportProgress(
+            processed: processed,
+            failed: failed,
+            transactionsFound: transactionsFound,
+            alreadyKnown: alreadyKnown,
+            scanned: scanned,
+            filterRejected: filterRejected,
+            unknownSender: unknownSender,
+            accepted: accepted,
+            parsed: parsed,
+            unparsed: unparsed,
+            incomplete: true,
+          ),
+        );
+        return SmsImportResult(
+          processed: processed,
+          failed: failed,
+          transactionsFound: transactionsFound,
+          alreadyKnown: alreadyKnown,
+          scanned: scanned,
+          filterRejected: filterRejected,
+          unknownSender: unknownSender,
+          accepted: accepted,
+          parsed: parsed,
+          unparsed: unparsed,
+          incomplete: true,
+        );
+      }
+      final identityConflictIds = identityCohortGuard.consume(page.messages);
       final batch = await _ingestor.ingestBatch(
         page.messages,
         merchantResolutionRun: merchantResolutionRun,
+        additionalIdentityConflictIds: identityConflictIds,
+        failedIdsAlreadyAttemptedThisRun: failedIdsAttemptedThisRun,
       );
       failed += batch.failed;
       processed += page.messages.length;
@@ -345,42 +387,87 @@ class SmsIncrementalCatchUp {
     var failed = 0;
     var recoveryPagesLeft = 1;
     var foundKnownBoundary = false;
+    final failedIdsAttemptedThisRun = <String>{};
+    final identityCohortGuard = SmsIdentityCohortGuard();
     await for (final page in readInboxPages(_reader, pageSize: _pageSize)) {
-      final pageIds = page.messages.map((sms) => sms.id).toList();
-      final knownIds = <String>{};
-      if (pageIds.isNotEmpty) {
-        final rawId = _database.rawSms.id;
-        final rawProcessed = _database.rawSms.processed;
-        final rawParserVersion = _database.rawSms.parserVersion;
-        final rawRows = await (_database.selectOnly(_database.rawSms)
-              ..addColumns([rawId, rawProcessed, rawParserVersion])
-              ..where(rawId.isIn(pageIds)))
+      if (failedIdsAttemptedThisRun.length + page.messages.length >
+          _maxFailedSmsIdsRetainedPerRun) {
+        return SmsImportResult(
+          processed: processed,
+          failed: failed,
+          incomplete: true,
+        );
+      }
+      final identityConflictIds = identityCohortGuard.consume(page.messages);
+      final pageIds = page.messages
+          .expand((sms) => sms.identityIds)
+          .toSet()
+          .toList(growable: false);
+      final transactionClaims = <String, List<Transaction>>{};
+      final dispositionClaims = <String, List<SmsDisposition>>{};
+      final retainedRawById = <String, RawSm>{};
+      for (var offset = 0; offset < pageIds.length; offset += 400) {
+        final ids = pageIds.skip(offset).take(400).toList();
+        final transactionIds = ids.map((id) => 'txn_$id').toList();
+        final rawRows = await (_database.select(_database.rawSms)
+              ..where((row) => row.id.isIn(ids)))
             .get();
         for (final row in rawRows) {
-          final id = row.read(rawId)!;
-          final processed = row.read(rawProcessed) ?? false;
-          final parserVersion = row.read(rawParserVersion);
-          if (processed ||
-              (parserVersion != null &&
-                  parserVersion >= _ingestor.parserVersion)) {
-            knownIds.add(id);
-          }
+          retainedRawById[row.id] = row;
         }
 
-        final transactionSmsId = _database.transactions.smsId;
-        final transactionRows = await (_database.selectOnly(
-          _database.transactions,
-        )
-              ..addColumns([transactionSmsId])
-              ..where(transactionSmsId.isIn(pageIds)))
+        final transactionRows = await (_database.select(_database.transactions)
+              ..where(
+                (row) => row.smsId.isIn(ids) | row.id.isIn(transactionIds),
+              ))
             .get();
-        knownIds.addAll(
-          transactionRows.map((row) => row.read(transactionSmsId)!),
+        for (final row in transactionRows) {
+          for (final id in ids) {
+            if (row.smsId == id || row.id == 'txn_$id') {
+              transactionClaims.putIfAbsent(id, () => <Transaction>[]).add(row);
+            }
+          }
+        }
+        final dispositions = await (_database.select(_database.smsDispositions)
+              ..where((row) => row.smsId.isIn(ids)))
+            .get();
+        for (final row in dispositions) {
+          dispositionClaims
+              .putIfAbsent(row.smsId, () => <SmsDisposition>[])
+              .add(row);
+        }
+      }
+      final knownByMessage = <String, String>{};
+      for (final sms in page.messages) {
+        final claims = validateSmsIdentityClaims(
+          sms,
+          rawRows: sms.identityIds
+              .map((id) => retainedRawById[id])
+              .whereType<RawSm>()
+              .toList(),
+          transactionRows: sms.identityIds
+              .expand(
+                (id) => transactionClaims[id] ?? const <Transaction>[],
+              )
+              .toList(),
+          dispositions: sms.identityIds
+              .expand(
+                (id) => dispositionClaims[id] ?? const <SmsDisposition>[],
+              )
+              .toList(),
+          parserVersion: _ingestor.parserVersion,
         );
+        if (!identityConflictIds.contains(sms.id) &&
+            !claims.conflict &&
+            claims.alreadyKnown) {
+          // Canonical and receipt-time raw rows can both be exact aliases for
+          // one SMS. Count them as one known boundary; keep the rows intact.
+          knownByMessage[sms.id] = sms.identityIds.first;
+        }
       }
       final pending = <RawSms>[];
       for (final sms in page.messages) {
-        if (knownIds.contains(sms.id)) {
+        if (knownByMessage.containsKey(sms.id)) {
           foundKnownBoundary = true;
           continue;
         }
@@ -389,6 +476,8 @@ class SmsIncrementalCatchUp {
       final batch = await _ingestor.ingestBatch(
         pending,
         merchantResolutionRun: merchantResolutionRun,
+        additionalIdentityConflictIds: identityConflictIds,
+        failedIdsAlreadyAttemptedThisRun: failedIdsAttemptedThisRun,
       );
       failed += batch.failed;
       processed += pending.length;
@@ -448,6 +537,7 @@ class SmsHistoryImporter implements SmsHistoryImportRunner {
     if (!force && await _marker.completedVersion() >= smsHistoryImportVersion) {
       return const SmsImportResult(processed: 0, failed: 0, skipped: true);
     }
+    if (force) await _marker.clearCheckpoint();
     final checkpoint = force ? null : await _marker.checkpoint();
     final result = await _backfiller.run(
       initialCursor: checkpoint == null
@@ -456,21 +546,21 @@ class SmsHistoryImporter implements SmsHistoryImportRunner {
               beforeEpochMillis: checkpoint.beforeEpochMillis,
               beforeId: checkpoint.beforeId,
             ),
-      onPageCompleted: force
-          ? null
-          : (cursor) => _marker.saveCheckpoint(
-                SmsImportCheckpoint(
-                  beforeEpochMillis: cursor.beforeEpochMillis,
-                  beforeId: cursor.beforeId,
-                ),
-              ),
+      onPageCompleted: (cursor) => _marker.saveCheckpoint(
+        SmsImportCheckpoint(
+          beforeEpochMillis: cursor.beforeEpochMillis,
+          beforeId: cursor.beforeId,
+        ),
+      ),
       onProgress: onProgress,
     );
     // Reaching the end proves the inbox scan completed. Individual messages
     // are isolated so a single malformed/unsupported row cannot force a full
     // re-scan on every launch; manual re-import remains available to retry.
     // Page/query failures still throw before this marker is written.
-    await _marker.markCompleted(smsHistoryImportVersion);
+    if (!result.incomplete) {
+      await _marker.markCompleted(smsHistoryImportVersion);
+    }
     return result;
   }
 }
@@ -610,7 +700,7 @@ class _SmsCatchUpLifecycleObserver with WidgetsBindingObserver {
   }
 }
 
-enum SmsBackfillStage { idle, running, completed, failed }
+enum SmsBackfillStage { idle, running, incomplete, completed, failed }
 
 class SmsBackfillStatusState {
   const SmsBackfillStatusState({
@@ -686,6 +776,19 @@ class SmsBackfillStatusNotifier extends StateNotifier<SmsBackfillStatusState> {
     );
   }
 
+  void markIncomplete({
+    required int processed,
+    required int failed,
+    int? total,
+  }) {
+    state = state.copyWith(
+      stage: SmsBackfillStage.incomplete,
+      processed: processed,
+      failed: failed,
+      total: total,
+    );
+  }
+
   void markFailed() {
     state = state.copyWith(stage: SmsBackfillStage.failed);
   }
@@ -719,10 +822,17 @@ final smsBackfillProvider = FutureProvider<int>((ref) async {
         );
       },
     );
-    notifier.markCompleted(
-      processed: result.processed,
-      failed: result.failed,
-    );
+    if (result.incomplete) {
+      notifier.markIncomplete(
+        processed: result.processed,
+        failed: result.failed,
+      );
+    } else {
+      notifier.markCompleted(
+        processed: result.processed,
+        failed: result.failed,
+      );
+    }
     return result.processed;
   } catch (error, stackTrace) {
     notifier.markFailed();

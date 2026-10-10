@@ -2,22 +2,40 @@ package com.paisatrack.capture
 
 import android.content.ContentResolver
 import android.content.Context
+import android.database.Cursor
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Telephony
 
 /**
  * Reads historical transactional SMS from the device inbox for backfill (T-023).
  *
- * Only messages accepted by [SmsFilter] are returned, and each is stamped with
- * the same deterministic [CapturedSmsId] as live capture so the Dart ingestor
- * upserts onto existing rows instead of duplicating them. The inbox `DATE`
- * column is stable across reads, so re-running a backfill yields identical ids.
+ * Only messages accepted by [SmsFilter] are returned. Identity uses a positive
+ * inbox `DATE_SENT` when available to match live capture; `DATE` remains the
+ * receipt-time pagination cursor and parser fallback. The receipt-time hash is
+ * carried as a compatibility alias for rows stored by earlier app versions.
  *
  * Privacy: this class never logs message bodies. The returned payloads stay on
  * device and are consumed synchronously by the encrypted local pipeline.
  */
-class SmsInboxReader(context: Context) {
+internal fun interface InboxCursorQuery {
+    fun query(uri: Uri, projection: Array<String>, queryArgs: Bundle): Cursor?
+}
+
+class SmsInboxReader private constructor(
+    context: Context,
+    private val queryOverride: InboxCursorQuery?,
+) {
+    constructor(context: Context) : this(context, null)
+
     private val appContext = context.applicationContext
+
+    companion object {
+        internal fun withQuery(context: Context, query: InboxCursorQuery) =
+            SmsInboxReader(context, query)
+
+        private const val MaxPageSize = 500
+    }
 
     /** Returns one raw-inbox page, filtered to financial messages. */
     fun readPage(
@@ -32,6 +50,7 @@ class SmsInboxReader(context: Context) {
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
+            Telephony.Sms.DATE_SENT,
         )
         val selection = beforeEpochMillis?.let {
             "(${Telephony.Sms.DATE} < ?) OR " +
@@ -52,12 +71,16 @@ class SmsInboxReader(context: Context) {
             // One look-ahead row tells the caller whether another page exists.
             putInt(ContentResolver.QUERY_ARG_LIMIT, limit + 1)
         }
-        val cursor = appContext.contentResolver.query(
-            Telephony.Sms.Inbox.CONTENT_URI,
-            projection,
-            queryArgs,
-            null,
-        ) ?: return mapOf(
+        val cursor = if (queryOverride == null) {
+            appContext.contentResolver.query(
+                Telephony.Sms.Inbox.CONTENT_URI,
+                projection,
+                queryArgs,
+                null,
+            )
+        } else {
+            queryOverride.query(Telephony.Sms.Inbox.CONTENT_URI, projection, queryArgs)
+        } ?: return mapOf(
             "messages" to emptyList<Map<String, Any>>(),
             "hasMore" to false,
             "scanned" to 0,
@@ -79,6 +102,7 @@ class SmsInboxReader(context: Context) {
             val addressIndex = rows.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
             val bodyIndex = rows.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val dateIndex = rows.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val sentDateIndex = rows.getColumnIndex(Telephony.Sms.DATE_SENT)
 
             while (scanned < limit && rows.moveToNext()) {
                 scanned++
@@ -96,17 +120,27 @@ class SmsInboxReader(context: Context) {
                         accepted++
                         val sender = rows.getString(addressIndex)!!
                         val body = rows.getString(bodyIndex)!!
+                        val identity = CapturedSmsId.forInboxMessage(
+                            sender = sender,
+                            body = body,
+                            receivedAtEpochMillis = receivedAtEpochMillis,
+                            sentAtEpochMillis = if (sentDateIndex >= 0 &&
+                                !rows.isNull(sentDateIndex)
+                            ) {
+                                rows.getLong(sentDateIndex)
+                            } else {
+                                null
+                            },
+                        )
                         results.add(
-                            mapOf(
-                                "id" to CapturedSmsId.forMessage(
-                                    sender = sender,
-                                    body = body,
-                                    receivedAtEpochMillis = receivedAtEpochMillis,
-                                ),
+                            mutableMapOf<String, Any>(
+                                "id" to identity.id,
                                 "sender" to sender,
                                 "body" to body,
                                 "receivedAtEpochMillis" to receivedAtEpochMillis,
-                            ),
+                            ).apply {
+                                identity.legacyReceivedId?.let { put("legacyId", it) }
+                            },
                         )
                     }
                 }
@@ -128,9 +162,6 @@ class SmsInboxReader(context: Context) {
         }
     }
 
-    private companion object {
-        const val MaxPageSize = 500
-    }
 }
 
 internal enum class SmsInboxAdmission {

@@ -105,6 +105,30 @@ void main() {
       expect(result.source, 'rule');
     });
 
+    test('phone-like VPA shape alone stays on the low-confidence fallback',
+        () async {
+      final result = await categorizer
+          .categorize(_record(counterpartyVpa: '9876543210@okaxis'));
+
+      expect(result.categoryId, Categorizer.fallbackCategoryId);
+      expect(result.confidence, Categorizer.fallbackConfidence);
+      expect(result.source, 'fallback');
+    });
+
+    test('an explicit rule can still classify a numeric VPA', () async {
+      await rules.insert(
+        matchType: 'counterparty',
+        matchValue: '9876543210@okaxis',
+        setCategoryId: 'transfers',
+      );
+
+      final result = await categorizer
+          .categorize(_record(counterpartyVpa: '9876543210@okaxis'));
+
+      expect(result.categoryId, 'transfers');
+      expect(result.source, 'rule');
+    });
+
     test('counterparty rule (exact identity) beats merchant rule', () async {
       await rules.insert(
         matchType: 'merchant',
@@ -138,10 +162,11 @@ void main() {
       expect(result.categoryId, 'shopping');
     });
 
-    test('rule without a category is skipped; seed map applies', () async {
+    test('description-only rule applies without changing category confidence',
+        () async {
       await rules.insert(
         matchType: 'merchant',
-        matchValue: 'amzn',
+        matchValue: 'AMZN*MKTPLC',
         setDescription: 'Amazon order',
       );
 
@@ -150,6 +175,50 @@ void main() {
       expect(result.source, 'seed');
       expect(result.categoryId, 'shopping');
       expect(result.confidence, Categorizer.seedConfidence);
+      expect(result.ruleId, isNull);
+      expect(result.description, 'Amazon order');
+    });
+
+    test('memory descriptions do not write without a matched user rule',
+        () async {
+      final categorizerWithMemory = Categorizer(
+        rules: rules,
+        seedMap: seedMap,
+        merchantMemory: ({merchantRaw, counterpartyVpa}) async =>
+            const CategorizationResult(
+          categoryId: 'shopping',
+          confidence: .99,
+          source: 'merchant_memory',
+          description: 'Unreviewed memory text',
+        ),
+      );
+
+      final result = await categorizerWithMemory
+          .categorize(_record(merchantRaw: 'Unknown Merchant'));
+
+      expect(result.source, 'merchant_memory');
+      expect(result.confidence, .99);
+      expect(result.description, isNull);
+    });
+
+    test('LLM descriptions do not write without a matched user rule', () async {
+      final categorizerWithSuggestion = Categorizer(
+        rules: rules,
+        seedMap: seedMap,
+        llmSuggester: (_) async => const CategorizationResult(
+          categoryId: 'shopping',
+          confidence: .7,
+          source: 'llm_suggestion',
+          description: 'Unreviewed model text',
+        ),
+      );
+
+      final result = await categorizerWithSuggestion
+          .categorize(_record(merchantRaw: 'Unknown Merchant'));
+
+      expect(result.source, 'llm_suggestion');
+      expect(result.confidence, .7);
+      expect(result.description, isNull);
     });
 
     test('seed map falls back to the VPA when merchant text is absent',

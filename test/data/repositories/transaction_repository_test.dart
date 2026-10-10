@@ -65,7 +65,7 @@ Future<void> _insertTxn(
   String? merchantRaw,
   String? counterpartyVpa,
   String status = 'asked',
-  String categoryId = 'other',
+  String? categoryId = 'other',
   bool isDeleted = false,
   bool isNotTransaction = false,
   String? duplicateOfTxnId,
@@ -1190,6 +1190,44 @@ void main() {
       expect(restored.single.setCategoryId, 'food_dining');
     });
 
+    test('same-second rule replacement belongs only to its own undo receipt',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'same_second_rule',
+        merchantRaw: 'Bookstore',
+      );
+      final repository = TransactionRepository(database);
+      DateTime atMicrosecond(int microsecond) =>
+          DateTime.utc(2026, 7, 8, 10).add(Duration(microseconds: microsecond));
+
+      final older = await repository.correctCategory(
+        txnId: 'same_second_rule',
+        categoryId: 'groceries',
+        scope: CorrectionScope.futureMatching,
+        context: 'detail_edit',
+        clock: () => atMicrosecond(100000),
+      );
+      final firstRule = (await database.select(database.rules).get()).single;
+      final newer = await repository.correctCategory(
+        txnId: 'same_second_rule',
+        categoryId: 'groceries',
+        scope: CorrectionScope.futureMatching,
+        context: 'detail_edit',
+        clock: () => atMicrosecond(200000),
+      );
+
+      expect(await repository.undoCategoryCorrection(older), isFalse);
+      final stillOwned = (await database.select(database.rules).get()).single;
+      expect(stillOwned.id, isNot(firstRule.id));
+      expect(stillOwned.setCategoryId, 'groceries');
+
+      expect(await repository.undoCategoryCorrection(newer), isTrue);
+      final restored = (await database.select(database.rules).get()).single;
+      expect(restored.id, firstRule.id);
+      expect(restored.setCategoryId, firstRule.setCategoryId);
+    });
+
     test('existing and future scope updates normalized matching history',
         () async {
       await _insertTxn(
@@ -1334,6 +1372,213 @@ void main() {
         (await database.select(database.rules).get()).single.setCategoryId,
         'food_dining',
       );
+    });
+
+    test('undo restores nullable category and status but preserves later note',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'undo_nullable',
+        categoryId: null,
+        status: 'needs_review',
+      );
+      final repository = TransactionRepository(database);
+      final correction = await repository.correctCategory(
+        txnId: 'undo_nullable',
+        categoryId: 'groceries',
+        scope: CorrectionScope.thisTransaction,
+        context: 'detail_chip_edit',
+      );
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('undo_nullable')))
+          .write(
+        const TransactionsCompanion(description: Value('unsaved note')),
+      );
+
+      expect(await repository.undoCategoryCorrection(correction), isTrue);
+      final restored = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('undo_nullable')))
+          .getSingle();
+      expect(restored.categoryId, isNull);
+      expect(restored.status, 'needs_review');
+      expect(restored.description, 'unsaved note');
+    });
+
+    test('undo restores a description explicitly changed by the correction',
+        () async {
+      await _insertTxn(database, id: 'undo_description');
+      final repository = TransactionRepository(database);
+      final correction = await repository.correctCategory(
+        txnId: 'undo_description',
+        categoryId: 'groceries',
+        description: const Value('correction description'),
+        scope: CorrectionScope.thisTransaction,
+        context: 'detail_edit',
+      );
+
+      expect(await repository.undoCategoryCorrection(correction), isTrue);
+      final restored = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('undo_description')))
+          .getSingle();
+      expect(restored.description, isNull);
+      expect(restored.categoryId, 'other');
+    });
+
+    test('description receipt ignores another target note and feedback',
+        () async {
+      await _insertTxn(database, id: 'undo_note_current');
+      await _insertTxn(database, id: 'undo_note_peer');
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('undo_note_peer')))
+          .write(const TransactionsCompanion(description: Value('peer note')));
+      await database.into(database.feedback).insert(
+            FeedbackCompanion.insert(
+              id: 'peer_note_feedback',
+              txnId: 'undo_note_peer',
+              field: 'description',
+              oldValue: const Value(null),
+              newValue: const Value('peer note'),
+              context: 'detail_note_edit',
+              createdAt: DateTime.utc(2026, 7, 8, 10),
+            ),
+          );
+      final repository = TransactionRepository(database);
+      final correction = await repository.correctCategory(
+        txnId: 'undo_note_current',
+        categoryId: 'groceries',
+        description: const Value('correction note'),
+        scope: CorrectionScope.matchingGroup,
+        matchingTxnIds: const {'undo_note_peer'},
+        context: 'batch_review',
+      );
+
+      expect(await repository.undoCategoryCorrection(correction), isTrue);
+      final rows = {
+        for (final row in await database.select(database.transactions).get())
+          row.id: row,
+      };
+      expect(rows['undo_note_current']!.description, isNull);
+      expect(rows['undo_note_peer']!.description, 'peer note');
+      expect(rows['undo_note_peer']!.categoryId, 'other');
+      expect(
+        (await database.select(database.feedback).get()).map((row) => row.id),
+        ['peer_note_feedback'],
+      );
+    });
+
+    test('same-second A-B-C-B feedback prevents an older correction undo',
+        () async {
+      await _insertTxn(database, id: 'undo_aba', status: 'confirmed');
+      final repository = TransactionRepository(database);
+      DateTime atMicrosecond(int microsecond) =>
+          DateTime.utc(2026, 7, 8, 10).add(Duration(microseconds: microsecond));
+
+      final original = await repository.correctCategory(
+        txnId: 'undo_aba',
+        categoryId: 'groceries',
+        scope: CorrectionScope.thisTransaction,
+        context: 'detail_edit',
+        clock: () => atMicrosecond(100000),
+      );
+      await repository.correctCategory(
+        txnId: 'undo_aba',
+        categoryId: 'food_dining',
+        scope: CorrectionScope.thisTransaction,
+        context: 'detail_edit',
+        clock: () => atMicrosecond(200000),
+      );
+      await repository.correctCategory(
+        txnId: 'undo_aba',
+        categoryId: 'groceries',
+        scope: CorrectionScope.thisTransaction,
+        context: 'detail_edit',
+        clock: () => atMicrosecond(300000),
+      );
+
+      expect(await repository.undoCategoryCorrection(original), isFalse);
+      final current = await (database.select(database.transactions)
+            ..where((row) => row.id.equals('undo_aba')))
+          .getSingle();
+      expect(current.categoryId, 'groceries');
+      expect(await database.select(database.feedback).get(), hasLength(3));
+    });
+
+    test('undo preflights every target before restoring rule or feedback',
+        () async {
+      await _insertTxn(
+        database,
+        id: 'undo_batch_current',
+        merchantRaw: 'Bookstore',
+      );
+      await _insertTxn(
+        database,
+        id: 'undo_batch_hidden',
+        merchantRaw: 'BOOKSTORE!',
+      );
+      final repository = TransactionRepository(database);
+      final correction = await repository.correctCategory(
+        txnId: 'undo_batch_current',
+        categoryId: 'groceries',
+        scope: CorrectionScope.existingAndFuture,
+        context: 'historical_cleanup',
+      );
+      final feedbackBefore = await database.select(database.feedback).get();
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('undo_batch_hidden')))
+          .write(const TransactionsCompanion(isDeleted: Value(true)));
+
+      expect(await repository.undoCategoryCorrection(correction), isFalse);
+      final rows = {
+        for (final row in await database.select(database.transactions).get())
+          row.id: row,
+      };
+      expect(rows['undo_batch_current']!.categoryId, 'groceries');
+      expect(rows['undo_batch_hidden']!.categoryId, 'groceries');
+      expect(rows['undo_batch_hidden']!.isDeleted, isTrue);
+      expect(await database.select(database.feedback).get(), feedbackBefore);
+      expect(await database.select(database.rules).get(), hasLength(1));
+    });
+
+    test('undo rejects source and eligibility changes after correction',
+        () async {
+      for (final id in ['changed_ts', 'changed_transfer', 'changed_policy']) {
+        await _insertTxn(database, id: id);
+      }
+      final repository = TransactionRepository(database);
+      final correction = await repository.correctCategory(
+        txnId: 'changed_ts',
+        categoryId: 'groceries',
+        scope: CorrectionScope.matchingGroup,
+        matchingTxnIds: const {'changed_transfer', 'changed_policy'},
+        context: 'batch_review',
+      );
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('changed_ts')))
+          .write(const TransactionsCompanion(ts: Value(1783501201000)));
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('changed_transfer')))
+          .write(
+        const TransactionsCompanion(
+          ownedTransferId: Value('new_transfer'),
+        ),
+      );
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals('changed_policy')))
+          .write(const TransactionsCompanion(isAnalyticsExcluded: Value(true)));
+
+      expect(await repository.undoCategoryCorrection(correction), isFalse);
+      final rows = {
+        for (final row in await database.select(database.transactions).get())
+          row.id: row,
+      };
+      expect(
+        rows.values
+            .where((row) => row.id.startsWith('changed_'))
+            .every((row) => row.categoryId == 'groceries'),
+        isTrue,
+      );
+      expect(rows['changed_transfer']!.ownedTransferId, 'new_transfer');
+      expect(rows['changed_policy']!.isAnalyticsExcluded, isTrue);
     });
 
     test('matching group updates only explicit ids and creates no rule',

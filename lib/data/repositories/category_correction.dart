@@ -67,10 +67,98 @@ class CorrectedTransactionSnapshot {
     required this.categoryId,
     required this.status,
     required this.feedbackIds,
+    this.postCategoryId,
+    this.postStatus = 'confirmed',
+    this.baselineFeedback = const [],
+    this.receiptFeedback = const [],
+    this.descriptionChanged = false,
+    this.descriptionBefore,
+    this.descriptionAfter,
+    this.merchantId,
+    this.merchantRaw,
+    this.counterpartyVpa,
+    this.parseSource = 'unknown',
+    this.smsId,
+    this.paymentSourceId,
+    this.channel = 'unknown',
+    this.accountHint,
+    this.direction = 'unknown',
+    this.amount = 0,
+    this.ts = 0,
+    this.currencyCode,
+    this.currencySymbol,
+    this.lifecycleState = 'unknown',
+    this.lifecycleReason,
+    this.messageKind,
+    this.confidenceJson = '{}',
+    this.evidenceJson,
+    this.refId,
+    this.ownedTransferId,
+    this.isAnalyticsExcluded = false,
+    this.isDeleted = false,
+    this.isNotTransaction = false,
+    this.duplicateOfTxnId,
+    this.hasUndoGuardEvidence = false,
   });
 
   final String id;
   final String? categoryId;
   final String status;
+  final String? postCategoryId;
+  final String postStatus;
   final List<String> feedbackIds;
+  final List<CorrectionFeedbackSnapshot> baselineFeedback;
+  final List<CorrectionFeedbackSnapshot> receiptFeedback;
+  final bool descriptionChanged;
+  final String? descriptionBefore;
+  final String? descriptionAfter;
+  final String? merchantId;
+  final String? merchantRaw;
+  final String? counterpartyVpa;
+  final String parseSource;
+  final String? smsId;
+  final String? paymentSourceId;
+  final String channel;
+  final String? accountHint;
+  final String direction;
+  final double amount;
+  final int ts;
+  final String? currencyCode;
+  final String? currencySymbol;
+  final String lifecycleState;
+  final String? lifecycleReason;
+  final String? messageKind;
+  final String confidenceJson;
+  final String? evidenceJson;
+  final String? refId;
+  final String? ownedTransferId;
+  final bool isAnalyticsExcluded;
+  final bool isDeleted;
+  final bool isNotTransaction;
+  final String? duplicateOfTxnId;
+  final bool hasUndoGuardEvidence;
+}
+
+/// Ephemeral exact feedback row evidence owned by one correction receipt.
+/// This stays in memory with the undo token; no database metadata is added.
+class CorrectionFeedbackSnapshot {
+  const CorrectionFeedbackSnapshot({
+    required this.id,
+    required this.txnId,
+    required this.field,
+    required this.oldValue,
+    required this.newValue,
+    required this.context,
+    required this.modelConfidenceAtTime,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String txnId;
+  final String field;
+  final String? oldValue;
+  final String? newValue;
+  final String context;
+  final double? modelConfidenceAtTime;
+  final DateTime createdAt;
 }

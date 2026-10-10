@@ -318,7 +318,11 @@ class FieldNormalizer {
       if (day == null || year == null) {
         throw const FormatException('Date components must be numeric');
       }
-      return DateTime.utc(_expandTwoDigitYear(year), month, day);
+      return _validatedDate(
+        year: _expandTwoDigitYear(year),
+        month: month,
+        day: day,
+      );
     }
 
     final parts = value.split(RegExp(r'[-/]'));
@@ -334,10 +338,14 @@ class FieldNormalizer {
     }
 
     if (format == 'dd-MM-yy' || format == 'dd/MM/yy') {
-      return DateTime.utc(_expandTwoDigitYear(third), second, first);
+      return _validatedDate(
+        year: _expandTwoDigitYear(third),
+        month: second,
+        day: first,
+      );
     }
     if (format == 'dd-MM-yyyy' || format == 'dd/MM/yyyy') {
-      return DateTime.utc(third, second, first);
+      return _validatedDate(year: third, month: second, day: first);
     }
 
     return null;
@@ -380,11 +388,23 @@ class FieldNormalizer {
       return null;
     }
 
-    return DateTime.utc(
-      _expandTwoDigitYear(int.parse(match.group(3)!)),
-      month,
-      int.parse(match.group(1)!),
+    return _validatedDate(
+      year: _expandTwoDigitYear(int.parse(match.group(3)!)),
+      month: month,
+      day: int.parse(match.group(1)!),
     );
+  }
+
+  DateTime? _validatedDate({
+    required int year,
+    required int month,
+    required int day,
+  }) {
+    final date = DateTime.utc(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) {
+      return null;
+    }
+    return date;
   }
 
   String? _namedGroup(RegExpMatch match, String name) {

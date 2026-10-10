@@ -54,6 +54,25 @@ class _CountingSmsHistoryImportRunner implements SmsHistoryImportRunner {
   }
 }
 
+class _IncompleteSmsHistoryImportRunner implements SmsHistoryImportRunner {
+  int calls = 0;
+
+  @override
+  Future<SmsImportResult> run({
+    bool force = false,
+    void Function(SmsImportProgress progress)? onProgress,
+  }) async {
+    calls++;
+    const result = SmsImportResult(
+      processed: 7,
+      failed: 0,
+      incomplete: true,
+    );
+    onProgress?.call(result);
+    return result;
+  }
+}
+
 class _FakeSmsPermissionGate implements SmsPermissionGate {
   _FakeSmsPermissionGate(this.statusValue);
 
@@ -158,6 +177,39 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('incomplete scan is shown as retryable rather than complete',
+      (tester) async {
+    final runner = _IncompleteSmsHistoryImportRunner();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          smsPermissionGateProvider.overrideWithValue(
+            _FakeSmsPermissionGate(SmsPermissionStatus.granted),
+          ),
+          smsHistoryImportRunnerProvider.overrideWith((ref) async => runner),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: SmsLookupSheet()),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.text('Scan now'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Scan paused before the inbox was complete'),
+      findsOneWidget,
+    );
+    expect(find.text('Run scan again'), findsOneWidget);
+    expect(find.text("You're up to date"), findsNothing);
+
+    await tester.tap(find.text('Run scan again'));
+    await tester.pumpAndSettle();
+    expect(runner.calls, 2);
   });
 
   testWidgets(

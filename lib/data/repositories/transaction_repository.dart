@@ -15,6 +15,8 @@ import 'rule_repository.dart';
 import '../../capture/template_engine/template_trust_ledger.dart';
 import '../../enrichment/merchant_resolver.dart';
 
+const _correctionQueryBatchSize = 400;
+
 /// User input for a manually entered transaction (T-037).
 ///
 /// Manual entries have no SMS provenance: `parse_source` is `'manual'`,
@@ -922,8 +924,26 @@ WHERE t.status = 'needs_review'
       final now = clock().toUtc();
       final ruleInput = _ruleInputFor(row);
       final willCreateRule = scope.createsRule && ruleInput != null;
-      RuleMutation? ruleMutation;
+      final targets = await _correctionTargets(
+        current: row,
+        scope: scope,
+        ruleInput: ruleInput,
+        matchingTxnIds: matchingTxnIds,
+      );
+      final descriptionChanged =
+          description.present && row.description != description.value;
+      final baselineFeedback = await _readFeedbackSnapshots(
+        targets.map((target) => target.id),
+        {'category_id', 'status'},
+      );
+      if (descriptionChanged) {
+        baselineFeedback.putIfAbsent(txnId, () => []).addAll(
+              (await _readFeedbackSnapshots([txnId], {'description'}))[txnId] ??
+                  const [],
+            );
+      }
 
+      RuleMutation? ruleMutation;
       if (willCreateRule) {
         ruleMutation = await RuleRepository(_database).replaceForIdentity(
           matchType: ruleInput.matchType,
@@ -935,12 +955,6 @@ WHERE t.status = 'needs_review'
         );
       }
 
-      final targets = await _correctionTargets(
-        current: row,
-        scope: scope,
-        ruleInput: ruleInput,
-        matchingTxnIds: matchingTxnIds,
-      );
       final feedbackRows = <FeedbackCompanion>[];
       final feedbackIdsByTransaction = <String, List<String>>{};
 
@@ -1026,6 +1040,9 @@ WHERE t.status = 'needs_review'
       for (final feedbackRow in feedbackRows) {
         await _database.into(_database.feedback).insert(feedbackRow);
       }
+      final receiptFeedback = await _readFeedbackSnapshotsById(
+        feedbackIdsByTransaction.values.expand((ids) => ids),
+      );
       return CategoryCorrectionResult(
         feedbackCount: feedbackRows.length,
         affectedTransactionCount: targets.length,
@@ -1037,8 +1054,45 @@ WHERE t.status = 'needs_review'
               id: target.id,
               categoryId: target.categoryId,
               status: target.status,
+              postCategoryId: categoryId,
+              postStatus: 'confirmed',
               feedbackIds:
                   List.unmodifiable(feedbackIdsByTransaction[target.id] ?? []),
+              baselineFeedback:
+                  List.unmodifiable(baselineFeedback[target.id] ?? []),
+              receiptFeedback: List.unmodifiable(
+                receiptFeedback[target.id] ?? [],
+              ),
+              descriptionChanged: target.id == txnId && descriptionChanged,
+              descriptionBefore: target.description,
+              descriptionAfter: target.id == txnId && descriptionChanged
+                  ? description.value
+                  : target.description,
+              merchantId: target.merchantId,
+              merchantRaw: target.merchantRaw,
+              counterpartyVpa: target.counterpartyVpa,
+              parseSource: target.parseSource,
+              smsId: target.smsId,
+              paymentSourceId: target.paymentSourceId,
+              channel: target.channel,
+              accountHint: target.accountHint,
+              direction: target.direction,
+              amount: target.amount,
+              ts: target.ts,
+              currencyCode: target.currencyCode,
+              currencySymbol: target.currencySymbol,
+              lifecycleState: target.lifecycleState,
+              lifecycleReason: target.lifecycleReason,
+              messageKind: target.messageKind,
+              confidenceJson: target.confidenceJson,
+              evidenceJson: target.evidenceJson,
+              refId: target.refId,
+              ownedTransferId: target.ownedTransferId,
+              isAnalyticsExcluded: target.isAnalyticsExcluded,
+              isDeleted: target.isDeleted,
+              isNotTransaction: target.isNotTransaction,
+              duplicateOfTxnId: target.duplicateOfTxnId,
+              hasUndoGuardEvidence: true,
             ),
         ],
       );
@@ -1058,28 +1112,85 @@ WHERE t.status = 'needs_review'
   /// intact so the visible state cannot diverge from the database.
   Future<bool> undoCategoryCorrection(CategoryCorrectionResult correction) {
     return _database.transaction(() async {
+      final snapshots = correction.affectedTransactions;
+      if (snapshots.any((snapshot) => !snapshot.hasUndoGuardEvidence)) {
+        return false;
+      }
+      final currentRows = await _readTransactionsById(
+        snapshots.map((snapshot) => snapshot.id),
+      );
+      if (snapshots.any((snapshot) {
+        final current = currentRows[snapshot.id];
+        return current == null ||
+            !_matchesCorrectionPostState(snapshot, current);
+      })) {
+        return false;
+      }
+
+      final currentFeedback = await _readFeedbackSnapshots(
+        snapshots.map((snapshot) => snapshot.id),
+        {'category_id', 'status'},
+      );
+      final descriptionSnapshots = snapshots
+          .where((snapshot) => snapshot.descriptionChanged)
+          .toList(growable: false);
+      if (descriptionSnapshots.isNotEmpty) {
+        final descriptions = await _readFeedbackSnapshots(
+          descriptionSnapshots.map((snapshot) => snapshot.id),
+          {'description'},
+        );
+        for (final entry in descriptions.entries) {
+          currentFeedback.putIfAbsent(entry.key, () => []).addAll(entry.value);
+        }
+      }
+      if (snapshots.any((snapshot) {
+        final expected = {
+          for (final row in [
+            ...snapshot.baselineFeedback,
+            ...snapshot.receiptFeedback,
+          ])
+            row.id: row,
+        };
+        final current = currentFeedback[snapshot.id] ?? const [];
+        if (current.length != expected.length) return true;
+        return current
+            .any((row) => !_matchesFeedbackSnapshot(row, expected[row.id]));
+      })) {
+        return false;
+      }
+
       final mutation = correction.ruleMutation;
       if (mutation != null &&
           !await RuleRepository(_database).restoreMutation(mutation)) {
         return false;
       }
 
-      final feedbackIds = correction.affectedTransactions
+      final feedbackIds = snapshots
           .expand((snapshot) => snapshot.feedbackIds)
-          .toSet();
-      if (feedbackIds.isNotEmpty) {
+          .toSet()
+          .toList(growable: false);
+      for (var offset = 0;
+          offset < feedbackIds.length;
+          offset += _correctionQueryBatchSize) {
+        final batch = feedbackIds
+            .skip(offset)
+            .take(_correctionQueryBatchSize)
+            .toList(growable: false);
         await (_database.delete(_database.feedback)
-              ..where((row) => row.id.isIn(feedbackIds)))
+              ..where((row) => row.id.isIn(batch)))
             .go();
       }
       final now = DateTime.now().toUtc();
-      for (final snapshot in correction.affectedTransactions) {
+      for (final snapshot in snapshots) {
         await (_database.update(_database.transactions)
               ..where((row) => row.id.equals(snapshot.id)))
             .write(
           TransactionsCompanion(
             categoryId: Value(snapshot.categoryId),
             status: Value(snapshot.status),
+            description: snapshot.descriptionChanged
+                ? Value(snapshot.descriptionBefore)
+                : const Value.absent(),
             updatedAt: Value(now),
           ),
         );
@@ -1087,6 +1198,138 @@ WHERE t.status = 'needs_review'
       return true;
     });
   }
+
+  bool _matchesCorrectionPostState(
+    CorrectedTransactionSnapshot snapshot,
+    Transaction current,
+  ) {
+    return !current.isDeleted &&
+        !current.isNotTransaction &&
+        current.duplicateOfTxnId == null &&
+        !snapshot.isDeleted &&
+        !snapshot.isNotTransaction &&
+        snapshot.duplicateOfTxnId == null &&
+        current.categoryId == snapshot.postCategoryId &&
+        current.status == snapshot.postStatus &&
+        current.merchantId == snapshot.merchantId &&
+        current.merchantRaw == snapshot.merchantRaw &&
+        current.counterpartyVpa == snapshot.counterpartyVpa &&
+        current.parseSource == snapshot.parseSource &&
+        current.smsId == snapshot.smsId &&
+        current.paymentSourceId == snapshot.paymentSourceId &&
+        current.channel == snapshot.channel &&
+        current.accountHint == snapshot.accountHint &&
+        current.direction == snapshot.direction &&
+        current.amount == snapshot.amount &&
+        current.ts == snapshot.ts &&
+        current.currencyCode == snapshot.currencyCode &&
+        current.currencySymbol == snapshot.currencySymbol &&
+        current.lifecycleState == snapshot.lifecycleState &&
+        current.lifecycleReason == snapshot.lifecycleReason &&
+        current.messageKind == snapshot.messageKind &&
+        current.confidenceJson == snapshot.confidenceJson &&
+        current.evidenceJson == snapshot.evidenceJson &&
+        current.refId == snapshot.refId &&
+        current.ownedTransferId == snapshot.ownedTransferId &&
+        current.isAnalyticsExcluded == snapshot.isAnalyticsExcluded &&
+        current.isDeleted == snapshot.isDeleted &&
+        current.isNotTransaction == snapshot.isNotTransaction &&
+        current.duplicateOfTxnId == snapshot.duplicateOfTxnId &&
+        (!snapshot.descriptionChanged ||
+            current.description == snapshot.descriptionAfter);
+  }
+
+  Future<Map<String, Transaction>> _readTransactionsById(
+    Iterable<String> transactionIds,
+  ) async {
+    final ids = transactionIds.toSet().toList(growable: false);
+    final rows = <Transaction>[];
+    for (var offset = 0;
+        offset < ids.length;
+        offset += _correctionQueryBatchSize) {
+      final batch = ids.skip(offset).take(_correctionQueryBatchSize).toList();
+      rows.addAll(
+        await (_database.select(_database.transactions)
+              ..where((row) => row.id.isIn(batch)))
+            .get(),
+      );
+    }
+    return {for (final row in rows) row.id: row};
+  }
+
+  Future<Map<String, List<CorrectionFeedbackSnapshot>>> _readFeedbackSnapshots(
+    Iterable<String> transactionIds,
+    Set<String> fields,
+  ) async {
+    final ids = transactionIds.toSet().toList(growable: false);
+    final rows = <FeedbackData>[];
+    for (var offset = 0;
+        offset < ids.length;
+        offset += _correctionQueryBatchSize) {
+      final batch = ids.skip(offset).take(_correctionQueryBatchSize).toList();
+      rows.addAll(
+        await (_database.select(_database.feedback)
+              ..where(
+                (row) => row.txnId.isIn(batch) & row.field.isIn(fields),
+              ))
+            .get(),
+      );
+    }
+    final grouped = <String, List<CorrectionFeedbackSnapshot>>{};
+    for (final row in rows) {
+      grouped.putIfAbsent(row.txnId, () => []).add(_toFeedbackSnapshot(row));
+    }
+    return grouped;
+  }
+
+  Future<Map<String, List<CorrectionFeedbackSnapshot>>>
+      _readFeedbackSnapshotsById(
+    Iterable<String> feedbackIds,
+  ) async {
+    final ids = feedbackIds.toSet().toList(growable: false);
+    final rows = <FeedbackData>[];
+    for (var offset = 0;
+        offset < ids.length;
+        offset += _correctionQueryBatchSize) {
+      final batch = ids.skip(offset).take(_correctionQueryBatchSize).toList();
+      rows.addAll(
+        await (_database.select(_database.feedback)
+              ..where((row) => row.id.isIn(batch)))
+            .get(),
+      );
+    }
+    final grouped = <String, List<CorrectionFeedbackSnapshot>>{};
+    for (final row in rows) {
+      grouped.putIfAbsent(row.txnId, () => []).add(_toFeedbackSnapshot(row));
+    }
+    return grouped;
+  }
+
+  CorrectionFeedbackSnapshot _toFeedbackSnapshot(FeedbackData row) =>
+      CorrectionFeedbackSnapshot(
+        id: row.id,
+        txnId: row.txnId,
+        field: row.field,
+        oldValue: row.oldValue,
+        newValue: row.newValue,
+        context: row.context,
+        modelConfidenceAtTime: row.modelConfidenceAtTime,
+        createdAt: row.createdAt,
+      );
+
+  bool _matchesFeedbackSnapshot(
+    CorrectionFeedbackSnapshot row,
+    CorrectionFeedbackSnapshot? snapshot,
+  ) =>
+      snapshot != null &&
+      row.id == snapshot.id &&
+      row.txnId == snapshot.txnId &&
+      row.field == snapshot.field &&
+      row.oldValue == snapshot.oldValue &&
+      row.newValue == snapshot.newValue &&
+      row.context == snapshot.context &&
+      row.modelConfidenceAtTime == snapshot.modelConfidenceAtTime &&
+      row.createdAt == snapshot.createdAt;
 
   Future<List<Transaction>> _correctionTargets({
     required Transaction current,
@@ -1096,25 +1339,11 @@ WHERE t.status = 'needs_review'
   }) async {
     if (scope == CorrectionScope.matchingGroup) {
       final ids = {...matchingTxnIds, current.id};
-      return (_database.select(_database.transactions)
-            ..where(
-              (row) =>
-                  row.id.isIn(ids) &
-                  row.isDeleted.equals(false) &
-                  row.isNotTransaction.equals(false) &
-                  row.duplicateOfTxnId.isNull(),
-            ))
-          .get();
+      return _selectEligibleTransactionsByIds(ids);
     }
     if (scope == CorrectionScope.existingAndFuture && ruleInput != null) {
-      final query = _database.select(_database.transactions)
-        ..where(
-          (row) =>
-              row.isDeleted.equals(false) &
-              row.isNotTransaction.equals(false) &
-              row.duplicateOfTxnId.isNull(),
-        );
       final exactIds = <String>{};
+      var candidates = <Transaction>[];
 
       if (ruleInput.matchType == 'merchant_id') {
         final raw = current.merchantRaw?.trim();
@@ -1138,16 +1367,26 @@ WHERE t.status = 'needs_review'
               .get();
           exactIds.addAll(vpaRows.map((row) => row.id));
         }
-        query.where(
-          (row) =>
-              row.merchantId.equals(ruleInput.matchValue) |
-              row.id.isIn(exactIds),
+        candidates = await _selectEligibleTransactionsByMerchantId(
+          ruleInput.matchValue,
         );
+        candidates.addAll(await _selectEligibleTransactionsByIds(exactIds));
+        candidates = {
+          for (final candidate in candidates) candidate.id: candidate,
+        }.values.toList(growable: false);
       } else if (ruleInput.matchType == 'counterparty') {
         final expected = ruleInput.matchValue.trim().toLowerCase();
         // VPAs are exact identifiers: substring matching would sweep in
         // 'notabc@ybl' and 'abc@ybl.fraud' when correcting 'abc@ybl'.
-        query.where((row) => row.counterpartyVpa.lower().equals(expected));
+        candidates = await (_database.select(_database.transactions)
+              ..where(
+                (row) =>
+                    row.counterpartyVpa.lower().equals(expected) &
+                    row.isDeleted.equals(false) &
+                    row.isNotTransaction.equals(false) &
+                    row.duplicateOfTxnId.isNull(),
+              ))
+            .get();
       } else {
         final normalizedKey = PayeeIdentityKey.normalize(ruleInput.matchValue);
         final indexedRows = await (_database.select(_database.payeeEvidence)
@@ -1159,9 +1398,8 @@ WHERE t.status = 'needs_review'
             .get();
         final indexedIds = indexedRows.map((row) => row.transactionId).toSet();
         final ids = {...indexedIds, current.id};
-        query.where((row) => row.id.isIn(ids));
+        candidates = await _selectEligibleTransactionsByIds(ids);
       }
-      final candidates = await query.get();
       if (ruleInput.matchType == 'counterparty') {
         return candidates;
       }
@@ -1190,6 +1428,43 @@ WHERE t.status = 'needs_review'
     }
     return [current];
   }
+
+  Future<List<Transaction>> _selectEligibleTransactionsByIds(
+    Iterable<String> transactionIds,
+  ) async {
+    final ids = transactionIds.toSet().toList(growable: false);
+    final rows = <Transaction>[];
+    for (var offset = 0;
+        offset < ids.length;
+        offset += _correctionQueryBatchSize) {
+      final batch = ids.skip(offset).take(_correctionQueryBatchSize).toList();
+      rows.addAll(
+        await (_database.select(_database.transactions)
+              ..where(
+                (row) =>
+                    row.id.isIn(batch) &
+                    row.isDeleted.equals(false) &
+                    row.isNotTransaction.equals(false) &
+                    row.duplicateOfTxnId.isNull(),
+              ))
+            .get(),
+      );
+    }
+    return rows;
+  }
+
+  Future<List<Transaction>> _selectEligibleTransactionsByMerchantId(
+    String merchantId,
+  ) =>
+      (_database.select(_database.transactions)
+            ..where(
+              (row) =>
+                  row.merchantId.equals(merchantId) &
+                  row.isDeleted.equals(false) &
+                  row.isNotTransaction.equals(false) &
+                  row.duplicateOfTxnId.isNull(),
+            ))
+          .get();
 
   /// Extracts the parse confidence from `confidence_json` (the `parser.c`
   /// entry SmsIngestor and insertManual write), or null when the payload has

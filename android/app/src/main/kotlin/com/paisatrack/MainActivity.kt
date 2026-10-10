@@ -195,6 +195,10 @@ open class MainActivity : FlutterActivity() {
                     backfillState.saveCheckpoint(beforeEpochMillis, beforeId)
                     result.success(null)
                 }
+                "clearBackfillCheckpoint" -> {
+                    backfillState.clearCheckpoint()
+                    result.success(null)
+                }
                 "markBackfillVersion" -> {
                     val version = call.argument<Number>("version")?.toInt()
                     if (version == null || version <= 0) {
@@ -904,6 +908,13 @@ private class BackfillStateStore(context: Context) {
         prefs.edit()
             .putLong(CheckpointEpochKey, beforeEpochMillis)
             .putLong(CheckpointIdKey, beforeId)
+            .apply()
+    }
+
+    fun clearCheckpoint() {
+        prefs.edit()
+            .remove(CheckpointEpochKey)
+            .remove(CheckpointIdKey)
             .apply()
     }
 

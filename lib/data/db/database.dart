@@ -422,6 +422,7 @@ class AppDatabase extends _$AppDatabase {
             rule.matches(
               direction: echo.direction,
               amount: echo.amount,
+              lifecycleState: echo.lifecycleState,
               ts: echoTs,
               refId: echo.refId,
               counterpartyKey: echoKey,

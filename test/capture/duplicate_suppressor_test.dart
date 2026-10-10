@@ -47,6 +47,7 @@ Transaction _existing({
   String? refId,
   bool isDeleted = false,
   String? duplicateOfTxnId,
+  String lifecycleState = 'settled',
   required DateTime ts,
 }) {
   return Transaction(
@@ -70,7 +71,7 @@ Transaction _existing({
     isNotTransaction: false,
     duplicateOfTxnId: duplicateOfTxnId,
     isAnalyticsExcluded: false,
-    lifecycleState: 'settled',
+    lifecycleState: lifecycleState,
     createdAt: ts,
     updatedAt: ts,
   );
@@ -185,9 +186,56 @@ void main() {
   for (final testCase in cases) {
     test(testCase.description, () {
       expect(
-        suppressor.isDuplicate(testCase.candidate, testCase.existing),
+        suppressor.isDuplicate(
+          testCase.candidate,
+          testCase.existing,
+          lifecycleState: 'settled',
+        ),
         testCase.expectDuplicate,
       );
     });
   }
+
+  test('only equal known lifecycle states may form a duplicate pair', () {
+    final candidate = _record(
+      merchantRaw: 'Amazon Pay India',
+      ts: baseTs.add(const Duration(minutes: 1)),
+    );
+    for (final state in ['pending', 'failed', 'reversed', 'unknown']) {
+      expect(
+        suppressor.isDuplicate(
+          candidate,
+          _existing(
+            merchantRaw: 'amazon@ybl',
+            lifecycleState: state,
+            ts: baseTs,
+          ),
+          lifecycleState: 'settled',
+        ),
+        isFalse,
+        reason: 'settled candidate vs $state existing transaction',
+      );
+    }
+    expect(
+      suppressor.isDuplicate(
+        candidate,
+        _existing(
+          merchantRaw: 'amazon@ybl',
+          lifecycleState: 'unknown',
+          ts: baseTs,
+        ),
+        lifecycleState: 'unknown',
+      ),
+      isFalse,
+      reason: 'matching unknown states are not known-compatible',
+    );
+    expect(
+      suppressor.isDuplicate(
+        candidate,
+        _existing(merchantRaw: 'amazon@ybl', ts: baseTs),
+        lifecycleState: 'settled',
+      ),
+      isTrue,
+    );
+  });
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,8 @@ import 'package:paisatrack/capture/parser_version.dart';
 import 'package:paisatrack/capture/sms_backfill.dart';
 import 'package:paisatrack/capture/sms_import_state.dart';
 import 'package:paisatrack/capture/sms_ingestion.dart';
+import 'package:paisatrack/capture/permissions/sms_permission.dart';
+import 'package:paisatrack/capture/permissions/sms_permission_provider.dart';
 import 'package:paisatrack/data/db/database_provider.dart';
 import 'package:paisatrack/capture/template_engine/template_matcher.dart';
 import 'package:paisatrack/core/result.dart';
@@ -99,6 +102,50 @@ void main() {
       transactions.map((row) => row.id),
       containsAll(['txn_sms_current', 'txn_sms_2022']),
     );
+  });
+
+  test('failed SMS is attempted once across pages and retryable next run',
+      () async {
+    const cursor = SmsInboxCursor(beforeEpochMillis: 1000, beforeId: 10);
+    final sms = message('sms_cross_page_failure');
+    final failingParser = FakeParserCascade(
+      _sampleRecord,
+      throwIds: {sms.id},
+    );
+    final firstRun = await SmsBackfiller(
+      ingestor: SmsIngestor(
+        database: database,
+        parser: failingParser,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader([
+        SmsInboxPage(messages: [sms], nextCursor: cursor),
+        SmsInboxPage(messages: [sms]),
+      ]),
+      pageSize: 1,
+    ).run();
+
+    expect(failingParser.parseCalls, 1);
+    expect(firstRun.failed, 1);
+    expect(await database.select(database.transactions).get(), isEmpty);
+    final failedRaw = await database.select(database.rawSms).getSingle();
+    expect(failedRaw.failureReason, 'processing_error');
+
+    final retryParser = FakeParserCascade(_sampleRecord);
+    final nextRun = await SmsBackfiller(
+      ingestor: SmsIngestor(
+        database: database,
+        parser: retryParser,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader.single([sms]),
+      pageSize: 1,
+    ).run();
+
+    expect(retryParser.parseCalls, 1);
+    expect(nextRun.failed, 0);
+    expect(nextRun.transactionsFound, 1);
+    expect(await database.select(database.transactions).get(), hasLength(1));
   });
 
   test('live, history, and catch-up resolve decorated payee identity equally',
@@ -524,6 +571,76 @@ void main() {
 
     notifier.markCompleted(processed: 100, failed: 2);
     expect(notifier.state.stage, SmsBackfillStage.completed);
+    notifier.markIncomplete(processed: 100, failed: 2);
+    expect(notifier.state.stage, SmsBackfillStage.incomplete);
+  });
+
+  test('platform marker clears only the checkpoint through its channel',
+      () async {
+    const channel = MethodChannel('test/paisatrack/sms_backfill');
+    var completedVersion = smsHistoryImportVersion - 1;
+    var hasCheckpoint = true;
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      switch (call.method) {
+        case 'completedBackfillVersion':
+          return completedVersion;
+        case 'backfillCheckpoint':
+          return hasCheckpoint
+              ? <String, Object?>{'beforeEpochMillis': 100, 'beforeId': 1}
+              : null;
+        case 'clearBackfillCheckpoint':
+          hasCheckpoint = false;
+          return null;
+        case 'markBackfillVersion':
+          completedVersion = call.arguments['version'] as int;
+          hasCheckpoint = false;
+          return null;
+        default:
+          throw MissingPluginException('Unexpected method: ${call.method}');
+      }
+    });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    const marker = PlatformBackfillMarker(channel: channel);
+    expect(await marker.checkpoint(), isNotNull);
+    await marker.clearCheckpoint();
+
+    expect(calls, ['backfillCheckpoint', 'clearBackfillCheckpoint']);
+    expect(await marker.completedVersion(), smsHistoryImportVersion - 1);
+    expect(await marker.checkpoint(), isNull);
+    expect(completedVersion, smsHistoryImportVersion - 1);
+  });
+
+  testWidgets('automatic provider keeps a capped scan retryable',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        smsPermissionGateProvider
+            .overrideWithValue(_GrantedSmsPermissionGate()),
+        smsHistoryImportRunnerProvider.overrideWith(
+          (ref) async => _IncompleteHistoryImportRunner(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(
+      await container.read(smsPermissionControllerProvider.future),
+      SmsPermissionStatus.granted,
+    );
+    final resultFuture = container.read(smsBackfillProvider.future);
+    await tester.pump();
+    expect(await resultFuture, 7);
+    expect(
+      container.read(smsBackfillStatusProvider).stage,
+      SmsBackfillStage.incomplete,
+    );
   });
 
   test('continues after a page containing no filter-approved messages',
@@ -731,6 +848,61 @@ void main() {
     expect(marker.markCount, 1);
   });
 
+  test('incomplete forced scan clears an older cursor before auto-resume',
+      () async {
+    const staleCheckpoint = SmsImportCheckpoint(
+      beforeEpochMillis: 100,
+      beforeId: 1,
+    );
+    const retryIdCapacity = 10000;
+    final marker = FakeBackfillMarker(
+      version: smsHistoryImportVersion - 1,
+      checkpoint: staleCheckpoint,
+    );
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: List.generate(
+          retryIdCapacity + 1,
+          (index) => message('forced_cap_$index'),
+        ),
+        nextCursor: const SmsInboxCursor(beforeEpochMillis: 50, beforeId: 5),
+      ),
+      SmsInboxPage(messages: [message('automatic_retry_from_start')]),
+    ]);
+    final importer = SmsHistoryImporter(
+      backfiller: SmsBackfiller(
+        ingestor: SmsIngestor(
+          database: database,
+          parser: FakeParserCascade(_sampleRecord),
+          messageKindClassifier: _testMessageKindClassifier,
+        ),
+        reader: reader,
+        pageSize: retryIdCapacity + 1,
+      ),
+      marker: marker,
+    );
+
+    final forced = await importer.run(force: true);
+
+    expect(forced.incomplete, isTrue);
+    expect(marker.clearCheckpointCount, 1);
+    expect(marker.version, smsHistoryImportVersion - 1);
+    expect(marker.checkpointValue, isNull);
+    expect(marker.markCount, 0);
+
+    final automatic = await importer.run();
+
+    expect(automatic.incomplete, isFalse);
+    expect(reader.requestedCursors, [null, null]);
+    expect(marker.markCount, 1);
+    expect(marker.version, smsHistoryImportVersion);
+    expect(
+      (await database.select(database.transactions).get())
+          .map((transaction) => transaction.smsId),
+      contains('automatic_retry_from_start'),
+    );
+  });
+
   test('automatic import resumes from the last completed page', () async {
     const checkpoint = SmsImportCheckpoint(
       beforeEpochMillis: 800,
@@ -772,6 +944,43 @@ void main() {
     expect(marker.savedCheckpoints.single.beforeEpochMillis, 700);
     expect(marker.savedCheckpoints.single.beforeId, 7);
     expect(marker.checkpointValue, isNull);
+  });
+
+  test('incomplete capped scan preserves marker version and checkpoint',
+      () async {
+    const checkpoint = SmsImportCheckpoint(
+      beforeEpochMillis: 700,
+      beforeId: 7,
+    );
+    final marker = FakeBackfillMarker(
+      version: smsHistoryImportVersion - 1,
+      checkpoint: checkpoint,
+    );
+    const retryIdCapacity = 10000;
+    final reader = FakeInboxReader.single(
+      List.generate(retryIdCapacity + 1, (i) => message('capped_$i')),
+    );
+    final importer = SmsHistoryImporter(
+      backfiller: SmsBackfiller(
+        ingestor: SmsIngestor(
+          database: database,
+          parser: FakeParserCascade(_sampleRecord),
+          messageKindClassifier: _testMessageKindClassifier,
+        ),
+        reader: reader,
+        pageSize: retryIdCapacity + 1,
+      ),
+      marker: marker,
+    );
+
+    final result = await importer.run();
+
+    expect(result.incomplete, isTrue);
+    expect(result.processed, 0);
+    expect(marker.markCount, 0);
+    expect(marker.version, smsHistoryImportVersion - 1);
+    expect(marker.checkpointValue, checkpoint);
+    expect(await database.select(database.transactions).get(), isEmpty);
   });
 
   test('partial row failure completes scan and remains manually retryable',
@@ -834,6 +1043,258 @@ void main() {
     expect(transactionIds, isNot(contains('txn_sms_outside_overlap')));
   });
 
+  test(
+      'catch-up treats exact canonical and receipt raw aliases as one boundary',
+      () async {
+    final canonical = message('sms_canonical', year: 2026);
+    final receiptAlias = RawSms(
+      id: 'sms_receipt',
+      sender: canonical.sender,
+      body: canonical.body,
+      receivedAt: canonical.receivedAt,
+    );
+    for (final raw in [canonical, receiptAlias]) {
+      await database.into(database.rawSms).insert(
+            RawSmsCompanion.insert(
+              id: raw.id,
+              sender: raw.sender,
+              body: raw.body,
+              receivedAt: raw.receivedAt,
+              processed: const Value(true),
+              parserVersion: const Value(smsParserVersion),
+              purgeAfter: raw.receivedAt.add(const Duration(days: 90)),
+            ),
+          );
+    }
+    const older = SmsInboxCursor(beforeEpochMillis: 600, beforeId: 6);
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: [
+          RawSms(
+            id: canonical.id,
+            legacyId: receiptAlias.id,
+            sender: canonical.sender,
+            body: canonical.body,
+            receivedAt: canonical.receivedAt,
+          ),
+        ],
+        nextCursor: older,
+      ),
+      SmsInboxPage(
+        messages: [message('sms_alias_overlap_gap', year: 2025)],
+        nextCursor: const SmsInboxCursor(beforeEpochMillis: 500, beforeId: 5),
+      ),
+      SmsInboxPage(
+        messages: [message('sms_outside_alias_boundary', year: 2024)],
+      ),
+    ]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+      pageSize: 1,
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 1);
+    expect(reader.readCount, 2);
+    final transactionIds = (await database.select(database.transactions).get())
+        .map((row) => row.id);
+    expect(transactionIds, {'txn_sms_alias_overlap_gap'});
+    expect(transactionIds, isNot(contains('txn_sms_outside_alias_boundary')));
+    expect(await database.select(database.rawSms).get(), hasLength(3));
+  });
+
+  test('catch-up guards shared aliases across adjacent receipt-date pages',
+      () async {
+    final receivedAt = DateTime.utc(2026, 5, 2, 9, 15);
+    RawSms withAlias(String id, String legacyId) => RawSms(
+          id: id,
+          legacyId: legacyId,
+          sender: 'VK-HDFCBK',
+          body: 'Spent Rs 449',
+          receivedAt: receivedAt,
+        );
+    const next = SmsInboxCursor(beforeEpochMillis: 1000, beforeId: 10);
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: [withAlias('canonical_page_one', 'legacy_shared_pages')],
+        nextCursor: next,
+      ),
+      SmsInboxPage(
+        messages: [
+          withAlias('canonical_page_two', 'legacy_shared_pages'),
+          message('valid_after_page_collision'),
+        ],
+      ),
+    ]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+      pageSize: 2,
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 3);
+    expect(result.failed, 1);
+    expect(reader.readCount, 2);
+    final transactions = await database.select(database.transactions).get();
+    expect(
+      transactions.map((row) => row.id),
+      {'txn_canonical_page_one', 'txn_valid_after_page_collision'},
+    );
+    expect(
+      transactions.map((row) => row.smsId),
+      {'canonical_page_one', 'valid_after_page_collision'},
+    );
+    expect(
+      (await database.select(database.rawSms).get()).map((row) => row.id),
+      {'canonical_page_one', 'valid_after_page_collision'},
+    );
+  });
+
+  test('identity cohort guard evicts on DATE change and abstains on overflow',
+      () {
+    final guard = SmsIdentityCohortGuard(maximumClaims: 2);
+    final receivedAt = DateTime.utc(2026, 5, 2, 9, 15);
+    RawSms cohortMessage(String id, String legacyId, DateTime at) => RawSms(
+          id: id,
+          legacyId: legacyId,
+          sender: 'VK-HDFCBK',
+          body: 'Spent Rs 449',
+          receivedAt: at,
+        );
+
+    final sameDateConflicts = guard.consume([
+      cohortMessage('cohort_first', 'cohort_legacy_first', receivedAt),
+      cohortMessage('cohort_overflow', 'cohort_legacy_overflow', receivedAt),
+    ]);
+    expect(sameDateConflicts, {'cohort_first', 'cohort_overflow'});
+    expect(
+      guard.consume([
+        cohortMessage(
+          'cohort_after_overflow',
+          'cohort_legacy_after',
+          receivedAt,
+        ),
+      ]),
+      {'cohort_after_overflow'},
+    );
+
+    final nextDate = receivedAt.subtract(const Duration(milliseconds: 1));
+    expect(
+      guard.consume([
+        cohortMessage('cohort_next_date', 'cohort_legacy_first', nextDate),
+      ]),
+      isEmpty,
+    );
+  });
+
+  test('history backfill guards aliases split across receipt-date pages',
+      () async {
+    final receivedAt = DateTime.utc(2026, 5, 2, 9, 15);
+    RawSms withAlias(String id) => RawSms(
+          id: id,
+          legacyId: 'legacy_history_page_boundary',
+          sender: 'VK-HDFCBK',
+          body: 'Spent Rs 449',
+          receivedAt: receivedAt,
+        );
+    final reader = FakeInboxReader([
+      SmsInboxPage(
+        messages: [withAlias('history_canonical_page_one')],
+        nextCursor: const SmsInboxCursor(beforeEpochMillis: 1000, beforeId: 10),
+      ),
+      SmsInboxPage(
+        messages: [
+          withAlias('history_canonical_page_two'),
+          message('history_valid_sibling'),
+        ],
+      ),
+    ]);
+
+    final result = await backfiller(reader).run();
+
+    expect(result.processed, 3);
+    expect(result.failed, 1);
+    expect(
+      (await database.select(database.transactions).get()).map((row) => row.id),
+      {'txn_history_canonical_page_one', 'txn_history_valid_sibling'},
+    );
+    expect(
+      (await database.select(database.rawSms).get()).map((row) => row.id),
+      {'history_canonical_page_one', 'history_valid_sibling'},
+    );
+  });
+
+  test('catch-up validates a deterministic transaction with a foreign source',
+      () async {
+    final foreign = message('sms_foreign_source');
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: foreign.id,
+            sender: foreign.sender,
+            body: foreign.body,
+            receivedAt: foreign.receivedAt,
+            processed: const Value(true),
+            purgeAfter: foreign.receivedAt.add(const Duration(days: 90)),
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_sms_candidate',
+            ts: foreign.receivedAt.millisecondsSinceEpoch,
+            amount: 449,
+            direction: 'debit',
+            channel: 'upi',
+            parseSource: 'template',
+            smsId: Value(foreign.id),
+            confidenceJson: '{}',
+            status: 'confirmed',
+            createdAt: foreign.receivedAt,
+            updatedAt: foreign.receivedAt,
+          ),
+        );
+
+    final reader = FakeInboxReader.single([message('sms_candidate')]);
+    final catchUp = SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: FakeParserCascade(_sampleRecord),
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: reader,
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+    );
+
+    final result = await catchUp.run();
+
+    expect(result.processed, 1);
+    expect(result.failed, 1);
+    expect(reader.readCount, 1);
+    final transactions = await database.select(database.transactions).get();
+    expect(transactions, hasLength(1));
+    expect(transactions.single.id, 'txn_sms_candidate');
+    expect(transactions.single.smsId, 'sms_foreign_source');
+    final rawRows = await database.select(database.rawSms).get();
+    expect(rawRows, hasLength(1));
+    expect(rawRows.single.id, 'sms_foreign_source');
+  });
+
   test('incremental catch-up retries retained failures after parser upgrade',
       () async {
     await SmsIngestor(
@@ -862,6 +1323,50 @@ void main() {
 
     expect(result.processed, 1);
     expect(result.failed, 0);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+  });
+
+  test('catch-up attempts a failed repeated ID once per run', () async {
+    const cursor = SmsInboxCursor(beforeEpochMillis: 1000, beforeId: 10);
+    final sms = message('sms_catchup_cross_page_failure');
+    final failingParser = FakeParserCascade(
+      _sampleRecord,
+      throwIds: {sms.id},
+    );
+    final firstRun = await SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: failingParser,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader([
+        SmsInboxPage(messages: [sms], nextCursor: cursor),
+        SmsInboxPage(messages: [sms]),
+      ]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+      pageSize: 1,
+    ).run();
+
+    expect(failingParser.parseCalls, 1);
+    expect(firstRun.failed, 1);
+    expect(await database.select(database.transactions).get(), isEmpty);
+
+    final retryParser = FakeParserCascade(_sampleRecord);
+    final nextRun = await SmsIncrementalCatchUp(
+      database: database,
+      ingestor: SmsIngestor(
+        database: database,
+        parser: retryParser,
+        messageKindClassifier: _testMessageKindClassifier,
+      ),
+      reader: FakeInboxReader.single([sms]),
+      marker: FakeBackfillMarker(version: smsHistoryImportVersion),
+      pageSize: 1,
+    ).run();
+
+    expect(retryParser.parseCalls, 1);
+    expect(nextRun.failed, 0);
     expect(await database.select(database.transactions).get(), hasLength(1));
   });
 
@@ -1020,6 +1525,7 @@ class FakeBackfillMarker implements BackfillMarker {
   SmsImportCheckpoint? checkpointValue;
   final List<SmsImportCheckpoint> savedCheckpoints = [];
   int markCount = 0;
+  int clearCheckpointCount = 0;
   int resetCount = 0;
 
   @override
@@ -1042,10 +1548,39 @@ class FakeBackfillMarker implements BackfillMarker {
   }
 
   @override
+  Future<void> clearCheckpoint() async {
+    clearCheckpointCount++;
+    checkpointValue = null;
+  }
+
+  @override
   Future<void> reset() async {
     version = 0;
     checkpointValue = null;
     resetCount++;
+  }
+}
+
+class _GrantedSmsPermissionGate implements SmsPermissionGate {
+  @override
+  Future<SmsPermissionStatus> status() async => SmsPermissionStatus.granted;
+
+  @override
+  Future<SmsPermissionStatus> request() async => SmsPermissionStatus.granted;
+
+  @override
+  Future<void> openAppSettings() async {}
+}
+
+class _IncompleteHistoryImportRunner implements SmsHistoryImportRunner {
+  @override
+  Future<SmsImportResult> run({
+    bool force = false,
+    void Function(SmsImportProgress progress)? onProgress,
+  }) async {
+    const result = SmsImportResult(processed: 7, failed: 0, incomplete: true);
+    onProgress?.call(result);
+    return result;
   }
 }
 
@@ -1059,12 +1594,14 @@ class FakeParserCascade extends ParserCascade {
   final NormalizedTransactionRecord _record;
   final Set<String> throwIds;
   final Set<String> unparsedIds;
+  int parseCalls = 0;
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(
     RawSms sms, {
     FinancialCalendar? calendar,
   }) async {
+    parseCalls++;
     if (throwIds.contains(sms.id)) throw StateError('simulated parse failure');
     if (unparsedIds.contains(sms.id)) {
       return const Err(ParseFailure.unparsed);

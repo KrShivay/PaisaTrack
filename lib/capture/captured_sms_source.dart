@@ -63,10 +63,12 @@ RawSms decodeRawSmsPayload(Object? event) {
   final sender = event['sender'];
   final body = event['body'];
   final receivedAtEpochMillis = event['receivedAtEpochMillis'];
+  final legacyId = event['legacyId'];
   if (id is! String ||
       sender is! String ||
       body is! String ||
-      receivedAtEpochMillis is! int) {
+      receivedAtEpochMillis is! int ||
+      (legacyId != null && (legacyId is! String || legacyId.trim().isEmpty))) {
     throw StateError('SMS event payload is missing required fields.');
   }
 
@@ -78,6 +80,7 @@ RawSms decodeRawSmsPayload(Object? event) {
       receivedAtEpochMillis,
       isUtc: true,
     ),
+    legacyId: legacyId as String?,
   );
 }
 

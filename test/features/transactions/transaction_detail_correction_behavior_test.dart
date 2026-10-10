@@ -186,6 +186,73 @@ void main() {
 
       await db.close();
     });
+
+    testWidgets(
+        'undo restores a nullable category and asked status in the detail UI',
+        (tester) async {
+      final db = await _seedDb();
+      await (db.update(db.transactions)
+            ..where((row) => row.id.equals('txn_001')))
+          .write(
+        const TransactionsCompanion(
+          categoryId: Value(null),
+          status: Value('asked'),
+        ),
+      );
+      final container = await _pumpDetail(tester, db);
+
+      await tester.tap(find.text('Shopping'));
+      await tester.pumpAndSettle();
+      final corrected = await _fetchTxn(db);
+      expect(corrected.categoryId, 'shopping_cat');
+      expect(corrected.status, 'confirmed');
+      expect(await db.select(db.feedback).get(), hasLength(2));
+
+      await container.read(undoControllerProvider)!.undoAction();
+      await tester.pumpAndSettle();
+
+      final restored = await _fetchTxn(db);
+      expect(restored.categoryId, isNull);
+      expect(restored.status, 'asked');
+      expect(await db.select(db.feedback).get(), isEmpty);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label ==
+                  'Category, Uncategorised, double tap to change',
+        ),
+        findsOneWidget,
+      );
+
+      await db.close();
+    });
+
+    testWidgets('undoing a category chip keeps an unsaved note in the editor',
+        (tester) async {
+      final db = await _seedDb();
+      final container = await _pumpDetail(tester, db);
+
+      await tester.tap(find.text('Shopping'));
+      await tester.pumpAndSettle();
+      final noteField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.hintText == 'Add a personal note or tag...',
+      );
+      await tester.enterText(noteField, 'still editing');
+      await container.read(undoControllerProvider)!.undoAction();
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(noteField).controller!.text,
+        'still editing',
+      );
+      final transaction = await _fetchTxn(db);
+      expect(transaction.categoryId, 'food_cat');
+      expect(transaction.description, isNull);
+      await db.close();
+    });
   });
 
   group('T-159a — _changeCategory', () {

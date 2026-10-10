@@ -56,6 +56,11 @@ void main() {
     final echo = rows.firstWhere((r) => r.id == 'txn_wallet_echo');
     final orphan = rows.firstWhere((r) => r.id == 'txn_orphan_echo');
 
+    // v1 predates lifecycle state, so additive migration defaults both sides
+    // to settled before the duplicate-link backfill evaluates them.
+    expect(primary.lifecycleState, 'settled');
+    expect(echo.lifecycleState, 'settled');
+
     // The paired echo converts to a link and is un-suppressed.
     expect(echo.duplicateOfTxnId, primary.id);
     expect(echo.isDeleted, isFalse);

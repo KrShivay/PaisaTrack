@@ -58,7 +58,7 @@ void main() {
     const istNormalizer = FieldNormalizer(
       calendar: FinancialCalendar.fixed(Duration(hours: 5, minutes: 30)),
     );
-    final receivedAt = DateTime.utc(2026, 7, 5, 22, 10);
+    final receivedAt = DateTime.utc(2026, 7, 5, 22, 10, 37);
     final parsed = istNormalizer.parseDate(
       value: '06-07-26',
       format: 'dd-MM-yy',
@@ -143,5 +143,47 @@ void main() {
       ),
       DateTime.utc(2026, 5, 1),
     );
+  });
+
+  test('rejects normalized calendar dates and preserves receive instant', () {
+    for (final (value, format) in [
+      ('31-02-26', 'dd-MM-yy'),
+      ('29-02-23', 'dd-MM-yy'),
+      ('31/04/2026', 'dd/MM/yyyy'),
+      ('31-Feb-26', 'dd-MMM-yy'),
+      ('31Feb26', 'ddMMMyy'),
+    ]) {
+      expect(
+        normalizer.parseDateComponents(value: value, format: format),
+        isNull,
+        reason: '$value ($format)',
+      );
+    }
+
+    final receivedAt = DateTime.utc(2026, 5, 1, 18, 42, 13);
+    expect(
+      normalizer.parseDate(
+        value: '31-02-26',
+        format: 'dd-MM-yy',
+        receivedAt: receivedAt,
+      ),
+      receivedAt,
+    );
+  });
+
+  test('accepts valid leap day across numeric and alphabetic month formats',
+      () {
+    for (final (value, format) in [
+      ('29-02-24', 'dd-MM-yy'),
+      ('29-02-2024', 'dd-MM-yyyy'),
+      ('29-Feb-24', 'dd-MMM-yy'),
+      ('29Feb24', 'ddMMMyy'),
+    ]) {
+      expect(
+        normalizer.parseDateComponents(value: value, format: format),
+        DateTime.utc(2024, 2, 29),
+        reason: '$value ($format)',
+      );
+    }
   });
 }

@@ -245,4 +245,99 @@ void main() {
     expect(event.fulfilledTxnId, 'prior_debit');
     expect(await database.select(database.transactions).get(), hasLength(1));
   });
+
+  test('snoozed obligations reconcile at the rescheduled expected date',
+      () async {
+    final due = DateTime.utc(2026, 7, 1);
+    await repository.recordExpectedEvent(
+      source: 'sms_reminder',
+      originSmsId: 'snoozed_origin',
+      counterpartyId: 'utility@upi',
+      label: 'Utility bill',
+      expectedAmountPaise: 12500,
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+      expectedDate: due,
+      dateWindowDays: 0,
+      confidence: 0.9,
+    );
+    final beforeSnooze = (await repository.getExpectedEvents()).single;
+    await repository.snoozeEvent(beforeSnooze.id, days: 2);
+    final rescheduledDate = DateTime.utc(2026, 7, 3);
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'snoozed_payment',
+            ts: rescheduledDate.millisecondsSinceEpoch,
+            amount: 125,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
+            direction: 'debit',
+            channel: 'upi',
+            lifecycleState: const Value('settled'),
+            status: 'confirmed',
+            counterpartyVpa: const Value('UTILITY@UPI'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            createdAt: rescheduledDate,
+            updatedAt: rescheduledDate,
+          ),
+        );
+
+    await repository.reconcileExpectedEvents(today: rescheduledDate);
+
+    final event = (await repository.getExpectedEvents()).single;
+    expect(event.expectedDate.toUtc(), rescheduledDate);
+    expect(event.state, 'fulfilled');
+    expect(event.fulfilledTxnId, 'snoozed_payment');
+  });
+
+  test('missing identity and invalid obligation amounts stay unresolved',
+      () async {
+    final oldDueDate = DateTime.utc(2026, 6, 1);
+    Future<void> addExpected({
+      required String label,
+      required String? counterpartyId,
+      required int expectedAmountPaise,
+      int? amountLowPaise,
+      int? amountHighPaise,
+    }) =>
+        repository.recordExpectedEvent(
+          source: 'sms_reminder',
+          label: label,
+          counterpartyId: counterpartyId,
+          expectedAmountPaise: expectedAmountPaise,
+          amountLowPaise: amountLowPaise,
+          amountHighPaise: amountHighPaise,
+          currencyCode: 'INR',
+          currencySymbol: '₹',
+          expectedDate: oldDueDate,
+          dateWindowDays: 0,
+          confidence: 0.9,
+        );
+
+    await addExpected(
+      label: 'No counterparty',
+      counterpartyId: null,
+      expectedAmountPaise: 10000,
+    );
+    await addExpected(
+      label: 'Zero amount',
+      counterpartyId: 'zero@upi',
+      expectedAmountPaise: 0,
+    );
+    await addExpected(
+      label: 'Invalid range',
+      counterpartyId: 'range@upi',
+      expectedAmountPaise: 10000,
+      amountLowPaise: 20000,
+      amountHighPaise: 5000,
+    );
+
+    await repository.reconcileExpectedEvents(today: DateTime.utc(2026, 7, 1));
+
+    expect(
+      (await repository.getExpectedEvents()).map((event) => event.state),
+      everyElement('expected'),
+    );
+  });
 }

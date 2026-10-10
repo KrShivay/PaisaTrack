@@ -259,65 +259,60 @@ class SmsIngestor {
   }) async {
     if (_isCapturePaused?.call() == true) return;
     if (_isSenderPaused?.call(sms.sender) == true) return;
-    final disposition = await (_database.select(_database.smsDispositions)
-          ..where((row) => row.smsId.equals(sms.id)))
-        .getSingleOrNull();
-    if (disposition != null) return;
-    final transactionId = 'txn_${sms.id}';
-    if (_knownTransactionIds?.contains(transactionId) ?? false) return;
     final flagsRepo = FeatureFlagRepository(_database);
     final flagsState = await flagsRepo.getFlags();
     final stagedMerchantRun = merchantResolutionRun?.stage();
+    var persistedSms = sms;
 
     try {
       await _database.transaction(() async {
-        final existingTransaction = await (_database.select(
-          _database.transactions,
-        )..where((row) => row.id.equals(transactionId)))
-            .getSingleOrNull();
-        if (existingTransaction != null) return;
-
-        final existingRaw = await (_database.select(_database.rawSms)
-              ..where((row) => row.id.equals(sms.id)))
-            .getSingleOrNull();
-        if (existingRaw?.processed == true ||
-            (existingRaw?.parserVersion != null &&
-                existingRaw!.parserVersion! >= _parserVersion)) {
-          return;
-        }
-
+        final claims = await _resolveIdentityClaims(sms);
+        if (claims.alreadyKnown) return;
+        final knownIds = sms.identityIds
+            .where((id) => _knownTransactionIds?.contains('txn_$id') ?? false)
+            .toSet();
+        if (knownIds.length > 1) throw const _SmsIdentityConflict();
+        if (knownIds.isNotEmpty) return;
+        persistedSms = RawSms(
+          id: claims.raw?.id ?? sms.id,
+          sender: sms.sender,
+          body: sms.body,
+          receivedAt: claims.raw?.receivedAt ?? sms.receivedAt,
+          legacyId: sms.legacyId,
+        );
+        final transactionId = 'txn_${persistedSms.id}';
         await _database.into(_database.rawSms).insertOnConflictUpdate(
               RawSmsCompanion.insert(
-                id: sms.id,
-                sender: sms.sender,
-                body: sms.body,
-                receivedAt: sms.receivedAt,
+                id: persistedSms.id,
+                sender: persistedSms.sender,
+                body: persistedSms.body,
+                receivedAt: persistedSms.receivedAt,
                 parserVersion: Value(_parserVersion),
                 failureReason: const Value<String?>(null),
-                purgeAfter: sms.receivedAt.add(
+                purgeAfter: persistedSms.receivedAt.add(
                   const Duration(days: AppConstants.rawSmsRetentionDays),
                 ),
               ),
             );
 
-        final kind =
-            _messageKindClassifier?.classify(sms.body) ?? MessageKind.unknown;
+        final kind = _messageKindClassifier?.classify(persistedSms.body) ??
+            MessageKind.unknown;
 
         if (kind == MessageKind.reminder || kind == MessageKind.mandate) {
           final parseResult = await _parser.parse(
-            sms,
+            persistedSms,
             calendar: _financialCalendar,
           );
           int amountPaise = 0;
           int? amountLowPaise;
           int? amountHighPaise;
           SourceCurrency? eventCurrency;
-          String label = sms.sender;
+          String label = persistedSms.sender;
           String? counterpartyId;
 
           if (parseResult is Ok<NormalizedTransactionRecord, ParseFailure>) {
             amountPaise = (parseResult.value.amount * 100).round();
-            label = parseResult.value.merchantRaw ?? sms.sender;
+            label = parseResult.value.merchantRaw ?? persistedSms.sender;
             counterpartyId = parseResult.value.counterpartyVpa;
             eventCurrency = SourceCurrency(
               code: parseResult.value.currencyCode,
@@ -327,17 +322,17 @@ class SmsIngestor {
             const amountNumber =
                 r'(?:\d{1,2}(?:,\d{2})*,\d{3}|\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?';
             final amtMatch = RegExp(
-              r'(Rs\.?|INR|₹|USD|US\$|\$)\s*(' + amountNumber + r')(?![\d,.])',
+              r'(Rs\.?|INR|₹|USD|US\$|\$)\s*(' + amountNumber + r')(?![\d,])',
               caseSensitive: false,
-            ).firstMatch(sms.body);
+            ).firstMatch(persistedSms.body);
             if (amtMatch != null) {
               eventCurrency = SourceCurrency.fromToken(amtMatch.group(1));
               amountPaise = _fallbackAmountPaise(amtMatch.group(2)!) ?? 0;
             }
             final rangeMatch = RegExp(
-              '(?:^|[^\\d,.])($amountNumber)\\s*to\\s*($amountNumber)(?![\\d,.])',
+              '(?:^|[^\\d,.])($amountNumber)\\s*to\\s*($amountNumber)(?![\\d,])',
               caseSensitive: false,
-            ).firstMatch(sms.body);
+            ).firstMatch(persistedSms.body);
             if (rangeMatch != null) {
               amountLowPaise = _fallbackAmountPaise(rangeMatch.group(1)!);
               amountHighPaise = _fallbackAmountPaise(rangeMatch.group(2)!);
@@ -346,7 +341,7 @@ class SmsIngestor {
 
           await _expectedEventRepository.recordExpectedEvent(
             source: 'sms_${kind.name}',
-            originSmsId: sms.id,
+            originSmsId: persistedSms.id,
             counterpartyId: counterpartyId,
             label: label,
             expectedAmountPaise: amountPaise,
@@ -354,12 +349,15 @@ class SmsIngestor {
             currencySymbol: eventCurrency?.symbol,
             amountLowPaise: amountLowPaise,
             amountHighPaise: amountHighPaise,
-            expectedDate: _reminderExpectedDate(sms.body, sms.receivedAt),
+            expectedDate: _reminderExpectedDate(
+              persistedSms.body,
+              persistedSms.receivedAt,
+            ),
             confidence: 0.95,
           );
 
           await _markRawSmsOutcome(
-            sms.id,
+            persistedSms.id,
             processed: true,
             failureReason: null,
           );
@@ -373,7 +371,7 @@ class SmsIngestor {
             kind == MessageKind.statement ||
             kind == MessageKind.unknown) {
           await _markRawSmsOutcome(
-            sms.id,
+            persistedSms.id,
             processed: kind != MessageKind.unknown,
             failureReason:
                 kind == MessageKind.unknown ? SmsFailureReason.unparsed : null,
@@ -402,13 +400,13 @@ class SmsIngestor {
         };
 
         final parseResult = await _parser.parse(
-          sms,
+          persistedSms,
           calendar: _financialCalendar,
         );
         switch (parseResult) {
           case Ok<NormalizedTransactionRecord, ParseFailure>(:final value):
             final directionCue =
-                _messageKindClassifier?.settledDirectionCue(sms.body);
+                _messageKindClassifier?.settledDirectionCue(persistedSms.body);
             final requiredDirection = switch (directionCue) {
               MessageKind.settledDebit => TransactionDirection.debit,
               MessageKind.settledCredit => TransactionDirection.credit,
@@ -417,14 +415,17 @@ class SmsIngestor {
             if (requiredDirection != null &&
                 value.direction != requiredDirection) {
               await _markRawSmsOutcome(
-                sms.id,
+                persistedSms.id,
                 processed: false,
                 failureReason: SmsFailureReason.unparsed,
               );
               return;
             }
 
-            final duplicateOfTxnId = await _findDuplicateOfExisting(value);
+            final duplicateOfTxnId = await _findDuplicateOfExisting(
+              value,
+              lifecycleState: lifecycleState,
+            );
             final merchant = await _merchantResolver?.resolve(
               value,
               run: stagedMerchantRun,
@@ -459,13 +460,13 @@ class SmsIngestor {
                 ? DecisionStatus.needsReview
                 : decidedStatus;
             final status = SpanVerifier.enforceWriteGuard(
-              body: sms.body,
+              body: persistedSms.body,
               record: value,
               requestedStatus: initialStatus,
             );
             await _database.into(_database.transactions).insertOnConflictUpdate(
                   _transactionCompanionFor(
-                    smsId: sms.id,
+                    smsId: persistedSms.id,
                     record: value,
                     duplicateOfTxnId: duplicateOfTxnId,
                     categorization: categorization,
@@ -486,8 +487,8 @@ class SmsIngestor {
                   .into(_database.transactionLinks)
                   .insertOnConflictUpdate(
                     TransactionLinksCompanion.insert(
-                      id: 'link_${sms.id}_$duplicateOfTxnId',
-                      fromTxnId: 'txn_${sms.id}',
+                      id: 'link_${persistedSms.id}_$duplicateOfTxnId',
+                      fromTxnId: 'txn_${persistedSms.id}',
                       toTxnId: duplicateOfTxnId,
                       linkType: 'echo',
                       basis: 'duplicate_suppressor',
@@ -500,13 +501,13 @@ class SmsIngestor {
                   .incrementHitCount(categorization!.ruleId!);
             }
             await _markRawSmsOutcome(
-              sms.id,
+              persistedSms.id,
               processed: true,
               failureReason: null,
             );
           case Err<NormalizedTransactionRecord, ParseFailure>():
             await _markRawSmsOutcome(
-              sms.id,
+              persistedSms.id,
               processed: false,
               failureReason: SmsFailureReason.unparsed,
             );
@@ -516,10 +517,36 @@ class SmsIngestor {
       if (stagedMerchantRun != null) {
         merchantResolutionRun!.commit(stagedMerchantRun);
       }
-    } catch (_) {
-      await _recordProcessingFailure(sms, flagsState);
+    } catch (error) {
+      if (error is _SmsIdentityConflict) rethrow;
+      await _recordProcessingFailure(persistedSms, flagsState);
       rethrow;
     }
+  }
+
+  Future<SmsIdentityClaims> _resolveIdentityClaims(RawSms sms) async {
+    final ids = sms.identityIds.toList(growable: false);
+    final transactionIds = ids.map((id) => 'txn_$id').toList(growable: false);
+    final rawRows = await (_database.select(_database.rawSms)
+          ..where((row) => row.id.isIn(ids)))
+        .get();
+    final transactionRows = await (_database.select(_database.transactions)
+          ..where(
+            (row) => row.smsId.isIn(ids) | row.id.isIn(transactionIds),
+          ))
+        .get();
+    final dispositions = await (_database.select(_database.smsDispositions)
+          ..where((row) => row.smsId.isIn(ids)))
+        .get();
+    final claims = validateSmsIdentityClaims(
+      sms,
+      rawRows: rawRows,
+      transactionRows: transactionRows,
+      dispositions: dispositions,
+      parserVersion: _parserVersion,
+    );
+    if (claims.conflict) throw const _SmsIdentityConflict();
+    return claims;
   }
 
   /// Imports one inbox page under a single outer transaction so Drift emits
@@ -528,6 +555,8 @@ class SmsIngestor {
   Future<SmsBatchIngestResult> ingestBatch(
     List<RawSms> messages, {
     MerchantResolutionRun? merchantResolutionRun,
+    Set<String> additionalIdentityConflictIds = const {},
+    Set<String>? failedIdsAlreadyAttemptedThisRun,
   }) async {
     final result = await _database.transaction(() async {
       final succeededIds = <String>{};
@@ -537,81 +566,151 @@ class SmsIngestor {
       final unparsedIds = <String>{};
       final failedIds = <String>{};
       final attemptedSmsIds = <String>{};
-      final smsIds = messages.map((sms) => sms.id).toList(growable: false);
-      final existingSmsIds = <String>{};
-      if (smsIds.isNotEmpty) {
-        final smsId = _database.transactions.smsId;
-        final rows = await (_database.selectOnly(_database.transactions)
-              ..addColumns([smsId])
-              ..where(smsId.isIn(smsIds)))
-            .get();
-        existingSmsIds.addAll(rows.map((row) => row.read(smsId)!));
-        final marked = await (_database.select(_database.smsDispositions)
-              ..where((row) => row.smsId.isIn(smsIds)))
-            .get();
-        existingSmsIds.addAll(marked.map((row) => row.smsId));
+      final identityCollisionIds = {
+        ...smsIdentityCollisionIds(messages),
+        ...additionalIdentityConflictIds,
+      };
+      final identityIds = messages
+          .expand((sms) => sms.identityIds)
+          .toSet()
+          .toList(growable: false);
+      final messageIdsByIdentity = <String, Set<String>>{};
+      for (final sms in messages) {
+        for (final id in sms.identityIds) {
+          messageIdsByIdentity.putIfAbsent(id, () => <String>{}).add(sms.id);
+        }
       }
-      final existingRawById = <String, RawSm>{};
-      if (smsIds.isNotEmpty) {
-        final rows = await (_database.select(_database.rawSms)
-              ..where((row) => row.id.isIn(smsIds)))
+      final transactionIds = identityIds.map((id) => 'txn_$id').toList();
+      final priorTransactionIds = <String>{};
+      final rawRowsById = <String, RawSm>{};
+      final transactionRowsByIdentity = <String, Set<Transaction>>{};
+      final dispositionsByIdentity = <String, List<SmsDisposition>>{};
+      for (var offset = 0; offset < identityIds.length; offset += 400) {
+        final ids = identityIds.skip(offset).take(400).toList();
+        final txnIds = transactionIds.skip(offset).take(400).toList();
+        final transactions = await (_database.select(_database.transactions)
+              ..where((row) => row.smsId.isIn(ids) | row.id.isIn(txnIds)))
             .get();
-        for (final row in rows) {
-          existingRawById[row.id] = row;
+        for (final transaction in transactions) {
+          priorTransactionIds.add(transaction.id);
+          for (final id in ids) {
+            if (transaction.smsId == id || transaction.id == 'txn_$id') {
+              transactionRowsByIdentity
+                  .putIfAbsent(id, () => <Transaction>{})
+                  .add(transaction);
+            }
+          }
+        }
+        final dispositions = await (_database.select(_database.smsDispositions)
+              ..where((row) => row.smsId.isIn(ids)))
+            .get();
+        for (final disposition in dispositions) {
+          dispositionsByIdentity
+              .putIfAbsent(disposition.smsId, () => <SmsDisposition>[])
+              .add(disposition);
+        }
+        final rawRows = await (_database.select(_database.rawSms)
+              ..where((row) => row.id.isIn(ids)))
+            .get();
+        for (final row in rawRows) {
+          rawRowsById[row.id] = row;
         }
       }
       var failed = 0;
       for (final sms in messages) {
-        if (existingSmsIds.contains(sms.id)) {
-          succeededIds.add(sms.id);
-          alreadyKnownIds.add(sms.id);
-          continue;
-        }
-        final existingRaw = existingRawById[sms.id];
-        if (existingRaw?.processed == true ||
-            (existingRaw?.parserVersion != null &&
-                existingRaw!.parserVersion! >= _parserVersion)) {
-          succeededIds.add(sms.id);
-          continue;
-        }
-        attemptedSmsIds.add(sms.id);
         try {
+          if (identityCollisionIds.contains(sms.id)) {
+            throw const _SmsIdentityConflict();
+          }
+          final ids = sms.identityIds;
+          final claims = validateSmsIdentityClaims(
+            sms,
+            rawRows:
+                ids.map((id) => rawRowsById[id]).whereType<RawSm>().toList(),
+            transactionRows: ids
+                .expand(
+                  (id) =>
+                      transactionRowsByIdentity[id] ?? const <Transaction>{},
+                )
+                .toList(),
+            dispositions: ids
+                .expand(
+                  (id) =>
+                      dispositionsByIdentity[id] ?? const <SmsDisposition>[],
+                )
+                .toList(),
+            parserVersion: _parserVersion,
+          );
+          if (claims.conflict) throw const _SmsIdentityConflict();
+          if (claims.alreadyKnown) {
+            succeededIds.add(sms.id);
+            alreadyKnownIds.add(sms.id);
+            continue;
+          }
+          if (failedIdsAlreadyAttemptedThisRun?.contains(sms.id) == true) {
+            failedIds.add(sms.id);
+            continue;
+          }
+          if (!attemptedSmsIds.add(sms.id)) {
+            if (failedIds.contains(sms.id)) continue;
+            succeededIds.add(sms.id);
+            alreadyKnownIds.add(sms.id);
+            continue;
+          }
           await ingest(sms, merchantResolutionRun: merchantResolutionRun);
           succeededIds.add(sms.id);
         } catch (_) {
-          failed++;
-          failedIds.add(sms.id);
+          final newBatchFailure = failedIds.add(sms.id);
+          final newRunFailure =
+              failedIdsAlreadyAttemptedThisRun?.add(sms.id) ?? true;
+          if (newBatchFailure && newRunFailure) failed++;
         }
       }
-      if (smsIds.isNotEmpty) {
+      for (var offset = 0; offset < identityIds.length; offset += 400) {
+        final ids = identityIds.skip(offset).take(400).toList();
+        final txnIds = transactionIds.skip(offset).take(400).toList();
         final transactionId = _database.transactions.id;
         final smsId = _database.transactions.smsId;
         final rows = await (_database.selectOnly(_database.transactions)
               ..addColumns([transactionId, smsId])
-              ..where(smsId.isIn(smsIds)))
+              ..where(smsId.isIn(ids) | transactionId.isIn(txnIds)))
             .get();
         for (final row in rows) {
-          final knownSmsId = row.read(smsId)!;
-          if (!existingSmsIds.contains(knownSmsId)) {
-            createdTxnIds.add(row.read(transactionId)!);
+          final txnId = row.read(transactionId)!;
+          if (!priorTransactionIds.contains(txnId)) {
+            createdTxnIds.add(txnId);
           }
         }
 
         final rawId = _database.rawSms.id;
         final processed = _database.rawSms.processed;
         final failureReason = _database.rawSms.failureReason;
-        final rawRows = attemptedSmsIds.isEmpty
+        final attemptedIds = attemptedSmsIds
+            .expand((id) {
+              final sms = messages.where((message) => message.id == id).first;
+              return sms.identityIds;
+            })
+            .where(ids.contains)
+            .toSet()
+            .toList(growable: false);
+        final rawRows = attemptedIds.isEmpty
             ? const <TypedResult>[]
             : await (_database.selectOnly(_database.rawSms)
                   ..addColumns([rawId, processed, failureReason])
-                  ..where(rawId.isIn(attemptedSmsIds)))
+                  ..where(rawId.isIn(attemptedIds)))
                 .get();
         for (final row in rawRows) {
-          final smsIdValue = row.read(rawId)!;
-          if (row.read(processed) == true) {
-            parsedIds.add(smsIdValue);
-          } else if (row.read(failureReason) == SmsFailureReason.unparsed) {
-            unparsedIds.add(smsIdValue);
+          final rawSmsId = row.read(rawId)!;
+          final ownerIds = messageIdsByIdentity[rawSmsId] ?? const <String>{};
+          for (final smsId in ownerIds) {
+            if (!attemptedSmsIds.contains(smsId) || failedIds.contains(smsId)) {
+              continue;
+            }
+            if (row.read(processed) == true) {
+              parsedIds.add(smsId);
+            } else if (row.read(failureReason) == SmsFailureReason.unparsed) {
+              unparsedIds.add(smsId);
+            }
           }
         }
       }
@@ -636,8 +735,9 @@ class SmsIngestor {
   /// payment as [record] (e.g. a bank SMS and its wallet/UPI echo, T-025),
   /// or null if none is found. Suppressed/deleted rows are never candidates.
   Future<String?> _findDuplicateOfExisting(
-    NormalizedTransactionRecord record,
-  ) async {
+    NormalizedTransactionRecord record, {
+    required String lifecycleState,
+  }) async {
     final window = _duplicateSuppressor.window;
     final windowStart = record.ts.toUtc().subtract(window);
     final windowEnd = record.ts.toUtc().add(window);
@@ -657,7 +757,11 @@ class SmsIngestor {
           ))
         .get();
     for (final existing in candidates) {
-      if (_duplicateSuppressor.isDuplicate(record, existing)) {
+      if (_duplicateSuppressor.isDuplicate(
+        record,
+        existing,
+        lifecycleState: lifecycleState,
+      )) {
         return existing.id;
       }
     }
@@ -837,6 +941,7 @@ class SmsIngestor {
       accountHint: Value(record.accountHint),
       merchantRaw: Value(record.merchantRaw),
       merchantId: Value(merchant?.merchantId),
+      description: Value(categorization?.description),
       counterpartyVpa: Value(record.counterpartyVpa),
       balanceAfter: Value(record.balanceAfter),
       refId: Value(record.refId),
@@ -949,4 +1054,203 @@ class SmsIngestor {
           ),
         );
   }
+}
+
+/// Shared exact-evidence validation for live ingestion, batch import, and
+/// incremental catch-up. Conflicts remain content-free for callers to report.
+SmsIdentityClaims validateSmsIdentityClaims(
+  RawSms sms, {
+  required List<RawSm> rawRows,
+  required List<Transaction> transactionRows,
+  required List<SmsDisposition> dispositions,
+  required int parserVersion,
+}) {
+  const conflict = SmsIdentityClaims(conflict: true);
+  for (final raw in rawRows) {
+    if (raw.sender != sms.sender || raw.body != sms.body) {
+      return conflict;
+    }
+  }
+
+  final transactionById = {for (final row in transactionRows) row.id: row};
+  if (transactionById.length > 1) {
+    return conflict;
+  }
+  final transaction =
+      transactionById.isEmpty ? null : transactionById.values.first;
+  if (transaction != null) {
+    final deterministicClaim = sms.identityIds.any(
+      (id) => transaction.id == 'txn_$id',
+    );
+    if (transaction.smsId != null &&
+        (!sms.identityIds.contains(transaction.smsId) ||
+            (deterministicClaim &&
+                transaction.smsId != transaction.id.substring(4)))) {
+      return conflict;
+    }
+  }
+
+  final dispositionIds = dispositions.map((row) => row.transactionId).toSet();
+  if (dispositionIds.length > 1 ||
+      (transaction != null &&
+          dispositionIds.any((id) => id != transaction.id))) {
+    return conflict;
+  }
+  if (transaction != null || dispositions.isNotEmpty) {
+    return const SmsIdentityClaims(alreadyKnown: true);
+  }
+
+  RawSm? selectedRaw;
+  for (final id in sms.identityIds) {
+    for (final raw in rawRows) {
+      if (raw.id == id && (selectedRaw == null || raw.id == sms.id)) {
+        selectedRaw = raw;
+      }
+    }
+  }
+  final terminalRaw = rawRows.any(
+    (raw) => isRawSmsAttemptTerminal(
+      processed: raw.processed,
+      parserVersion: raw.parserVersion,
+      failureReason: raw.failureReason,
+      currentParserVersion: parserVersion,
+    ),
+  );
+  return SmsIdentityClaims(
+    raw: selectedRaw,
+    alreadyKnown: terminalRaw,
+  );
+}
+
+/// Returns page entries whose bounded alias is claimed by different canonical
+/// payloads. Identical repeated inputs with the same id/body remain idempotent.
+Set<String> smsIdentityCollisionIds(List<RawSms> messages) {
+  final claimantsByIdentity = <String, Map<String, RawSms>>{};
+  final collisions = <String>{};
+  for (final sms in messages) {
+    for (final identity in sms.identityIds) {
+      final claimants = claimantsByIdentity.putIfAbsent(
+        identity,
+        () => <String, RawSms>{},
+      );
+      final prior = claimants[sms.id];
+      claimants[sms.id] = sms;
+      if (claimants.length > 1 ||
+          (prior != null &&
+              (prior.sender != sms.sender || prior.body != sms.body))) {
+        collisions.addAll(claimants.keys);
+      }
+    }
+  }
+  return collisions;
+}
+
+/// Keeps exact alias evidence for only the last receipt-time cohort in an
+/// inbox run, which can continue across adjacent DATE-sorted pages.
+class SmsIdentityCohortGuard {
+  SmsIdentityCohortGuard({this.maximumClaims = 4096})
+      : assert(maximumClaims > 0);
+
+  final int maximumClaims;
+  int? _receivedAtEpochMillis;
+  final Map<String, _SmsIdentityCohortClaim?> _claims = {};
+  bool _overflowed = false;
+
+  Set<String> consume(List<RawSms> messages) {
+    final conflicts = smsIdentityCollisionIds(messages);
+    for (final sms in messages) {
+      final receivedAt = sms.receivedAt.millisecondsSinceEpoch;
+      if (_receivedAtEpochMillis != receivedAt) {
+        _receivedAtEpochMillis = receivedAt;
+        _claims.clear();
+        _overflowed = false;
+      }
+      if (_overflowed) {
+        conflicts.add(sms.id);
+        continue;
+      }
+
+      final claimant = _SmsIdentityCohortClaim(
+        canonicalId: sms.id,
+        sender: sms.sender,
+        body: sms.body,
+      );
+      var conflict = false;
+      for (final identity in sms.identityIds) {
+        if (!_claims.containsKey(identity)) continue;
+        final prior = _claims[identity];
+        if (prior == null ||
+            prior.canonicalId != claimant.canonicalId ||
+            prior.sender != claimant.sender ||
+            prior.body != claimant.body) {
+          conflicts.add(sms.id);
+          _claims[identity] = null;
+          conflict = true;
+        }
+      }
+      if (conflict) {
+        for (final identity in sms.identityIds) {
+          if (_claims.containsKey(identity)) {
+            _claims[identity] = null;
+          } else if (_claims.length < maximumClaims) {
+            _claims[identity] = null;
+          } else {
+            _overflowed = true;
+          }
+        }
+        continue;
+      }
+
+      final newClaims = sms.identityIds
+          .where((identity) => !_claims.containsKey(identity))
+          .length;
+      if (_claims.length + newClaims > maximumClaims) {
+        // Once evidence cannot be retained safely, abstain on this timestamp
+        // cohort until DATE advances instead of accepting unseen collisions.
+        _overflowed = true;
+        conflicts.add(sms.id);
+        conflicts.addAll(
+          messages
+              .where(
+                (candidate) =>
+                    candidate.receivedAt.millisecondsSinceEpoch == receivedAt,
+              )
+              .map((candidate) => candidate.id),
+        );
+        continue;
+      }
+      for (final identity in sms.identityIds) {
+        if (!_claims.containsKey(identity)) _claims[identity] = claimant;
+      }
+    }
+    return conflicts;
+  }
+}
+
+class _SmsIdentityCohortClaim {
+  const _SmsIdentityCohortClaim({
+    required this.canonicalId,
+    required this.sender,
+    required this.body,
+  });
+
+  final String canonicalId;
+  final String sender;
+  final String body;
+}
+
+class SmsIdentityClaims {
+  const SmsIdentityClaims({
+    this.raw,
+    this.alreadyKnown = false,
+    this.conflict = false,
+  });
+
+  final RawSm? raw;
+  final bool alreadyKnown;
+  final bool conflict;
+}
+
+class _SmsIdentityConflict implements Exception {
+  const _SmsIdentityConflict();
 }

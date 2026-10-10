@@ -22,12 +22,19 @@ class DuplicateMatchRule {
   bool matches({
     required String direction,
     required double amount,
+    required String lifecycleState,
     required DateTime ts,
     required String? refId,
     required String? counterpartyKey,
     required Transaction existing,
   }) {
+    const knownLifecycleStates = {'settled', 'pending', 'failed', 'reversed'};
+    if (!knownLifecycleStates.contains(lifecycleState) ||
+        !knownLifecycleStates.contains(existing.lifecycleState)) {
+      return false;
+    }
     if (existing.direction != direction) return false;
+    if (existing.lifecycleState != lifecycleState) return false;
     if ((existing.amount - amount).abs() > amountTolerance) return false;
 
     final existingTs = DateTime.fromMillisecondsSinceEpoch(

@@ -100,7 +100,7 @@ class ExpectedEventRepository {
   Future<void> reconcileExpectedEvents({required DateTime today}) async {
     await _db.transaction(() async {
       final pendingEvents = await (_db.select(_db.expectedEvents)
-            ..where((row) => row.state.equals('expected'))
+            ..where((row) => row.state.isIn(['expected', 'snoozed']))
             ..orderBy([
               (row) => OrderingTerm.asc(row.expectedDate),
               (row) => OrderingTerm.asc(row.id),
@@ -121,6 +121,7 @@ class ExpectedEventRepository {
       final candidatesByEvent = <String, List<Transaction>>{};
       final eventIdsByTxn = <String, Set<String>>{};
       final hasPotentialMatch = <String, bool>{};
+      final canMarkMissed = <String, bool>{};
       for (final event in pendingEvents) {
         final eventCurrency = SourceCurrency(
           code: event.currencyCode,
@@ -131,8 +132,10 @@ class ExpectedEventRepository {
         if (counterparty.isEmpty || bounds == null) {
           candidatesByEvent[event.id] = const [];
           hasPotentialMatch[event.id] = false;
+          canMarkMissed[event.id] = false;
           continue;
         }
+        canMarkMissed[event.id] = true;
 
         final dueDay = _utcDayStart(event.expectedDate);
         final windowDays = event.dateWindowDays < 0 ? 0 : event.dateWindowDays;
@@ -188,7 +191,9 @@ class ExpectedEventRepository {
           await (_db.update(_db.expectedEvents)
                 ..where(
                   (row) =>
-                      row.id.equals(event.id) & row.state.equals('expected'),
+                      row.id.equals(event.id) &
+                      row.state.equals(event.state) &
+                      row.expectedDate.equals(event.expectedDate),
                 ))
               .write(
             ExpectedEventsCompanion(
@@ -202,12 +207,15 @@ class ExpectedEventRepository {
           final windowDays =
               event.dateWindowDays < 0 ? 0 : event.dateWindowDays;
           final lastWindowDay = dueDay.add(Duration(days: windowDays));
-          if (hasPotentialMatch[event.id] != true &&
+          if (canMarkMissed[event.id] == true &&
+              hasPotentialMatch[event.id] != true &&
               todayStart.isAfter(lastWindowDay)) {
             await (_db.update(_db.expectedEvents)
                   ..where(
                     (row) =>
-                        row.id.equals(event.id) & row.state.equals('expected'),
+                        row.id.equals(event.id) &
+                        row.state.equals(event.state) &
+                        row.expectedDate.equals(event.expectedDate),
                   ))
                 .write(const ExpectedEventsCompanion(state: Value('missed')));
           }
@@ -227,8 +235,11 @@ class ExpectedEventRepository {
   static (int, int)? _amountBounds(ExpectedEvent event) {
     final low = event.amountLowPaise;
     final high = event.amountHighPaise;
-    if (low != null && high != null && low > 0 && high >= low) {
-      return (low, high);
+    if (low != null || high != null) {
+      if (low != null && high != null && low > 0 && high >= low) {
+        return (low, high);
+      }
+      return null;
     }
     if (event.expectedAmountPaise <= 0) return null;
     // Transaction.amount is still REAL; one paisa absorbs its conversion

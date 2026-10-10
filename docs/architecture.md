@@ -68,11 +68,32 @@ converts those local date and clock fields into the stored UTC instant.
   continue through `SmsReceiver` → `CapturedSmsSink` → EventChannel; messages
   received while the process is absent are recovered from the inbox on open.
 - Live and historical messages share `SmsIngestor`.
+- Parser contract version 3 shares terminal/retry decisions across live, batch
+  and catch-up paths. Current-version processing errors retry once per unique
+  ID in a run; the 10,000-ID failure bound produces an explicit incomplete
+  result. Forced scans replace stale resume cursors while retaining completed
+  version evidence and checkpoint only completed pages.
+- Live identity hashes the exact sender/body with the PDU's sent timestamp.
+  Inbox identity uses positive `DATE_SENT`, falling back to receipt `DATE` when
+  unavailable. Receipt DATE/ID still controls keyset paging and the historical
+  parser's date fallback. Missing sent time cannot guarantee live/inbox equality.
+- The inbox payload carries an optional exact old receipt-hash alias. Shared
+  validation resolves raw rows, transactions and dispositions before writes,
+  preserves existing primary/source IDs and user facts, and abstains on
+  conflicting claims. Import/catch-up preflight input pages and retain only a
+  bounded last-receipt-time cohort (4,096 alias claims) across adjacent pages;
+  overflow abstains until receipt time changes. Alternate mappings are
+  transient, so separate runs cannot compare aliases omitted from stored state.
+  See [ADR 0030](decisions/0030-sms-identity-timestamp-compatibility.md).
 - The parser order is template → conservative generic parser → optional local
   LLM extractor.
-- OTP, promotional, failed, and future-event messages do not become settled
-  transactions.
-- `DuplicateSuppressor` links cross-source echoes instead of deleting evidence.
+- Classification separates primary OTPs from detached security footers and
+  recognizes affirmative returned credits for failed payments. Negated credit
+  or authorization cues remain guarded; primary OTP, promotional, failed and
+  future-event evidence retains its meaning.
+- `DuplicateSuppressor` links cross-source echoes only within equal known
+  lifecycle states instead of deleting evidence. Existing suppressed rows are
+  not automatically rewritten.
 
 Future recurring-calendar work must route bill-due/autopay reminders to expected
 events, not relax the transaction parser's future-event rejection.
@@ -113,15 +134,15 @@ deterministic creation; embeddings provide review suggestions only.
 2. optional confirmed-history memory callback;
 3. the local classifier when its category threshold is met;
 4. the seed keyword map;
-5. a person/self counterparty default to Transfers;
+5. a conservative person/self counterparty fallback at review confidence;
 6. an optional capped LLM category suggestion;
 7. `Other` at review confidence.
 
 **Production wiring caveat (2026-09-26):** `categorizerProvider` supplies rules,
 seed map, classifier and adaptive thresholds, but not the memory or LLM
 callbacks. Those extension points are not evidence of active production
-learning. T-177 audits and connects the needed paths. Its plan also reviews the
-P2P default: a personal VPA does not prove that a payment is non-spending.
+learning. T-177 audits and connects the needed paths. Numeric or personal VPA
+shape alone does not prove non-spending or owned transfer identity.
 
 `DecisionPolicy` chooses `auto`, `asked`, or `needs_review`. Unseen UPI
 counterparties fail closed; seen counterparties rejoin the confidence policy
@@ -135,6 +156,14 @@ exact normalized merchant identity, then the R1 word-boundary fallback for
 ID. Unresolved rows continue to use exact VPA or exact merchant keys. Rules
 created before R3 keep their existing match types and behavior. A correction
 replaces the rule for that identity, and undo restores the prior rule state.
+Replacement uses a fresh opaque rule ID; its receipt requires that exact
+generation and content before restoring prior mappings. Category Undo first
+validates all affected transaction facts and relevant feedback membership/value
+snapshots, so same-second edits or newer rules cannot be overwritten. Both
+detail category entry paths reload the stored label after correction/Undo and
+preserve unsaved note text.
+New captures may also apply an explicit matching user rule's description;
+model/memory descriptions and historical rewrites are excluded.
 Confirmed rule hits use the live decision policy during history import and
 catch-up. Other historical rows remain review-only. Capture-decision v2
 records when a rule supplied the category.
@@ -212,7 +241,21 @@ refuse conflicting merges without replacing raw source fields.
   and transfer facts stay visible. The route bypasses paymentSourcesProvider's
   load-time reconciliation and creates no source, relationship or accounting
   change. Already-collapsed historical source collisions remain unobservable.
-- Recurring detection derives series from settled history.
+- Recurring detection derives series from settled history. Foreground and
+  nightly scans share complete projection cleanup, preserving current user
+  status memory across changed IDs and temporary non-detection. Successful
+  detection precedes transactional status reconciliation and stale-row pruning.
+  Dashboard commitments count every active non-income INR series due in the
+  current calendar month; the next-three display cap is separate. Ask applies
+  the same active expense eligibility and retains source-currency buckets.
+- Existing owned-transfer reconciliation requires distinct known four-digit
+  account suffixes after mask normalization. Equal suffixes or missing numeric
+  suffixes abstain; this conservative guard neither establishes ownership nor
+  merges channel-specific sources.
+- Expected-event reconciliation includes snoozed reminders at their rescheduled
+  date. Exact identity/currency/amount/window, ambiguity and one-payment guards
+  remain; missing identity or invalid amount stays unresolved. Updates compare
+  the original state and date so cancellation or rescheduling is protected.
 - `RefundLinkPreviewRepository` is a read-only preparation API with no production
   UI or ingestion caller. It uses exact stored-reference equality, source-currency
   buckets, existing spending eligibility, and bounded relationship inspection.

@@ -257,49 +257,7 @@ class _TransactionDetailScreenState
     );
     if (scope == null || !mounted) return;
 
-    final prevCategory = _categoryId;
     CategoryCorrectionResult? correction;
-
-    setState(() {
-      _categoryId = chosen.id;
-      _categoryName = chosen.name;
-    });
-
-    await _correctionController.apply(
-      id: 'cat_detail_${widget.txnId}',
-      message: 'Category updated to ${chosen.name}',
-      action: (repo) async {
-        correction = await repo!.correctCategory(
-          txnId: widget.txnId,
-          categoryId: chosen.id,
-          scope: scope,
-          context: 'detail_edit',
-        );
-      },
-      undo: (repo) async {
-        final result = correction;
-        if (result != null && !await repo!.undoCategoryCorrection(result)) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Could not undo: a newer rule now owns this category.',
-                ),
-              ),
-            );
-          }
-          throw StateError('Category correction is no longer reversible');
-        }
-        if (mounted) {
-          setState(() => _categoryId = prevCategory);
-        }
-      },
-    );
-  }
-
-  Future<void> _selectCategoryDirectly(Category chosen) async {
-    final prevCategory = _categoryId;
-    final prevCategoryName = _categoryName;
 
     setState(() {
       _categoryId = chosen.id;
@@ -311,36 +269,86 @@ class _TransactionDetailScreenState
         id: 'cat_detail_${widget.txnId}',
         message: 'Category updated to ${chosen.name}',
         action: (repo) async {
-          await repo!.correctCategory(
+          correction = await repo!.correctCategory(
+            txnId: widget.txnId,
+            categoryId: chosen.id,
+            scope: scope,
+            context: 'detail_edit',
+          );
+          _refreshCategoryFromStore();
+        },
+        undo: (repo) async {
+          final result = correction;
+          if (result == null || !await repo!.undoCategoryCorrection(result)) {
+            if (mounted) {
+              _refreshCategoryFromStore();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Could not undo: this transaction changed after the correction.',
+                  ),
+                ),
+              );
+            }
+            throw StateError('Category correction is no longer reversible');
+          }
+          _refreshCategoryFromStore();
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      _refreshCategoryFromStore();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update the category.')),
+      );
+    }
+  }
+
+  Future<void> _selectCategoryDirectly(Category chosen) async {
+    CategoryCorrectionResult? correction;
+
+    setState(() {
+      _categoryId = chosen.id;
+      _categoryName = chosen.name;
+    });
+
+    try {
+      await _correctionController.apply(
+        id: 'cat_detail_${widget.txnId}',
+        message: 'Category updated to ${chosen.name}',
+        action: (repo) async {
+          correction = await repo!.correctCategory(
             txnId: widget.txnId,
             categoryId: chosen.id,
             scope: CorrectionScope.thisTransaction,
             context: 'detail_chip_edit',
           );
+          _refreshCategoryFromStore();
         },
         undo: (repo) async {
-          if (prevCategory != null) {
-            await repo!.updateWithFeedback(
-              txnId: widget.txnId,
-              categoryId: Value(prevCategory),
-              context: 'undo_detail',
-            );
+          final result = correction;
+          if (result == null || !await repo!.undoCategoryCorrection(result)) {
             if (mounted) {
-              setState(() => _categoryId = prevCategory);
+              _refreshCategoryFromStore();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Could not undo: this transaction changed after the correction.',
+                  ),
+                ),
+              );
             }
+            throw StateError('Category correction is no longer reversible');
           }
+          _refreshCategoryFromStore();
         },
       );
     } catch (e) {
       if (!mounted) return;
+      _refreshCategoryFromStore();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update category: $e')),
       );
-      setState(() {
-        _categoryId = prevCategory;
-        _categoryName = prevCategoryName;
-      });
-      return;
     }
   }
 

@@ -71,4 +71,21 @@ abstract final class RecurringStatusMemory {
           ModelMetaCompanion.insert(key: _key, value: jsonEncode(statuses)),
         );
   }
+
+  /// Persists the complete status snapshot. Callers may use this inside the
+  /// same transaction that prunes/reconciles the derived recurring projection.
+  static Future<void> write(
+    AppDatabase database,
+    Map<String, String> statuses,
+  ) async {
+    if (statuses.isEmpty) {
+      await (database.delete(database.modelMeta)
+            ..where((row) => row.key.equals(_key)))
+          .go();
+      return;
+    }
+    await database.into(database.modelMeta).insertOnConflictUpdate(
+          ModelMetaCompanion.insert(key: _key, value: jsonEncode(statuses)),
+        );
+  }
 }

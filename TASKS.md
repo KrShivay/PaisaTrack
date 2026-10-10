@@ -8,6 +8,13 @@ later hardening.
 
 ## In Progress
 
+- [ ] T-201 [P0] Verify and repair reported transaction-integrity defects.
+      Capture repairs pass 153 focused tests and clean analyzer/formatting;
+      Paused at user request; fixes are uncommitted, final acceptance pending.
+      Identity host review passes (79 tests); post-fix physical verification
+      remains open: native QA fallback builds, but the phone is disconnected.
+      Sequential acceptance: [T-201](docs/tasks/T-201.md).
+
 ## Ready
 
 <!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the

@@ -32,9 +32,9 @@ class SmsReceiver : BroadcastReceiver() {
                 part.displayMessageBody ?: part.messageBody ?: ""
             }
             if (SmsFilter.isAllowed(sender, body)) {
-                // The inbox provider stores the SMS/PDU timestamp. Hash the
-                // same value here so a later full-history import resolves to
-                // the identical SMS and transaction ids.
+                // Hash the live PDU timestamp. Inbox import matches it when
+                // the provider retains that value as a positive DATE_SENT;
+                // DATE alone is receipt time and may differ.
                 val receivedAtEpochMillis = parts.minOf { it.timestampMillis }
                 CapturedSmsSink.current.accept(
                     CapturedSms(

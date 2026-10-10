@@ -8,6 +8,7 @@ import '../../data/repositories/dashboard_repository.dart';
 import '../../data/repositories/budget_repository.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
+import '../../intelligence/recurring_eligibility.dart';
 import '../recurring/recurring_screen.dart';
 import '../transactions/transactions_providers.dart';
 
@@ -326,9 +327,9 @@ final commitmentsTotalProvider = Provider<double>((ref) {
   if (!period.isCurrentMonth(now)) return 0;
   final calendar = ref.watch(financialCalendarProvider);
   final currentMonth = calendar.monthContaining(now);
-  final upcoming = ref.watch(upcomingRecurringProvider);
+  final eligible = ref.watch(activeRecurringExpensesProvider);
   var sum = 0.0;
-  for (final series in upcoming) {
+  for (final series in eligible) {
     if (series.currencyCode == 'INR' &&
         calendar.monthContaining(series.nextExpectedDate).start ==
             currentMonth.start) {
@@ -569,13 +570,23 @@ final recentTransactionsProvider = Provider<List<TransactionListItem>>((ref) {
       .toList(growable: false);
 });
 
-final upcomingRecurringProvider = Provider<List<RecurringSery>>((ref) {
+final activeRecurringExpensesProvider = Provider<List<RecurringSery>>((ref) {
   final items = ref.watch(recurringSeriesProvider).valueOrNull ?? const [];
   final upcoming = items
-      .where((item) => item.series.status != 'inactive')
+      .where(
+        (item) => isActiveRecurringExpense(
+          status: item.series.status,
+          kind: item.series.kind,
+        ),
+      )
       .map((item) => item.series)
       .toList(growable: false)
     ..sort((a, b) => a.nextExpectedDate.compareTo(b.nextExpectedDate));
+  return upcoming;
+});
+
+final upcomingRecurringProvider = Provider<List<RecurringSery>>((ref) {
+  final upcoming = ref.watch(activeRecurringExpensesProvider);
   return upcoming.take(3).toList(growable: false);
 });
 

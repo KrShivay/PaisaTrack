@@ -49,6 +49,38 @@ void main() {
     await database.close();
   });
 
+  test('decodes one optional exact legacy identity and old payloads', () {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    final oldPayload = decodeRawSmsPayload({
+      'id': 'canonical-id',
+      'sender': 'VK-HDFCBK',
+      'body': 'Spent Rs 100',
+      'receivedAtEpochMillis': receivedAt.millisecondsSinceEpoch,
+    });
+    expect(oldPayload.legacyId, isNull);
+    expect(oldPayload.identityIds, {'canonical-id'});
+
+    final compatiblePayload = decodeRawSmsPayload({
+      'id': 'canonical-id',
+      'legacyId': 'receipt-id',
+      'sender': 'VK-HDFCBK',
+      'body': 'Spent Rs 100',
+      'receivedAtEpochMillis': receivedAt.millisecondsSinceEpoch,
+    });
+    expect(compatiblePayload.legacyId, 'receipt-id');
+    expect(compatiblePayload.identityIds, {'canonical-id', 'receipt-id'});
+    expect(
+      () => decodeRawSmsPayload({
+        'id': 'canonical-id',
+        'legacyId': '  ',
+        'sender': 'VK-HDFCBK',
+        'body': 'Spent Rs 100',
+        'receivedAtEpochMillis': receivedAt.millisecondsSinceEpoch,
+      }),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   Future<void> waitForCaptureReady(ProviderContainer container) async {
     await container.read(smsPermissionControllerProvider.future);
     await container.read(appDatabaseProvider.future);
@@ -142,6 +174,71 @@ void main() {
       'src': 'new',
     });
     expect(confidence['category'], {'c': 0.8, 'src': 'seed'});
+  });
+
+  test('numeric phone-like VPA alone stays fallback and reviewable', () async {
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(merchantRaw: null, counterpartyVpa: '9876543210@okaxis'),
+    );
+    await ingestor.ingest(
+      _message(
+        'sms_numeric_vpa_review',
+        body: 'A/c XX1234 debited by Rs 449 towards 9876543210@okaxis',
+      ),
+    );
+
+    final transaction =
+        await database.select(database.transactions).getSingle();
+    final confidence =
+        jsonDecode(transaction.confidenceJson) as Map<String, Object?>;
+    expect(transaction.categoryId, 'other');
+    // The low-confidence fallback remains on the confirmation path.
+    expect(transaction.status, 'asked');
+    expect(confidence['category'], {'c': .3, 'src': 'fallback'});
+  });
+
+  test('description-only user rule applies independently of category guess',
+      () async {
+    await RuleRepository(database).insert(
+      matchType: 'merchant',
+      matchValue: 'Corner Store',
+      setDescription: 'Household supplies',
+    );
+    final ingestor = _ingestorFor(
+      database,
+      _sampleRecord(merchantRaw: 'Corner Store'),
+    );
+    await ingestor.ingest(
+      _message('sms_description_rule', body: 'Rs 449 spent at Corner Store'),
+    );
+
+    final transaction =
+        await database.select(database.transactions).getSingle();
+    final confidence =
+        jsonDecode(transaction.confidenceJson) as Map<String, Object?>;
+    expect(transaction.description, 'Household supplies');
+    expect(transaction.categoryId, 'other');
+    expect(transaction.status, 'needs_review');
+    expect(confidence['category'], {'c': .3, 'src': 'fallback'});
+  });
+
+  test('reminder amount parser accepts terminal sentence punctuation',
+      () async {
+    final ingestor = SmsIngestor(
+      database: database,
+      parser: FakeParserCascade.err(),
+      messageKindClassifier: _testMessageKindClassifier,
+    );
+    await ingestor.ingest(
+      _message(
+        'sms_reminder_terminal_period',
+        body: 'Credit card payment due on 15-Jul-2026. Amount: Rs. 500.',
+      ),
+    );
+
+    final expected = await database.select(database.expectedEvents).getSingle();
+    expect(expected.expectedAmountPaise, 50000);
   });
 
   test(
@@ -793,6 +890,577 @@ void main() {
     expect(raw.failureReason, SmsFailureReason.processingError);
     expect(raw.failureReason, isNot(contains('private parser detail')));
     expect(raw.failureReason, isNot(contains(sms.body)));
+
+    parser.setProcessingError(null);
+    await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingest(sms);
+    expect(parser.parseCalls, 2);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+  });
+
+  test('batch attempts one repeated failing SMS id once without false success',
+      () async {
+    final parser = FakeParserCascade.ok(_sampleRecord())
+      ..setProcessingError(StateError('simulated parser failure'));
+    final sms = _message('sms_repeated_failure');
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([sms, sms]);
+
+    expect(parser.parseCalls, 1);
+    expect(result.failed, 1);
+    expect(result.failedIds, {'sms_repeated_failure'});
+    expect(result.succeededIds, isEmpty);
+    expect(result.alreadyKnownIds, isEmpty);
+    expect(
+      result.failedIds.intersection(result.succeededIds),
+      isEmpty,
+    );
+  });
+
+  test('shared run failure set counts repeated same-page ID once', () async {
+    final parser = FakeParserCascade.ok(_sampleRecord())
+      ..setProcessingError(StateError('simulated parser failure'));
+    final sms = _message('sms_shared_repeated_failure');
+    final attemptedFailures = <String>{};
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch(
+      [sms, sms],
+      failedIdsAlreadyAttemptedThisRun: attemptedFailures,
+    );
+
+    expect(parser.parseCalls, 1);
+    expect(attemptedFailures, {'sms_shared_repeated_failure'});
+    expect(result.failed, 1);
+    expect(result.failedIds, {'sms_shared_repeated_failure'});
+    expect(result.succeededIds, isEmpty);
+    expect(result.alreadyKnownIds, isEmpty);
+    expect(result.failedIds.intersection(result.succeededIds), isEmpty);
+    expect(result.failedIds.intersection(result.alreadyKnownIds), isEmpty);
+  });
+
+  test('shared run failure set counts repeated identity conflict once',
+      () async {
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final sms = _message('sms_shared_repeated_conflict');
+    final attemptedFailures = <String>{};
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch(
+      [sms, sms],
+      additionalIdentityConflictIds: {sms.id},
+      failedIdsAlreadyAttemptedThisRun: attemptedFailures,
+    );
+
+    expect(parser.parseCalls, 0);
+    expect(attemptedFailures, {'sms_shared_repeated_conflict'});
+    expect(result.failed, 1);
+    expect(result.failedIds, {'sms_shared_repeated_conflict'});
+    expect(result.succeededIds, isEmpty);
+    expect(result.alreadyKnownIds, isEmpty);
+  });
+
+  test('processed raw evidence from an older parser version is replayable',
+      () async {
+    final sms = _message('sms_old_processed_replay');
+    await _insertIdentityRaw(
+      database,
+      id: sms.id,
+      sender: sms.sender,
+      body: sms.body,
+      receivedAt: sms.receivedAt,
+      processed: true,
+      parserVersion: smsParserVersion - 1,
+    );
+    final parser = FakeParserCascade.ok(_sampleRecord());
+
+    await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingest(sms);
+
+    expect(parser.parseCalls, 1);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+    final raw = await database.select(database.rawSms).getSingle();
+    expect(raw.parserVersion, smsParserVersion);
+    expect(raw.processed, isTrue);
+  });
+
+  test('history identity keeps legacy transaction and disposition claims',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    const sender = 'VK-HDFCBK';
+    const body = 'Spent Rs 449';
+    await _insertIdentityRaw(
+      database,
+      id: 'legacy_transaction',
+      sender: sender,
+      body: body,
+      receivedAt: receivedAt,
+      processed: true,
+    );
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_legacy_transaction',
+      smsId: 'legacy_transaction',
+      isDeleted: true,
+    );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'legacy_disposition',
+            transactionId: 'txn_legacy_disposition',
+            disposition: 'not_transaction',
+            createdAt: receivedAt,
+          ),
+        );
+    final originalTransaction =
+        await database.select(database.transactions).getSingle();
+    final originalRaw = await database.select(database.rawSms).getSingle();
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_transaction',
+        legacyId: 'legacy_transaction',
+        sender: sender,
+        body: body,
+        receivedAt: receivedAt.add(const Duration(minutes: 1)),
+      ),
+      RawSms(
+        id: 'canonical_disposition',
+        legacyId: 'legacy_disposition',
+        sender: sender,
+        body: body,
+        receivedAt: receivedAt.add(const Duration(minutes: 1)),
+      ),
+    ]);
+
+    expect(result.failed, 0);
+    expect(result.alreadyKnownIds, {
+      'canonical_transaction',
+      'canonical_disposition',
+    });
+    expect(result.parsedIds, isEmpty);
+    expect(result.unparsedIds, isEmpty);
+    expect(parser.parseCalls, 0);
+    expect(
+      await database.select(database.transactions).get(),
+      [originalTransaction],
+    );
+    expect(await database.select(database.rawSms).get(), [originalRaw]);
+    expect(await database.select(database.smsDispositions).get(), hasLength(1));
+  });
+
+  test('source-null and nonstandard-ID legacy transactions remain known',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_legacy_source_missing',
+      smsId: null,
+      isDeleted: true,
+    );
+    await _insertIdentityRaw(
+      database,
+      id: 'legacy_arbitrary_source',
+      sender: 'VK-HDFCBK',
+      body: 'Spent Rs 449',
+      receivedAt: receivedAt,
+      processed: true,
+    );
+    await _insertIdentityTransaction(
+      database,
+      id: 'restored_custom_transaction_id',
+      smsId: 'legacy_arbitrary_source',
+    );
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_source_missing',
+        legacyId: 'legacy_source_missing',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+      RawSms(
+        id: 'canonical_arbitrary_source',
+        legacyId: 'legacy_arbitrary_source',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 0);
+    expect(result.alreadyKnownIds, {
+      'canonical_source_missing',
+      'canonical_arbitrary_source',
+    });
+    expect(parser.parseCalls, 0);
+    expect(await database.select(database.transactions).get(), hasLength(2));
+    expect(
+      (await database.select(database.rawSms).get()).single.id,
+      'legacy_arbitrary_source',
+    );
+  });
+
+  test('distinct canonical and legacy transaction claims abstain in batch',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_canonical_conflict',
+      smsId: null,
+    );
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_legacy_conflict',
+      smsId: null,
+    );
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_conflict',
+        legacyId: 'legacy_conflict',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 1);
+    expect(result.failedIds, {'canonical_conflict'});
+    expect(result.alreadyKnownIds, isEmpty);
+    expect(parser.parseCalls, 0);
+    expect(await database.select(database.transactions).get(), hasLength(2));
+    expect(await database.select(database.rawSms).get(), isEmpty);
+  });
+
+  test('batch isolates one identity conflict and imports a valid sibling',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_canonical_isolated',
+      smsId: null,
+    );
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_legacy_isolated',
+      smsId: null,
+    );
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_isolated',
+        legacyId: 'legacy_isolated',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+      RawSms(
+        id: 'valid_sibling',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 1);
+    expect(result.failedIds, {'canonical_isolated'});
+    expect(result.succeededIds, {'valid_sibling'});
+    expect(result.createdTxnIds, {'txn_valid_sibling'});
+    expect(parser.parseCalls, 1);
+    expect(
+      (await database.select(database.transactions).get())
+          .map((transaction) => transaction.id),
+      containsAll([
+        'txn_canonical_isolated',
+        'txn_legacy_isolated',
+        'txn_valid_sibling',
+      ]),
+    );
+    expect(
+      (await database.select(database.rawSms).get()).map((raw) => raw.id),
+      {'valid_sibling'},
+    );
+  });
+
+  test('batch rejects a shared alias across canonical inputs but keeps sibling',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_collision_a',
+        legacyId: 'legacy_shared_collision',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+      RawSms(
+        id: 'canonical_collision_b',
+        legacyId: 'legacy_shared_collision',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+      RawSms(
+        id: 'valid_after_collision',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 2);
+    expect(
+      result.failedIds,
+      {'canonical_collision_a', 'canonical_collision_b'},
+    );
+    expect(result.succeededIds, {'valid_after_collision'});
+    expect(parser.parseCalls, 1);
+    expect(
+      (await database.select(database.transactions).get())
+          .map((transaction) => transaction.id),
+      {'txn_valid_after_collision'},
+    );
+    expect(
+      (await database.select(database.rawSms).get()).map((raw) => raw.id),
+      {'valid_after_collision'},
+    );
+  });
+
+  test('batch rejects inconsistent repeated canonical payloads before writes',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_inconsistent',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+      RawSms(
+        id: 'canonical_inconsistent',
+        sender: 'VK-HDFCBK',
+        body: 'Different synthetic body',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 1);
+    expect(result.failedIds, {'canonical_inconsistent'});
+    expect(parser.parseCalls, 0);
+    expect(await database.select(database.transactions).get(), isEmpty);
+    expect(await database.select(database.rawSms).get(), isEmpty);
+  });
+
+  test('two stored transactions claiming one exact identity abstain', () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_same_claim',
+      smsId: null,
+    );
+    await _insertIdentityRaw(
+      database,
+      id: 'same_claim',
+      sender: 'VK-HDFCBK',
+      body: 'Spent Rs 449',
+      receivedAt: receivedAt,
+      processed: true,
+    );
+    await _insertIdentityTransaction(
+      database,
+      id: 'restored_other_claim',
+      smsId: 'same_claim',
+    );
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'same_claim',
+        legacyId: 'other_candidate',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 1);
+    expect(result.alreadyKnownIds, isEmpty);
+    expect(parser.parseCalls, 0);
+    expect(await database.select(database.transactions).get(), hasLength(2));
+    expect(
+      (await database.select(database.rawSms).get()).single.id,
+      'same_claim',
+    );
+  });
+
+  test('transaction and unrelated disposition claims abstain', () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    await _insertIdentityTransaction(
+      database,
+      id: 'txn_disposition_conflict',
+      smsId: null,
+    );
+    await database.into(database.smsDispositions).insert(
+          SmsDispositionsCompanion.insert(
+            smsId: 'disposition_conflict',
+            transactionId: 'different_transaction',
+            disposition: 'not_transaction',
+            createdAt: receivedAt,
+          ),
+        );
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'disposition_conflict',
+        legacyId: 'disposition_conflict_legacy',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: receivedAt,
+      ),
+    ]);
+
+    expect(result.failed, 1);
+    expect(result.alreadyKnownIds, isEmpty);
+    expect(parser.parseCalls, 0);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+    expect(await database.select(database.rawSms).get(), isEmpty);
+    expect(await database.select(database.smsDispositions).get(), hasLength(1));
+  });
+
+  test('identity conflict leaves mismatched retained raw bytes unchanged',
+      () async {
+    final receivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    await _insertIdentityRaw(
+      database,
+      id: 'legacy_mismatched',
+      sender: 'VK-OTHERBANK',
+      body: 'Different synthetic alert',
+      receivedAt: receivedAt,
+      processed: false,
+      parserVersion: smsParserVersion - 1,
+    );
+    final originalRaw = await database.select(database.rawSms).getSingle();
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final ingestor = SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    );
+
+    await expectLater(
+      ingestor.ingest(
+        RawSms(
+          id: 'canonical_mismatched',
+          legacyId: 'legacy_mismatched',
+          sender: 'VK-HDFCBK',
+          body: 'Spent Rs 449',
+          receivedAt: receivedAt,
+        ),
+      ),
+      throwsA(isA<Exception>()),
+    );
+
+    expect(await database.select(database.rawSms).get(), [originalRaw]);
+    expect(await database.select(database.transactions).get(), isEmpty);
+    expect(parser.parseCalls, 0);
+  });
+
+  test(
+      'exact dual retained aliases replay under canonical ID without date drift',
+      () async {
+    final legacyReceivedAt = DateTime.utc(2026, 7, 5, 10, 31);
+    final canonicalReceivedAt =
+        legacyReceivedAt.add(const Duration(minutes: 1));
+    for (final id in ['canonical_replay', 'legacy_replay']) {
+      await _insertIdentityRaw(
+        database,
+        id: id,
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: legacyReceivedAt,
+        processed: false,
+        parserVersion: smsParserVersion - 1,
+      );
+    }
+    final parser = FakeParserCascade.ok(_sampleRecord());
+    final result = await SmsIngestor(
+      database: database,
+      parser: parser,
+      messageKindClassifier: _testMessageKindClassifier,
+    ).ingestBatch([
+      RawSms(
+        id: 'canonical_replay',
+        legacyId: 'legacy_replay',
+        sender: 'VK-HDFCBK',
+        body: 'Spent Rs 449',
+        receivedAt: canonicalReceivedAt,
+      ),
+    ]);
+
+    final rawRows = await database.select(database.rawSms).get();
+    final transactions = await database.select(database.transactions).get();
+    expect(result.failed, 0);
+    expect(parser.parseCalls, 1);
+    expect(rawRows.map((row) => row.id).toSet(), {
+      'canonical_replay',
+      'legacy_replay',
+    });
+    expect(
+      rawRows.singleWhere((row) => row.id == 'canonical_replay').receivedAt,
+      legacyReceivedAt.toLocal(),
+    );
+    expect(transactions, hasLength(1));
+    expect(transactions.single.id, 'txn_canonical_replay');
+    expect(transactions.single.smsId, 'canonical_replay');
+    expect(transactions.single.refId, isNull);
+    expect(transactions.single.counterpartyVpa, isNull);
   });
 
   test('reprocessing the same SMS id is idempotent (no duplicate rows)',
@@ -1086,15 +1754,18 @@ void main() {
   });
 
   test(
-      'production parser registry ingests a real SBI fixture through '
-      'smsCaptureBootstrapProvider', () async {
+      'production capture keeps real payment fixtures past lifecycle cues '
+      'and security footers', () async {
     final controller = StreamController<Object?>();
-    final expected = jsonDecode(
-      File('test/fixtures/sms/sbi/sbi_debit_dearupi_01.expected.json')
-          .readAsStringSync(),
-    ) as Map<String, Object?>;
-    final record = (expected['expected']! as Map<String, Object?>)['ok']!
-        as Map<String, Object?>;
+    const fixtures = [
+      'sbi/sbi_debit_dearupi_01',
+      'centbk/centbk_debit_02',
+      'centbk/centbk_debit_03',
+      'centbk/centbk_debit_04',
+      'centbk/centbk_credit_lakh_balance',
+      'indusind/indusb_credit_02',
+      'indusind/indusb_credit_03',
+    ];
     final container = ProviderContainer(
       overrides: [
         financialCalendarProvider.overrideWithValue(
@@ -1122,33 +1793,71 @@ void main() {
     addTearDown(bootstrap.close);
     await waitForCaptureReady(container);
 
+    for (final fixture in fixtures) {
+      final expected = jsonDecode(
+        File('test/fixtures/sms/$fixture.expected.json').readAsStringSync(),
+      ) as Map<String, Object?>;
+      controller.add({
+        'id': 'sms_${fixture.split('/').last}',
+        'sender': expected['sender'],
+        'body': File('test/fixtures/sms/$fixture.txt').readAsStringSync(),
+        'receivedAtEpochMillis': expected['received_at'],
+      });
+      await pumpEventQueue();
+    }
     controller.add({
-      'id': 'sms_sbi_fixture',
-      'sender': expected['sender'],
-      'body': File('test/fixtures/sms/sbi/sbi_debit_dearupi_01.txt')
-          .readAsStringSync(),
-      'receivedAtEpochMillis': expected['received_at'],
+      'id': 'sms_otp_authorization',
+      'sender': 'TESTBANK',
+      'body':
+          'Your OTP to authorize a debit transaction of Rs. 500. Do not share.',
+      'receivedAtEpochMillis': DateTime.utc(2026, 7, 5).millisecondsSinceEpoch,
     });
     await pumpEventQueue();
 
     final rawRows = await database.select(database.rawSms).get();
-    expect(rawRows, hasLength(1));
-    expect(rawRows.single.processed, isTrue);
+    expect(rawRows, hasLength(fixtures.length + 1));
+    expect(rawRows.every((row) => row.processed), isTrue);
 
     final transactions = await database.select(database.transactions).get();
-    expect(transactions, hasLength(1));
-    expect(transactions.single.id, 'txn_sms_sbi_fixture');
-    expect(transactions.single.amount, record['amount']);
-    expect(transactions.single.direction, record['direction']);
-    expect(transactions.single.channel, record['channel']);
-    expect(transactions.single.merchantRaw, record['merchant_raw']);
-    expect(transactions.single.accountHint, record['account_hint']);
-    expect(transactions.single.refId, record['ref_id']);
+    expect(transactions, hasLength(fixtures.length));
+    for (final fixture in fixtures) {
+      final expected = jsonDecode(
+        File('test/fixtures/sms/$fixture.expected.json').readAsStringSync(),
+      ) as Map<String, Object?>;
+      final record = (expected['expected']! as Map<String, Object?>)['ok']!
+          as Map<String, Object?>;
+      final smsId = 'sms_${fixture.split('/').last}';
+      final transaction = transactions.singleWhere(
+        (row) => row.id == 'txn_$smsId',
+      );
+      expect(transaction.amount, record['amount'], reason: fixture);
+      expect(transaction.direction, record['direction'], reason: fixture);
+      expect(transaction.lifecycleState, 'settled', reason: fixture);
+      expect(
+        transaction.messageKind,
+        record['direction'] == 'credit' ? 'settledCredit' : 'settledDebit',
+        reason: fixture,
+      );
+      if (fixture == 'sbi/sbi_debit_dearupi_01') {
+        expect(transaction.channel, record['channel']);
+        expect(transaction.merchantRaw, record['merchant_raw']);
+        expect(transaction.accountHint, record['account_hint']);
+        expect(transaction.refId, record['ref_id']);
+        expect(
+          transaction.ts,
+          DateTime.utc(2023, 11, 7)
+              .subtract(const Duration(hours: 5, minutes: 30))
+              .millisecondsSinceEpoch,
+        );
+      }
+      if (fixture == 'centbk/centbk_credit_lakh_balance') {
+        expect(transaction.amount, 150);
+        expect(transaction.direction, 'credit');
+      }
+    }
     expect(
-      transactions.single.ts,
-      DateTime.utc(2023, 11, 7)
-          .subtract(const Duration(hours: 5, minutes: 30))
-          .millisecondsSinceEpoch,
+      transactions.any((row) => row.id == 'txn_sms_otp_authorization'),
+      isFalse,
     );
   });
 
@@ -1436,6 +2145,53 @@ RawSms _message(String id, {String? body}) {
   );
 }
 
+Future<void> _insertIdentityRaw(
+  AppDatabase database, {
+  required String id,
+  required String sender,
+  required String body,
+  required DateTime receivedAt,
+  required bool processed,
+  int? parserVersion,
+}) {
+  return database.into(database.rawSms).insert(
+        RawSmsCompanion.insert(
+          id: id,
+          sender: sender,
+          body: body,
+          receivedAt: receivedAt,
+          processed: Value(processed),
+          parserVersion: Value(parserVersion),
+          purgeAfter: receivedAt.add(const Duration(days: 30)),
+        ),
+      );
+}
+
+Future<void> _insertIdentityTransaction(
+  AppDatabase database, {
+  required String id,
+  required String? smsId,
+  bool isDeleted = false,
+}) {
+  final timestamp = DateTime.utc(2026, 7, 5, 10, 30);
+  return database.into(database.transactions).insert(
+        TransactionsCompanion.insert(
+          id: id,
+          ts: timestamp.millisecondsSinceEpoch,
+          amount: 777,
+          direction: 'debit',
+          channel: 'upi',
+          parseSource: 'template',
+          smsId: Value(smsId),
+          confidenceJson: '{}',
+          status: 'confirmed',
+          isDeleted: Value(isDeleted),
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        ),
+      );
+}
+
 RawSms _messageAt(String id, DateTime receivedAt, {required String body}) =>
     RawSms(
       id: id,
@@ -1606,7 +2362,7 @@ class FakeParserCascade extends ParserCascade {
 
   void setError(ParseFailure? error) => _error = error;
 
-  void setProcessingError(Object error) => _processingError = error;
+  void setProcessingError(Object? error) => _processingError = error;
 
   @override
   Future<Result<NormalizedTransactionRecord, ParseFailure>> parse(

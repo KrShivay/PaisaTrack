@@ -140,7 +140,7 @@ class PaymentSourceRepository {
 -- The eligible source facts intentionally ignore prior owned_transfer_id flags.
 WITH eligible AS NOT MATERIALIZED (
   SELECT t.id, t.ts, t.amount, t.direction, t.currency_code,
-         t.currency_symbol, t.payment_source_id
+         t.currency_symbol, t.payment_source_id, ps.masked_identifier
   FROM transactions t
   JOIN payment_sources ps ON ps.id = t.payment_source_id
   WHERE ps.is_owned = 1 AND ps.is_active = 1
@@ -301,6 +301,10 @@ WHERE c.ts BETWEEN t.ts - $_ownedTransferWindowMs
   AND c.amount = t.amount AND c.direction != t.direction
   AND c.direction IN ('debit', 'credit')
   AND c.payment_source_id != t.payment_source_id
+  AND ${_knownMaskedAccountProbe('cps.masked_identifier')}
+  AND ${_knownMaskedAccountProbe('t.masked_identifier')}
+  AND ${_maskedAccountSuffixSql('cps.masked_identifier')}
+      != ${_maskedAccountSuffixSql('t.masked_identifier')}
   AND c.currency_code IS t.currency_code
   AND c.currency_symbol IS t.currency_symbol
   AND cps.is_owned = 1 AND cps.is_active = 1
@@ -309,6 +313,15 @@ WHERE c.ts BETWEEN t.ts - $_ownedTransferWindowMs
 -- Ordering is unnecessary: one candidate is a singleton; a second is ambiguous.
 LIMIT 1 OFFSET $offset
 ''';
+
+  String _normalizedMaskedIdentifierSql(String column) =>
+      "lower(replace(replace(replace(trim($column), ' ', ''), '-', ''), '*', 'x'))";
+
+  String _maskedAccountSuffixSql(String column) =>
+      'substr(${_normalizedMaskedIdentifierSql(column)}, -4)';
+
+  String _knownMaskedAccountProbe(String column) =>
+      "${_maskedAccountSuffixSql(column)} GLOB '[0-9][0-9][0-9][0-9]'";
 }
 
 String _ownedTransferPairKey(String firstId, String secondId) =>

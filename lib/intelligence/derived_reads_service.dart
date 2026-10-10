@@ -9,7 +9,6 @@ import '../core/clock.dart';
 import '../core/financial_calendar.dart';
 import '../data/db/database.dart';
 import '../data/db/database_provider.dart';
-import '../data/repositories/recurring_status_memory.dart';
 import 'anomaly_detector.dart';
 import 'burn_rate_forecaster.dart';
 import 'insights_engine.dart';
@@ -127,39 +126,11 @@ class DerivedReadsService {
   }
 
   Future<void> rebuildRecurring({DateTime? today}) async {
-    final statuses = await RecurringStatusMemory.read(database);
-    final previous = await database.select(database.recurringSeries).get();
-    final previousIds = previous.map((row) => row.id).toSet();
-    for (final row in previous) {
-      if (RecurringStatusMemory.isUserControlled(row.status)) {
-        final key = RecurringStatusMemory.identity(row);
-        statuses[key] = row.status;
-        await RecurringStatusMemory.remember(database, key, row.status);
-      }
-    }
-    final detections = await RecurringDetector(
+    await rebuildRecurringProjection(
       database,
       embedder: recurringEmbedder,
-    ).run(today: today);
-    final detectedIds = detections.map((row) => row.id).toSet();
-    await database.transaction(() async {
-      final current = await database.select(database.recurringSeries).get();
-      for (final row in current) {
-        final status = previousIds.contains(row.id)
-            ? null
-            : statuses[RecurringStatusMemory.identity(row)];
-        if (status != null && row.status != status) {
-          await (database.update(database.recurringSeries)
-                ..where((item) => item.id.equals(row.id)))
-              .write(RecurringSeriesCompanion(status: Value(status)));
-        }
-        if (!detectedIds.contains(row.id)) {
-          await (database.delete(database.recurringSeries)
-                ..where((item) => item.id.equals(row.id)))
-              .go();
-        }
-      }
-    });
+      today: today,
+    );
   }
 
   Future<void> rebuildAnomalies({DateTime? today}) async {

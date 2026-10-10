@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:paisatrack/data/repositories/budget_repository.dart';
 import 'package:paisatrack/data/repositories/dashboard_repository.dart';
 import 'package:paisatrack/features/dashboard/dashboard_providers.dart';
 import 'package:paisatrack/features/dashboard/dashboard_widgets.dart';
+import 'package:paisatrack/features/recurring/recurring_screen.dart';
 
 DashboardAggregateSnapshot _snapshot({double debitTotal = 0}) {
   return DashboardAggregateSnapshot(
@@ -41,6 +43,63 @@ RecurringSery _recurringSeries(DateTime nextExpectedDate) {
 }
 
 void main() {
+  test('commitments include every active expense but display only three',
+      () async {
+    final now = DateTime.utc(2026, 7, 15);
+    final base = _recurringSeries(now);
+    RecurringSery item({
+      required String id,
+      required double amount,
+      String status = 'active',
+      String kind = 'bill',
+      String? currencyCode = 'INR',
+      String? currencySymbol = '₹',
+    }) =>
+        base.copyWith(
+          id: id,
+          label: id,
+          expectedAmount: amount,
+          status: status,
+          kind: kind,
+          currencyCode: Value(currencyCode),
+          currencySymbol: Value(currencySymbol),
+        );
+
+    final series = [
+      item(id: 'bill-1', amount: 100),
+      item(id: 'bill-2', amount: 200),
+      item(id: 'bill-3', amount: 300),
+      item(id: 'bill-4', amount: 400),
+      item(id: 'income', amount: 900, kind: 'income'),
+      item(id: 'paused', amount: 1000, status: 'paused'),
+      item(id: 'cancelled', amount: 1000, status: 'cancelled'),
+      item(id: 'muted', amount: 1000, status: 'muted'),
+      item(id: 'unknown', amount: 1000, status: 'unknown'),
+      item(id: 'usd', amount: 250, currencyCode: 'USD', currencySymbol: r'$'),
+    ];
+    final container = ProviderContainer(
+      overrides: [
+        recurringSeriesProvider.overrideWith(
+          (ref) => Stream.value([
+            for (final row in series) RecurringSeriesItem(series: row),
+          ]),
+        ),
+        clockProvider.overrideWith((ref) => () => now),
+        dashboardPeriodProvider.overrideWith(
+          (ref) => DashboardPeriod.month(now),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(recurringSeriesProvider.future);
+    expect(
+      container.read(upcomingRecurringProvider).map((row) => row.id),
+      ['bill-1', 'bill-2', 'bill-3'],
+    );
+    expect(container.read(commitmentsTotalProvider), 1000);
+  });
+
   test('commitments use financial month membership at a UTC month boundary',
       () {
     const calendar = FinancialCalendar.fixed(Duration(hours: -4));
@@ -53,7 +112,7 @@ void main() {
         dashboardPeriodProvider.overrideWith(
           (ref) => DashboardPeriod.month(now, calendar: calendar),
         ),
-        upcomingRecurringProvider.overrideWith((ref) => [series]),
+        activeRecurringExpensesProvider.overrideWith((ref) => [series]),
       ],
     );
     addTearDown(container.dispose);
@@ -78,7 +137,7 @@ void main() {
           dashboardAggregateProvider.overrideWith(
             (ref) async => _snapshot(debitTotal: 1200),
           ),
-          upcomingRecurringProvider.overrideWith((ref) => [series]),
+          activeRecurringExpensesProvider.overrideWith((ref) => [series]),
           clockProvider.overrideWith((ref) => () => now),
           dashboardPeriodProvider.overrideWith(
             (ref) => DashboardPeriod.month(now),
@@ -108,7 +167,7 @@ void main() {
           dashboardAggregateProvider.overrideWith(
             (ref) async => _snapshot(debitTotal: 1200),
           ),
-          upcomingRecurringProvider.overrideWith((ref) => const []),
+          activeRecurringExpensesProvider.overrideWith((ref) => const []),
           clockProvider.overrideWith((ref) => () => now),
           dashboardPeriodProvider.overrideWith(
             (ref) => DashboardPeriod.month(now),

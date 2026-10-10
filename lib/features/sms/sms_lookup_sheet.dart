@@ -17,6 +17,7 @@ enum SmsLookupState {
   ready,
   scanning,
   complete,
+  incomplete,
   partialFailure,
   error,
 }
@@ -92,7 +93,9 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
       if (!mounted) return;
       setState(() {
         _lastResult = result;
-        if (result.failed > 0) {
+        if (result.incomplete) {
+          _state = SmsLookupState.incomplete;
+        } else if (result.failed > 0) {
           _state = SmsLookupState.partialFailure;
         } else {
           _state = SmsLookupState.complete;
@@ -364,6 +367,21 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
               : '${_scanOutcomeSummary(res)}\n$failed could not be read',
         );
 
+      case SmsLookupState.incomplete:
+        final res = _lastResult;
+        return _buildCard(
+          isDark: isDark,
+          bgColor: isDark ? const Color(0xFF2A2210) : const Color(0xFFFFF8E6),
+          borderColor:
+              isDark ? const Color(0xFF52421D) : const Color(0xFFFBE6B5),
+          icon: Icons.pause_circle_outline_rounded,
+          iconColor: AppColorTokens.warningDark,
+          title: 'Scan paused before the inbox was complete',
+          subtitle: res == null
+              ? 'Run the scan again to continue.'
+              : '${_scanOutcomeSummary(res)}\nRun the scan again to continue.',
+        );
+
       case SmsLookupState.error:
         return _buildCard(
           isDark: isDark,
@@ -557,6 +575,28 @@ class _SmsLookupSheetState extends ConsumerState<SmsLookupSheet> {
                 ),
                 onPressed: () => _startScan(force: true),
                 child: const Text('Retry failed messages'),
+              ),
+            ),
+          ],
+        );
+
+      case SmsLookupState.incomplete:
+        return Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColorTokens.warningDark,
+                ),
+                onPressed: () => _startScan(force: true),
+                child: const Text('Run scan again'),
               ),
             ),
           ],

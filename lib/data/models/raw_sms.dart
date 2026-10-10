@@ -8,6 +8,7 @@ class RawSms {
     required this.sender,
     required this.body,
     required this.receivedAt,
+    this.legacyId,
   });
 
   final String id;
@@ -18,4 +19,15 @@ class RawSms {
 
   /// Device receive time used as a parser fallback when SMS text omits a date.
   final DateTime receivedAt;
+
+  /// Prior receipt-time identity for inbox rows stored before DATE_SENT was
+  /// used as the canonical capture timestamp.
+  final String? legacyId;
+
+  /// The canonical identity and its one bounded, exact-content compatibility
+  /// alias. This is transient capture metadata, not a persisted model field.
+  Set<String> get identityIds => {
+        id,
+        if (legacyId != null && legacyId != id) legacyId!,
+      };
 }

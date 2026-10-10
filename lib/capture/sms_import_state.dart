@@ -25,6 +25,10 @@ abstract interface class BackfillMarker {
 
   Future<void> saveCheckpoint(SmsImportCheckpoint checkpoint);
 
+  /// Removes a stale cursor without changing whether an import version
+  /// previously completed.
+  Future<void> clearCheckpoint();
+
   Future<void> markCompleted(int version);
 
   /// Clears the marker when all app data is deliberately reset.
@@ -54,10 +58,11 @@ class PlatformBackfillMarker implements BackfillMarker {
     if (payload is! Map<Object?, Object?>) {
       throw const FormatException('Invalid SMS import checkpoint payload');
     }
-    if (payload case {
-      'beforeEpochMillis': final int beforeEpochMillis,
-      'beforeId': final int beforeId,
-    }) {
+    if (payload
+        case {
+          'beforeEpochMillis': final int beforeEpochMillis,
+          'beforeId': final int beforeId,
+        }) {
       return SmsImportCheckpoint(
         beforeEpochMillis: beforeEpochMillis,
         beforeId: beforeId,
@@ -75,6 +80,11 @@ class PlatformBackfillMarker implements BackfillMarker {
         'beforeId': checkpoint.beforeId,
       },
     );
+  }
+
+  @override
+  Future<void> clearCheckpoint() async {
+    await _channel.invokeMethod<void>('clearBackfillCheckpoint');
   }
 
   @override

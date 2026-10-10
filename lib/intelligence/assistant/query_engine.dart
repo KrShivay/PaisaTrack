@@ -5,6 +5,7 @@ import '../../data/analytics/financial_eligibility.dart';
 import '../../data/db/database.dart';
 import '../../data/models/source_currency.dart';
 import '../../enrichment/payee_identity_key.dart';
+import '../recurring_eligibility.dart';
 import '../claim.dart';
 import 'assistant_intent.dart';
 
@@ -839,6 +840,7 @@ WHERE t.id IN ($placeholders) AND t.merchant_id IS NOT NULL
     final items = rows
         .where(
           (row) =>
+              isActiveRecurringExpense(status: row.status, kind: row.kind) &&
               !row.nextExpectedDate.isBefore(range.start) &&
               row.nextExpectedDate.isBefore(range.end),
         )

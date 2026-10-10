@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/database.dart';
 import '../../enrichment/payee_identity_key.dart';
 
+var _ruleIdSequence = 0;
+
 class RuleMutation {
   const RuleMutation({
     required this.matchType,
@@ -13,6 +15,7 @@ class RuleMutation {
     required this.categoryId,
     required this.description,
     required this.createdFromTxnId,
+    this.writtenRuleIds = const [],
   });
 
   final String matchType;
@@ -22,6 +25,7 @@ class RuleMutation {
   final String? categoryId;
   final String? description;
   final String createdFromTxnId;
+  final List<String> writtenRuleIds;
 }
 
 /// User-taught deterministic rules — step 1 of the categorizer ladder
@@ -110,32 +114,26 @@ class RuleRepository {
         .toList()
       ..sort(_newestFirst);
 
-    if (previous.isEmpty) {
-      await insert(
-        matchType: matchType,
-        matchValue: normalized,
-        setCategoryId: setCategoryId,
-        setDescription: setDescription,
-        createdFromTxnId: createdFromTxnId,
-        clock: () => now,
-      );
-    } else {
-      for (final rule in previous) {
-        await (_database.update(_database.rules)
-              ..where((row) => row.id.equals(rule.id)))
-            .write(
-          RulesCompanion(
-            matchType: Value(matchType),
-            matchValue: Value(normalized),
-            setCategoryId: Value(setCategoryId),
-            setDescription: Value(setDescription),
-            createdFromTxnId: Value(createdFromTxnId),
-            hitCount: const Value(0),
-            createdAt: Value(now),
-          ),
-        );
+    for (var offset = 0; offset < previous.length; offset += 400) {
+      final ids = previous
+          .skip(offset)
+          .take(400)
+          .map((rule) => rule.id)
+          .toList(growable: false);
+      if (ids.isNotEmpty) {
+        await (_database.delete(_database.rules)
+              ..where((row) => row.id.isIn(ids)))
+            .go();
       }
     }
+    final writtenRuleId = await insert(
+      matchType: matchType,
+      matchValue: normalized,
+      setCategoryId: setCategoryId,
+      setDescription: setDescription,
+      createdFromTxnId: createdFromTxnId,
+      clock: () => now,
+    );
 
     return RuleMutation(
       matchType: matchType,
@@ -145,43 +143,51 @@ class RuleRepository {
       categoryId: setCategoryId,
       description: setDescription,
       createdFromTxnId: createdFromTxnId,
+      writtenRuleIds: [writtenRuleId],
     );
   }
 
   /// Restores the prior identity mapping only if this correction still owns it.
   Future<bool> restoreMutation(RuleMutation mutation) async {
+    if (mutation.writtenRuleIds.isEmpty) return false;
+    final writtenIds = mutation.writtenRuleIds.toSet();
     final current = await _database.select(_database.rules).get();
     final matching = current
         .where(
           (rule) =>
-              rule.matchType == mutation.matchType &&
+              (rule.matchType == mutation.matchType ||
+                  (mutation.matchType == 'merchant' &&
+                      rule.matchType == 'merchant_legacy')) &&
               normalizeMatchValue(mutation.matchType, rule.matchValue) ==
                   mutation.matchValue,
         )
         .toList();
-    if (matching.isEmpty ||
-        matching.any(
+    final ownedRules = matching
+        .where((rule) => writtenIds.contains(rule.id))
+        .toList(growable: false);
+    if (matching.length != writtenIds.length ||
+        ownedRules.length != writtenIds.length ||
+        ownedRules.any(
           (rule) =>
+              rule.matchType != mutation.matchType ||
+              rule.matchValue != mutation.matchValue ||
               rule.setCategoryId != mutation.categoryId ||
               rule.setDescription != mutation.description ||
               rule.createdFromTxnId != mutation.createdFromTxnId ||
-              rule.createdAt.difference(mutation.writtenAt).abs() >=
-                  const Duration(seconds: 1),
+              rule.hitCount != 0,
         )) {
       return false;
     }
 
     if (mutation.previousRules.isEmpty) {
       await (_database.delete(_database.rules)
-            ..where((rule) => rule.id.isIn(matching.map((row) => row.id))))
+            ..where((rule) => rule.id.isIn(writtenIds)))
           .go();
     } else {
       final oldIds = mutation.previousRules.map((rule) => rule.id).toSet();
       await (_database.delete(_database.rules)
             ..where(
-              (rule) =>
-                  rule.id.isIn(matching.map((row) => row.id)) &
-                  rule.id.isNotIn(oldIds),
+              (rule) => rule.id.isIn(writtenIds) & rule.id.isNotIn(oldIds),
             ))
           .go();
       for (final rule in mutation.previousRules) {
@@ -224,7 +230,13 @@ class RuleRepository {
     DateTime Function() clock = DateTime.now,
   }) async {
     final now = clock().toUtc();
-    final id = 'rule_${now.microsecondsSinceEpoch}';
+    String id;
+    do {
+      id = 'rule_${now.microsecondsSinceEpoch}_${_ruleIdSequence++}';
+    } while (await (_database.select(_database.rules)
+              ..where((rule) => rule.id.equals(id)))
+            .getSingleOrNull() !=
+        null);
     await _database.into(_database.rules).insert(
           RulesCompanion.insert(
             id: id,

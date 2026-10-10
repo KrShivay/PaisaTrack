@@ -60,6 +60,7 @@ void main() {
       final matches = rule.matches(
         direction: 'debit',
         amount: 500.0,
+        lifecycleState: 'settled',
         ts: DateTime.utc(2026, 7, 10, 10, 1),
         refId: '616016648402',
         counterpartyKey: null,
@@ -96,6 +97,7 @@ void main() {
       final matches = rule.matches(
         direction: 'debit',
         amount: 500.0,
+        lifecycleState: 'settled',
         ts: DateTime.utc(2026, 7, 10, 10, 1),
         refId: null,
         counterpartyKey: 'AMAZONPAYLATER',

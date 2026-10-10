@@ -7,6 +7,7 @@ import '../data/db/database.dart';
 import '../data/analytics/financial_eligibility.dart';
 import '../data/models/source_currency.dart';
 import '../data/repositories/recurring_status_memory.dart';
+import 'recurring_eligibility.dart';
 import 'models/embedder.dart';
 
 const _foregroundScanCheckpointKey = 'recurring_foreground_scan_checkpoint_v2';
@@ -485,6 +486,63 @@ class RecurringDetector {
   }
 }
 
+/// Runs a complete detector pass, then applies status memory and stale-row
+/// pruning together with the completed detector snapshot in one transaction.
+///
+/// A successful empty result is a complete snapshot too, so stale derived rows
+/// are pruned only after [RecurringDetector.run] returns successfully.
+Future<void> rebuildRecurringProjection(
+  AppDatabase database, {
+  DateTime? today,
+  Embedder embedder = const NoopEmbedder(),
+}) async {
+  final previous = await database.select(database.recurringSeries).get();
+  final previousIds = previous.map((row) => row.id).toSet();
+
+  final detections = await RecurringDetector(
+    database,
+    embedder: embedder,
+  ).run(today: today);
+  final detectedIds = detections.map((row) => row.id).toSet();
+  await database.transaction(() async {
+    final effectiveStatuses = await RecurringStatusMemory.read(database);
+    final current = await database.select(database.recurringSeries).get();
+    final currentById = {for (final row in current) row.id: row};
+    for (final previousRow in previous) {
+      if (!RecurringStatusMemory.isUserControlled(previousRow.status)) continue;
+      final key = RecurringStatusMemory.identity(previousRow);
+      final latest = currentById[previousRow.id];
+      if (latest != null &&
+          !RecurringStatusMemory.isUserControlled(latest.status)) {
+        effectiveStatuses.remove(key);
+      } else {
+        effectiveStatuses.putIfAbsent(key, () => previousRow.status);
+      }
+    }
+    for (final row in current) {
+      if (RecurringStatusMemory.isUserControlled(row.status)) {
+        effectiveStatuses[RecurringStatusMemory.identity(row)] = row.status;
+      }
+    }
+    await RecurringStatusMemory.write(database, effectiveStatuses);
+    for (final row in current) {
+      final status = previousIds.contains(row.id)
+          ? null
+          : effectiveStatuses[RecurringStatusMemory.identity(row)];
+      if (status != null && row.status != status) {
+        await (database.update(database.recurringSeries)
+              ..where((item) => item.id.equals(row.id)))
+            .write(RecurringSeriesCompanion(status: Value(status)));
+      }
+      if (!detectedIds.contains(row.id)) {
+        await (database.delete(database.recurringSeries)
+              ..where((item) => item.id.equals(row.id)))
+            .go();
+      }
+    }
+  });
+}
+
 /// Runs the foreground recurring scan only when transaction data changed.
 ///
 /// The nightly job remains responsible for time-based status refreshes. This
@@ -513,10 +571,11 @@ class ForegroundRecurringScanner {
       if (changed == null) return false;
     }
 
-    await RecurringDetector(
+    await rebuildRecurringProjection(
       _database,
       embedder: _embedder,
-    ).run(today: startedAt);
+      today: startedAt,
+    );
     await _database.into(_database.modelMeta).insertOnConflictUpdate(
           ModelMetaCompanion.insert(
             key: _foregroundScanCheckpointKey,
@@ -563,7 +622,8 @@ class _PendingRecurringWrite {
 double computeTotalMonthlyCommitmentLoad(List<RecurringDetection> detections) {
   var total = 0.0;
   for (final d in detections) {
-    if (d.status != 'active' || d.kind == 'income' || d.currencyCode != 'INR') {
+    if (!isActiveRecurringExpense(status: d.status, kind: d.kind) ||
+        d.currencyCode != 'INR') {
       continue;
     }
     final monthlyAmount = switch (d.period) {

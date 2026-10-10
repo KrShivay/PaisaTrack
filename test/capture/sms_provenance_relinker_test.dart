@@ -155,6 +155,79 @@ void main() {
     expect((await database.select(database.rawSms).get()).length, 1);
   });
 
+  test('re-links the exact legacy identity without re-keying the transaction',
+      () async {
+    const body = 'Rs.250.00 debited from a/c XX1234 to payzomato@hdfcbank';
+    const legacyId = 'legacy_receipt_hash';
+    await insertTransaction(
+      legacyId,
+      evidenceJson: evidenceFor(body, 'Rs.250.00'),
+    );
+    final before = await database.select(database.transactions).getSingle();
+    final incoming = RawSms(
+      id: 'canonical_sent_hash',
+      legacyId: legacyId,
+      sender: 'VK-HDFCBK',
+      body: body,
+      receivedAt: receivedAt,
+    );
+
+    final result = await SmsProvenanceRelinker(
+      database: database,
+      reader: _FakeInboxReader([
+        [incoming],
+      ]),
+      pageSize: 10,
+    ).run();
+
+    final after = await database.select(database.transactions).getSingle();
+    final raw = await database.select(database.rawSms).getSingle();
+    expect(result.relinked, 1);
+    expect(after.id, 'txn_$legacyId');
+    expect(after.smsId, legacyId);
+    expect(after.amount, before.amount);
+    expect(after.ts, before.ts);
+    expect(raw.id, legacyId);
+    expect(raw.sender, incoming.sender);
+    expect(raw.body, body);
+    expect(raw.receivedAt, receivedAt.toLocal());
+  });
+
+  test('legacy relink collision between two transactions abstains', () async {
+    const body = 'Rs.250.00 debited from a/c XX1234 to payzomato@hdfcbank';
+    await insertTransaction(
+      'canonical_collision',
+      evidenceJson: evidenceFor(body, 'Rs.250.00'),
+    );
+    await insertTransaction(
+      'legacy_collision',
+      evidenceJson: evidenceFor(body, 'Rs.250.00'),
+    );
+    final result = await SmsProvenanceRelinker(
+      database: database,
+      reader: _FakeInboxReader([
+        [
+          RawSms(
+            id: 'canonical_collision',
+            legacyId: 'legacy_collision',
+            sender: 'VK-HDFCBK',
+            body: body,
+            receivedAt: receivedAt,
+          ),
+        ],
+      ]),
+    ).run();
+
+    expect(result.relinked, 0);
+    expect(result.skippedAmbiguous, 2);
+    expect(await database.select(database.rawSms).get(), isEmpty);
+    expect(
+      (await database.select(database.transactions).get())
+          .every((transaction) => transaction.smsId == null),
+      isTrue,
+    );
+  });
+
   test('does not read the inbox when no provenance is missing', () async {
     final reader = _FakeInboxReader([
       [sms('1', 'Rs.1 debited')],

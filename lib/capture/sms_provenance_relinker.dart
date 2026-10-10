@@ -74,21 +74,36 @@ class SmsProvenanceRelinker {
     final candidates = await _unlinkedSmsTransactions();
     if (candidates.isEmpty) return const SmsProvenanceRelinkResult();
 
+    final candidatesByTransactionId = {
+      for (final transaction in candidates.values) transaction.id: transaction,
+    };
     final seen = <String, RawSms?>{};
     await for (final page in readInboxPages(_reader, pageSize: _pageSize)) {
       for (final sms in page.messages) {
-        if (!candidates.containsKey(sms.id)) continue;
+        final matchingTransactions = sms.identityIds
+            .map((id) => candidates[id])
+            .whereType<Transaction>()
+            .map((transaction) => transaction.id)
+            .toSet();
+        if (matchingTransactions.isEmpty) continue;
         if (_isSenderPaused?.call(sms.sender) == true) continue;
-        // A repeated provider id is ambiguous; null marks it.
-        seen[sms.id] = seen.containsKey(sms.id) ? null : sms;
+        if (matchingTransactions.length > 1) {
+          for (final transactionId in matchingTransactions) {
+            seen[transactionId] = null;
+          }
+          continue;
+        }
+        final transactionId = matchingTransactions.single;
+        // A repeated provider identity is ambiguous; null marks it.
+        seen[transactionId] = seen.containsKey(transactionId) ? null : sms;
       }
       await Future<void>.delayed(Duration.zero);
     }
 
     var relinked = 0;
     var skipped = 0;
-    for (final MapEntry(key: smsId, value: sms) in seen.entries) {
-      final transaction = candidates[smsId]!;
+    for (final MapEntry(key: transactionId, value: sms) in seen.entries) {
+      final transaction = candidatesByTransactionId[transactionId]!;
       if (sms != null &&
           _evidenceMatches(transaction, sms.body) &&
           await _link(transaction, sms)) {
@@ -139,21 +154,32 @@ class SmsProvenanceRelinker {
   Future<bool> _link(Transaction transaction, RawSms sms) async {
     try {
       await _database.transaction(() async {
-        final existing = await (_database.select(_database.rawSms)
-              ..where((row) => row.id.equals(sms.id)))
-            .getSingleOrNull();
-        if (existing != null && existing.body != sms.body) {
+        final sourceId = transaction.id.substring(_transactionIdPrefix.length);
+        if (!sms.identityIds.contains(sourceId)) throw const _RelinkConflict();
+        final existingRows = await (_database.select(_database.rawSms)
+              ..where((row) => row.id.isIn(sms.identityIds)))
+            .get();
+        if (existingRows.any(
+          (row) => row.sender != sms.sender || row.body != sms.body,
+        )) {
           throw const _RelinkConflict();
         }
-        final claimed = await (_database.select(_database.transactions)
-              ..where((row) => row.smsId.equals(sms.id))
-              ..limit(1))
-            .getSingleOrNull();
-        if (claimed != null) throw const _RelinkConflict();
-        if (existing == null) {
+        final claimedRows = await (_database.select(_database.transactions)
+              ..where(
+                (row) =>
+                    row.smsId.isIn(sms.identityIds) |
+                    row.id.isIn(
+                      sms.identityIds.map((id) => '$_transactionIdPrefix$id'),
+                    ),
+              ))
+            .get();
+        if (claimedRows.any((row) => row.id != transaction.id)) {
+          throw const _RelinkConflict();
+        }
+        if (!existingRows.any((row) => row.id == sourceId)) {
           await _database.into(_database.rawSms).insert(
                 RawSmsCompanion.insert(
-                  id: sms.id,
+                  id: sourceId,
                   sender: sms.sender,
                   body: sms.body,
                   receivedAt: sms.receivedAt,
@@ -170,7 +196,7 @@ class SmsProvenanceRelinker {
               ..where(
                 (row) => row.id.equals(transaction.id) & row.smsId.isNull(),
               ))
-            .write(TransactionsCompanion(smsId: Value(sms.id)));
+            .write(TransactionsCompanion(smsId: Value(sourceId)));
         if (changed != 1) throw const _RelinkConflict();
       });
       return true;

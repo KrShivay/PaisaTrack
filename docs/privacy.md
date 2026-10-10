@@ -9,8 +9,13 @@ PaisaTrack is local-first:
   and message bodies are never logged, even on error paths. The explicit
   Settings re-import rescans locally and preserves user edits/deletions.
 - After the versioned initial import, open/resume catch-up reads only messages
-  newer than the first known SMS. Live receiver and catch-up paths share the
-  same on-device parser and encrypted store.
+  through the first known SMS's page and one older recovery page. Live receiver
+  and catch-up paths share the same on-device parser and encrypted store.
+- Sent-time identity and optional exact receipt-hash compatibility are computed
+  on-device. Alternate mappings and bounded per-run conflict evidence are
+  transient; they add no backup fields, remote lookup or telemetry. Retained
+  sender/body must match exactly before a stored alias is accepted. User edits,
+  exclusions and existing transaction/source IDs remain authoritative.
 - Source SMS provenance is kept ([ADR 0021](decisions/0021-retain-source-sms-provenance.md)):
   the SMS behind a transaction or a "Not a transaction" disposition stays in
   the encrypted local database for as long as that record exists. Any other
@@ -29,7 +34,7 @@ PaisaTrack is local-first:
   the same reader and permission as history import, to re-link source SMS
   that the earlier 30-day purge removed. It links only exact matches, never
   edits transactions, skips paused senders, and reports only counts.
-- A user's “Not a transaction” correction persists the provider SMS ID,
+- A user's “Not a transaction” correction persists the deterministic source SMS ID,
   transaction ID, disposition, and correction time in the encrypted local
   database and backup. The disposition itself stores no message body, sender,
   or receipt time; the source SMS it refers to is kept as provenance

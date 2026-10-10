@@ -17,6 +17,104 @@ void main() {
   });
 
   group('MessageKindClassifier', () {
+    test('classifies account movement ahead of unrelated security footers', () {
+      for (final (fixture, expectedKind) in [
+        ('centbk/centbk_debit_02', MessageKind.settledDebit),
+        ('centbk/centbk_debit_03', MessageKind.settledDebit),
+        ('centbk/centbk_debit_04', MessageKind.settledDebit),
+        ('centbk/centbk_credit_lakh_balance', MessageKind.settledCredit),
+      ]) {
+        final body = File('test/fixtures/sms/$fixture.txt').readAsStringSync();
+        expect(
+          classifier.classify(body),
+          expectedKind,
+          reason: fixture,
+        );
+      }
+
+      expect(
+        classifier.classify(
+          'A/c XX1234 debited by Rs. 50. If unauthorized, call your bank.',
+        ),
+        MessageKind.settledDebit,
+      );
+      expect(
+        classifier.classify(
+          'A/c XX1234 debited by Rs. 50. If not authorized, call your bank.',
+        ),
+        MessageKind.settledDebit,
+      );
+      expect(
+        classifier.classify(
+          'A/c XX1234 debited by Rs. 50. Do not share your OTP.',
+        ),
+        MessageKind.settledDebit,
+      );
+      expect(
+        classifier.classify(
+          'Your OTP to authorize a debit transaction of Rs. 500. Do not share.',
+        ),
+        MessageKind.otp,
+      );
+      for (final body in [
+        'OTP 123456 to authorize this payment. A/c XX1234 will be debited by Rs 500.',
+        'OTP 123456 for confirmation. If A/c XX1234 debited by Rs 500, call the bank.',
+        'Your OTP for transaction of Rs 500 is 123456. Rewards are credited to your account monthly.',
+      ]) {
+        expect(classifier.classify(body), MessageKind.otp, reason: body);
+      }
+    });
+
+    test('classifies returned failed-payment credit as a settled credit', () {
+      for (final fixture in [
+        'indusind/indusb_credit_02',
+        'indusind/indusb_credit_03',
+      ]) {
+        final body = File('test/fixtures/sms/$fixture.txt').readAsStringSync();
+        expect(
+          classifier.classify(body),
+          MessageKind.settledCredit,
+          reason: fixture,
+        );
+      }
+      expect(
+        classifier.classify(
+          'Your credit transaction for Rs. 500 has failed. No funds were returned.',
+        ),
+        MessageKind.failed,
+      );
+      for (final body in [
+        'A/c XX1234 was not credited by Rs 500 for failed UPI txn.',
+        'A/c XX1234 has not been credited by Rs 500 for failed UPI txn.',
+        'A/c XX1234 wasn\'t credited by Rs 500 for failed UPI txn.',
+        'A/c XX1234 not yet credited by Rs 500 for failed UPI txn.',
+        'A/c XX1234 could not be credited by Rs 500 for failed UPI txn.',
+      ]) {
+        expect(classifier.classify(body), MessageKind.failed, reason: body);
+      }
+      expect(
+        classifier.classify(
+          'No refund has been credited by the bank to A/c XX1234 for failed UPI txn of Rs 500.',
+        ),
+        MessageKind.failed,
+      );
+    });
+
+    test('negated authorization does not hide an explicit credit event', () {
+      for (final body in [
+        'Your card payment has not yet been authorized. Rs 500 was credited to A/c XX1234.',
+        'Your card payment has not been authorized. Rs 500 was credited to A/c XX1234.',
+        'Your card payment has never been authorized. Rs 500 was credited to A/c XX1234.',
+        'Your card payment wasn\'t authorized. Rs 500 was credited to A/c XX1234.',
+      ]) {
+        expect(
+          classifier.classify(body),
+          MessageKind.settledCredit,
+          reason: body,
+        );
+      }
+    });
+
     test('classifies promoted negative fixtures correctly', () {
       final billDueBody =
           File('test/fixtures/sms/axisbk/axisbk_bill_due_reminder.txt')
@@ -237,10 +335,24 @@ void main() {
         ),
         MessageKind.pendingAuth,
       );
+      for (final body in [
+        'A/c XX1234 debited by Rs 50. If not  authorized, call your bank.',
+        'A/c XX1234 debited by Rs 50. If not\nauthorized, call your bank.',
+      ]) {
+        expect(
+          classifier.classify(body),
+          MessageKind.settledDebit,
+          reason: body,
+        );
+      }
 
       expect(
         classifier.classify('Your account summary is ready for INR 500.'),
         MessageKind.unknown,
+      );
+      expect(
+        classifier.classify('Reminder:Your account is dormant.'),
+        MessageKind.reminder,
       );
       expect(MessageKind.fromWireName('unrecognized'), MessageKind.unknown);
 

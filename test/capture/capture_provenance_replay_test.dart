@@ -429,6 +429,9 @@ class _FixtureBackfillMarker implements BackfillMarker {
   Future<void> saveCheckpoint(SmsImportCheckpoint checkpoint) async {}
 
   @override
+  Future<void> clearCheckpoint() async {}
+
+  @override
   Future<void> markCompleted(int version) async {}
 
   @override

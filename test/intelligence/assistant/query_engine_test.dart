@@ -864,6 +864,76 @@ void main() {
               kind: 'subscription',
             ),
           );
+      for (final row in [
+        (
+          id: 'income-due',
+          label: 'Salary',
+          status: 'active',
+          kind: 'income',
+          currency: 'INR',
+          symbol: '₹'
+        ),
+        (
+          id: 'paused-due',
+          label: 'Paused bill',
+          status: 'paused',
+          kind: 'bill',
+          currency: 'INR',
+          symbol: '₹'
+        ),
+        (
+          id: 'cancelled-due',
+          label: 'Cancelled bill',
+          status: 'cancelled',
+          kind: 'bill',
+          currency: 'INR',
+          symbol: '₹'
+        ),
+        (
+          id: 'muted-due',
+          label: 'Muted bill',
+          status: 'muted',
+          kind: 'bill',
+          currency: 'INR',
+          symbol: '₹'
+        ),
+        (
+          id: 'unknown-due',
+          label: 'Unknown bill',
+          status: 'future-status',
+          kind: 'bill',
+          currency: 'INR',
+          symbol: '₹'
+        ),
+        (
+          id: 'usd-due',
+          label: 'Dollar bill',
+          status: 'active',
+          kind: 'bill',
+          currency: 'USD',
+          symbol: r'$'
+        ),
+      ]) {
+        await database.into(database.recurringSeries).insert(
+              RecurringSeriesCompanion.insert(
+                id: row.id,
+                merchantId: 'swiggy',
+                label: row.label,
+                expectedAmount: 25,
+                tolerancePct: .05,
+                period: 'monthly',
+                periodDays: 30,
+                nextExpectedDate: DateTime.utc(2026, 7, 21),
+                lastAmount: 25,
+                amountTrend: 'flat',
+                occurrences: 2,
+                status: row.status,
+                kind: row.kind,
+                currencyCode: Value(row.currency),
+                currencySymbol: Value(row.symbol),
+              ),
+            );
+      }
       await database.into(database.insights).insert(
             InsightsCompanion.insert(
               id: 'active',
@@ -897,10 +967,12 @@ void main() {
           range: july,
         ),
       ) as RecurringQueryResult;
-      expect(
-        (recurring.items.single.label, recurring.items.single.amount),
-        ('Swiggy One', 99),
-      );
+      expect(recurring.items.map((item) => item.label), [
+        'Swiggy One',
+        'Dollar bill',
+      ]);
+      expect(recurring.items.map((item) => item.amount), [99, 25]);
+      expect(recurring.items.map((item) => item.currencyCode), [null, 'USD']);
       final insights = await engine.run(
         const AssistantIntent(
           kind: AssistantIntentKind.activeInsights,
