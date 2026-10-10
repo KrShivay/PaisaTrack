@@ -478,7 +478,7 @@ loading/error/empty slots, fixed min-height per spec) laid out by
 `span` (1 or full), `minHeight`, and a stable id. Cards today: Hero ring +
 metric pills, Budget, Source currency activity, Top categories, Insight,
 Today list, Exclusions note. T-207 adds ordering/visibility persistence on top
-of the same `DashboardCardSpec{id, span, builder}`; T-204 must not add
+of the same `DashboardCardSpec{id, span, builder}` (`id` is the `card_type` of the T-207 registry in `docs/plans/intelligence-v2.md`; T-207 adds default rank, eligibility predicate and persisted layout per its ADR 0035, and reserves skeleton height per card, which `minHeight` here provides); T-204 must not add
 reorder UI. Implementation uses a sliver list of row groups (no eager
 `ListView(children)`), `RepaintBoundary` per card, hero ring painted once and
 re-animated only on period change. Wrap-up: Exclusions note becomes a
@@ -610,14 +610,14 @@ and lets those tasks consume it.
 
 (This task does not edit it; T-204ao applies these.)
 
-1. Add section numbers so existing code references resolve: `## 1 Principles`,
-   `## 2 Foundations`, `## 3 Standard states`, `## 4 Feature migration
-   contract`, `## 5 Money colour and amounts` (new; move the debit/credit and
-   "neutral transfers" rules here; code comments at `app_tokens.dart:36`,
-   `paisa_colors.dart:35`, `transaction_repository.dart:108`,
-   `app_state_views.dart:7` cite §5), `## 6 Iconography` (new; below),
-   `## 7 Future feature UX`, `## 8 Accessibility acceptance`.
-2. §6 Iconography: one family (Rounded); sizes 16/20/24 only; `AppIcons` is the
+1. Keep sections named, not numbered (orchestrator decision 2026-10-10;
+   `app_tokens.dart` already cites "Foundations" and "Iconography", and an
+   Iconography section exists). Add a named "Money colour and amounts"
+   section (move the debit/credit and neutral-transfer rules there) and point
+   the remaining "§5"/"§6" comments (`paisa_colors.dart:35`,
+   `transaction_repository.dart:108`, `app_state_views.dart:7`,
+   `category_visuals.dart:14`) at section names.
+2. Iconography: one family (Rounded); sizes 16/20/24 only; `AppIcons` is the
    only import point (features must not import `Icons`); outlined/filled pair
    only for nav selected state; decorative icons excluded from semantics,
    meaningful icons carry a label; icon colour from role (not money colours);
