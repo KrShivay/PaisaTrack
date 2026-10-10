@@ -1,46 +1,48 @@
 # PaisaTrack — delivery plan
 
-Updated 2026-10-03. This is future direction, not a shipped-feature checklist.
+Updated 2026-10-10. This is future direction, not a shipped-feature checklist.
 Current behavior: [architecture](docs/architecture.md) and
 [product status](docs/product-status.md). Executable queue: [TASKS.md](TASKS.md).
 
 ## Product priority
 
-Make captured transactions useful with less manual work: recognise the payee,
-reuse what the user already confirmed, fill supported details, and ask only
-about uncertainty. Then explain and forecast recorded spending with evidence.
+Owner direction (2026-10-10): the app must be smooth (no flicker), fast and
+intelligent, and ship faster; full UI/UX rewrites are allowed. Make captured
+transactions useful with less manual work: recognise the payee, reuse what the
+user confirmed, separate spending from transfers and income honestly, and ask
+only about real uncertainty. Then turn every SMS field into source-faithful
+facts and explain them with evidence.
 
 ## Delivery order
 
-1. Finish T-176 physical-device acceptance (T-179a passed its isolated
-   physical recovery run on 2026-10-01); retain capture,
-   visibility and recovery release blockers on the board. T-157b and PV-02
-   passed independent review and are complete.
-2. T-177a: baseline and production-wiring audit. Resolve contradictory legacy
-   completion claims before adding duplicate implementations.
-3. T-177b–f: safe recognition/memory, scoped correction/undo, grouped review,
-   category reuse and a measured staged rollout. [Full feature plan](docs/plans/smart-transaction-assistance.md).
-4. T-178a is complete. T-178b–d cover validated forecast ranges, grounded
-   English/Hinglish questions and evaluation.
-   [AI report](docs/reports/grounded-ai-opportunities.md).
-5. T-102: local statement reconciliation; T-177g: optional receipt evidence
-   feasibility. Neither is required for the initial learn-once flow.
-6. Finish remaining refund/expected-event product gaps (T-100/T-101), then
-   category budgets (T-098). Existing link/event code must be reused and audited,
-   not rebuilt from old design briefs.
+Waves, parallel groups, hot-file locks and the dependency ledger live in the
+[roadmap](docs/plans/roadmap.md); this list is the priority summary.
 
-This order does not waive release blockers or claim dependencies have passed.
-New work stays Backlog until its child brief is groomed; one implementation task
-at a time. Briefs: [T-177](docs/tasks/T-177.md), [T-178](docs/tasks/T-178.md).
+1. **Smooth and honest (P0):** T-203 import flicker/speed; T-205 categorisation
+   and income gap ([plan](docs/plans/categorisation-v2.md)); T-210 test speed
+   so implementation can iterate.
+2. **Foundations (P1):** T-204 icon system and UX v2 ([plan](docs/plans/ux-v2.md));
+   T-208 performance budgets ([plan](docs/plans/performance.md)); T-211
+   taxonomy; T-207 extraction audit and fact model
+   ([plan](docs/plans/intelligence-v2.md)).
+3. **Owner-approved schema:** T-207 facts store and timelines (ADR 0034),
+   integer minor-unit money T-165c (ADR 0033), customisable dashboard
+   (ADR 0035), payee review memory (ADR 0036).
+4. **Money semantics:** T-100 refunds (window decided; attribution T-209),
+   T-190 card accounting, T-098 budgets, T-102 statements.
+5. **Grounded AI and release:** T-178b–d, T-177b–g, T-171b budgets,
+   T-090/091/094. Device gates in `In Review` run in batched owner sessions.
 
 ## Remaining product contracts
 
 | Outcome | Required behavior |
 |---|---|
+| T-205 categories | Direction-aware deterministic cue rules; explicit per-payee "spending or transfer?" decisions with preview/Undo; no amount changes |
+| T-207 facts | Span-verified facts linked to raw SMS; never transactions; model may only locate spans |
 | T-102 statements | Local CSV preview/account mapping; reference-first guarded matching; idempotency; ambiguity review; rollback; never overwrite user corrections |
-| T-100 refunds/reimbursements | Full/partial/many links; preserve source rows; explain net totals; verify existing link implementation before planning gaps |
-| T-101 expected payments | Expected events separate from settled payments; date/amount ranges; guarded settlement match; snooze/cancel/missed/price-change states |
-| T-098 category budgets | Dedicated category/month model; net-spending consistency; explained exclusions; no automatic rollover; current global prototype is not completion |
+| T-100 refunds | Full/partial/many links; 31-day lookback; one attribution switch; preserve source rows; explain net totals |
+| T-101 expected payments | Expected events separate from settled payments; guarded settlement match; snooze/cancel/missed/price-change states |
+| T-098 category budgets | Dedicated category/month model; net-spending consistency; explained exclusions; no automatic rollover |
 | T-090/T-091/T-094 release | App lock before privacy-safe widget; recovery, performance, accessibility and distribution evidence |
 
 ## Non-negotiable boundaries
@@ -57,8 +59,12 @@ at a time. Briefs: [T-177](docs/tasks/T-177.md), [T-178](docs/tasks/T-178.md).
   linked refunds follow the verified accounting contract, not merchant-name guesses.
 - Schema changes require an ADR, additive migration, backup/delete coverage and
   migration tests. [ADR 0011](docs/decisions/0011-evidence-backed-assistance.md)
-  is accepted in part; this plan does not approve any additional schema, model,
-  or runtime change.
+  is accepted in part; ADRs 0033–0036 were accepted by the owner on
+  2026-10-10 (not yet implemented). This plan approves no other
+  schema, model or runtime change.
+- Deterministic extraction is authoritative; the on-device model is advisory,
+  RAM-gated (ADR 0009), never awaited on the capture path and never sets
+  amounts, dates or references.
 
 ## Defaults to preserve or validate
 

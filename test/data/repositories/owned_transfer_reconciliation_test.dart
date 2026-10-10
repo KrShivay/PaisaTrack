@@ -18,14 +18,19 @@ void main() {
 
   tearDown(() => database.close());
 
+  // Owned-transfer reconciliation requires distinct known four-digit account
+  // suffixes, so every fixture source gets a unique numeric suffix.
+  var nextAccountSuffix = 1000;
+
   Future<void> addSources(Iterable<String> ids) async {
     final now = DateTime.utc(2026, 1, 1);
     for (final id in ids) {
+      final suffix = nextAccountSuffix++;
       await database.into(database.paymentSources).insert(
             PaymentSourcesCompanion.insert(
               id: id,
               kind: 'bank',
-              maskedIdentifier: 'XX-$id',
+              maskedIdentifier: 'XX$suffix',
               isOwned: const Value(true),
               isActive: const Value(true),
               createdAt: now,
@@ -192,6 +197,61 @@ void main() {
     expect(byId['credit_at_minus_boundary']!.ownedTransferId, isNotNull);
     expect(byId['debit_outside']!.ownedTransferId, isNull);
     expect(byId['credit_one_ms_outside']!.ownedTransferId, isNull);
+  });
+
+  test('abstains unless both sources have distinct known four-digit suffixes',
+      () async {
+    const ts = 1767225600000;
+    final now = DateTime.utc(2026, 1, 1);
+    const masks = {
+      'same_a': 'XX1234',
+      'same_b': 'xx-1234',
+      'text_a': 'XX-text',
+      'text_b': 'XX5678',
+      'ok_a': 'XX1111',
+      'ok_b': 'XX2222',
+    };
+    for (final entry in masks.entries) {
+      await database.into(database.paymentSources).insert(
+            PaymentSourcesCompanion.insert(
+              id: entry.key,
+              kind: 'bank',
+              maskedIdentifier: entry.value,
+              isOwned: const Value(true),
+              isActive: const Value(true),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    }
+    var n = 0;
+    for (final (debit, credit, amount) in [
+      ('same_a', 'same_b', 100.0),
+      ('text_a', 'text_b', 200.0),
+      ('ok_a', 'ok_b', 300.0),
+    ]) {
+      await addTransaction(
+        id: '${debit}_debit',
+        sourceId: debit,
+        direction: 'debit',
+        ts: ts + n++,
+        amount: amount,
+      );
+      await addTransaction(
+        id: '${credit}_credit',
+        sourceId: credit,
+        direction: 'credit',
+        ts: ts + n++,
+        amount: amount,
+      );
+    }
+
+    expect(await repository.reconcileOwnedTransfers(), 1);
+    final linked = (await transactions())
+        .where((row) => row.ownedTransferId != null)
+        .map((row) => row.id)
+        .toSet();
+    expect(linked, {'ok_a_debit', 'ok_b_credit'});
   });
 
   test('requires matching currency code, symbol, and settled lifecycle',

@@ -33,7 +33,8 @@ abstract final class AppColorTokens {
   static const lightTextSecondary = Color(0xFF5B6E67);
 
   // Semantic money colors. Applied to amounts, deltas, and direction chips
-  // ONLY — never to whole rows or backgrounds (see design-system.md §5).
+  // ONLY — never to whole rows or backgrounds (see docs/design-system.md
+  // "Foundations").
   static const creditDark = Color(0xFF3DDC97);
   static const creditLight = Color(0xFF0E9F6E);
   static const debitDark = Color(0xFFF48A8A);
@@ -263,7 +264,8 @@ abstract final class AppDurations {
 ///
 /// These are large glossy 3D illustrations: use them ONLY as hero images in
 /// onboarding, empty states, and feature intros (48–120dp). Never as list,
-/// tab, or button icons — those use Material icons (see design-system.md §6).
+/// tab, or button icons — those use Material icons (see
+/// docs/design-system.md "Iconography").
 abstract final class AppIllustrations {
   static const appIcon = 'assets/icons/app_icon.png';
   static const wallet = 'assets/icons/wallet.png';

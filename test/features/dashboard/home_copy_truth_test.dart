@@ -150,7 +150,8 @@ void main() {
 
     expect(
       find.text(
-        '₹750.00 more expected this month for recurring bills (gold slice).',
+        '₹48,050.00 left after bills. '
+        '₹750.00 recurring bills still expected (gold).',
       ),
       findsOneWidget,
     );
@@ -179,7 +180,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('No more recurring bills expected this month.'),
+      find.text(
+        '₹48,800.00 left after bills. '
+        'No more recurring bills expected this month.',
+      ),
       findsOneWidget,
     );
   });

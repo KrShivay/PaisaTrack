@@ -72,7 +72,12 @@ class RecurringDetector {
                 (t.merchantId.isNotNull() |
                     t.counterpartyVpa.isNotNull() |
                     t.merchantRaw.isNotNull()) &
-                FinancialEligibility.base(t),
+                FinancialEligibility.base(t) &
+                // User said "this is not recurring": keep it out of series
+                // detection. NULL (automatic) and 'recurring' rows are
+                // unaffected.
+                (t.recurringOverride.isNull() |
+                    t.recurringOverride.isNotValue('not_recurring')),
           ))
         .get();
     final merchants = {
@@ -484,6 +489,20 @@ class RecurringDetector {
         values.length;
     return math.sqrt(variance) / mean;
   }
+}
+
+/// The `recurring_series.merchant_id` the detector would group [txn] under, or
+/// null when it carries no merchant evidence. Mirrors the grouping in
+/// [RecurringDetector.run].
+String? recurringSeriesMerchantId(Transaction txn) {
+  final merchantId = txn.merchantId;
+  if (merchantId != null) return merchantId;
+  final normalized = (txn.merchantRaw ?? txn.counterpartyVpa)
+      ?.trim()
+      .toUpperCase()
+      .replaceAll(RegExp('[^A-Z0-9]'), '');
+  if (normalized == null || normalized.isEmpty) return null;
+  return 'merchant_evidence_$normalized';
 }
 
 /// Runs a complete detector pass, then applies status memory and stale-row

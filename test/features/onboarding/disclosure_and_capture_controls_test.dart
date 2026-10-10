@@ -135,6 +135,11 @@ void main() {
 
       final blockButton = find.text('Block a sender');
       await tester.ensureVisible(blockButton);
+      // Async Settings sections (e.g. On-device AI status) can resize after
+      // the first scroll; settle and re-scroll so the tap lands on the button.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.ensureVisible(blockButton);
+      await tester.pump();
       await tester.tap(blockButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

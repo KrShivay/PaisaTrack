@@ -71,7 +71,7 @@ large-text acceptance, or participant pass.
 | --- | --- | --- |
 | Android platform | SMS permission, live receiver, inbox paging, notifications, document picker, model bridges, Keystore plugin | `android/app/src/main/kotlin/`, `packages/paisatrack_keystore/` |
 | Capture | Live/history/resume ingestion, template → generic → optional local-LLM parsing, deduplication, typed misses | `lib/capture/` |
-| Domain/data | Drift schema v19 on SQLCipher; transactions, recurring series, and expected events retain source currency code/symbol evidence | `lib/data/`, `lib/enrichment/` |
+| Domain/data | Drift schema v20 on SQLCipher; transactions, recurring series, and expected events retain source currency code/symbol evidence | `lib/data/`, `lib/enrichment/` |
 | Intelligence | Currency-bucketed recurring, anomaly, forecast, insight, and grounded assistant paths; INR-only budgets disclose scope; no implicit FX conversion | `lib/intelligence/` |
 | Presentation | Riverpod state with four-tab Bloom shell and task sheets/pages | `lib/features/`, `lib/core/widgets/` |
 
@@ -112,9 +112,9 @@ net-spending contract.
    and analytics-eligibility contract as future analytics paths are added.
 3. **P1 — Scale:** move Activity/Review search and paging to SQL; stream
    backups; replace quadratic owned-transfer reconciliation.
-4. **P1 — Privacy:** implement Ready T-195's owner decision to retain linked
-   source SMS beyond 30 days; protect lock-screen notification content and move
-   pending answers out of plaintext preferences.
+4. **P1 — Privacy:** linked source SMS are retained (ADR 0021, shipped by
+   T-195; device evidence is T-170b); protect lock-screen notification content
+   and move pending answers out of plaintext preferences.
 5. **P2 — Maintainability:** remove the database↔duplicate-rule import cycle,
    split oversized repositories/screens, and migrate money from `double`/REAL
    to integer paise.

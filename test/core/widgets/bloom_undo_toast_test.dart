@@ -319,7 +319,7 @@ void main() {
     expect(find.text('First action'), findsNothing);
   });
 
-  testWidgets('toast expires after ten seconds', (tester) async {
+  testWidgets('toast expires after six seconds', (tester) async {
     await pumpApp(tester);
     final container = ProviderScope.containerOf(
       tester.element(find.text('Open detail')),
@@ -335,7 +335,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Undo'), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 10));
+    await tester.pump(const Duration(seconds: 6));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Undo'), findsNothing);
   });

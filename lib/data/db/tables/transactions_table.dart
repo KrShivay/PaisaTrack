@@ -76,6 +76,8 @@ class Transactions extends Table {
       text().withDefault(const Constant('settled'))();
   TextColumn get lifecycleReason => text().nullable()();
   TextColumn get messageKind => text().nullable()();
+  // v20 user intent (ADR 0032): 'recurring' | 'not_recurring'; NULL = auto.
+  TextColumn get recurringOverride => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

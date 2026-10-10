@@ -51,6 +51,39 @@ void main() {
     await database.close();
   });
 
+  testWidgets(
+      'History entry points keep cleared items reachable and restorable',
+      (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    final container = _container(database);
+    await _pumpInbox(tester, container);
+
+    expect(find.text('History'), findsOneWidget);
+    await tester.tap(find.text('Clear all'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Recorded fees'), findsNothing);
+    expect(find.text('View insight history (1)'), findsOneWidget);
+
+    await tester.tap(find.text('View insight history (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Insight history'), findsOneWidget);
+    expect(find.text('Recorded fees'), findsOneWidget);
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+    expect(find.text('Clear'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('Insight history'))).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Recorded fees'), findsOneWidget);
+    expect(find.text('View insight history (1)'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    container.dispose();
+    await database.close();
+  });
+
   testWidgets('period selection renders only claims for the selected period',
       (tester) async {
     final database = AppDatabase(NativeDatabase.memory());

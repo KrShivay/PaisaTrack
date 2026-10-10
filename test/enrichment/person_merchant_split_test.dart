@@ -42,7 +42,8 @@ void main() {
     await database.close();
   });
 
-  test('P2P payment creates no merchant row and needsReview is false', () async {
+  test('P2P payment creates no merchant row and is not auto-filed as transfers',
+      () async {
     final p2pRecord = NormalizedTransactionRecord(
       amount: 500.0,
       direction: TransactionDirection.debit,
@@ -61,10 +62,12 @@ void main() {
     expect(resolution.merchantId, isNull);
     expect(resolution.needsReview, isFalse);
 
+    // ADR 0011: a personal VPA alone does not prove a non-spending transfer
+    // (shopkeepers use personal VPAs), so P2P falls back to review-able
+    // `other` instead of being silently removed from spending as transfers.
     final categorization = await categorizer.categorize(p2pRecord);
-    expect(categorization.categoryId, 'transfers');
-    expect(categorization.confidence, 1.0);
-    expect(categorization.source, 'p2p_default');
+    expect(categorization.categoryId, isNot('transfers'));
+    expect(categorization.source, 'fallback');
 
     final merchants = await database.select(database.merchants).get();
     expect(merchants, isEmpty);

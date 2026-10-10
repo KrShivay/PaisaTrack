@@ -5,6 +5,8 @@ import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/data/repositories/recurring_override_repository.dart';
+import 'package:paisatrack/data/repositories/transaction_sms_repository.dart';
 import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
@@ -27,6 +29,13 @@ void main() {
         overrides: [
           transactionDetailProvider(detail.txn.id)
               .overrideWith((ref) => Stream.value(detail)),
+          transactionSmsMessagesProvider(detail.txn.id)
+              .overrideWith((ref) async => const []),
+          transactionRecurringOverrideProvider(detail.txn.id).overrideWith(
+            (ref) => Stream.value(RecurringOverride.automatic),
+          ),
+          transactionDetectedRecurringProvider(detail.txn.id)
+              .overrideWith((ref) async => false),
         ],
         child: MaterialApp(
           home: BloomUndoToastHost(
@@ -79,7 +88,7 @@ void main() {
 
       await pumpDetail(tester, detail);
 
-      final expander = find.text('Technical details & SMS provenance');
+      final expander = find.text('Technical details');
       expect(expander, findsOneWidget);
       await tester.ensureVisible(expander);
       await tester.tap(expander);
@@ -97,8 +106,7 @@ void main() {
       );
     });
 
-    testWidgets(
-        'Row with purged raw_sms degrades to retention text without error',
+    testWidgets('Row with missing raw_sms shows the neutral unavailable state',
         (tester) async {
       final detail = TransactionDetail(
         txn: Transaction(
@@ -132,14 +140,14 @@ void main() {
 
       await pumpDetail(tester, detail);
 
-      final expander = find.text('Technical details & SMS provenance');
+      final expander = find.text('Technical details');
       await tester.ensureVisible(expander);
       await tester.tap(expander);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(
-        find.text('Source message purged per retention policy'),
+        find.text('Source message not available'),
         findsOneWidget,
       );
     });
@@ -178,7 +186,7 @@ void main() {
 
       await pumpDetail(tester, detail);
 
-      final expander = find.text('Technical details & SMS provenance');
+      final expander = find.text('Technical details');
       await tester.ensureVisible(expander);
       await tester.tap(expander);
       await tester.pump();

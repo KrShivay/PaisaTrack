@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'app_tokens.dart';
 import 'paisa_colors.dart';
@@ -50,6 +51,24 @@ abstract final class AppTheme {
       letterSpacing: size * letterSpacing,
       fontFeatures: tabularFigures,
       color: color,
+    );
+  }
+
+  /// Transparent status/navigation bars with icon brightness matching the
+  /// theme. Android 15+ enforces edge-to-edge, so the app draws behind both
+  /// bars and every route must honour `MediaQuery.padding`.
+  static SystemUiOverlayStyle edgeToEdgeOverlayStyle(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final icons = isDark ? Brightness.light : Brightness.dark;
+    return SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: icons,
+      statusBarBrightness: brightness,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: icons,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarContrastEnforced: false,
+      systemStatusBarContrastEnforced: false,
     );
   }
 
@@ -164,6 +183,7 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: scheme.surface,
       extensions: [paisa],
       appBarTheme: AppBarTheme(
+        systemOverlayStyle: edgeToEdgeOverlayStyle(scheme.brightness),
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: 0,
@@ -211,7 +231,8 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(64, AppSizes.minTouchTarget), // >=48dp touch target height
+          // >=48dp touch target height
+          minimumSize: const Size(64, AppSizes.minTouchTarget),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
@@ -220,6 +241,8 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        dismissDirection: DismissDirection.horizontal,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
@@ -244,6 +267,7 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: scheme.surface,
       extensions: [paisa],
       appBarTheme: AppBarTheme(
+        systemOverlayStyle: edgeToEdgeOverlayStyle(scheme.brightness),
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: 0,
@@ -290,6 +314,8 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        dismissDirection: DismissDirection.horizontal,
         backgroundColor: AppColorTokens.ink,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.bloomRow),

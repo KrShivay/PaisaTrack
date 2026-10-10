@@ -127,6 +127,9 @@ Future<T?> showBloomModalSheet<T>({
     context: context,
     isScrollControlled: isScrollControlled,
     useRootNavigator: useRootNavigator,
+    // Edge-to-edge (Android 15+): keep tall sheets below the status bar and
+    // display cutout instead of drawing underneath them.
+    useSafeArea: true,
     isDismissible: isDismissible,
     barrierColor: barrierColor,
     backgroundColor: Colors.transparent,

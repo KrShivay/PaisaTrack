@@ -53,7 +53,7 @@ void main() {
     expect(schemaAfter.map((row) => row.data['name']).toList(), schemaBefore);
     final version =
         await migrated.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data['user_version'], 19);
+    expect(version.data['user_version'], migrated.schemaVersion);
 
     // The migration's predicate is safe to retry and leaves tagged rows alone.
     await migrated.customStatement(

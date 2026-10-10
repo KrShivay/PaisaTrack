@@ -1,15 +1,21 @@
 import 'package:drift/drift.dart';
 
+import '../../capture/supporting_sms_classifier.dart';
 import '../db/database.dart';
 import '../models/source_currency.dart';
+import 'transaction_sms_repository.dart';
 
 /// Repository for managing ExpectedEvents (T-138b).
 /// Expected events capture bill-due reminders, mandates, and upcoming obligations.
 /// Invariant: Expected events NEVER enter spending totals or transactions.
 class ExpectedEventRepository {
-  ExpectedEventRepository(this._db);
+  ExpectedEventRepository(
+    this._db, {
+    SupportingSmsClassifier? supportingClassifier,
+  }) : _supportingClassifier = supportingClassifier;
 
   final AppDatabase _db;
+  final SupportingSmsClassifier? _supportingClassifier;
 
   /// Derive stable deduplication key for one obligation across multiple reminders.
   static String computeDedupKey({
@@ -202,6 +208,7 @@ class ExpectedEventRepository {
             ),
           );
           alreadyLinkedTxnIds.add(match.id);
+          await _linkOriginSms(event.originSmsId, match.id);
         } else {
           final dueDay = _utcDayStart(event.expectedDate);
           final windowDays =
@@ -222,6 +229,53 @@ class ExpectedEventRepository {
         }
       }
     });
+  }
+
+  /// Records the reminder SMS behind a fulfilled event as a supporting
+  /// message of the transaction that fulfilled it (ADR 0032), so it appears
+  /// on the transaction detail screen. Idempotent; a message that is already
+  /// linked anywhere keeps its existing link.
+  Future<bool> _linkOriginSms(String? originSmsId, String transactionId) async {
+    if (originSmsId == null) return false;
+    final links = TransactionSmsRepository(_db);
+    if (await links.hasLink(originSmsId)) return false;
+    final raw = await (_db.select(_db.rawSms)
+          ..where((row) => row.id.equals(originSmsId)))
+        .getSingleOrNull();
+    if (raw == null) return false;
+    final kind =
+        _supportingClassifier?.classify(raw.body)?.kind.wireName ?? 'related';
+    return links.recordLink(
+      smsId: originSmsId,
+      transactionId: transactionId,
+      kind: kind,
+      basis: 'expected_event_fulfilled',
+      confidence: 0.9,
+    );
+  }
+
+  /// Backfill for events fulfilled before origin links existed: links each
+  /// fulfilled event's still-retained origin SMS. Bounded by [limit]; returns
+  /// the number of links written.
+  Future<int> linkFulfilledOriginSms({int limit = 500}) async {
+    final linkedIds = _db.selectOnly(_db.smsTransactionLinks)
+      ..addColumns([_db.smsTransactionLinks.smsId]);
+    final events = await (_db.select(_db.expectedEvents)
+          ..where(
+            (row) =>
+                row.fulfilledTxnId.isNotNull() &
+                row.originSmsId.isNotNull() &
+                row.originSmsId.isNotInQuery(linkedIds),
+          )
+          ..limit(limit))
+        .get();
+    var written = 0;
+    for (final event in events) {
+      if (await _linkOriginSms(event.originSmsId, event.fulfilledTxnId!)) {
+        written++;
+      }
+    }
+    return written;
   }
 
   static String _normalizedVpa(String? value) =>

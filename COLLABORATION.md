@@ -62,7 +62,9 @@ section.
 1. Read `TASKS.md`, `PLAN.md`, and the current `WORKLOG.md`.
 2. Check the working tree and preserve unrelated user changes.
 3. Re-verify task dependencies and acceptance criteria.
-4. Work on one task only.
+4. Each worker claims one child task. An orchestrator may run several workers
+   in parallel only on disjoint files, following the hot-file locks and schema
+   queue in `docs/plans/roadmap.md`; at most one schema-changing child at a time.
 5. Update the task and replace/append the rolling handoff as needed.
 6. Commit and push only when explicitly requested or when the active automation
    workflow authorizes it.

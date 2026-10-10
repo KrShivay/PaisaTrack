@@ -3,8 +3,8 @@ name: flutter-conventions
 description: >
   Use when writing or reviewing any Dart code in lib/ (widgets, providers,
   repositories, models). Use when: creating a new screen, adding a Riverpod
-  provider, defining a data model, touching anything under lib/experience,
-  lib/data/models, or lib/data/repositories, or reviewing a PR that adds/edits
+  provider, defining a data model, touching anything under lib/features,
+  lib/core/widgets, lib/data/models, or lib/data/repositories, or reviewing a PR that adds/edits
   .dart files outside test/. Covers Riverpod patterns, freezed models, the
   Result type, folder placement, and lint expectations for this repo.
 checklist:
@@ -19,8 +19,9 @@ checklist:
   - No `try/catch` at a UI call site to route control flow — that belongs
     inside the repository/service that produced the Result.
   - Data models are `freezed` classes (or, for the transaction record
-    contract, hand-written immutable classes matching plan §6.2 exactly).
-  - New files land in the folder plan §3 specifies — no ad hoc top-level
+    contract, hand-written immutable classes matching
+    `lib/data/models/normalized_transaction_record.dart` exactly).
+  - New files land in the folder the table in §4 below specifies — no ad hoc top-level
     files under lib/.
   - No `dynamic` anywhere in new code. Use a concrete type, a generic, or
     `Object?` plus a type check.
@@ -34,11 +35,12 @@ checklist:
 
 # Flutter Conventions for PaisaTrack
 
-This is the how-to layer over `PLAN.md`. The plan defines the folder
-structure (§3), the feature list (§4), and the data model (§6). This skill
-tells you how to write idiomatic, senior-quality Dart against that spec.
-When in doubt about *where* something goes, `PLAN.md §3` wins; this file is
-about *how* to write it once you know where.
+This is the how-to layer over the current docs: module layout and runtime
+flow live in `docs/architecture.md`, the data model in `docs/schema.md` and
+`lib/data/db/tables/`, durable decisions in `docs/decisions/`. (Old
+`PLAN.md §N` / `plan §N` references are retired; `PLAN.md` is now only the
+delivery plan.) This skill tells you how to write idiomatic, senior-quality
+Dart; §4 below is the folder map.
 
 ## 1. Riverpod patterns
 
@@ -151,7 +153,7 @@ Use `freezed` for models with multiple fields, optional fields, or that need
 `copyWith`/equality (`Merchant`, `RecurringSeries`, `Insight`). Exception:
 `NormalizedTransactionRecord` is hand-written (see
 `lib/data/models/normalized_transaction_record.dart`) because its shape is
-the frozen contract from plan §6.2 and must not silently pick up fields via
+a frozen, reviewed contract and must not silently pick up fields via
 codegen drift — every field is explicit and reviewed.
 
 Rules for freezed classes:
@@ -165,23 +167,26 @@ Rules for freezed classes:
   `toJson` mapping colocated in the same file — never magic strings compared
   ad hoc at call sites.
 
-## 4. Folder placement (plan §3)
+## 4. Folder placement
 
 Before creating a new file, find its slot:
 
 | You're writing... | Goes in |
 |---|---|
-| A screen | `lib/experience/screens/<feature>/` |
-| A shared widget | `lib/experience/widgets/` |
-| A provider that's screen-specific | co-located in the screen's folder, suffix `_providers.dart` |
+| A screen | `lib/features/<feature>/` (sub-widgets in a subfolder, e.g. `lib/features/transactions/detail/`) |
+| A shared widget / Bloom component | `lib/core/widgets/` (`lib/core/widgets/bloom/` for design-system primitives) |
+| Theme tokens, category visuals | `lib/core/theme/` |
+| A provider that's screen-specific | co-located in the feature folder, suffix `_providers.dart` (e.g. `dashboard_providers.dart`) |
 | A provider used across features | `lib/data/repositories/` (repository provider) or `lib/core/` (app-wide) |
-| An Enricher | `lib/intelligence/enrichers/` implementing `Enricher` |
-| A parser cascade stage | `lib/capture/` (see `parser_cascade.dart`) |
+| Categorization / identity / enrichment | `lib/enrichment/` |
+| Insights, forecasts, recurring, assistant, LLM | `lib/intelligence/` (`assistant/`, `llm/`, `models/`) |
+| Analytics queries / eligibility | `lib/data/analytics/` |
+| A parser cascade stage or capture step | `lib/capture/` (see `parser_cascade.dart`) |
 | A drift table | `lib/data/db/tables/`, one file per table |
 | A freezed model | `lib/data/models/` |
 
 If you can't find a slot that fits, that's a signal to raise it in
-`planning-and-tasks` grooming, not to invent a new top-level folder solo.
+TASKS.md grooming, not to invent a new top-level folder solo.
 
 ## 5. Lint expectations & senior tells
 

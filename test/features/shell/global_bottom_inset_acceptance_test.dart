@@ -467,7 +467,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 350));
         await tester.pump();
 
-        final skipAction = find.byIcon(Icons.skip_next_rounded);
+        final skipAction = find.byIcon(Icons.arrow_forward_rounded);
         expect(skipAction, findsOneWidget);
         expect(
           tester.getRect(skipAction).bottom,

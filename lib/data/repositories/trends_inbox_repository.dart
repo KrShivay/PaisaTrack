@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 
 import 'package:drift/drift.dart' show Value;
 
+import '../../core/constants.dart';
 import '../../data/db/database.dart';
 import '../../intelligence/claim.dart';
 
@@ -98,6 +99,7 @@ class TrendsInboxRepository {
         }),
       );
 
+  /// Every retained item across periods (current, past, Later and cleared).
   Future<List<TrendsInboxItem>> readAll() => _queue.run(
         () => _database.transaction(() async {
           final data = await _read();
@@ -127,6 +129,23 @@ class TrendsInboxRepository {
   Future<void> returnToSeen(String key) => _updateItem(
         key,
         (item) => item.copyWith(state: TrendsInboxState.seen),
+      );
+
+  /// Restores a cleared item to `seen` and un-dismisses its source insight.
+  /// Non-cleared or unknown keys are left untouched.
+  Future<void> restore(String key) => _queue.run(
+        () => _database.transaction(() async {
+          final data = await _read();
+          final item = _parseItem(key, data.items[key]);
+          if (item == null || item.state != TrendsInboxState.cleared) return;
+          data.items[key] = _encodeItem(
+            _toStored(item).copyWith(state: TrendsInboxState.seen),
+          );
+          await (_database.update(_database.insights)
+                ..where((row) => row.id.equals(item.insight.id)))
+              .write(const InsightsCompanion(dismissed: Value(false)));
+          await _writeIfChanged(data);
+        }),
       );
 
   Future<void> clear(String key) => _clearItems({key});
@@ -234,7 +253,10 @@ class TrendsInboxRepository {
     final now = DateTime.now();
     final current = DateTime(now.year, now.month);
     final anchor = selected.isAfter(current) ? selected : current;
-    final cutoff = DateTime(anchor.year, anchor.month - 3);
+    final cutoff = DateTime(
+      anchor.year,
+      anchor.month - AppConstants.trendsInboxRetentionMonths,
+    );
     items.removeWhere((key, json) {
       final rawInsight = json['insight'];
       final itemPeriod =

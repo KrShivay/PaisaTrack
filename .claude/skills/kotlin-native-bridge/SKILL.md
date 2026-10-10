@@ -32,9 +32,14 @@ checklist:
 
 # Kotlin ↔ Dart Native Bridge Conventions
 
-Plan references: PLAN.md §2 (tech stack — native layer must be Kotlin),
-§3 (android/ folder layout), §4 (Capture feature list), §7.9 (nightly job
-order/constraints).
+References: `docs/architecture.md` (Runtime flow, Capture, On-device models),
+ADR 0009 (LiteRT-LM), ADR 0007 (embedder), `docs/privacy.md`.
+
+Legacy `PLAN.md §N` / `plan §N` references in this skill are retired. Map
+them to: §2–§4 and §7 → `docs/architecture.md` (+ `docs/sms-intelligence-design.md`
+for parsing); §6 → `docs/schema.md` and `lib/data/db/tables/`; §8 →
+`docs/privacy.md`; §10 → `docs/development.md`; §12 → `COLLABORATION.md` and
+`docs/decisions/`.
 
 ## 1. Channel contract conventions
 

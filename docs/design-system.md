@@ -20,6 +20,16 @@ This document contains the product rules needed for future UI work.
 - Minimum touch target: 48×48 logical pixels.
 - Avoid introducing a chart dependency for simple bars or sparklines.
 
+## Iconography
+
+- List, tab, chip and button icons are Material icons; brand illustrations in
+  `assets/icons/` (`AppIllustrations`) are hero images only (onboarding, empty
+  states, feature intros at 48–120dp).
+- Category icons resolve through `lib/core/theme/category_visuals.dart`.
+- Proposed (T-204, not yet shipped): one Rounded family through a shared
+  `AppIcons` mapping, sizes 16/20/24 only, no raw `Icons.*` in feature code.
+  See [UX v2 plan](plans/ux-v2.md).
+
 ## Standard states
 
 Every screen must define loading, empty, normal, error, and narrow/large-text

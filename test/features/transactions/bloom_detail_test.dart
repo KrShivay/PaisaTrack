@@ -5,6 +5,8 @@ import 'package:paisatrack/core/widgets/bloom/bloom.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/data/models/transaction_confidence_trail.dart';
 import 'package:paisatrack/data/repositories/transaction_repository.dart';
+import 'package:paisatrack/data/repositories/recurring_override_repository.dart';
+import 'package:paisatrack/data/repositories/transaction_sms_repository.dart';
 import 'package:paisatrack/features/transactions/transaction_detail_screen.dart';
 import 'package:paisatrack/features/transactions/transactions_providers.dart';
 
@@ -27,6 +29,13 @@ void main() {
         overrides: [
           transactionDetailProvider(detail.txn.id)
               .overrideWith((ref) => Stream.value(detail)),
+          transactionSmsMessagesProvider(detail.txn.id)
+              .overrideWith((ref) async => const []),
+          transactionRecurringOverrideProvider(detail.txn.id).overrideWith(
+            (ref) => Stream.value(RecurringOverride.automatic),
+          ),
+          transactionDetectedRecurringProvider(detail.txn.id)
+              .overrideWith((ref) async => false),
         ],
         child: MaterialApp(
           home: BloomUndoToastHost(
@@ -81,7 +90,7 @@ void main() {
     testWidgets('discloses technical provenance on tap', (tester) async {
       await pumpDetail(tester, testDetail);
 
-      final techHeader = find.text('Technical details & SMS provenance');
+      final techHeader = find.text('Technical details');
       expect(techHeader, findsOneWidget);
 
       await tester.ensureVisible(techHeader);
@@ -89,8 +98,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.textContaining('Review status: confirmed'), findsOneWidget);
-      expect(find.textContaining('CONFIDENCE: 98%'), findsOneWidget);
+      expect(find.text('Review status'), findsOneWidget);
+      expect(find.text('98%'), findsOneWidget);
     });
   });
 }

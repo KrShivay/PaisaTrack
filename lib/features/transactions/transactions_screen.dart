@@ -941,17 +941,34 @@ class _DismissibleTransactionRow extends StatelessWidget {
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          item.displayName,
-          style: AppTheme.bloomDisplay(
-            14,
-            FontWeight.w500,
-            color: isDark
-                ? AppColorTokens.bloomDarkTextPrimary
-                : AppColorTokens.ink,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                item.displayName,
+                style: AppTheme.bloomDisplay(
+                  14,
+                  FontWeight.w500,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextPrimary
+                      : AppColorTokens.ink,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (item.recurringOverride == 'recurring') ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.repeat_rounded,
+                size: 14,
+                semanticLabel: 'Recurring',
+                color: isDark
+                    ? AppColorTokens.bloomDarkTextSecondary
+                    : AppColorTokens.inkSecondary,
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 2),
         Text(
@@ -1018,7 +1035,8 @@ class _DismissibleTransactionRow extends StatelessWidget {
           currencyCode: item.currencyCode,
           currencySymbol: item.currencySymbol,
         )}, ${formatActivityDateGroup(item.ts)}, '
-            'Status ${item.status.replaceAll('_', ' ')}, ${_formatMeta(item)}',
+            'Status ${item.status.replaceAll('_', ' ')}, ${_formatMeta(item)}'
+            '${item.recurringOverride == 'recurring' ? ', Recurring' : ''}',
         button: true,
         onTap: onTap,
         child: ExcludeSemantics(

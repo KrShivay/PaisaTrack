@@ -6,6 +6,20 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 
 | Parent | Area | Brief | Board / brief state |
 |---|---|---|---|
+| T-203 | Import flicker and speed | [T-203.md](T-203.md) | Ready (wave 1) |
+| T-204 | UI/UX v2 and icon system | [T-204.md](T-204.md) | Ready; plan [ux-v2](../plans/ux-v2.md) |
+| T-205 | Categorisation and income gap | [T-205.md](T-205.md) | Ready; plan [categorisation-v2](../plans/categorisation-v2.md) |
+| T-206 | Merge to main, branch cleanup | [T-206.md](T-206.md) | Ready (owner action) |
+| T-207 | Intelligence v2 | [T-207.md](T-207.md) | Ready (no-schema phase); plan [intelligence-v2](../plans/intelligence-v2.md) |
+| T-208 | Performance budgets | [T-208.md](T-208.md) | Ready; plan [performance](../plans/performance.md) |
+| T-210 | Test-suite speed | [T-210.md](T-210.md) | Ready |
+| T-211 | Category taxonomy | [T-211.md](T-211.md) | Ready (a); rest after ADR 0036 |
+| T-165c | Integer minor-unit money | [T-165c.md](T-165c.md) | Backlog; blocked on ADR 0033 |
+| T-170 | Reliability/QA (T-170d matrix) | [T-170.md](T-170.md) | Backlog |
+| T-171 | CI shards / acceptance budgets | [T-171.md](T-171.md) | Ready (T-171b) |
+| T-176 | Bottom-inset contract evidence | [T-176.md](T-176.md) | In Review |
+| T-167c | Large-text overflow evidence | [T-167c.md](T-167c.md) | In Review |
+| T-177a | Production audit evidence log | [T-177a-evidence.md](T-177a-evidence.md) | In Review |
 | T-133 | Admission and quarantine | [T-133.md](T-133.md) | Open on board |
 | T-143 | Corpus, shadow, metrics | [T-143.md](T-143.md) | Completed (c1–c3 verified 2026-10-03) |
 | T-149 | Local profile | [T-149.md](T-149.md) | Open children on board |
@@ -19,20 +33,20 @@ Read [TASKS.md](../../TASKS.md) to select unfinished implementation work, then o
 | T-162 | Salary-credit ingestion coverage | [T-162.md](T-162.md) | Future children remain on board |
 | T-177 | Smart transaction assistance | [T-177.md](T-177.md) | Active; T-177a gates remain open |
 | T-178 | Grounded analysis, forecasts, assistant | [T-178.md](T-178.md) | Backlog; b–d plan in [grounded-ai-validation](../plans/grounded-ai-validation.md) |
-| T-195 | Keep source SMS provenance | [T-195.md](T-195.md) | Ready (owner decision 2026-10-03) |
-| T-196 | Transaction details card | [T-196.md](T-196.md) | Ready |
-| T-197 | Activity scroll position after edit | [T-197.md](T-197.md) | Ready |
-| T-198 | Readable payee names | [T-198.md](T-198.md) | Ready |
+| T-195 | Keep source SMS provenance | [T-195.md](T-195.md) | Complete (host); device proof is T-170b |
+| T-196 | Transaction details card | [T-196.md](T-196.md) | In Review (owner-phone check) |
+| T-197 | Activity scroll position after edit | [T-197.md](T-197.md) | In Review (owner-phone check) |
+| T-198 | Readable payee names | [T-198.md](T-198.md) | In Review (owner-phone check) |
 | T-199 | Static UPI QR for stored VPAs | [T-199.md](T-199.md) | In review; synthetic device QA and release review open |
 | T-200 | Unified transaction-detail confirmation | [T-200.md](T-200.md) | In Review |
-| T-098 | Monthly category budgets | [T-098.md](T-098.md) | Backlog; groomed, not Ready |
-| T-100 | Refund/reversal accounting | [T-100.md](T-100.md) | Backlog; groomed, not Ready |
+| T-098 | Monthly category budgets | [T-098.md](T-098.md) | Backlog; refreshed 2026-10-10, after T-165c/T-100c1 |
+| T-100 | Refund/reversal accounting | [T-100.md](T-100.md) | Backlog; refreshed 2026-10-10, blocked on T-209 |
 | T-101 | Expected-payment calendar | [T-101.md](T-101.md) | Backlog; groomed, not Ready |
 | T-102 | Statement import | [T-102.md](T-102.md) | Backlog; groomed, not Ready |
 | T-130 | Residual coupling | [T-130.md](T-130.md) | Open; narrowed to residual seams |
 | T-190 | Credit-card accounting | [T-190.md](T-190.md) | Backlog; phased a1–h2, not Ready |
 | T-193 | Legacy currency repair | [T-193.md](T-193.md) | Complete: physical acceptance `385e056`; UNDO-1 follow-up fixed in `58af0a4` |
-| T-194 | Compressed ARM64 packaging trial | [T-194.md](T-194.md) | In Progress |
+| T-194 | Compressed ARM64 packaging trial | [T-194.md](T-194.md) | In Review (device measurement) |
 
 ## Stale or unboarded briefs
 

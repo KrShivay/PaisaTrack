@@ -269,6 +269,45 @@ void main() {
       databaseClosed = true;
     });
 
+    testWidgets('budget card lakh amounts do not overflow at 1x (owner '
+        'report)', (tester) async {
+      // Owner device: card content width 353.8dp with ₹1,70,597.32 spent of
+      // ₹1,50,000.00 overflowed the old baseline Row by 11px.
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            monthlyBudgetProvider.overrideWith((ref) async => 150000),
+            monthDirectionTotalsProvider.overrideWith(
+              (ref) => const AsyncData(
+                MonthDirectionTotals(
+                  debitTotal: 170597.32,
+                  creditTotal: 10349.09,
+                ),
+              ),
+            ),
+            commitmentsTotalProvider.overrideWith((ref) => 24000),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(child: BloomBudgetCard()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('₹1,70,597.32'), findsOneWidget);
+      expect(find.text('spent of ₹1,50,000.00'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('budget card keeps full amounts readable at 2x text',
         (tester) async {
       tester.view.physicalSize = const Size(402, 874);
@@ -304,7 +343,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('of ₹12,000.00'), findsOneWidget);
+      expect(find.text('spent of ₹12,000.00'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());

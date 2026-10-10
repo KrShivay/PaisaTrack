@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
@@ -9,6 +10,9 @@ import 'intelligence/nightly_job.dart';
 /// Application entry point.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Android 15+ (targetSdk 35/36) enforces edge-to-edge; opt in explicitly so
+  // behaviour is identical on older releases.
+  unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
   runApp(
     const ProviderScope(
       child: PaisaTrackApp(),

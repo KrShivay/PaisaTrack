@@ -339,9 +339,47 @@ final commitmentsTotalProvider = Provider<double>((ref) {
   return sum;
 });
 
-/// Safe today = (budget - spent - remaining commitments) / inclusive days remaining.
-/// Only meaningful for the current calendar month — returns null otherwise.
-final safeTodayValueProvider = Provider<AsyncValue<double?>>((ref) {
+/// One budget snapshot shared by the hero ring, the budget card and runway so
+/// every surface shows numbers that tally (same spent, bills and days left).
+class BudgetStatus {
+  const BudgetStatus({
+    required this.budget,
+    required this.spent,
+    required this.commitments,
+    required this.daysRemaining,
+  });
+
+  final double budget;
+  final double spent;
+
+  /// Recurring bills still expected this calendar month (INR, active series).
+  final double commitments;
+
+  /// Days left in the month including today (never below 1).
+  final int daysRemaining;
+
+  /// Budget left after spending and expected bills; negative when over.
+  double get left => budget - spent - commitments;
+
+  /// Spending above the budget itself, ignoring expected bills.
+  double get overspent => spent > budget ? spent - budget : 0;
+
+  bool get isOver => left < 0;
+
+  /// What can still be spent per day; never negative.
+  double get safePerDay => isOver ? 0 : left / daysRemaining;
+}
+
+/// Inclusive days left in [now]'s local month (today counts as a day).
+int daysRemainingInMonth(DateTime now) {
+  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+  final remaining = daysInMonth - now.day + 1;
+  return remaining < 1 ? 1 : remaining;
+}
+
+/// Budget status for the current calendar month; `null` when the selected
+/// period is not the current month or no budget is set.
+final budgetStatusProvider = Provider<AsyncValue<BudgetStatus?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
   final now = ref.watch(clockProvider)();
   if (!period.isCurrentMonth(now)) return const AsyncData(null);
@@ -350,30 +388,35 @@ final safeTodayValueProvider = Provider<AsyncValue<double?>>((ref) {
   if (budget == null) return const AsyncData(null);
 
   final commitments = ref.watch(commitmentsTotalProvider);
-  return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final daysRemaining = daysInMonth - now.day + 1;
-    if (daysRemaining <= 0) return 0.0;
-    return (budget - totals.debitTotal - commitments) / daysRemaining;
-  });
+  return ref.watch(monthDirectionTotalsProvider).whenData<BudgetStatus?>(
+        (totals) => BudgetStatus(
+          budget: budget,
+          spent: totals.debitTotal,
+          commitments: commitments,
+          daysRemaining: daysRemainingInMonth(now),
+        ),
+      );
 });
 
-/// Runway in days = (budget - spent - commitments) / daily burn.
+/// Safe today = max(0, budget - spent - expected bills) / days left incl.
+/// today. Only meaningful for the current calendar month — null otherwise.
+final safeTodayValueProvider = Provider<AsyncValue<double?>>((ref) {
+  return ref
+      .watch(budgetStatusProvider)
+      .whenData((status) => status?.safePerDay);
+});
+
+/// Runway in days = remaining budget / daily burn; 0 once the budget is gone.
 /// Only meaningful for the current calendar month — returns null otherwise.
 final runwayValueProvider = Provider<AsyncValue<double?>>((ref) {
   final period = ref.watch(dashboardPeriodProvider);
   final now = ref.watch(clockProvider)();
-  if (!period.isCurrentMonth(now)) return const AsyncData(null);
-
-  final budget = ref.watch(monthlyBudgetProvider).valueOrNull;
-  if (budget == null) return const AsyncData(null);
-
-  final commitments = ref.watch(commitmentsTotalProvider);
-  return ref.watch(monthDirectionTotalsProvider).whenData<double?>((totals) {
+  return ref.watch(budgetStatusProvider).whenData<double?>((status) {
+    if (status == null) return null;
     final daysElapsed = period.elapsedDays(now);
-    final burn = daysElapsed <= 0 ? 0.0 : totals.debitTotal / daysElapsed;
+    final burn = daysElapsed <= 0 ? 0.0 : status.spent / daysElapsed;
     if (burn <= 0) return null;
-    return (budget - totals.debitTotal - commitments) / burn;
+    return status.isOver ? 0 : status.left / burn;
   });
 });
 
@@ -615,8 +658,8 @@ final dashboardStatusSublineProvider = Provider<String>((ref) {
       return '$pct higher spend $comparison';
     }
   }
-  final safeToday = ref.watch(safeTodayValueProvider).valueOrNull;
-  if (safeToday != null && safeToday >= 0) {
+  final status = ref.watch(budgetStatusProvider).valueOrNull;
+  if (status != null && !status.isOver) {
     return 'Budget on track today';
   }
   return 'Track your daily activity';
