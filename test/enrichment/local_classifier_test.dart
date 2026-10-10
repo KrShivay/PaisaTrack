@@ -286,7 +286,11 @@ void main() {
     test('no feedback rows -> false, no model written', () async {
       final trained = await ClassifierTrainer(database).train();
       expect(trained, isFalse);
-      expect(await database.select(database.modelMeta).get(), isEmpty);
+      expect(
+        (await database.select(database.modelMeta).get())
+            .where((row) => row.key != categorySeedVersionKey),
+        isEmpty,
+      );
     });
 
     test('fewer than two distinct categories -> false', () async {
@@ -318,7 +322,11 @@ void main() {
       final trained = await ClassifierTrainer(database).train();
 
       expect(trained, isFalse);
-      expect(await database.select(database.modelMeta).get(), isEmpty);
+      expect(
+        (await database.select(database.modelMeta).get())
+            .where((row) => row.key != categorySeedVersionKey),
+        isEmpty,
+      );
     });
 
     test('trains and persists weights + last_trained_at from feedback rows',

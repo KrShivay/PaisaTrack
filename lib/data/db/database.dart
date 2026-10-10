@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 import 'package:flutter/services.dart';
@@ -68,23 +69,71 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// The seed is safe to run repeatedly. Existing category ids are ignored so
   /// user-edited names and icons survive app upgrades and restarts.
+  ///
+  /// Seed rows carry an optional `since` version (absent = 1, the original
+  /// 87-row taxonomy). Version-1 rows keep their historical behaviour: they
+  /// are re-offered on every run because transactions, rules and the
+  /// categorizer fallback (`other`) depend on them. Rows added later are
+  /// offered exactly once per install, tracked by [categorySeedVersionKey] in
+  /// `model_meta`, so existing installs receive new categories on the next
+  /// launch while a category the user later deletes is never resurrected.
+  /// Backups carry `model_meta`, so a restore keeps this bookkeeping
+  /// consistent with the restored category rows. A row is skipped (never
+  /// inserted dangling) when its parent category no longer exists.
   Future<void> seedDefaultCategories({AssetBundle? bundle}) async {
     final source = await (bundle ?? rootBundle).loadString(
       _defaultCategoriesAsset,
     );
     final decoded = jsonDecode(source) as List<Object?>;
-    final rows = decoded
-        .cast<Map<String, Object?>>()
-        .map(_categorySeedToCompanion)
-        .toList(growable: false);
+    final seeds = decoded.cast<Map<String, Object?>>();
+    final latestVersion = seeds.fold<int>(
+      1,
+      (latest, json) => math.max(latest, _categorySeedVersion(json)),
+    );
 
-    await batch((batch) {
-      batch.insertAll(
-        categories,
-        rows,
-        mode: InsertMode.insertOrIgnore,
-      );
+    await transaction(() async {
+      final markerRow = await (select(modelMeta)
+            ..where((row) => row.key.equals(categorySeedVersionKey)))
+          .getSingleOrNull();
+      final appliedVersion = int.tryParse(markerRow?.value ?? '') ?? 1;
+      final existingIds = (await (selectOnly(categories)
+                ..addColumns([categories.id]))
+              .map((row) => row.read(categories.id)!)
+              .get())
+          .toSet();
+
+      final rows = <CategoriesCompanion>[];
+      for (final json in seeds) {
+        final version = _categorySeedVersion(json);
+        if (version > 1 && version <= appliedVersion) continue;
+        final parentId = json['parent_id'] as String?;
+        if (parentId != null && !existingIds.contains(parentId)) continue;
+        rows.add(_categorySeedToCompanion(json));
+        existingIds.add(json['id']! as String);
+      }
+
+      await batch((batch) {
+        batch.insertAll(categories, rows, mode: InsertMode.insertOrIgnore);
+      });
+
+      if (latestVersion > appliedVersion) {
+        await into(modelMeta).insertOnConflictUpdate(
+          ModelMetaCompanion.insert(
+            key: categorySeedVersionKey,
+            value: '$latestVersion',
+          ),
+        );
+      }
     });
+  }
+
+  /// Whether a category row with [categoryId] currently exists.
+  Future<bool> categoryExists(String categoryId) async {
+    final row = await (select(categories)
+          ..where((category) => category.id.equals(categoryId))
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
   }
 
   /// Seeds the current feature-flag defaults without overwriting overrides.
@@ -613,6 +662,12 @@ class AppDatabase extends _$AppDatabase {
 }
 
 const _defaultCategoriesAsset = 'assets/seed/categories.json';
+
+/// `model_meta` key recording the newest category seed version offered.
+const categorySeedVersionKey = 'category_seed_version';
+
+int _categorySeedVersion(Map<String, Object?> json) =>
+    (json['since'] as int?) ?? 1;
 
 CategoriesCompanion _categorySeedToCompanion(Map<String, Object?> json) {
   return CategoriesCompanion.insert(
