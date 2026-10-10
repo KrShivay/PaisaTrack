@@ -44,6 +44,7 @@ void main() {
     String? currencySymbol,
     String direction = 'debit',
     String lifecycleState = 'settled',
+    String? recurringOverride,
   }) {
     return database.into(database.transactions).insert(
           TransactionsCompanion.insert(
@@ -62,6 +63,7 @@ void main() {
             confidenceJson: '{}',
             status: 'auto',
             lifecycleState: Value(lifecycleState),
+            recurringOverride: Value(recurringOverride),
             createdAt: date,
             updatedAt: date,
           ),
@@ -96,6 +98,68 @@ void main() {
     expect(rows.single.occurrences, 4);
     expect(rows.single.kind, 'subscription');
     expect(rows.single.status, 'active');
+  });
+
+  Future<void> monthlyStream({String? overrideForS2}) async {
+    await merchant('streaming', 'StreamFlix');
+    for (final entry in [
+      ('s1', DateTime.utc(2026, 1, 1), 499.0),
+      ('s2', DateTime.utc(2026, 1, 31), 499.0),
+      ('s3', DateTime.utc(2026, 3, 2), 499.0),
+    ]) {
+      await txn(
+        id: entry.$1,
+        merchantId: 'streaming',
+        date: entry.$2,
+        amount: entry.$3,
+        recurringOverride: entry.$1 == 's2' ? overrideForS2 : null,
+      );
+    }
+  }
+
+  test('not_recurring transaction is excluded and breaks a minimal series',
+      () async {
+    await monthlyStream(overrideForS2: 'not_recurring');
+    final detections = await RecurringDetector(database).run(
+      today: DateTime.utc(2026, 4, 1),
+    );
+    expect(detections, isEmpty);
+  });
+
+  test('recurring override and NULL rows detect exactly as before', () async {
+    await monthlyStream();
+    final baseline = await RecurringDetector(database).run(
+      today: DateTime.utc(2026, 4, 1),
+    );
+    expect(baseline, hasLength(1));
+    expect(baseline.single.occurrences, 3);
+
+    await (database.update(database.transactions)
+          ..where((t) => t.id.equals('s2')))
+        .write(
+      const TransactionsCompanion(recurringOverride: Value('recurring')),
+    );
+    final marked = await RecurringDetector(database).run(
+      today: DateTime.utc(2026, 4, 1),
+    );
+    expect(marked, hasLength(1));
+    expect(marked.single.occurrences, 3);
+    expect(marked.single.expectedAmount, baseline.single.expectedAmount);
+  });
+
+  test('not_recurring only removes that row from a longer series', () async {
+    await monthlyStream();
+    await txn(
+      id: 's4',
+      merchantId: 'streaming',
+      date: DateTime.utc(2026, 4, 1),
+      amount: 499,
+      recurringOverride: 'not_recurring',
+    );
+    final detections = await RecurringDetector(database).run(
+      today: DateTime.utc(2026, 4, 5),
+    );
+    expect(detections.single.occurrences, 3);
   });
 
   test('pending amount cannot create a recurring price creep', () async {

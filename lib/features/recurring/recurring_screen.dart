@@ -9,7 +9,12 @@ import '../../core/widgets/bloom/bloom.dart';
 import '../../data/db/database.dart';
 import '../../data/db/database_provider.dart';
 import '../../data/models/source_currency.dart';
+import '../../data/payee_display_name.dart';
+import '../../data/repositories/recurring_override_repository.dart';
 import '../../data/repositories/recurring_repository.dart';
+import '../../intelligence/recurring_detector.dart'
+    show recurringSeriesMerchantId;
+import '../transactions/transaction_detail_screen.dart';
 import '../transactions/transactions_screen.dart';
 
 class RecurringSeriesItem {
@@ -73,6 +78,86 @@ final recurringSeriesProvider =
   );
 });
 
+/// A transaction the user marked recurring that no detected series covers.
+class MarkedRecurringItem {
+  const MarkedRecurringItem({
+    required this.id,
+    required this.displayName,
+    required this.amount,
+    required this.ts,
+    this.currencyCode,
+    this.currencySymbol,
+  });
+
+  final String id;
+  final String displayName;
+  final double amount;
+  final DateTime ts;
+  final String? currencyCode;
+  final String? currencySymbol;
+}
+
+/// Transactions with `recurring_override = 'recurring'` whose merchant is not
+/// already covered by a detected series (same merchant, same currency bucket).
+final markedRecurringProvider =
+    StreamProvider<List<MarkedRecurringItem>>((ref) {
+  final databaseAsync = ref.watch(appDatabaseProvider);
+  final series = ref.watch(recurringSeriesProvider).valueOrNull ?? const [];
+  return databaseAsync.when(
+    data: (database) {
+      final covered = <String>{
+        for (final item in series)
+          '${item.series.merchantId}\u0000${SourceCurrency(code: item.series.currencyCode, symbol: item.series.currencySymbol).bucketKey}',
+      };
+      final query = database.select(database.transactions).join([
+        leftOuterJoin(
+          database.merchants,
+          database.merchants.id.equalsExp(database.transactions.merchantId),
+        ),
+      ])
+        ..where(database.transactions.recurringOverride.equals('recurring'))
+        ..where(database.transactions.isDeleted.equals(false))
+        ..orderBy([OrderingTerm.desc(database.transactions.ts)]);
+      return query.watch().map((rows) {
+        final items = <MarkedRecurringItem>[];
+        for (final row in rows) {
+          final txn = row.readTable(database.transactions);
+          final merchant = row.readTableOrNull(database.merchants);
+          final merchantId = recurringSeriesMerchantId(txn);
+          final bucket = SourceCurrency(
+            code: txn.currencyCode,
+            symbol: txn.currencySymbol,
+          ).bucketKey;
+          if (merchantId != null &&
+              covered.contains('$merchantId\u0000$bucket')) {
+            continue;
+          }
+          items.add(
+            MarkedRecurringItem(
+              id: txn.id,
+              displayName: payeeDisplayName(
+                userLabel: merchant?.userLabel,
+                merchantName: merchant?.canonicalName,
+                merchantRaw: txn.merchantRaw,
+                counterpartyVpa: txn.counterpartyVpa,
+                description: txn.description,
+              ),
+              amount: txn.amount,
+              ts: DateTime.fromMillisecondsSinceEpoch(txn.ts, isUtc: true),
+              currencyCode: txn.currencyCode,
+              currencySymbol: txn.currencySymbol,
+            ),
+          );
+        }
+        return items;
+      });
+    },
+    loading: () => const Stream<List<MarkedRecurringItem>>.empty(),
+    error: (error, stackTrace) =>
+        Stream<List<MarkedRecurringItem>>.error(error, stackTrace),
+  );
+});
+
 /// Redesigned Bloom Recurring screen for subscriptions, bills, EMIs, and rent.
 class RecurringScreen extends ConsumerWidget {
   const RecurringScreen({super.key});
@@ -82,6 +167,7 @@ class RecurringScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final seriesAsync = ref.watch(recurringSeriesProvider);
     final items = seriesAsync.valueOrNull ?? const [];
+    final marked = ref.watch(markedRecurringProvider).valueOrNull ?? const [];
 
     final activeItems = items
         .where(
@@ -262,9 +348,51 @@ class RecurringScreen extends ConsumerWidget {
                 if (item != items.last) const SizedBox(height: 10),
               ],
 
+            if (marked.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Marked recurring by you',
+                style: AppTheme.bloomDisplay(
+                  15,
+                  FontWeight.w600,
+                  color: isDark
+                      ? AppColorTokens.bloomDarkTextPrimary
+                      : AppColorTokens.ink,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (final entry in marked) ...[
+                _MarkedRecurringRow(
+                  item: entry,
+                  isDark: isDark,
+                  onTap: () => _openTransaction(context, entry.id),
+                  onUnmark: () async {
+                    final repo = await ref
+                        .read(recurringOverrideRepositoryProvider.future);
+                    await repo.setOverride(
+                      entry.id,
+                      RecurringOverride.automatic,
+                    );
+                  },
+                ),
+                if (entry != marked.last) const SizedBox(height: 10),
+              ],
+            ],
+
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openTransaction(BuildContext context, String txnId) {
+    showBloomModalSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: 0.9,
+        child: TransactionDetailScreen(txnId: txnId),
       ),
     );
   }
@@ -473,6 +601,99 @@ class _CommitmentsSummaryCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MarkedRecurringRow extends StatelessWidget {
+  const _MarkedRecurringRow({
+    required this.item,
+    required this.isDark,
+    required this.onTap,
+    required this.onUnmark,
+  });
+
+  final MarkedRecurringItem item;
+  final bool isDark;
+  final VoidCallback onTap;
+  final VoidCallback onUnmark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
+    final primary =
+        isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink;
+    final secondary = isDark
+        ? AppColorTokens.bloomDarkTextSecondary
+        : AppColorTokens.inkSecondary;
+    final amount = formatSourceAmount(
+      item.amount,
+      currencyCode: item.currencyCode,
+      currencySymbol: item.currencySymbol,
+    );
+    final date = formatActivityDateGroup(item.ts);
+    return Semantics(
+      container: true,
+      button: true,
+      label: '${item.displayName}, $amount, $date, marked recurring',
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.repeat_rounded, size: 18, color: secondary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.bloomDisplay(
+                          14,
+                          FontWeight.w500,
+                          color: primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$amount · $date',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.bloomDisplay(
+                          11,
+                          FontWeight.w400,
+                          color: secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Semantics(
+                  button: true,
+                  label: 'Unmark ${item.displayName} as recurring',
+                  child: IconButton(
+                    tooltip: 'Unmark recurring',
+                    icon: Icon(Icons.close_rounded, size: 18, color: secondary),
+                    onPressed: onUnmark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
