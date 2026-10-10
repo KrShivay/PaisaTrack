@@ -800,51 +800,56 @@ class _SetBudgetCard extends ConsumerWidget {
       button: true,
       onTap: openBudget,
       child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: openBudget,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColorTokens.bloomCard,
-                borderRadius: BorderRadius.circular(AppRadius.bloomCard),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 28,
-                    color: AppColorTokens.violetPrimary,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Set monthly budget',
-                          style: AppTheme.bloomDisplay(14, FontWeight.w600),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColorTokens.bloomCard,
+            borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: openBudget,
+              borderRadius: BorderRadius.circular(AppRadius.bloomCard),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 28,
+                        color: AppColorTokens.violetPrimary,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Set monthly budget',
+                              style: AppTheme.bloomDisplay(14, FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Unlocks safe-today calculation and progress ring.',
+                              style: AppTheme.bloomDisplay(
+                                12,
+                                FontWeight.w400,
+                                color: AppColorTokens.inkTertiary,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Unlocks safe-today calculation and progress ring.',
-                          style: AppTheme.bloomDisplay(
-                            12,
-                            FontWeight.w400,
-                            color: AppColorTokens.inkTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 16,
+                        color: AppColorTokens.inkTertiary,
+                      ),
+                    ],
                   ),
-                  const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: AppColorTokens.inkTertiary,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
