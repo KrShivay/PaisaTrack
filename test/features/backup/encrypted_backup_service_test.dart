@@ -1606,6 +1606,57 @@ void main() {
     expect(await database.select(database.modelMeta).get(), hasLength(1));
     expect(await database.select(database.recurringSeries).get(), hasLength(1));
   });
+
+  test('recurringOverride round-trips and a missing key restores as NULL',
+      () async {
+    const passphrase = 'correct horse battery staple';
+    await _insertTransaction(database, 'txn_override_recurring');
+    await _insertTransaction(database, 'txn_override_not_recurring');
+    await _insertTransaction(database, 'txn_override_legacy');
+    for (final entry in {
+      'txn_override_recurring': 'recurring',
+      'txn_override_not_recurring': 'not_recurring',
+    }.entries) {
+      await (database.update(database.transactions)
+            ..where((row) => row.id.equals(entry.key)))
+          .write(TransactionsCompanion(recurringOverride: Value(entry.value)));
+    }
+
+    Future<Map<String, String?>> overrides() async => {
+          for (final row in await database.select(database.transactions).get())
+            row.id: row.recurringOverride,
+        };
+    final expected = await overrides();
+    expect(expected['txn_override_recurring'], 'recurring');
+    expect(expected['txn_override_not_recurring'], 'not_recurring');
+    expect(expected['txn_override_legacy'], isNull);
+
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: passphrase,
+    );
+    await database.delete(database.transactions).go();
+    await service().importFromFile(file: file, passphrase: passphrase);
+    expect(await overrides(), expected);
+
+    // An archive written before schema v20 has no recurringOverride key.
+    final legacy = await _rewriteLegacyArchive(
+      await service().exportBytes(passphrase: passphrase),
+      passphrase: passphrase,
+      rewrite: (archive) {
+        final rows = (archive['tables'] as Map<String, dynamic>)['transactions']
+            as List<dynamic>;
+        for (final row in rows) {
+          (row as Map<String, dynamic>).remove('recurringOverride');
+        }
+      },
+    );
+    await database.delete(database.transactions).go();
+    await service().importBytes(bytes: legacy, passphrase: passphrase);
+    final restored = await overrides();
+    expect(restored.keys, expected.keys);
+    expect(restored.values, everyElement(isNull));
+  });
 }
 
 Future<void> _insertTransaction(

@@ -70,6 +70,7 @@ class TransactionListItem {
     this.paymentSourceName,
     this.includeInAnalytics = true,
     this.isOwnedTransfer = false,
+    this.recurringOverride,
   });
 
   final String id;
@@ -98,6 +99,9 @@ class TransactionListItem {
   final String? paymentSourceName;
   final bool includeInAnalytics;
   final bool isOwnedTransfer;
+
+  /// User's recurring intent: 'recurring', 'not_recurring' or null (auto).
+  final String? recurringOverride;
 
   /// Whether the category counts toward spending. Transfers and cash
   /// withdrawals are excluded (PLAN §5) and render in a neutral color rather
@@ -1614,6 +1618,7 @@ WHERE t.status = 'needs_review'
           paymentSource?.nickname ?? paymentSource?.maskedIdentifier,
       includeInAnalytics: !txn.isAnalyticsExcluded,
       isOwnedTransfer: txn.ownedTransferId != null,
+      recurringOverride: txn.recurringOverride,
       // Unknown/uncategorized defaults to spending; only an explicit
       // non-spending category (transfers, cash withdrawal) flips this.
       categoryIsSpending: category?.isSpending ?? true,
