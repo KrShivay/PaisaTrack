@@ -21,7 +21,9 @@ import '../sms/sms_lookup_sheet.dart';
 import '../sms/sms_permission_status_card.dart';
 import '../sms/unreadable_sms_screen.dart';
 import '../transactions/transactions_providers.dart';
+import 'ai_model_section.dart';
 import 'app_data_reset_service.dart';
+import 'appearance_section.dart';
 import 'app_settings.dart';
 import 'category_manager_screen.dart';
 import 'card_source_audit_screen.dart';
@@ -82,111 +84,15 @@ class SettingsScreen extends ConsumerWidget {
             _SettingsSection(
               title: 'APPEARANCE',
               isDark: isDark,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      for (final choice in AppThemeChoice.values) ...[
-                        Expanded(
-                          child: Semantics(
-                            container: true,
-                            label: choice.label,
-                            button: true,
-                            selected: settings.themeChoice == choice,
-                            onTap: () => ref
-                                .read(
-                                  appSettingsControllerProvider.notifier,
-                                )
-                                .setThemeChoice(choice),
-                            child: ExcludeSemantics(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => ref
-                                    .read(
-                                      appSettingsControllerProvider.notifier,
-                                    )
-                                    .setThemeChoice(choice),
-                                child: ConstrainedBox(
-                                  constraints:
-                                      const BoxConstraints(minHeight: 48),
-                                  child: Center(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: settings.themeChoice == choice
-                                            ? (isDark
-                                                ? AppColorTokens.violetPrimary
-                                                : AppColorTokens.ink)
-                                            : (isDark
-                                                ? AppColorTokens.bloomDarkBase
-                                                : Colors.white),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Text(
-                                        choice.label,
-                                        style: AppTheme.bloomDisplay(
-                                          13,
-                                          FontWeight.w600,
-                                          color: settings.themeChoice == choice
-                                              ? Colors.white
-                                              : (isDark
-                                                  ? AppColorTokens
-                                                      .bloomDarkTextSecondary
-                                                  : AppColorTokens
-                                                      .inkSecondary),
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (choice != AppThemeChoice.values.last)
-                          const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      'Show paise',
-                      style: AppTheme.bloomDisplay(
-                        14,
-                        FontWeight.w600,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextPrimary
-                            : AppColorTokens.ink,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Display exact decimals (e.g. ₹450.00)',
-                      style: AppTheme.bloomDisplay(
-                        12,
-                        FontWeight.w400,
-                        color: isDark
-                            ? AppColorTokens.bloomDarkTextTertiary
-                            : AppColorTokens.inkTertiary,
-                      ),
-                    ),
-                    value: settings.showPaise,
-                    activeThumbColor: AppColorTokens.violetPrimary,
-                    onChanged: (val) {
-                      ref
-                          .read(
-                            appSettingsControllerProvider.notifier,
-                          )
-                          .setShowPaise(val);
-                    },
-                  ),
-                ],
-              ),
+              child: AppearanceSectionBody(settings: settings, isDark: isDark),
+            ),
+            const SizedBox(height: 20),
+
+            // On-device AI model download / delete
+            _SettingsSection(
+              title: 'ON-DEVICE AI',
+              isDark: isDark,
+              child: AiModelSectionBody(isDark: isDark),
             ),
             const SizedBox(height: 20),
 
@@ -427,9 +333,6 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _LlmModelTile(isDark: isDark),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
                   Text(
                     'ASK PAISATRACK DAILY BUDGET',
                     style: AppTheme.bloomDisplay(
@@ -955,44 +858,6 @@ class _TileRow extends StatelessWidget {
             : AppColorTokens.inkTertiary,
       ),
       onTap: onTap,
-    );
-  }
-}
-
-class _LlmModelTile extends StatelessWidget {
-  const _LlmModelTile({required this.isDark});
-
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.psychology_outlined,
-        color: isDark
-            ? AppColorTokens.bloomDarkTextSecondary
-            : AppColorTokens.inkSecondary,
-      ),
-      title: Text(
-        'On-device AI engine',
-        style: AppTheme.bloomDisplay(
-          14,
-          FontWeight.w600,
-          color:
-              isDark ? AppColorTokens.bloomDarkTextPrimary : AppColorTokens.ink,
-        ),
-      ),
-      subtitle: Text(
-        'Engine active · 100% On-device',
-        style: AppTheme.bloomDisplay(
-          12,
-          FontWeight.w400,
-          color: isDark
-              ? AppColorTokens.bloomDarkTextTertiary
-              : AppColorTokens.inkTertiary,
-        ),
-      ),
     );
   }
 }
