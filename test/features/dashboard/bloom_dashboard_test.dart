@@ -304,7 +304,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('of ₹12,000.00'), findsOneWidget);
+      expect(find.text('spent of ₹12,000.00'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());

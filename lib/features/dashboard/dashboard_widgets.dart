@@ -103,29 +103,41 @@ class BloomHeroRing extends ConsumerWidget {
     final AsyncValue<_HeroMetricContent> contentAsync;
     switch (selectedMetric) {
       case DashboardMetricChoice.safeToday:
-        contentAsync = ref.watch(safeTodayValueProvider).whenData(
-              (safeToday) => _HeroMetricContent(
-                label: 'SAFE TODAY',
-                amount: safeToday != null
-                    ? _formatAmount(safeToday, showPaise: showPaise)
-                    : 'No Budget',
-                sub: safeToday != null
-                    ? (safeToday >= 0 ? 'Budget on track' : 'Over daily budget')
-                    : 'Tap to set budget',
-                color: safeToday != null
-                    ? (safeToday >= 0 ? creditColor : debitColor)
-                    : secondaryColor,
-              ),
+        contentAsync = ref.watch(budgetStatusProvider).whenData(
+              (status) => status == null
+                  ? _HeroMetricContent(
+                      label: 'SAFE TODAY',
+                      amount: 'No Budget',
+                      sub: 'Tap to set budget',
+                      color: secondaryColor,
+                    )
+                  : _HeroMetricContent(
+                      label: 'SAFE TODAY',
+                      amount: _formatAmount(
+                        status.safePerDay,
+                        showPaise: showPaise,
+                      ),
+                      sub: status.isOver
+                          ? 'Budget used up · ${formatInr(-status.left)} short '
+                              'incl. bills'
+                          : '${formatInr(status.left)} left · '
+                              '${status.daysRemaining} days',
+                      color: status.isOver ? debitColor : creditColor,
+                    ),
             );
       case DashboardMetricChoice.netFlow:
-        contentAsync = ref.watch(monthNetProvider).whenData(
-              (netFlow) => _HeroMetricContent(
-                label: 'NET FLOW',
-                amount: _formatAmount(netFlow, showPaise: showPaise),
-                sub: netFlow >= 0 ? 'Surplus this month' : 'Deficit this month',
-                color: netFlow >= 0 ? creditColor : debitColor,
-              ),
+        contentAsync = ref.watch(monthDirectionTotalsProvider).whenData(
+          (totals) {
+            final netFlow = totals.creditTotal - totals.debitTotal;
+            return _HeroMetricContent(
+              label: 'NET FLOW',
+              amount: _formatAmount(netFlow, showPaise: showPaise),
+              sub: 'In ${formatInr(totals.creditTotal)} · '
+                  'Out ${formatInr(totals.debitTotal)}',
+              color: netFlow >= 0 ? creditColor : debitColor,
             );
+          },
+        );
       case DashboardMetricChoice.burn:
         contentAsync = ref.watch(dailyAverageSpendProvider).whenData(
               (burn) => _HeroMetricContent(
@@ -571,8 +583,7 @@ class BloomBudgetCard extends ConsumerWidget {
     bool isError = false,
   }) {
     final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final daysLeft = daysInMonth - now.day;
+    final daysLeft = daysRemainingInMonth(now);
 
     final spentFraction =
         spent == null ? 0.0 : (spent / budget).clamp(0.0, 1.0);
@@ -603,8 +614,9 @@ class BloomBudgetCard extends ConsumerWidget {
                 width: 120,
                 child: BloomSkeleton(height: 28, borderRadius: 8),
               );
+    final overspent = spent != null && spent > budget;
     final budgetAmount = Text(
-      'of ${formatInr(budget)}',
+      'spent of ${formatInr(budget)}',
       style: AppTheme.bloomMono(
         13,
         FontWeight.w400,
@@ -734,8 +746,13 @@ class BloomBudgetCard extends ConsumerWidget {
                             if (spentW > 0)
                               Container(
                                 width: spentW,
-                                decoration: const BoxDecoration(
-                                  gradient: AppColorTokens.bloomEmeraldGradient,
+                                decoration: BoxDecoration(
+                                  gradient: overspent
+                                      ? null
+                                      : AppColorTokens.bloomEmeraldGradient,
+                                  color: overspent
+                                      ? AppColorTokens.bloomDebitDark
+                                      : null,
                                 ),
                               ),
                             if (committedW > 0)
@@ -755,9 +772,11 @@ class BloomBudgetCard extends ConsumerWidget {
                 Text(
                   isError
                       ? 'Spending total is unavailable right now.'
-                      : commitments > 0
-                          ? '${formatInr(commitments)} more expected this month for recurring bills (gold slice).'
-                          : 'No more recurring bills expected this month.',
+                      : _budgetCaption(
+                          budget: budget,
+                          spent: spent,
+                          commitments: commitments,
+                        ),
                   style: AppTheme.bloomDisplay(
                     12,
                     FontWeight.w400,
@@ -770,6 +789,25 @@ class BloomBudgetCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Caption that makes budget − spent − bills = left add up on the card.
+  String _budgetCaption({
+    required double budget,
+    required double? spent,
+    required double commitments,
+  }) {
+    final bills = commitments > 0
+        ? '${formatInr(commitments)} recurring bills still expected (gold).'
+        : 'No more recurring bills expected this month.';
+    if (spent == null) return bills;
+    final left = budget - spent - commitments;
+    if (spent > budget) {
+      return '${formatInr(spent - budget)} over budget. $bills';
+    }
+    return left >= 0
+        ? '${formatInr(left)} left after bills. $bills'
+        : 'Bills exceed what is left by ${formatInr(-left)}. $bills';
   }
 
   String _monthName(int month) => const [

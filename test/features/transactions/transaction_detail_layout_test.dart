@@ -233,8 +233,10 @@ void main() {
       smsRoleLabel(TransactionSmsRole.supporting, 'rd_instalment'),
       'RD instalment',
     );
-    expect(smsRoleLabel(TransactionSmsRole.supporting, 'emi_notice'),
-        'EMI notice');
+    expect(
+      smsRoleLabel(TransactionSmsRole.supporting, 'emi_notice'),
+      'EMI notice',
+    );
     expect(
       smsRoleLabel(TransactionSmsRole.supporting, 'collect_request'),
       'UPI payment request',
