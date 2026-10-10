@@ -1,5 +1,28 @@
 # Current Handoff
 
+## 2026-10-11 — Owner 12-item batch merged on integration branch (T-202)
+
+- Branch `claude/paisatrack-multi-feature-mh2nhw` (pushed). Schema v20 / ADR
+  0032 (recurring_override, sms_transaction_links). Merged: Trends insight
+  history (12-month retention, filters, restore); recurring override backend,
+  Recurring section, Activity badge; supporting SMS classifier/linker
+  (dividend, RD, EMI notice, UPI collect) with retention, backup, nightly and
+  history-import linking; detail page (source SMS above details, curated
+  copy, technical card, recurring control; category restored under amount);
+  Sort list redesign and matched back/skip; On-device AI model + embedder
+  download; Appearance cards; dismissible toasts (undo 6s, SnackBar close
+  icon); Android 16 edge-to-edge (overlay style, cutout, sheets use safe
+  area); dashboard BudgetStatus (Safe today never negative, same days-left,
+  Net flow In/Out, card wraps); data-test fixture repairs.
+- Owner answers: refund window 3–5 business days, match up to 31 days
+  (attribution default still open, T-209). Owner allows UI rewrites.
+- Known: owner data shows ~96% spend in "Other" — P2P now falls back to
+  `other` per ADR 0011 (stale test updated); T-205 owns the fix. Full suite
+  is slow (~15 min, per-file compile; T-210).
+- Open/running at handoff: T-203 flicker/speed (`wt-flicker`), bot-branch
+  triage (`wt-triage`), T-204 icon/UX pass, T-206 merge to main + owner
+  deletes remote branches (session proxy cannot delete). No device QA.
+
 ## 2026-10-04 — T-100a-S1 read-only refund preview host complete
 
 - Luna High added a persisted-row preview API; Sol independently reviewed it.
@@ -65,69 +88,3 @@
   card ownership/instrument/schema/accounting contracts remain open. No owner
   GUI/SMS/DB/log/backup/key access, phone update or APK publication. Both
   protected stashes, isolated T-194 trial and .handoff/paused remain intact.
-
-## 2026-10-04 — T-201 integrity repair active; physical identity defect proven
-
-- **Paused at the user's explicit request.** No commit/push. Production/test
-  changes remain in the shared working tree; worker interrupted. Capture's 153
-  focused tests and consumer repository/UI/category/recurring/transfer focused
-  checks pass; latest consumer analyzer/diff are clean. A final nullable-category
-  widget regression was being added when paused; its final result is unverified.
-  Resume by inspecting that worker diff/checkpoint, then final full Flutter suite
-  with encrypted migration executed, relevant timezone checks, formatter/docs,
-  fresh complete graph review and the disconnected-phone QA proof. Do not treat
-  focused results as final acceptance. SDK ownership must be explicitly acquired
-  before resuming checks. No owner app update or APK publication.
-
-- User supplied transaction-integrity bug report; three Luna High read-only
-  audits and Sol source review confirmed capture, duplicate/retry, totals,
-  category Undo and inference issues. Task/report and ADRs 0028–0031 record
-  bounded contracts. Production/test implementation remains sequential.
-- First physical milestone passed in isolated RecoveryQA on Motorola Edge 50
-  Pro, Android 16/API 36: actual synthetic 3GPP PDU through SmsReceiver and
-  injected MatrixCursor through SmsInboxReader accepted the same HDFCBK alert,
-  but IDs differed when received DATE was 60 seconds after sent DATE_SENT.
-  Marker SMS_IDENTITY_QA_OBSERVED: accepted both=true, idsMatch=false,
-  dateSentRequested=false, timestampDifferenceMillis=60000. No owner provider,
-  app, data or logs accessed; only RecoveryQA updated. Carrier/default-provider
-  delivery remains outside this synthetic proof.
-- User briefly requested a pause, then resumed. The preserved native query
-  seam, fixed-data QA probe and integration test are uncommitted; no identity
-  fix landed before the pause. Replacement Luna High implements sent-time IDs
-  and exact legacy aliases under ADR 0030 with exclusive Flutter/Gradle use;
-  two Luna agents prepare/review read-only. Sol independently reviews and owns
-  docs/integration. Identity host review now passes: 79 focused tests, clean
-  analyzer/diff, Android unit tests and independent Luna/Sol reviews. Shared
-  validation preserves exact stored claims; per-page plus bounded 4,096-claim
-  last-DATE cohort checks reject conflicting input without rewriting earlier
-  pages. Alternate mappings are transient, so cross-run ambiguity remains a
-  documented boundary. Capture repairs now pass 153 focused tests, analyzer,
-  formatting, diff checks and Android unit tests: real bank alerts and negative
-  controls, lifecycle-aware duplicates, bounded once-per-run retries, safe
-  forced-scan checkpoints, conservative numeric VPA fallback, valid template
-  dates and explicit user-rule descriptions. Consumer totals/Ask, expected-event,
-  shared recurring projection and normalized owned-transfer guard are implemented
-  with focused tests; final mask-style guard rerun is included in pending combined
-  verification. Independent source review passes. Recurring reconciliation
-  re-reads latest status memory after awaited detection, preserving concurrent
-  user intent. Category receipt/preflight and both detail UI paths are active;
-  combined consumer/analyzer and final acceptance remain pending.
-- Post-fix physical integration installed/launched only RecoveryQA and started
-  its Dart VM, but forwarding closed before test load/probe marker. Device
-  acceptance remains open; no passing post-fix result is claimed. SDK was
-  explicitly released before the next implementation handoff. A permission-free
-  native intent fallback is implemented only in RecoveryQA under ADR 0028;
-  normal/QA Android unit runs pass (33 tests) and QA APK compilation passes.
-  Manifest verifies isolated app ID/debuggable and absent SMS permissions.
-  Phone is disconnected; user asked to reconnect while consumer work proceeds.
-  No post-fix physical marker is claimed, and the failed Flutter run stays open.
-  No commit yet.
-- GitNexus baseline refreshed (9,131 nodes/21,375 edges/416 flows); global flow
-  inventory capped and MCP cached index stale, so fresh CLI plus source review
-  used. HIGH capture and CRITICAL model/categorizer/date risks warned before
-  edits. RawSms impact: 92 symbols/15 flows. No final full-suite acceptance yet
-  for this unfinished slice; previous 1,338 pass belongs to dcfdab4 only.
-- Preserve protected stashes, isolated T-194 trial and .handoff/paused. No APK
-  publication or owner update. Suggestions default-off; refund-period and
-  ownership/card accounting decisions remain open. Historical persisted
-  suppression/lifecycle errors require grounded repair; no blanket backfill.

@@ -20,9 +20,43 @@ later hardening.
 <!-- Groomed tasks awaiting an implementer; see docs/plans/roadmap.md for the
      proposed order of the remaining backlog. -->
 
+- [ ] T-203 [P0] Import flicker and speed. Fresh install with a large inbox:
+      lists vanish/reappear and screens flicker. Keep previous data while
+      Drift streams reload (shared AsyncValue helper; 37 `.when` sites),
+      throttle derived reads during import (trailing edge always applied),
+      batch history-import writes, stable row keys, import progress banner.
+      Acceptance: widget test proves a loaded list never returns to
+      skeleton/empty during many writes; final totals correct after import;
+      before/after import benchmark recorded. (Worker branch `wt-flicker`.)
+- [ ] T-204 [P1] App-wide icon and UX consistency (owner items #3, #6).
+      Apply the Rounded icon mapping (sizes 16/20/24), identical period chips
+      on Dashboard/Trends, 48dp targets + semantics for undersized icon
+      controls (Trends chips, assistant send, weekly toggles), make the
+      Dashboard streak chip clearly separate from Settings, and fix every
+      finding of a full UI/UX scan. Owner allows screen redesigns.
+- [ ] T-205 [P0] Categorisation and income gap. Owner data: ~96% of October
+      spend is "Other" and only ₹10k counts as money in, so transfers, rent,
+      investments and income are likely misclassified. Audit real
+      distributions (counts only, no PII), add deterministic rules for
+      self/P2P transfers, rent, investments, salary, and surface an
+      "Uncategorised" review flow. Totals must stay source-faithful.
+- [ ] T-206 [P1] Merge integration branch to `main`; owner deletes stale
+      remote branches (session git proxy cannot). Includes bot-branch triage
+      results (`wt-triage`) and local worktree cleanup.
+
 ## In Review
 
 <!-- Implementations in review; retain each task's remaining acceptance gates. -->
+- [ ] T-202 [P0] Owner 12-item batch (2026-10-10) is host-verified on
+      `claude/paisatrack-multi-feature-mh2nhw`: schema v20 (ADR 0032),
+      Trends insight history, per-transaction recurring override, supporting
+      SMS (dividend/RD/EMI/collect) linking + retention + backup, detail page
+      (source SMS first, curated copy, technical card, recurring control),
+      Sort list redesign and matched card nav, on-device AI model download,
+      Appearance cards, dismissible toasts, Android 16 edge-to-edge, dashboard
+      Safe today/Net flow/budget tally. Open: physical-device QA (sheets now
+      use safe area, edge-to-edge, toasts, AI download, dashboard), privacy.md
+      paragraph for model downloads, Sort list account/channel hint.
 - [ ] T-200 [P0] Unified transaction-detail confirmation is host-verified: one action, atomic status/eligible parse feedback, guarded Undo, and visible success/loading. Full suite 1,270/1,270; America/New_York touched suites 275/275; analyzer clean. Phone confirmation acceptance remains open; see [T-200](docs/tasks/T-200.md).
 - [ ] T-199 [P1] Show a scannable static UPI QR for stored transaction VPAs in details and Sort. Detail device QA on the earlier geometry build and normal/max-input decoder checks passed. The final same-version 0.1.8+2017 artifact is installed and hash-verified; no UI check was run on that exact build. Sort card/list QA remains open. See [T-199 brief](docs/tasks/T-199.md); QR dependency/payload decision: [ADR 0023](docs/decisions/0023-static-upi-qr.md).
 - [ ] T-167j [P0] Implement the app-wide Android, predictive, and in-app back contract. Host behavior is implemented; see [T-167j brief](docs/tasks/T-167j.md) for test evidence and open device gates.
@@ -454,6 +488,21 @@ Completed T-156b, T-157a/b/c, T-158a/d, and T-159a/b are mapped in
 `docs/archive/planning-cleanup-2026-09.md`.
 
 ## Backlog
+
+- [ ] T-207 [P1] Intelligence v2 plan (owner vision): integrate the
+      on-device model with capture, insights and UI; extract every SMS field
+      (balances, limits, due dates, mandates, folios); adaptive per-user
+      dashboard; explainable insights; Ask with charts. Deterministic NLP
+      first; LLM advisory only (ADR 0002/0009/0011). Plan in
+      `docs/plans/intelligence-v2.md` with small-model subtasks.
+- [ ] T-208 [P1] Performance plan (owner: "app needs to be faster"):
+      startup, Activity/Dashboard query and render budgets, import
+      throughput; builds on T-115, T-164b, T-165a.
+- [ ] T-209 [P2] Confirm refund attribution default (purchase vs posting
+      period) with owner before T-100; matching window up to 31 days is
+      decided (docs/plans/credit-card-accounting.md).
+- [ ] T-210 [P2] Test-suite speed: profile the full Flutter suite, find slow
+      or hanging tests, and shard/optimise without weakening assertions.
 
 - [ ] T-190 [P2] Resolve credit-card ownership/accounting contracts and deliver
       the remaining purchase, bill, payment, refund and failure phases. **Do this last among the newly requested tasks.**
