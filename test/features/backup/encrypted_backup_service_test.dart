@@ -767,6 +767,112 @@ void main() {
     }
   });
 
+  test('supporting SMS links round-trip in both formats and keep raw SMS',
+      () async {
+    const passphrase = 'supporting-sms-link-passphrase';
+    final now = DateTime.utc(2026, 7, 28);
+    // Expired by age (> 7 days) but linked only through sms_transaction_links:
+    // the raw row must still be exported and restored.
+    final received = DateTime.utc(2026, 6, 1);
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_support_notice',
+            sender: 'AX-BANK',
+            body: 'Synthetic EMI notice body',
+            receivedAt: received,
+            purgeAfter: received.add(const Duration(days: 7)),
+          ),
+        );
+    await _insertTransaction(database, 'txn_support_target');
+    await database.into(database.smsTransactionLinks).insert(
+          SmsTransactionLinksCompanion.insert(
+            smsId: 'sms_support_notice',
+            transactionId: 'txn_support_target',
+            kind: 'emi_notice',
+            basis: 'amount+account_suffix',
+            createdAt: now,
+          ),
+        );
+
+    for (final chunked in [false, true]) {
+      final Uint8List bytes;
+      if (chunked) {
+        final file = await service().exportToFile(
+          directory: directory,
+          passphrase: passphrase,
+        );
+        bytes = await file.readAsBytes();
+      } else {
+        bytes = await service().exportBytes(passphrase: passphrase);
+      }
+      await database.delete(database.smsTransactionLinks).go();
+      await database.delete(database.rawSms).go();
+      if (chunked) {
+        final file = File('${directory.path}/support-links.ptrack');
+        await file.writeAsBytes(bytes);
+        await service().importFromFile(file: file, passphrase: passphrase);
+      } else {
+        await service().importBytes(bytes: bytes, passphrase: passphrase);
+      }
+
+      final link =
+          await database.select(database.smsTransactionLinks).getSingle();
+      expect(link.smsId, 'sms_support_notice');
+      expect(link.transactionId, 'txn_support_target');
+      expect(link.kind, 'emi_notice');
+      expect(link.basis, 'amount+account_suffix');
+      expect(link.confidence, 1.0);
+      expect(
+        (await database.select(database.rawSms).getSingle()).id,
+        'sms_support_notice',
+      );
+    }
+  });
+
+  test('archives without supporting SMS links restore with an empty table',
+      () async {
+    const passphrase = 'supporting-links-old-archive-passphrase';
+    await _insertTransaction(database, 'txn_old_support');
+    final bytes = await service().exportBytes(passphrase: passphrase);
+    final oldLegacy = await _rewriteLegacyArchive(
+      bytes,
+      passphrase: passphrase,
+      rewrite: (archive) {
+        (archive['tables'] as Map<String, dynamic>)
+            .remove('sms_transaction_links');
+      },
+    );
+    await database.into(database.smsTransactionLinks).insert(
+          SmsTransactionLinksCompanion.insert(
+            smsId: 'sms_stale',
+            transactionId: 'txn_old_support',
+            kind: 'related',
+            basis: 'test',
+            createdAt: DateTime.utc(2026, 8, 1),
+          ),
+        );
+    await service().importBytes(bytes: oldLegacy, passphrase: passphrase);
+    expect(await database.select(database.smsTransactionLinks).get(), isEmpty);
+
+    final file = await service().exportToFile(
+      directory: directory,
+      passphrase: passphrase,
+    );
+    final oldChunked = File('${directory.path}/old-no-support-links.ptrack');
+    await oldChunked.writeAsBytes(
+      await _removeChunkedOptionalTables(
+        await file.readAsBytes(),
+        passphrase: passphrase,
+      ),
+    );
+    await service().importFromFile(file: oldChunked, passphrase: passphrase);
+    expect(await database.select(database.smsTransactionLinks).get(), isEmpty);
+    expect(
+      (await database.select(database.transactions).get()).map((r) => r.id),
+      contains('txn_old_support'),
+    );
+  });
+
   test('chunked file export reports monotonic progress and finalizes',
       () async {
     final progress = <EncryptedBackupProgress>[];
@@ -1700,6 +1806,7 @@ Future<Uint8List> _removeChunkedOptionalTables(
         'counterparties',
         'expected_events',
         'transaction_links',
+        'sms_transaction_links',
       };
       final removedRowCount = records
           .where(

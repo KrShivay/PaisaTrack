@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:paisatrack/capture/supporting_sms_classifier.dart';
 import 'package:paisatrack/core/financial_calendar.dart';
 import 'package:paisatrack/data/db/database.dart';
 import 'package:paisatrack/intelligence/nightly_job.dart';
@@ -136,6 +138,60 @@ void main() {
     expect(transaction.smsId, 'txn_sms');
   });
 
+  test(
+      'supporting-SMS stage links retained messages and tolerates a load '
+      'failure', () async {
+    final at = DateTime.utc(2026, 11, 5, 4);
+    await database.into(database.rawSms).insert(
+          RawSmsCompanion.insert(
+            id: 'sms_notice',
+            sender: 'BANK',
+            body: 'Your loan EMI of Rs 12,345 is due on 05-Nov-26. Please '
+                'maintain balance in A/c XX1234.',
+            receivedAt: at.subtract(const Duration(days: 2)),
+            purgeAfter: at.add(const Duration(days: 5)),
+          ),
+        );
+    await database.into(database.transactions).insert(
+          TransactionsCompanion.insert(
+            id: 'txn_emi',
+            ts: at.millisecondsSinceEpoch,
+            amount: 12345,
+            currencyCode: const Value('INR'),
+            currencySymbol: const Value('₹'),
+            direction: 'debit',
+            channel: 'upi',
+            accountHint: const Value('xx1234'),
+            parseSource: 'template',
+            confidenceJson: '{}',
+            status: 'auto',
+            createdAt: at,
+            updatedAt: at,
+          ),
+        );
+
+    await NightlyPipeline.production(
+      database,
+      supportingClassifierLoader: () async => throw StateError('no asset'),
+    ).runStages(only: {NightlyStage.linkSupportingSms}, now: at);
+    expect(await database.select(database.smsTransactionLinks).get(), isEmpty);
+
+    await NightlyPipeline.production(
+      database,
+      supportingClassifierLoader: () async => SupportingSmsClassifier.fromJson(
+        File(SupportingSmsClassifier.assetPath).readAsStringSync(),
+      ),
+    ).runStages(
+      only: {NightlyStage.linkSupportingSms},
+      now: at.add(const Duration(days: 1)),
+    );
+
+    final link =
+        (await database.select(database.smsTransactionLinks).get()).single;
+    expect(link.smsId, 'sms_notice');
+    expect(link.transactionId, 'txn_emi');
+  });
+
   test('failed run resumes after the last completed stage', () async {
     final calls = <NightlyStage>[];
     var failOnce = true;
@@ -172,6 +228,7 @@ void main() {
         NightlyStage.recomputeThresholds,
         NightlyStage.merchantClustering,
         NightlyStage.precomputeInsights,
+        NightlyStage.linkSupportingSms,
       ],
     );
   });

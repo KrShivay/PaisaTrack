@@ -32,7 +32,8 @@ import 'parser_version.dart';
 import 'permissions/sms_permission.dart';
 import 'permissions/sms_permission_provider.dart';
 import 'span_verifier.dart';
-import 'template_engine/field_normalizer.dart';
+import 'supporting_sms_classifier.dart';
+import 'supporting_sms_linker.dart';
 import 'template_engine/template_matcher.dart';
 import 'template_engine/template_registry.dart';
 import 'template_engine/template_trust_ledger.dart';
@@ -80,6 +81,15 @@ final messageKindClassifierProvider =
   return MessageKindClassifier.fromJson(cueJson);
 });
 
+/// Loads the supporting-SMS cues (dividend, RD, EMI notice, UPI collect
+/// request; ADR 0032) once for ingestion and the nightly backfill.
+final supportingSmsClassifierProvider =
+    FutureProvider<SupportingSmsClassifier>((ref) async {
+  final cueJson =
+      await rootBundle.loadString(SupportingSmsClassifier.assetPath);
+  return SupportingSmsClassifier.fromJson(cueJson);
+});
+
 /// Coordinates live Android SMS events into raw capture rows and transactions.
 final smsCaptureBootstrapProvider = Provider<void>((ref) {
   final permission = ref.watch(smsPermissionControllerProvider);
@@ -94,7 +104,12 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
   final categorizer = ref.watch(categorizerProvider).valueOrNull;
   final messageKindClassifier =
       ref.watch(messageKindClassifierProvider).valueOrNull;
-  if (parser == null || categorizer == null || messageKindClassifier == null) {
+  final supportingSmsClassifier =
+      ref.watch(supportingSmsClassifierProvider).valueOrNull;
+  if (parser == null ||
+      categorizer == null ||
+      messageKindClassifier == null ||
+      supportingSmsClassifier == null) {
     return;
   }
   final ingestor = SmsIngestor(
@@ -102,6 +117,7 @@ final smsCaptureBootstrapProvider = Provider<void>((ref) {
     parser: parser,
     categorizer: categorizer,
     messageKindClassifier: messageKindClassifier,
+    supportingSmsClassifier: supportingSmsClassifier,
     merchantResolver: ref.watch(merchantResolverProvider(database)),
     // Deliberately ref.read (lazy, at decision time) — NOT ref.watch.
     // Watching the settings controller here rebuilt this provider on every
@@ -193,6 +209,7 @@ class SmsIngestor {
     DuplicateSuppressor duplicateSuppressor = const DuplicateSuppressor(),
     DateTime Function()? now,
     MessageKindClassifier? messageKindClassifier,
+    SupportingSmsClassifier? supportingSmsClassifier,
     ExpectedEventRepository? expectedEventRepository,
     FinancialCalendar? financialCalendar,
     int parserVersion = smsParserVersion,
@@ -209,8 +226,15 @@ class SmsIngestor {
         _decisionPolicy = decisionPolicy,
         _duplicateSuppressor = duplicateSuppressor,
         _messageKindClassifier = messageKindClassifier,
-        _expectedEventRepository =
-            expectedEventRepository ?? ExpectedEventRepository(database),
+        _supportingSmsClassifier = supportingSmsClassifier,
+        _supportingLinker = supportingSmsClassifier == null
+            ? null
+            : SupportingSmsLinker(database, supportingSmsClassifier),
+        _expectedEventRepository = expectedEventRepository ??
+            ExpectedEventRepository(
+              database,
+              supportingClassifier: supportingSmsClassifier,
+            ),
         _financialCalendar = financialCalendar ?? FinancialCalendar(),
         _parserVersion = parserVersion,
         _now = now ?? DateTime.now {
@@ -237,6 +261,8 @@ class SmsIngestor {
   final DecisionPolicy _decisionPolicy;
   final DuplicateSuppressor _duplicateSuppressor;
   final MessageKindClassifier? _messageKindClassifier;
+  final SupportingSmsClassifier? _supportingSmsClassifier;
+  final SupportingSmsLinker? _supportingLinker;
   final ExpectedEventRepository _expectedEventRepository;
   final FinancialCalendar _financialCalendar;
   final int _parserVersion;
@@ -362,6 +388,7 @@ class SmsIngestor {
             failureReason: null,
           );
           await reconcileExpectedEvents();
+          await _linkSupportingSms(persistedSms.id);
           return;
         }
 
@@ -370,12 +397,20 @@ class SmsIngestor {
             kind == MessageKind.balance ||
             kind == MessageKind.statement ||
             kind == MessageKind.unknown) {
+          // A dividend advice, RD/EMI notice or UPI collect request is
+          // understood supporting evidence, not an unparsed message. It never
+          // becomes a transaction (ADR 0032).
+          final isSupporting = kind != MessageKind.otp &&
+              kind != MessageKind.promo &&
+              (_supportingSmsClassifier?.classify(persistedSms.body) != null);
           await _markRawSmsOutcome(
             persistedSms.id,
-            processed: kind != MessageKind.unknown,
-            failureReason:
-                kind == MessageKind.unknown ? SmsFailureReason.unparsed : null,
+            processed: kind != MessageKind.unknown || isSupporting,
+            failureReason: kind == MessageKind.unknown && !isSupporting
+                ? SmsFailureReason.unparsed
+                : null,
           );
+          if (isSupporting) await _linkSupportingSms(persistedSms.id);
           return;
         }
 
@@ -505,12 +540,14 @@ class SmsIngestor {
               processed: true,
               failureReason: null,
             );
+            await _linkSupportingForTransaction(transactionId);
           case Err<NormalizedTransactionRecord, ParseFailure>():
             await _markRawSmsOutcome(
               persistedSms.id,
               processed: false,
               failureReason: SmsFailureReason.unparsed,
             );
+            await _linkSupportingSms(persistedSms.id);
         }
         await reconcileExpectedEvents();
       });
@@ -521,6 +558,29 @@ class SmsIngestor {
       if (error is _SmsIdentityConflict) rethrow;
       await _recordProcessingFailure(persistedSms, flagsState);
       rethrow;
+    }
+  }
+
+  /// Looks for the transaction a stored supporting SMS describes. Best
+  /// effort: a linking failure must never fail or roll back capture.
+  Future<void> _linkSupportingSms(String smsId) async {
+    final linker = _supportingLinker;
+    if (linker == null) return;
+    try {
+      await linker.linkMessage(smsId);
+    } catch (_) {
+      // Intentionally swallowed: no SMS content is logged on this path.
+    }
+  }
+
+  /// Looks back for stored supporting SMS that describe a new transaction.
+  Future<void> _linkSupportingForTransaction(String transactionId) async {
+    final linker = _supportingLinker;
+    if (linker == null) return;
+    try {
+      await linker.linkTransaction(transactionId);
+    } catch (_) {
+      // Intentionally swallowed: linking is optional enrichment.
     }
   }
 
@@ -980,23 +1040,8 @@ class SmsIngestor {
     );
   }
 
-  int? _fallbackAmountPaise(String amountText) {
-    final double? amount;
-    try {
-      amount = const FieldNormalizer().parseOptionalAmount(amountText);
-    } on FormatException {
-      return null;
-    }
-    if (amount == null || !amount.isFinite || amount <= 0) return null;
-
-    // Expected amounts are stored as integer paise; keep conversion within the
-    // safe integer range of the double-based normalizer.
-    const maxSafePaise = 9007199254740991;
-    final paiseValue = amount * 100;
-    if (!paiseValue.isFinite || paiseValue > maxSafePaise) return null;
-    final paise = paiseValue.round();
-    return paise > 0 ? paise : null;
-  }
+  int? _fallbackAmountPaise(String amountText) =>
+      SupportingSmsClassifier.amountToPaise(amountText);
 
   DateTime _reminderExpectedDate(String body, DateTime fallback) {
     DateTime fallbackDate() {

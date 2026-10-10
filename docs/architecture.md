@@ -98,6 +98,27 @@ converts those local date and clock fields into the stored UTC instant.
 Future recurring-calendar work must route bill-due/autopay reminders to expected
 events, not relax the transaction parser's future-event rejection.
 
+### Supporting SMS (ADR 0032)
+
+Dividend advices, RD instalment notices, EMI notices (pre-debit and debited) and
+UPI collect/payment requests describe a money movement without being the
+settled bank transaction. `SupportingSmsClassifier`
+(`assets/seed/supporting_sms_cues_in.json`) recognizes them deterministically
+and extracts amount (integer paise), source currency, account suffixes,
+reference, VPA/requester and due date. `SupportingSmsLinker` then writes
+`sms_transaction_links` rows, never a transaction or amount, in either arrival
+order: exact paise and source-currency bucket, a time window (notices and
+requests up to 7 days before the transaction; dividend and RD advices within 3
+days either side), at least one corroborator (account suffix, reference,
+counterparty, or a company token in the dividend narration), and exactly one
+live settled canonical candidate, otherwise it abstains. `SmsIngestor` calls it
+inside the existing per-message transaction (best effort; a linking failure
+never fails capture), a fulfilled expected event records its origin SMS as a
+link, and the nightly `linkSupportingSms` stage backfills retained messages.
+`RawSmsRetention.isLinked` treats linked rows as provenance;
+`TransactionSmsRepository.messagesFor` returns primary, duplicate and
+supporting messages for the detail screen.
+
 ## Storage and privacy
 
 - Drift is opened through SQLCipher.

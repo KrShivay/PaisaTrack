@@ -21,6 +21,15 @@ PaisaTrack is local-first:
   the encrypted local database for as long as that record exists. Any other
   raw SMS (unparsed, unreadable, never linked) is deleted 7 days after receipt
   (`AppConstants.rawSmsRetentionDays`).
+- Supporting SMS are retained with their transaction
+  ([ADR 0032](decisions/0032-recurring-intent-and-supporting-sms.md)): a
+  dividend advice, RD instalment notice, EMI notice or UPI collect request that
+  the on-device matcher links to a transaction (`sms_transaction_links`, no
+  message content, no network) is kept for as long as that transaction link
+  exists and is shown on its detail screen. An unmatched supporting SMS is an
+  ordinary unlinked raw SMS and expires after 7 days. Linked messages are
+  included in encrypted backups (about 340 bytes each); older archives restore
+  with no links. "Delete everything" removes the links with the database.
 - Encrypted backups include every linked source SMS plus unlinked SMS whose
   `purge_after` is still in the future; restore removes expired unlinked rows.
   Each kept SMS adds roughly 340 bytes to a backup. Backup files are capped at
