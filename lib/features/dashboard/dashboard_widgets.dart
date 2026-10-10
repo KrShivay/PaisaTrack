@@ -716,14 +716,13 @@ class BloomBudgetCard extends ConsumerWidget {
                         ],
                       );
                     }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        spentAmount,
-                        const SizedBox(width: 8),
-                        budgetAmount,
-                      ],
+                    // Wrap (not Row): large lakh amounts plus the "spent of"
+                    // label move to a second line instead of overflowing.
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      children: [spentAmount, budgetAmount],
                     );
                   },
                 ),
