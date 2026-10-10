@@ -25,6 +25,7 @@ import '../transactions/transaction_correction_sheet.dart';
 import '../transactions/transaction_detail_screen.dart';
 import '../transactions/transaction_correction_controller.dart';
 import '../transactions/transactions_providers.dart';
+import 'review_list_row.dart';
 import 'weekly_review_providers.dart';
 
 typedef _RemovedCard = ({
@@ -110,6 +111,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
             onConfirm: _confirmItem,
             onRecategorize: _recategorizeItem,
             onSkip: _skipItem,
+            onOpen: (item) => _openDetailSheet(context, item),
             keepBlocked: _keepBlocked,
           );
         }
@@ -304,7 +306,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                         : AppColorTokens.bloomChip,
                     onTap: index == 0 ? null : _goBack,
                     isDark: isDark,
-                    size: 50,
+                    size: compactLandscape ? 48 : 50,
                   ),
                   // Change category button (Gold)
                   _ActionButton(
@@ -317,20 +319,6 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                     onTap: () => _recategorizeItem(item),
                     isDark: isDark,
                     size: compactLandscape ? 48 : 58,
-                  ),
-                  // Skip button (Neutral)
-                  _ActionButton(
-                    icon: Icons.skip_next_rounded,
-                    semanticLabel: 'Skip transaction',
-                    color: isDark
-                        ? AppColorTokens.bloomDarkTextSecondary
-                        : AppColorTokens.inkSecondary,
-                    bgColor: isDark
-                        ? AppColorTokens.bloomDarkCard
-                        : AppColorTokens.bloomChip,
-                    onTap: () => _skipItem(item),
-                    isDark: isDark,
-                    size: compactLandscape ? 48 : 50,
                   ),
                   // Keep button (Emerald); disabled while the guess for an
                   // edited card is recomputed (T-154b).
@@ -345,6 +333,20 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                         _keepBlocked(item.id) ? null : () => _confirmItem(item),
                     isDark: isDark,
                     size: compactLandscape ? 48 : 58,
+                  ),
+                  // Skip button (Neutral)
+                  _ActionButton(
+                    icon: Icons.arrow_forward_rounded,
+                    semanticLabel: 'Skip to next transaction',
+                    color: isDark
+                        ? AppColorTokens.bloomDarkTextSecondary
+                        : AppColorTokens.inkSecondary,
+                    bgColor: isDark
+                        ? AppColorTokens.bloomDarkCard
+                        : AppColorTokens.bloomChip,
+                    onTap: () => _skipItem(item),
+                    isDark: isDark,
+                    size: compactLandscape ? 48 : 50,
                   ),
                 ],
               ),
@@ -925,7 +927,9 @@ class _ViewModeToggle extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: isDark
                     ? AppColorTokens.bloomDarkCard
@@ -934,7 +938,7 @@ class _ViewModeToggle extends ConsumerWidget {
               ),
               child: Icon(
                 isCard ? Icons.view_list_rounded : Icons.view_carousel_rounded,
-                size: 18,
+                size: 20,
                 color: isDark
                     ? AppColorTokens.bloomDarkTextSecondary
                     : AppColorTokens.inkSecondary,
@@ -1088,7 +1092,7 @@ class _SortCard extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.arrow_back_rounded,
-                              size: 14,
+                              size: 16,
                               color: isDark
                                   ? AppColorTokens.bloomDarkTextSecondary
                                   : AppColorTokens.inkSecondary,
@@ -1279,10 +1283,12 @@ class _ListView extends StatelessWidget {
     required this.onConfirm,
     required this.onRecategorize,
     required this.onSkip,
+    required this.onOpen,
     required this.keepBlocked,
   });
 
   final List<TransactionReviewItem> items;
+  final ValueChanged<TransactionReviewItem> onOpen;
   final bool isDark;
   final ValueChanged<TransactionReviewItem> onConfirm;
   final ValueChanged<TransactionReviewItem> onRecategorize;
@@ -1367,9 +1373,10 @@ class _ListView extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    return _ReviewListRow(
+                    return ReviewListRow(
                       item: item,
                       isDark: isDark,
+                      onOpen: () => onOpen(item),
                       onConfirm: () => onConfirm(item),
                       onRecategorize: () => onRecategorize(item),
                       onSkip: () => onSkip(item),
@@ -1381,209 +1388,6 @@ class _ListView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ReviewListRow extends StatelessWidget {
-  const _ReviewListRow({
-    required this.item,
-    required this.isDark,
-    required this.onConfirm,
-    required this.onRecategorize,
-    required this.onSkip,
-    required this.keepEnabled,
-  });
-
-  final TransactionReviewItem item;
-  final bool isDark;
-  final VoidCallback onConfirm;
-  final VoidCallback onRecategorize;
-  final VoidCallback onSkip;
-  final bool keepEnabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = isDark ? AppColorTokens.bloomDarkCard : AppColorTokens.bloomCard;
-
-    final signedAmount = item.direction == TransactionDirection.debit
-        ? -item.amount
-        : item.amount;
-    final spokenAmount = formatSourceAmount(
-      signedAmount,
-      currencyCode: item.currencyCode,
-      currencySymbol: item.currencySymbol,
-    );
-    final direction =
-        item.direction == TransactionDirection.debit ? 'Expense' : 'Income';
-    final lowTrustNote =
-        item.isLowTrustParse ? ', Low confidence parse — verify details' : '';
-    final statusLabel =
-        item.status == 'needs_review' ? 'Needs review' : item.status;
-    final rowActions = <CustomSemanticsAction, VoidCallback>{
-      if (keepEnabled) const CustomSemanticsAction(label: 'Keep'): onConfirm,
-      const CustomSemanticsAction(label: 'Change category'): onRecategorize,
-      const CustomSemanticsAction(label: 'Skip'): onSkip,
-    };
-
-    return Semantics(
-      container: true,
-      explicitChildNodes: true,
-      label: '${item.displayName}, ${item.categoryName ?? 'Uncategorised'}, '
-          '$direction, $spokenAmount, ${formatActivityDateGroup(item.ts)}, '
-          '$statusLabel$lowTrustNote',
-      hint: keepEnabled
-          ? 'Actions: Keep, Change category, Skip'
-          : 'Actions: Change category, Skip. Keep is unavailable until a '
-              'category guess or correction is ready.',
-      customSemanticsActions: rowActions,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ExcludeSemantics(
-            child: Dismissible(
-              key: ValueKey('review_${item.id}'),
-              background: Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.only(left: 20),
-                decoration: BoxDecoration(
-                  color: AppColorTokens.bloomEmerald,
-                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-                ),
-                child: const Icon(Icons.check, color: Colors.white),
-              ),
-              secondaryBackground: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                decoration: BoxDecoration(
-                  color: AppColorTokens.bloomGold,
-                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-                ),
-                child: const Icon(Icons.sell_outlined, color: Colors.white),
-              ),
-              confirmDismiss: (direction) async {
-                if (direction == DismissDirection.startToEnd) {
-                  onConfirm();
-                } else {
-                  onRecategorize();
-                }
-                return false;
-              },
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 320;
-                    final amount = BloomAmount(
-                      amount: item.direction == TransactionDirection.debit
-                          ? -item.amount
-                          : item.amount,
-                      currencyCode: item.currencyCode,
-                      currencySymbol: item.currencySymbol,
-                      size: 15,
-                      weight: FontWeight.w500,
-                      maxLines: 2,
-                      textAlign: TextAlign.end,
-                    );
-                    final details = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.displayName,
-                          style: AppTheme.bloomDisplay(
-                            14,
-                            FontWeight.w500,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                item.categoryName ?? 'Uncategorised',
-                                style: AppTheme.bloomDisplay(
-                                  11,
-                                  FontWeight.w400,
-                                  color: isDark
-                                      ? AppColorTokens.bloomDarkTextTertiary
-                                      : AppColorTokens.inkTertiary,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (item.isLowTrustParse) ...[
-                              const SizedBox(width: 6),
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                size: 12,
-                                color: AppColorTokens.bloomGold,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    );
-
-                    if (compact) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              BloomCategoryTile(
-                                categoryId: item.categoryId,
-                                iconName: item.categoryIcon,
-                                size: 36,
-                                borderRadius: 13,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(child: details),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: SizedBox(width: 112, child: amount),
-                          ),
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      children: [
-                        BloomCategoryTile(
-                          categoryId: item.categoryId,
-                          iconName: item.categoryIcon,
-                          size: 36,
-                          borderRadius: 13,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: details),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 112, child: amount),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          UpiQrAction(
-            counterpartyVpa: item.counterpartyVpa,
-            transactionTitle: item.displayName,
-          ),
-        ],
       ),
     );
   }
