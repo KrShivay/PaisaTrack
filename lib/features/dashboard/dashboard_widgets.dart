@@ -1399,67 +1399,67 @@ class _TransactionRow extends StatelessWidget {
       button: true,
       onTap: onTap,
       child: MergeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(AppRadius.bloomRow),
-              ),
-              child: Row(
-                children: [
-                  BloomCategoryTile(
-                    categoryId: txn.categoryId,
-                    iconName: txn.categoryIcon,
-                    size: 36,
-                    borderRadius: 13,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          txn.displayName,
-                          style: AppTheme.bloomDisplay(
-                            14,
-                            FontWeight.w500,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextPrimary
-                                : AppColorTokens.ink,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _formatTime(txn.ts),
-                          style: AppTheme.bloomDisplay(
-                            11,
-                            FontWeight.w400,
-                            color: isDark
-                                ? AppColorTokens.bloomDarkTextTertiary
-                                : AppColorTokens.inkTertiary,
-                          ),
-                        ),
-                      ],
+        child: Material(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppRadius.bloomRow),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    BloomCategoryTile(
+                      categoryId: txn.categoryId,
+                      iconName: txn.categoryIcon,
+                      size: 36,
+                      borderRadius: 13,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  BloomAmount(
-                    amount: txn.direction == TransactionDirection.debit
-                        ? -txn.amount
-                        : txn.amount,
-                    currencyCode: txn.currencyCode,
-                    currencySymbol: txn.currencySymbol,
-                    size: 15,
-                    weight: FontWeight.w500,
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            txn.displayName,
+                            style: AppTheme.bloomDisplay(
+                              14,
+                              FontWeight.w500,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextPrimary
+                                  : AppColorTokens.ink,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatTime(txn.ts),
+                            style: AppTheme.bloomDisplay(
+                              11,
+                              FontWeight.w400,
+                              color: isDark
+                                  ? AppColorTokens.bloomDarkTextTertiary
+                                  : AppColorTokens.inkTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    BloomAmount(
+                      amount: txn.direction == TransactionDirection.debit
+                          ? -txn.amount
+                          : txn.amount,
+                      currencyCode: txn.currencyCode,
+                      currencySymbol: txn.currencySymbol,
+                      size: 15,
+                      weight: FontWeight.w500,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
