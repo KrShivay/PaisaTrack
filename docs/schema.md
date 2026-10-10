@@ -48,6 +48,14 @@ must remain distinguishable from user-authored labels.
 
 ## Planned additive areas
 
+**Version allocation (2026-10-10).** Version numbers in proposed ADRs and
+briefs are provisional: ADR 0034 (`sms_facts`, written as v21), ADR 0035
+(dashboard tables, v22) and ADR 0033 (minor-unit money columns, "next free").
+The implementer takes the next free `schemaVersion` when the task starts,
+renames its migration test accordingly and updates this file. Only one
+schema-changing task may be In Progress at a time, because
+`lib/data/db/database.dart` is a serialised file.
+
 Exact tables are chosen during task design, but future migrations will need to
 represent:
 
